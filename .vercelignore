@@ -1,0 +1,12 @@
+Backend/
+Database.sql
+DATABASE_SETUP_README.md
+PROJECT_SETUP.md
+Logo.png
+Frontend/node_modules/
+Frontend/.env
+Frontend/.env.local
+Frontend/.env.development.local
+Frontend/.env.test.local
+Frontend/.env.production.local
+*.log

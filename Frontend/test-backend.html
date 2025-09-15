@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Test</title>
+</head>
+<body>
+    <h1>Backend Connection Test</h1>
+    <button onclick="testBackend()">Test Backend Connection</button>
+    <div id="result"></div>
+
+    <script>
+        async function testBackend() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Test health endpoint
+                const healthResponse = await fetch('https://mathematico-backend-new.vercel.app/api/v1/health');
+                const healthData = await healthResponse.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>Health Check:</h3>
+                    <pre>${JSON.stringify(healthData, null, 2)}</pre>
+                    <p>Status: ${healthResponse.status}</p>
+                `;
+                
+                // Test admin endpoint (should return 401 if not authenticated)
+                try {
+                    const adminResponse = await fetch('https://mathematico-backend-new.vercel.app/api/v1/admin/books');
+                    resultDiv.innerHTML += `
+                        <h3>Admin Books Endpoint:</h3>
+                        <p>Status: ${adminResponse.status}</p>
+                        <p>This should return 401 (Unauthorized) if working correctly</p>
+                    `;
+                } catch (error) {
+                    resultDiv.innerHTML += `
+                        <h3>Admin Books Endpoint:</h3>
+                        <p>Error: ${error.message}</p>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Error:</h3>
+                    <p>${error.message}</p>
+                    <p>Backend might not be running or there's a CORS issue.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
