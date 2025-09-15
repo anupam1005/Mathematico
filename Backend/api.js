@@ -809,6 +809,79 @@ app.get('/api/v1/payments/history', (req, res) => {
   });
 });
 
+// Create payment order endpoint
+app.post('/api/v1/payments/create-order', (req, res) => {
+  const { courseId } = req.body;
+  
+  if (!courseId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Course ID is required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Mock payment order creation
+  const order = {
+    id: 'order_' + Date.now(),
+    amount: 99.99,
+    currency: 'USD',
+    receipt: 'receipt_' + Date.now(),
+    status: 'created',
+    courseId: courseId,
+    createdAt: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    data: {
+      order: order,
+      course: {
+        id: courseId,
+        title: 'Advanced Mathematics',
+        price: 99.99
+      }
+    },
+    message: 'Payment order created successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Verify payment endpoint
+app.post('/api/v1/payments/verify', (req, res) => {
+  const { paymentId, orderId, signature, courseId } = req.body;
+  
+  if (!paymentId || !orderId || !signature || !courseId) {
+    return res.status(400).json({
+      success: false,
+      message: 'All payment verification fields are required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Mock payment verification
+  res.json({
+    success: true,
+    data: {
+      enrollment: {
+        id: 'enrollment_' + Date.now(),
+        courseId: courseId,
+        courseTitle: 'Advanced Mathematics',
+        enrolledAt: new Date().toISOString(),
+        paymentStatus: 'completed'
+      },
+      payment: {
+        id: paymentId,
+        amount: 99.99,
+        currency: 'USD',
+        status: 'completed'
+      }
+    },
+    message: 'Payment verified successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Enrollments endpoints
 app.get('/api/v1/enrollments', (req, res) => {
   const { page = 1, limit = 10 } = req.query;
@@ -834,6 +907,30 @@ app.get('/api/v1/enrollments', (req, res) => {
       totalPages: Math.ceil(enrollments.length / parseInt(limit))
     },
     message: 'Enrollments retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Enrollment status endpoint
+app.get('/api/v1/enrollments/status', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      hasEnrollment: true,
+      isAdmin: false,
+      enrollments: [
+        {
+          id: 1,
+          enrolledAt: new Date().toISOString(),
+          course: {
+            id: 1,
+            title: 'Advanced Mathematics',
+            price: 99.99
+          }
+        }
+      ]
+    },
+    message: 'Enrollment status retrieved successfully',
     timestamp: new Date().toISOString()
   });
 });
