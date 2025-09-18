@@ -4,6 +4,28 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const { Book, testConnection, createBooksTable } = require('../database');
+
+// Initialize database connection
+let dbInitialized = false;
+
+async function initializeDatabase() {
+  if (dbInitialized) return;
+  
+  try {
+    console.log('🔄 Initializing database connection...');
+    const connected = await testConnection();
+    if (connected) {
+      await createBooksTable();
+      dbInitialized = true;
+      console.log('✅ Database initialized successfully');
+    } else {
+      console.error('❌ Failed to initialize database');
+    }
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+  }
+}
 
 // Create Express app
 const app = express();
@@ -108,6 +130,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Request logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+  next();
+});
+
+// Database initialization middleware
+app.use(async (req, res, next) => {
+  await initializeDatabase();
   next();
 });
 
@@ -571,98 +599,67 @@ app.get('/api/v1/courses/:id', (req, res) => {
   });
 });
 
-app.get('/api/v1/books', (req, res) => {
-  const { page = 1, limit = 10, category, search } = req.query;
-  
-  // Sample books data
-  const sampleBooks = [
-    {
-      id: 1,
-      title: 'Advanced Calculus Textbook',
-      author: 'Dr. John Smith',
-      description: 'Comprehensive textbook covering advanced calculus topics',
-      price: 49.99,
-      category: 'Mathematics',
-      pages: 450,
-      isbn: '978-1234567890',
-      coverImage: '/placeholder.svg',
-      pdfUrl: '/uploads/advanced-calculus.pdf',
-      status: 'published',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      title: 'Linear Algebra Fundamentals',
-      author: 'Prof. Jane Doe',
-      description: 'Essential guide to linear algebra concepts and applications',
-      price: 39.99,
-      category: 'Mathematics',
-      pages: 320,
-      isbn: '978-0987654321',
-      coverImage: '/placeholder.svg',
-      pdfUrl: '/uploads/linear-algebra.pdf',
-      status: 'published',
-      createdAt: new Date().toISOString()
-    }
-  ];
-  
-  res.json({
-    success: true,
-    data: sampleBooks,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: sampleBooks.length,
-      totalPages: Math.ceil(sampleBooks.length / parseInt(limit))
-    },
-    message: 'Books retrieved successfully',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/v1/books', async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, search } = req.query;
+    
+    const result = await Book.getAll(page, limit, category, search);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      message: 'Books retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve books',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
-app.get('/api/v1/books/:id', (req, res) => {
-  const bookId = req.params.id;
-  
-  const book = {
-    id: parseInt(bookId),
-    title: 'Advanced Calculus Textbook',
-    author: 'Dr. John Smith',
-    description: 'Comprehensive textbook covering advanced calculus topics including limits, derivatives, integrals, and series.',
-    price: 49.99,
-    category: 'Mathematics',
-    pages: 450,
-    isbn: '978-1234567890',
-    coverImage: '/placeholder.svg',
-    pdfUrl: '/uploads/advanced-calculus.pdf',
-    status: 'published',
-    chapters: [
-      { id: 1, title: 'Introduction to Calculus', pageStart: 1, pageEnd: 50 },
-      { id: 2, title: 'Limits and Continuity', pageStart: 51, pageEnd: 100 },
-      { id: 3, title: 'Derivatives', pageStart: 101, pageEnd: 200 }
-    ],
-    createdAt: new Date().toISOString()
-  };
-  
-  res.json({
-    success: true,
-    data: book,
-    message: 'Book details retrieved successfully',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/v1/books/:id', async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    
+    const book = await Book.getById(bookId);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: book,
+      message: 'Book details retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting book by ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Create a new book
-app.post('/api/v1/books', (req, res) => {
+app.post('/api/v1/books', async (req, res) => {
   try {
     const bookData = req.body;
     
-    // Generate a new ID (in real app, this would be from database)
-    const newBook = {
-      id: Date.now(), // Simple ID generation
-      ...bookData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    const newBook = await Book.create(bookData);
     
     console.log('Creating new book:', newBook);
     
@@ -684,16 +681,20 @@ app.post('/api/v1/books', (req, res) => {
 });
 
 // Update a book
-app.put('/api/v1/books/:id', (req, res) => {
+app.put('/api/v1/books/:id', async (req, res) => {
   try {
-    const bookId = req.params.id;
+    const bookId = parseInt(req.params.id);
     const updateData = req.body;
     
-    const updatedBook = {
-      id: parseInt(bookId),
-      ...updateData,
-      updatedAt: new Date().toISOString()
-    };
+    const updatedBook = await Book.update(bookId, updateData);
+    
+    if (!updatedBook) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     console.log('Updating book:', updatedBook);
     
@@ -715,14 +716,25 @@ app.put('/api/v1/books/:id', (req, res) => {
 });
 
 // Delete a book
-app.delete('/api/v1/books/:id', (req, res) => {
+app.delete('/api/v1/books/:id', async (req, res) => {
   try {
-    const bookId = req.params.id;
+    const bookId = parseInt(req.params.id);
     
-    console.log('Deleting book with ID:', bookId);
+    const deletedBook = await Book.delete(bookId);
+    
+    if (!deletedBook) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    console.log('Deleting book with ID:', bookId, 'Book:', deletedBook.title);
     
     res.json({
       success: true,
+      data: deletedBook,
       message: 'Book deleted successfully',
       timestamp: new Date().toISOString()
     });
@@ -738,20 +750,26 @@ app.delete('/api/v1/books/:id', (req, res) => {
 });
 
 // Toggle book publish status
-app.patch('/api/v1/books/:id/publish', (req, res) => {
+app.patch('/api/v1/books/:id/publish', async (req, res) => {
   try {
-    const bookId = req.params.id;
+    const bookId = parseInt(req.params.id);
     const { isPublished } = req.body;
+    
+    const updatedBook = await Book.togglePublish(bookId, isPublished);
+    
+    if (!updatedBook) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     console.log('Toggling publish status for book:', bookId, 'to:', isPublished);
     
     res.json({
       success: true,
-      data: {
-        id: parseInt(bookId),
-        isPublished: isPublished,
-        updatedAt: new Date().toISOString()
-      },
+      data: updatedBook,
       message: 'Book publish status updated successfully',
       timestamp: new Date().toISOString()
     });
