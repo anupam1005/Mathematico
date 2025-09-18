@@ -651,6 +651,121 @@ app.get('/api/v1/books/:id', (req, res) => {
   });
 });
 
+// Create a new book
+app.post('/api/v1/books', (req, res) => {
+  try {
+    const bookData = req.body;
+    
+    // Generate a new ID (in real app, this would be from database)
+    const newBook = {
+      id: Date.now(), // Simple ID generation
+      ...bookData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('Creating new book:', newBook);
+    
+    res.status(201).json({
+      success: true,
+      data: newBook,
+      message: 'Book created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error creating book:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Update a book
+app.put('/api/v1/books/:id', (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const updateData = req.body;
+    
+    const updatedBook = {
+      id: parseInt(bookId),
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('Updating book:', updatedBook);
+    
+    res.json({
+      success: true,
+      data: updatedBook,
+      message: 'Book updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error updating book:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Delete a book
+app.delete('/api/v1/books/:id', (req, res) => {
+  try {
+    const bookId = req.params.id;
+    
+    console.log('Deleting book with ID:', bookId);
+    
+    res.json({
+      success: true,
+      message: 'Book deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error deleting book:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Toggle book publish status
+app.patch('/api/v1/books/:id/publish', (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const { isPublished } = req.body;
+    
+    console.log('Toggling publish status for book:', bookId, 'to:', isPublished);
+    
+    res.json({
+      success: true,
+      data: {
+        id: parseInt(bookId),
+        isPublished: isPublished,
+        updatedAt: new Date().toISOString()
+      },
+      message: 'Book publish status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error toggling book publish status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book publish status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get('/api/v1/live-classes', (req, res) => {
   const { page = 1, limit = 10, status } = req.query;
   
