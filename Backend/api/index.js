@@ -23,22 +23,61 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://127.0.0.1:3000',
   'https://mathematico-frontend.vercel.app',
-  'https://mathematico-frontend-gvpmf2rwj-anupam-das-projects-db63fa41.vercel.app'
+  'https://mathematico-frontend-gvpmf2rwj-anupam-das-projects-db63fa41.vercel.app',
+  'https://mathematico-backend-new.vercel.app',
+  'https://mathematico-mobile.vercel.app',
+  'https://mathematico-app.vercel.app',
+  // Mobile app origins (React Native/Expo)
+  'exp://192.168.1.100:8081',
+  'exp://192.168.1.101:8081',
+  'exp://192.168.1.102:8081',
+  'exp://192.168.1.103:8081',
+  'exp://192.168.1.104:8081',
+  'exp://192.168.1.105:8081',
+  'exp://192.168.1.106:8081',
+  'exp://192.168.1.107:8081',
+  'exp://192.168.1.108:8081',
+  'exp://192.168.1.109:8081',
+  'exp://192.168.1.110:8081',
+  'exp://10.0.2.2:8081',
+  'exp://localhost:8081',
+  'exp://127.0.0.1:8081'
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
+      console.log('✅ CORS allowing request with no origin (mobile app)');
       return callback(null, true);
     }
     
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS allowing origin:', origin);
       return callback(null, true);
     }
     
     // Allow Vercel preview URLs
     if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
       console.log('✅ CORS allowing Vercel preview URL:', origin);
+      return callback(null, true);
+    }
+    
+    // Allow Expo/React Native development URLs
+    if (origin.match(/^exp:\/\/.*$/)) {
+      console.log('✅ CORS allowing Expo development URL:', origin);
+      return callback(null, true);
+    }
+    
+    // Allow localhost with any port for development
+    if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+      console.log('✅ CORS allowing localhost URL:', origin);
+      return callback(null, true);
+    }
+    
+    // Allow local IP addresses for mobile development
+    if (origin.match(/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/)) {
+      console.log('✅ CORS allowing local IP URL:', origin);
       return callback(null, true);
     }
     
@@ -54,7 +93,9 @@ app.use(cors({
     'Cache-Control', 
     'Accept', 
     'Origin',
-    'Pragma'
+    'Pragma',
+    'X-API-Key',
+    'X-Requested-With'
   ],
   optionsSuccessStatus: 200
 }));
@@ -99,7 +140,20 @@ app.get('/api/v1/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    vercel: process.env.VERCEL === '1'
+    vercel: process.env.VERCEL === '1',
+    version: '1.3.0',
+    mobile: {
+      supported: true,
+      baseUrl: 'https://mathematico-backend-new.vercel.app/api/v1',
+      endpoints: {
+        health: '/api/v1/health',
+        auth: '/api/v1/auth',
+        courses: '/api/v1/courses',
+        books: '/api/v1/books',
+        liveClasses: '/api/v1/live-classes',
+        admin: '/api/v1/admin'
+      }
+    }
   });
 });
 

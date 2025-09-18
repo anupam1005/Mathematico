@@ -2,26 +2,30 @@
   "version": 2,
   "builds": [
     {
-      "src": "api.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/v1",
-      "dest": "/api.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/api/v1/(.*)",
-      "dest": "/api.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/api/(.*)",
-      "dest": "/api.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/api",
-      "dest": "/api.js"
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
     }
   ],
   "env": {
