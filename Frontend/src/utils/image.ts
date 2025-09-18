@@ -7,7 +7,7 @@ const getBackendBaseUrl = (): string => {
   // Use VITE_BACKEND_URL if available, otherwise construct from VITE_API_URL
   return import.meta.env.VITE_BACKEND_URL || 
          import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 
-         'https://mathematico-backend-new.vercel.app';
+         'http://localhost:5000';
 };
 
 /**

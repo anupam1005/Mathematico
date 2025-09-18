@@ -18,7 +18,7 @@ export const BackendStatus: React.FC<BackendStatusProps> = ({ showInAdmin = fals
     setErrorMessage('');
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://mathematico-backend-new.vercel.app/api/v1'}/health`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

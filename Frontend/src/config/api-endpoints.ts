@@ -3,7 +3,7 @@
  * This file centralizes all API endpoints used in the application
  */
 
-// Note: The base URL is already set in the axios instance (https://mathematico-backend-new.vercel.app/api/v1)
+// Note: The base URL is already set in the axios instance (http://localhost:5000/api/v1)
 // So we don't need to include /api/v1 in the endpoint paths
 
 const AUTH = {

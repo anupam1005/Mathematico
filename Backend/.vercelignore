@@ -1,15 +1,26 @@
-node_modules
-dist
-logs
-*.log
+# Database files
+Database.sql
+
+# Documentation
+README.md
+DEPLOYMENT.md
+
+# Environment files
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-config.env
-config.env.example
-uploads
-test-*.js
-test-*.html
-setup-db-simple.js
+
+# Logs
+*.log
+
+# Test files
+test-health.sh
+
+# Uploads
+uploads/
+
+# Backup files
+*.backup
+*.bak

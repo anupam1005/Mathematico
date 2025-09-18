@@ -6,14 +6,14 @@
 export const APP_CONFIG = {
   NAME: import.meta.env.VITE_APP_NAME || 'Educational Platform',
   VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
-  ENV: import.meta.env.VITE_APP_ENV || 'production',
+  ENV: import.meta.env.VITE_APP_ENV || 'development',
   DEBUG: import.meta.env.VITE_APP_DEBUG === 'true',
-  DOMAIN: import.meta.env.VITE_APP_DOMAIN || 'mathematico-frontend.vercel.app',
+  DOMAIN: import.meta.env.VITE_APP_DOMAIN || 'localhost',
 };
 
 // API configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://mathematico-backend-new.vercel.app/api/v1',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
   TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000', 10),
   WITH_CREDENTIALS: true,
 };

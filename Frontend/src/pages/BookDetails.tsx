@@ -71,7 +71,7 @@ const BookDetails = () => {
     if (book?.pdfUrl) {
       // First check if backend is running
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://mathematico-backend-new.vercel.app';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const healthResponse = await fetch(`${backendUrl}/api/v1/health`);
         
         if (!healthResponse.ok) {
@@ -95,7 +95,7 @@ const BookDetails = () => {
       // Use VITE_BACKEND_URL if available, otherwise construct from VITE_API_URL
       const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 
                             import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 
-                            'https://mathematico-backend-new.vercel.app';
+                            'http://localhost:5000';
       
       // Ensure the PDF URL starts with /uploads
       const pdfPath = book.pdfUrl.startsWith('/uploads') ? book.pdfUrl : `/uploads${book.pdfUrl}`;
