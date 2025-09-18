@@ -29,6 +29,11 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "DB_HOST": "hopper.proxy.rlwy.net",
+    "DB_PORT": "46878",
+    "DB_USERNAME": "root",
+    "DB_PASSWORD": "hSuamHEZBJuyqLSJkHUbAPTdIoyeTXIN",
+    "DB_DATABASE": "railway"
   }
 }

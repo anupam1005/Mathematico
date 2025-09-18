@@ -4,6 +4,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+require('dotenv').config();
 const { Book, testConnection, createBooksTable } = require('../database');
 
 // Initialize database connection
