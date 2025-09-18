@@ -25,8 +25,6 @@ const allowedOrigins = [
   'https://mathematico-frontend.vercel.app',
   'https://mathematico-frontend-gvpmf2rwj-anupam-das-projects-db63fa41.vercel.app',
   'https://mathematico-backend-new.vercel.app',
-  'https://mathematico-mobile.vercel.app',
-  'https://mathematico-app.vercel.app',
   // Mobile app origins (React Native/Expo)
   'exp://192.168.1.100:8081',
   'exp://192.168.1.101:8081',
@@ -152,7 +150,8 @@ app.get('/api/v1/health', (req, res) => {
         books: '/api/v1/books',
         liveClasses: '/api/v1/live-classes',
         admin: '/api/v1/admin'
-      }
+      },
+      note: 'Use https://mathematico-backend-new.vercel.app as your API base URL for mobile apps'
     }
   });
 });
