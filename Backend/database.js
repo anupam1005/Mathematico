@@ -84,6 +84,35 @@ let fallbackBooks = [
 
 let nextFallbackId = 3;
 
+// Create users table if it doesn't exist
+async function createUsersTable() {
+  try {
+    const connection = await pool.getConnection();
+    
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role ENUM('student', 'admin') DEFAULT 'student',
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableQuery);
+    console.log('✅ Users table created/verified successfully');
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating users table:', error.message);
+    return false;
+  }
+}
+
 // Create books table if it doesn't exist
 async function createBooksTable() {
   try {
@@ -381,6 +410,7 @@ const Book = {
 module.exports = {
   pool,
   testConnection,
+  createUsersTable,
   createBooksTable,
   Book
 };
