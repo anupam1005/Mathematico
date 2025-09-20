@@ -292,157 +292,55 @@ app.get('/api/v1/admin/dashboard', async (req, res) => {
   }
 });
 
+// In-memory book storage
+let booksStore = [
+  {
+    id: 1,
+    title: 'Advanced Mathematics',
+    author: 'Dr. John Smith',
+    description: 'Comprehensive guide to advanced mathematical concepts',
+    category: 'Mathematics',
+    pages: 450,
+    isbn: '978-1234567890',
+    status: 'published',
+    is_published: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    title: 'Physics Fundamentals',
+    author: 'Prof. Jane Doe',
+    description: 'Essential physics concepts for beginners',
+    category: 'Physics',
+    pages: 300,
+    isbn: '978-1234567891',
+    status: 'draft',
+    is_published: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 3,
+    title: 'Chemistry Basics',
+    author: 'Dr. Mike Johnson',
+    description: 'Introduction to chemical principles',
+    category: 'Chemistry',
+    pages: 250,
+    isbn: '978-1234567892',
+    status: 'published',
+    is_published: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
 // Admin books endpoint
-app.get('/api/v1/admin/books', async (req, res) => {
+app.get('/api/v1/admin/books', (req, res) => {
   try {
-    await initializeDatabase();
-    
-    let books = [];
-
-    if (dbInitialized) {
-      try {
-        const [booksResult] = await pool.execute(
-          'SELECT * FROM books ORDER BY created_at DESC'
-        );
-        books = booksResult;
-        
-        // If no books in database, provide sample data
-        if (books.length === 0) {
-          books = [
-            {
-              id: 1,
-              title: 'Advanced Mathematics',
-              author: 'Dr. John Smith',
-              description: 'Comprehensive guide to advanced mathematical concepts',
-              category: 'Mathematics',
-              pages: 450,
-              isbn: '978-1234567890',
-              status: 'published',
-              is_published: 1,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 2,
-              title: 'Physics Fundamentals',
-              author: 'Prof. Jane Doe',
-              description: 'Essential physics concepts for beginners',
-              category: 'Physics',
-              pages: 300,
-              isbn: '978-1234567891',
-              status: 'draft',
-              is_published: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 3,
-              title: 'Chemistry Basics',
-              author: 'Dr. Mike Johnson',
-              description: 'Introduction to chemical principles',
-              category: 'Chemistry',
-              pages: 250,
-              isbn: '978-1234567892',
-              status: 'published',
-              is_published: 1,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ];
-        }
-      } catch (dbError) {
-        console.error('Database admin books error:', dbError);
-        // Fallback to sample data if database fails
-        books = [
-          {
-            id: 1,
-            title: 'Advanced Mathematics',
-            author: 'Dr. John Smith',
-            description: 'Comprehensive guide to advanced mathematical concepts',
-            category: 'Mathematics',
-            pages: 450,
-            isbn: '978-1234567890',
-            status: 'published',
-            is_published: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            title: 'Physics Fundamentals',
-            author: 'Prof. Jane Doe',
-            description: 'Essential physics concepts for beginners',
-            category: 'Physics',
-            pages: 300,
-            isbn: '978-1234567891',
-            status: 'draft',
-            is_published: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 3,
-            title: 'Chemistry Basics',
-            author: 'Dr. Mike Johnson',
-            description: 'Introduction to chemical principles',
-            category: 'Chemistry',
-            pages: 250,
-            isbn: '978-1234567892',
-            status: 'published',
-            is_published: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
-      }
-    } else {
-      // Fallback to sample data if database not initialized
-      books = [
-        {
-          id: 1,
-          title: 'Advanced Mathematics',
-          author: 'Dr. John Smith',
-          description: 'Comprehensive guide to advanced mathematical concepts',
-          category: 'Mathematics',
-          pages: 450,
-          isbn: '978-1234567890',
-          status: 'published',
-          is_published: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 2,
-          title: 'Physics Fundamentals',
-          author: 'Prof. Jane Doe',
-          description: 'Essential physics concepts for beginners',
-          category: 'Physics',
-          pages: 300,
-          isbn: '978-1234567891',
-          status: 'draft',
-          is_published: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 3,
-          title: 'Chemistry Basics',
-          author: 'Dr. Mike Johnson',
-          description: 'Introduction to chemical principles',
-          category: 'Chemistry',
-          pages: 250,
-          isbn: '978-1234567892',
-          status: 'published',
-          is_published: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-    }
-
     res.json({
       success: true,
-      data: books,
+      data: booksStore,
       message: 'Admin books retrieved successfully',
       timestamp: new Date().toISOString()
     });
@@ -472,7 +370,7 @@ app.post('/api/v1/admin/books', (req, res) => {
       });
     }
 
-    // Return a mock response - no database operations
+    // Create new book and add to store
     const newBook = {
       id: Date.now(), // Generate a unique ID
       title,
@@ -486,6 +384,9 @@ app.post('/api/v1/admin/books', (req, res) => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+
+    // Add to store
+    booksStore.push(newBook);
 
     res.json({
       success: true,
@@ -512,24 +413,34 @@ app.put('/api/v1/admin/books/:id', (req, res) => {
     
     console.log('Updating book with ID:', id, 'Data:', req.body);
     
-    // Return a mock response - no database operations
-    const updatedBook = {
-      id: parseInt(id),
-      title: title || 'Updated Book',
-      author: author || 'Unknown Author',
-      description: description || '',
-      category: category || 'General',
-      pages: pages || 0,
-      isbn: isbn || '',
-      status: status || 'draft',
-      is_published: status === 'published' ? 1 : 0,
-      created_at: new Date().toISOString(),
+    // Find and update book in store
+    const bookIndex = booksStore.findIndex(book => book.id === parseInt(id));
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Update the book in store
+    booksStore[bookIndex] = {
+      ...booksStore[bookIndex],
+      title: title || booksStore[bookIndex].title,
+      author: author || booksStore[bookIndex].author,
+      description: description || booksStore[bookIndex].description,
+      category: category || booksStore[bookIndex].category,
+      pages: pages || booksStore[bookIndex].pages,
+      isbn: isbn || booksStore[bookIndex].isbn,
+      status: status || booksStore[bookIndex].status,
+      is_published: status === 'published' ? 1 : (status === 'draft' ? 0 : booksStore[bookIndex].is_published),
       updated_at: new Date().toISOString()
     };
     
     res.json({
       success: true,
-      data: updatedBook,
+      data: booksStore[bookIndex],
       message: 'Book updated successfully',
       timestamp: new Date().toISOString()
     });
@@ -551,7 +462,20 @@ app.delete('/api/v1/admin/books/:id', (req, res) => {
     
     console.log('Deleting book with ID:', id);
     
-    // Return a mock response - no database operations
+    // Find and remove book from store
+    const bookIndex = booksStore.findIndex(book => book.id === parseInt(id));
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Remove book from store
+    booksStore.splice(bookIndex, 1);
+    
     res.json({
       success: true,
       message: 'Book deleted successfully',
@@ -576,24 +500,25 @@ app.put('/api/v1/admin/books/:id/toggle-publish', (req, res) => {
     
     console.log('Toggling publish status for book ID:', id, 'isPublished:', isPublished);
     
-    // Return a mock response - no database operations
-    const updatedBook = {
-      id: parseInt(id),
-      title: 'Sample Book',
-      author: 'Sample Author',
-      description: 'Sample description',
-      category: 'General',
-      pages: 100,
-      isbn: '978-0000000000',
-      status: isPublished ? 'published' : 'draft',
-      is_published: isPublished ? 1 : 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // Find book in store
+    const bookIndex = booksStore.findIndex(book => book.id === parseInt(id));
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Update publish status in store
+    booksStore[bookIndex].is_published = isPublished ? 1 : 0;
+    booksStore[bookIndex].status = isPublished ? 'published' : 'draft';
+    booksStore[bookIndex].updated_at = new Date().toISOString();
     
     res.json({
       success: true,
-      data: updatedBook,
+      data: booksStore[bookIndex],
       message: `Book ${isPublished ? 'published' : 'unpublished'} successfully`,
       timestamp: new Date().toISOString()
     });
