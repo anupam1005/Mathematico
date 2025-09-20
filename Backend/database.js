@@ -89,14 +89,25 @@ async function createUsersTable() {
     
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role ENUM('student', 'admin') DEFAULT 'student',
-        status ENUM('active', 'inactive') DEFAULT 'active',
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        email_verification_token VARCHAR(255) NULL,
+        avatar_url VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login DATETIME,
+        login_attempts INT DEFAULT 0,
+        lock_until DATETIME NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
+        role ENUM('user', 'admin', 'instructor') DEFAULT 'user',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email\` (\`email\`),
+        INDEX \`idx_users_role\` (\`role\`),
+        INDEX \`idx_users_is_active\` (\`is_active\`),
+        INDEX \`idx_users_email_verified\` (\`email_verified\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `;
     

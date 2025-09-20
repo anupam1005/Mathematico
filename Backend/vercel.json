@@ -1,38 +1,38 @@
 {
   "version": 2,
   "functions": {
-    "api/index-simple.js": {
+    "api/index-db.js": {
       "maxDuration": 30
     }
   },
   "routes": [
     {
       "src": "/api/v1/mobile/(.*)",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/api/v1/admin/(.*)",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/api/v1/auth/(.*)",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/api/v1/health",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/api/v1",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/api/(.*)",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/api/index-simple.js"
+      "dest": "/api/index-db.js"
     }
   ],
   "env": {
