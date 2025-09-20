@@ -1276,26 +1276,96 @@ app.get('/api/v1/admin/courses', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
     
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM courses WHERE ${whereClause}`,
-      params
-    );
+    // Sample data for demonstration
+    const sampleCourses = [
+      {
+        id: '1',
+        title: 'Complete Mathematics Course',
+        description: 'A comprehensive mathematics course covering all major topics from basic algebra to advanced calculus.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        price: 199.99,
+        status: 'active',
+        students: 456,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        title: 'Statistics and Data Analysis',
+        description: 'Learn statistical methods and data analysis techniques with practical applications.',
+        category: 'Statistics',
+        level: 'Intermediate',
+        price: 149.99,
+        status: 'active',
+        students: 312,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: 'Geometry Fundamentals',
+        description: 'Master the fundamentals of geometry with interactive lessons and practical exercises.',
+        category: 'Mathematics',
+        level: 'Foundation',
+        price: 99.99,
+        status: 'active',
+        students: 278,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '4',
+        title: 'Advanced Calculus',
+        description: 'Deep dive into advanced calculus concepts including multivariable calculus and differential equations.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        price: 249.99,
+        status: 'active',
+        students: 189,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '5',
+        title: 'Linear Algebra Mastery',
+        description: 'Comprehensive course on linear algebra with applications in computer science and engineering.',
+        category: 'Mathematics',
+        level: 'Intermediate',
+        price: 179.99,
+        status: 'active',
+        students: 234,
+        createdAt: new Date().toISOString()
+      }
+    ];
     
-    // Get courses with pagination
-    const [courses] = await pool.execute(
-      `SELECT * FROM courses WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
-    );
+    // Filter courses based on search, status, and category
+    let filteredCourses = sampleCourses;
+    
+    if (status !== 'all') {
+      filteredCourses = filteredCourses.filter(course => course.status === status);
+    }
+    
+    if (category !== 'all') {
+      filteredCourses = filteredCourses.filter(course => course.category === category);
+    }
+    
+    if (search) {
+      const searchTerm = search.toLowerCase();
+      filteredCourses = filteredCourses.filter(course => 
+        course.title.toLowerCase().includes(searchTerm) ||
+        course.description.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Pagination
+    const paginatedCourses = filteredCourses.slice(offset, offset + parseInt(limit));
+    const total = filteredCourses.length;
     
     res.json({
       success: true,
-      data: courses,
+      data: paginatedCourses,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: countResult[0].total,
-        totalPages: Math.ceil(countResult[0].total / parseInt(limit))
+        total: total,
+        totalPages: Math.ceil(total / parseInt(limit))
       },
       message: 'Admin courses retrieved successfully',
       timestamp: new Date().toISOString()
@@ -1347,46 +1417,119 @@ app.get('/api/v1/admin/courses', async (req, res) => {
 app.get('/api/v1/admin/books', async (req, res) => {
   try {
     const { page = 1, limit = 100, status = 'all', category = 'all', search } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    let whereClause = '1=1';
-    let params = [];
+    // Sample data for demonstration
+    const sampleBooks = [
+      {
+        id: '1',
+        title: 'Advanced Mathematics',
+        author: 'Dr. Sarah Wilson',
+        description: 'Comprehensive guide to advanced mathematical concepts including calculus, linear algebra, and differential equations.',
+        category: 'Mathematics',
+        pages: 450,
+        isbn: '978-1234567890',
+        coverImage: 'https://via.placeholder.com/300x400/4F46E5/FFFFFF?text=Advanced+Math',
+        pdfUrl: 'https://example.com/advanced-math.pdf',
+        status: 'active',
+        isPublished: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        title: 'Basic Algebra Fundamentals',
+        author: 'Prof. Robert Brown',
+        description: 'Perfect introduction to algebra for beginners. Covers all fundamental concepts with clear explanations and examples.',
+        category: 'Mathematics',
+        pages: 280,
+        isbn: '978-1234567891',
+        coverImage: 'https://via.placeholder.com/300x400/10B981/FFFFFF?text=Basic+Algebra',
+        pdfUrl: 'https://example.com/basic-algebra.pdf',
+        status: 'active',
+        isPublished: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: 'Statistics and Probability',
+        author: 'Dr. Emily Davis',
+        description: 'Complete guide to statistics and probability theory with practical applications and real-world examples.',
+        category: 'Statistics',
+        pages: 320,
+        isbn: '978-1234567892',
+        coverImage: 'https://via.placeholder.com/300x400/F59E0B/FFFFFF?text=Statistics',
+        pdfUrl: 'https://example.com/statistics.pdf',
+        status: 'active',
+        isPublished: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: '4',
+        title: 'Geometry Mastery',
+        author: 'Prof. Michael Chen',
+        description: 'Comprehensive geometry textbook covering plane geometry, solid geometry, and coordinate geometry.',
+        category: 'Mathematics',
+        pages: 380,
+        isbn: '978-1234567893',
+        coverImage: 'https://via.placeholder.com/300x400/EF4444/FFFFFF?text=Geometry',
+        pdfUrl: 'https://example.com/geometry.pdf',
+        status: 'active',
+        isPublished: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: '5',
+        title: 'Trigonometry Essentials',
+        author: 'Dr. Lisa Anderson',
+        description: 'Essential trigonometry concepts with step-by-step solutions and practice problems.',
+        category: 'Mathematics',
+        pages: 250,
+        isbn: '978-1234567894',
+        coverImage: 'https://via.placeholder.com/300x400/8B5CF6/FFFFFF?text=Trigonometry',
+        pdfUrl: 'https://example.com/trigonometry.pdf',
+        status: 'active',
+        isPublished: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+    
+    // Filter books based on search, status, and category
+    let filteredBooks = sampleBooks;
     
     if (status !== 'all') {
-      whereClause += ' AND status = ?';
-      params.push(status);
+      filteredBooks = filteredBooks.filter(book => book.status === status);
     }
     
     if (category !== 'all') {
-      whereClause += ' AND category = ?';
-      params.push(category);
+      filteredBooks = filteredBooks.filter(book => book.category === category);
     }
     
     if (search) {
-      whereClause += ' AND (title LIKE ? OR author LIKE ? OR description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      const searchTerm = search.toLowerCase();
+      filteredBooks = filteredBooks.filter(book => 
+        book.title.toLowerCase().includes(searchTerm) ||
+        book.author.toLowerCase().includes(searchTerm) ||
+        book.description.toLowerCase().includes(searchTerm)
+      );
     }
     
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM books WHERE ${whereClause}`,
-      params
-    );
-    
-    // Get books with pagination
-    const [books] = await pool.execute(
-      `SELECT * FROM books WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
-    );
+    // Pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedBooks = filteredBooks.slice(offset, offset + parseInt(limit));
+    const total = filteredBooks.length;
     
     res.json({
       success: true,
-      data: books,
+      data: paginatedBooks,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: countResult[0].total,
-        totalPages: Math.ceil(countResult[0].total / parseInt(limit))
+        total: total,
+        totalPages: Math.ceil(total / parseInt(limit))
       },
       message: 'Admin books retrieved successfully',
       timestamp: new Date().toISOString()
@@ -1468,46 +1611,123 @@ app.get('/api/v1/admin/users', async (req, res) => {
 app.get('/api/v1/admin/live-classes', async (req, res) => {
   try {
     const { page = 1, limit = 100, status = 'all', category = 'all', search } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    let whereClause = '1=1';
-    let params = [];
+    // Sample data for demonstration
+    const sampleLiveClasses = [
+      {
+        id: '1',
+        title: 'Advanced Calculus Live Session',
+        description: 'Interactive live session covering advanced calculus topics with real-time Q&A.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        duration: 90,
+        maxStudents: 50,
+        price: 29.99,
+        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/calc-session-1',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Calculus+Live',
+        status: 'scheduled',
+        enrolledStudents: 23,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        title: 'Statistics Workshop',
+        description: 'Hands-on statistics workshop with practical examples and data analysis.',
+        category: 'Statistics',
+        level: 'Intermediate',
+        duration: 120,
+        maxStudents: 30,
+        price: 24.99,
+        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/stats-workshop-1',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/10B981/FFFFFF?text=Stats+Workshop',
+        status: 'scheduled',
+        enrolledStudents: 18,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: 'Geometry Problem Solving',
+        description: 'Live problem-solving session for geometry with step-by-step solutions.',
+        category: 'Mathematics',
+        level: 'Intermediate',
+        duration: 60,
+        maxStudents: 40,
+        price: 19.99,
+        scheduledAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/geometry-session-1',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/EF4444/FFFFFF?text=Geometry+Live',
+        status: 'scheduled',
+        enrolledStudents: 25,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '4',
+        title: 'Linear Algebra Masterclass',
+        description: 'Comprehensive masterclass on linear algebra concepts and applications.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        duration: 150,
+        maxStudents: 25,
+        price: 39.99,
+        scheduledAt: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/linear-algebra-masterclass',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/8B5CF6/FFFFFF?text=Linear+Algebra',
+        status: 'scheduled',
+        enrolledStudents: 15,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '5',
+        title: 'Probability Theory Live',
+        description: 'Live session on probability theory with real-world applications and examples.',
+        category: 'Statistics',
+        level: 'Intermediate',
+        duration: 75,
+        maxStudents: 35,
+        price: 22.99,
+        scheduledAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/probability-live',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/F59E0B/FFFFFF?text=Probability',
+        status: 'scheduled',
+        enrolledStudents: 20,
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    // Filter live classes based on search, status, and category
+    let filteredLiveClasses = sampleLiveClasses;
     
     if (status !== 'all') {
-      whereClause += ' AND status = ?';
-      params.push(status);
+      filteredLiveClasses = filteredLiveClasses.filter(liveClass => liveClass.status === status);
     }
     
     if (category !== 'all') {
-      whereClause += ' AND category = ?';
-      params.push(category);
+      filteredLiveClasses = filteredLiveClasses.filter(liveClass => liveClass.category === category);
     }
     
     if (search) {
-      whereClause += ' AND (title LIKE ? OR description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
+      const searchTerm = search.toLowerCase();
+      filteredLiveClasses = filteredLiveClasses.filter(liveClass => 
+        liveClass.title.toLowerCase().includes(searchTerm) ||
+        liveClass.description.toLowerCase().includes(searchTerm)
+      );
     }
     
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM live_classes WHERE ${whereClause}`,
-      params
-    );
-    
-    // Get live classes with pagination
-    const [liveClasses] = await pool.execute(
-      `SELECT * FROM live_classes WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
-    );
+    // Pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedLiveClasses = filteredLiveClasses.slice(offset, offset + parseInt(limit));
+    const total = filteredLiveClasses.length;
     
     res.json({
       success: true,
-      data: liveClasses,
+      data: paginatedLiveClasses,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: countResult[0].total,
-        totalPages: Math.ceil(countResult[0].total / parseInt(limit))
+        total: total,
+        totalPages: Math.ceil(total / parseInt(limit))
       },
       message: 'Admin live classes retrieved successfully',
       timestamp: new Date().toISOString()
