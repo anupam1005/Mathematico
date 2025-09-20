@@ -161,6 +161,173 @@ app.get('/api/v1/admin/books', (req, res) => {
   }
 });
 
+// Admin dashboard endpoint
+app.get('/api/v1/admin/dashboard', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          totalUsers: 1,
+          totalBooks: 2,
+          totalCourses: 0,
+          totalLiveClasses: 0,
+          totalRevenue: 0
+        },
+        recentActivity: [],
+        totalBooks: 2,
+        totalCourses: 0,
+        totalLiveClasses: 0,
+        totalUsers: 1,
+        totalEnrollments: 0
+      },
+      message: 'Dashboard stats retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting dashboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve dashboard data',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Admin courses endpoint
+app.get('/api/v1/admin/courses', (req, res) => {
+  try {
+    const sampleCourses = [
+      {
+        id: '1',
+        title: 'Complete Mathematics Course',
+        description: 'A comprehensive mathematics course covering all major topics.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        price: 199.99,
+        status: 'active',
+        students: 456,
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    res.json({
+      success: true,
+      data: sampleCourses,
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: sampleCourses.length,
+        totalPages: 1
+      },
+      message: 'Admin courses retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting admin courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve admin courses',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// User books endpoint (public)
+app.get('/api/v1/books', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: sampleBooks,
+      message: 'Books retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve books',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// User courses endpoint (public)
+app.get('/api/v1/courses', (req, res) => {
+  try {
+    const sampleCourses = [
+      {
+        id: '1',
+        title: 'Complete Mathematics Course',
+        description: 'A comprehensive mathematics course covering all major topics.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        price: 199.99,
+        status: 'active',
+        students: 456,
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    res.json({
+      success: true,
+      data: sampleCourses,
+      message: 'Courses retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve courses',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// User live classes endpoint (public)
+app.get('/api/v1/live-classes', (req, res) => {
+  try {
+    const sampleLiveClasses = [
+      {
+        id: '1',
+        title: 'Advanced Calculus Live Session',
+        description: 'Interactive live session covering advanced calculus topics.',
+        category: 'Mathematics',
+        level: 'Advanced',
+        duration: 90,
+        maxStudents: 50,
+        price: 29.99,
+        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        meetingUrl: 'https://meet.example.com/calc-session-1',
+        thumbnailUrl: 'https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Calculus+Live',
+        status: 'scheduled',
+        enrolledStudents: 23,
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    res.json({
+      success: true,
+      data: sampleLiveClasses,
+      message: 'Live classes retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting live classes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve live classes',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Admin login endpoint
 app.post('/api/v1/auth/login', (req, res) => {
   try {
