@@ -26,10 +26,13 @@ async function initializeDatabase() {
       dbInitialized = true;
       console.log('✅ Database initialized successfully');
     } else {
-      console.error('❌ Failed to initialize database');
+      console.error('❌ Failed to initialize database - using fallback data');
+      dbInitialized = true; // Mark as initialized even if DB fails
     }
   } catch (error) {
     console.error('❌ Database initialization error:', error);
+    console.log('🔄 Continuing with fallback data...');
+    dbInitialized = true; // Mark as initialized even if DB fails
   }
 }
 
@@ -167,6 +170,16 @@ app.get('/', (req, res) => {
       admin: '/api/v1/admin',
       enrollments: '/api/v1/enrollments'
     }
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Mathematico Backend API',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    version: '1.3.0'
   });
 });
 
