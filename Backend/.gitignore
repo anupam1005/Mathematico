@@ -42,6 +42,14 @@ yarn-error.log*
 # TypeScript cache
 *.tsbuildinfo
 
+# Test files
+test-*.js
+test-*.html
+test-*.pdf
+test-*.png
+migrate-database.js
+admin-book-form.html
+
 # Misc
 .DS_Store
 Thumbs.db

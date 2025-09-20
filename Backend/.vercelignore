@@ -12,4 +12,8 @@ config.env.example
 uploads
 test-*.js
 test-*.html
+test-*.pdf
+test-*.png
 setup-db-simple.js
+migrate-database.js
+admin-book-form.html

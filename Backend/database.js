@@ -53,7 +53,6 @@ let fallbackBooks = [
     title: 'Advanced Calculus Textbook',
     author: 'Dr. John Smith',
     description: 'Comprehensive textbook covering advanced calculus topics',
-    price: 49.99,
     category: 'Mathematics',
     pages: 450,
     isbn: '978-1234567890',
@@ -69,7 +68,6 @@ let fallbackBooks = [
     title: 'Linear Algebra Fundamentals',
     author: 'Prof. Jane Doe',
     description: 'Essential guide to linear algebra concepts and applications',
-    price: 39.99,
     category: 'Mathematics',
     pages: 320,
     isbn: '978-0987654321',
@@ -124,16 +122,16 @@ async function createBooksTable() {
         title VARCHAR(255) NOT NULL,
         author VARCHAR(255),
         description TEXT,
-        price DECIMAL(10, 2),
         category VARCHAR(100),
+        level VARCHAR(50),
         pages INT,
         isbn VARCHAR(20),
         coverImage VARCHAR(500),
         pdfUrl VARCHAR(500),
-        status ENUM('draft', 'published', 'archived') DEFAULT 'draft',
-        isPublished BOOLEAN DEFAULT FALSE,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+        is_published BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `;
     
@@ -144,9 +142,9 @@ async function createBooksTable() {
     const [rows] = await connection.execute('SELECT COUNT(*) as count FROM books');
     if (rows[0].count === 0) {
       const insertSampleData = `
-        INSERT INTO books (title, author, description, price, category, pages, isbn, coverImage, pdfUrl, status, isPublished) VALUES
-        ('Advanced Calculus Textbook', 'Dr. John Smith', 'Comprehensive textbook covering advanced calculus topics', 49.99, 'Mathematics', 450, '978-1234567890', '/placeholder.svg', '/uploads/advanced-calculus.pdf', 'published', TRUE),
-        ('Linear Algebra Fundamentals', 'Prof. Jane Doe', 'Essential guide to linear algebra concepts and applications', 39.99, 'Mathematics', 320, '978-0987654321', '/placeholder.svg', '/uploads/linear-algebra.pdf', 'published', TRUE)
+        INSERT INTO books (title, author, description, category, level, pages, isbn, coverImage, pdfUrl, status, is_published) VALUES
+        ('Advanced Calculus Textbook', 'Dr. John Smith', 'Comprehensive textbook covering advanced calculus topics', 'Mathematics', 'Advanced', 450, '978-1234567890', '/placeholder.svg', '/uploads/advanced-calculus.pdf', 'active', TRUE),
+        ('Linear Algebra Fundamentals', 'Prof. Jane Doe', 'Essential guide to linear algebra concepts and applications', 'Mathematics', 'Intermediate', 320, '978-0987654321', '/placeholder.svg', '/uploads/linear-algebra.pdf', 'active', TRUE)
       `;
       
       await connection.execute(insertSampleData);
@@ -157,6 +155,111 @@ async function createBooksTable() {
     return true;
   } catch (error) {
     console.error('❌ Error creating books table:', error.message);
+    return false;
+  }
+}
+
+// Create courses table
+async function createCoursesTable() {
+  try {
+    const connection = await pool.getConnection();
+    
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS courses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(100),
+        level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
+        price DECIMAL(10,2) DEFAULT 0.00,
+        status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableQuery);
+    console.log('✅ Courses table created/verified successfully');
+    
+    // Insert sample data if table is empty
+    const [rows] = await connection.execute('SELECT COUNT(*) as count FROM courses');
+    if (rows[0].count === 0) {
+      const insertSampleData = `
+        INSERT INTO courses (title, description, category, level, price, status) VALUES
+        ('Advanced Mathematics', 'Comprehensive course covering advanced mathematical concepts', 'Mathematics', 'Advanced', 99.99, 'active'),
+        ('Basic Algebra', 'Introduction to algebraic concepts and problem solving', 'Mathematics', 'Foundation', 49.99, 'active')
+      `;
+      
+      await connection.execute(insertSampleData);
+      console.log('✅ Sample courses data inserted successfully');
+    }
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating courses table:', error.message);
+    return false;
+  }
+}
+
+// Create live_classes table
+async function createLiveClassesTable() {
+  try {
+    const connection = await pool.getConnection();
+    
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS live_classes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        category VARCHAR(100),
+        level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
+        scheduled_at DATETIME,
+        duration INT DEFAULT 60,
+        max_students INT DEFAULT 50,
+        status ENUM('draft', 'scheduled', 'live', 'completed', 'cancelled') DEFAULT 'draft',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableQuery);
+    console.log('✅ Live classes table created/verified successfully');
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating live_classes table:', error.message);
+    return false;
+  }
+}
+
+// Create enrollments table
+async function createEnrollmentsTable() {
+  try {
+    const connection = await pool.getConnection();
+    
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS enrollments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        course_id INT NOT NULL,
+        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        payment_status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+        amount DECIMAL(10,2) DEFAULT 0.00,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_enrollment (user_id, course_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableQuery);
+    console.log('✅ Enrollments table created/verified successfully');
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating enrollments table:', error.message);
     return false;
   }
 }
@@ -200,7 +303,7 @@ const Book = {
         LIMIT ? OFFSET ?
       `;
       
-      const [rows] = await connection.execute(selectQuery, [...params, limit, offset]);
+      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
       
       connection.release();
       
@@ -412,5 +515,8 @@ module.exports = {
   testConnection,
   createUsersTable,
   createBooksTable,
+  createCoursesTable,
+  createLiveClassesTable,
+  createEnrollmentsTable,
   Book
 };

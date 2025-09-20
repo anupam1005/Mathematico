@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 
 // Import controllers
-const adminController = require('../../controllers/adminController');
+const adminController = require('../../controllers/adminController-simple');
 
 // Import middleware
-const { authenticateToken, requireAdmin } = require('../../middlewares/auth');
+const { authenticateToken, requireAdmin } = require('../../middlewares/authMiddleware');
+const { upload, processCoverImage, processPDF, handleUploadError } = require('../../middlewares/upload');
 
 // Test route (no auth required)
 router.get('/', (req, res) => {
@@ -38,5 +39,16 @@ router.get('/courses', adminController.getCourses);
 
 // Books management
 router.get('/books', adminController.getBooks);
+router.get('/books/:id', adminController.getBookById);
+router.post('/books', 
+  upload.fields([
+    { name: 'pdf', maxCount: 1 },
+    { name: 'coverImage', maxCount: 1 }
+  ]),
+  processCoverImage,
+  processPDF,
+  handleUploadError,
+  adminController.createBook
+);
 
 module.exports = router;

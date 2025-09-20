@@ -5,7 +5,7 @@ const router = express.Router();
 const authController = require('../../controllers/authController');
 
 // Import middleware
-const { authenticateToken } = require('../../middlewares/auth');
+const { authenticateToken } = require('../../middlewares/authMiddleware');
 
 // Test route
 router.get('/', (req, res) => {

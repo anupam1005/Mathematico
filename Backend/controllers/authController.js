@@ -1,4 +1,4 @@
-const { generateJWT } = require('../middlewares/auth');
+const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
 
 // Auth Controller - Handles authentication requests
@@ -24,26 +24,37 @@ const login = async (req, res) => {
     
     // Check if it's the hardcoded admin user
     if (email === 'dc2006089@gmail.com' && password === 'Myname*321') {
-      // Generate JWT token for admin
-      const token = generateJWT({ 
-        userId: 1, 
-        email: email, 
-        role: 'admin' 
-      });
+      // Generate JWT tokens for admin
+      const userPayload = {
+        id: 1,
+        email: email,
+        name: 'Admin User',
+        role: 'admin',
+        isAdmin: true,
+        is_admin: true,
+        email_verified: true,
+        is_active: true
+      };
+      
+      const accessToken = generateAccessToken(userPayload);
+      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+      
+      console.log('Admin login successful, JWT tokens generated');
       
       res.json({
         success: true,
-        message: 'Admin login successful',
+        message: 'Login successful',
         data: {
           user: {
-            id: 1,
-            email: email,
-            name: 'Admin User',
-            role: 'admin',
-            isAdmin: true
+            ...userPayload,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
-          token: token,
-          expiresIn: '24h'
+          tokens: {
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresIn: 3600
+          }
         },
         timestamp: new Date().toISOString()
       });
@@ -72,26 +83,37 @@ const login = async (req, res) => {
         });
       }
       
-      // Generate JWT token for student
-      const token = generateJWT({ 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
-      });
+      // Generate JWT tokens for student
+      const userPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
+        isAdmin: false,
+        is_admin: false,
+        email_verified: user.email_verified || true,
+        is_active: user.is_active !== false
+      };
+      
+      const accessToken = generateAccessToken(userPayload);
+      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+      
+      console.log('Student login successful, JWT tokens generated');
       
       res.json({
         success: true,
-        message: 'Student login successful',
+        message: 'Login successful',
         data: {
           user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            isAdmin: false
+            ...userPayload,
+            created_at: user.created_at || new Date().toISOString(),
+            updated_at: user.updated_at || new Date().toISOString()
           },
-          token: token,
-          expiresIn: '24h'
+          tokens: {
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresIn: 3600
+          }
         },
         timestamp: new Date().toISOString()
       });
@@ -155,26 +177,35 @@ const register = async (req, res) => {
       role: 'user'
     });
     
-    // Generate JWT token
-    const token = generateJWT({ 
-      userId: newUser.id, 
-      email: newUser.email, 
-      role: newUser.role 
-    });
+    // Generate JWT tokens
+    const userPayload = {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role || 'user',
+      isAdmin: false,
+      is_admin: false,
+      email_verified: false,
+      is_active: true
+    };
+    
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
     
     res.status(201).json({
       success: true,
       message: 'Student registration successful',
       data: {
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          role: newUser.role,
-          isAdmin: false
+          ...userPayload,
+          created_at: newUser.created_at || new Date().toISOString(),
+          updated_at: newUser.updated_at || new Date().toISOString()
         },
-        token: token,
-        expiresIn: '24h'
+        tokens: {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          expiresIn: 3600
+        }
       },
       timestamp: new Date().toISOString()
     });
@@ -210,46 +241,6 @@ const logout = async (req, res) => {
   }
 };
 
-/**
- * Refresh token
- */
-const refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'Bad Request',
-        message: 'Refresh token is required',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Simple token refresh (in production, use proper JWT)
-    const newToken = generateToken('refreshed');
-    
-    res.json({
-      success: true,
-      data: {
-        tokens: {
-          accessToken: newToken,
-          refreshToken: newToken,
-          expiresIn: 3600
-        }
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Refresh token endpoint error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal Server Error',
-      message: 'Token refresh failed',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
 
 /**
  * Forgot password
@@ -342,6 +333,128 @@ const verifyEmail = async (req, res) => {
       success: false,
       error: 'Internal Server Error',
       message: 'Email verification failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Refresh access token
+ */
+const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Refresh token is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const { verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+    
+    try {
+      const decoded = verifyRefreshToken(refreshToken);
+      
+      // For admin user (hardcoded)
+      if (decoded.id === 1 || decoded.email === 'dc2006089@gmail.com') {
+        const userPayload = {
+          id: 1,
+          email: 'dc2006089@gmail.com',
+          name: 'Admin User',
+          role: 'admin',
+          isAdmin: true,
+          is_admin: true,
+          email_verified: true,
+          is_active: true
+        };
+        
+        const newAccessToken = generateAccessToken(userPayload);
+        const newRefreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+        
+        console.log('Admin refresh token successful, new tokens generated');
+        
+        res.json({
+          success: true,
+          data: {
+            tokens: {
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+              expiresIn: 3600
+            }
+          },
+          message: 'Token refreshed successfully',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // For regular users, get from database
+        const user = await User.findById(decoded.id);
+        
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            error: 'Not Found',
+            message: 'User not found',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        if (!user.is_active) {
+          return res.status(403).json({
+            success: false,
+            error: 'Forbidden',
+            message: 'Account is inactive',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        const userPayload = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role || 'user',
+          isAdmin: false,
+          is_admin: false,
+          email_verified: user.email_verified || true,
+          is_active: user.is_active !== false
+        };
+        
+        const newAccessToken = generateAccessToken(userPayload);
+        const newRefreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+        
+        console.log('User refresh token successful, new tokens generated');
+        
+        res.json({
+          success: true,
+          data: {
+            tokens: {
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+              expiresIn: 3600
+            }
+          },
+          message: 'Token refreshed successfully',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Refresh token verification failed:', error.message);
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Invalid or expired refresh token',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Refresh token endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: 'Failed to refresh token',
       timestamp: new Date().toISOString()
     });
   }

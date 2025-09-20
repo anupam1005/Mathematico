@@ -5,14 +5,14 @@ const router = express.Router();
 const studentController = require('../../controllers/studentController');
 
 // Import middleware
-const { authenticateToken, requireUser } = require('../../middlewares/auth');
+const { authenticateToken, requireActiveUser } = require('../../middlewares/authMiddleware');
 
 // Test route (no auth required)
 router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Student API is working!',
-    note: 'Authentication required for other endpoints',
+    note: 'Authentication required for enrollment/purchase actions',
     endpoints: {
       dashboard: 'GET /api/student/dashboard',
       courses: 'GET /api/student/courses',
@@ -23,26 +23,24 @@ router.get('/', (req, res) => {
   });
 });
 
-// All student routes require authentication and user role
+// Public routes (no authentication required for browsing)
+router.get('/courses', studentController.getCourses);
+router.get('/courses/:id', studentController.getCourseById);
+router.get('/books', studentController.getBooks);
+router.get('/books/:id', studentController.getBookById);
+router.get('/live-classes', studentController.getLiveClasses);
+router.get('/live-classes/:id', studentController.getLiveClassById);
+
+// Protected routes (require authentication)
 router.use(authenticateToken);
-router.use(requireUser);
+router.use(requireActiveUser);
 
 // Student dashboard
 router.get('/dashboard', studentController.getDashboard);
 
-// Student courses
-router.get('/courses', studentController.getCourses);
-router.get('/courses/:id', studentController.getCourseById);
+// Enrollment and purchase actions (require authentication)
 router.post('/courses/:id/enroll', studentController.enrollInCourse);
-
-// Student books
-router.get('/books', studentController.getBooks);
-router.get('/books/:id', studentController.getBookById);
 router.post('/books/:id/purchase', studentController.purchaseBook);
-
-// Student live classes
-router.get('/live-classes', studentController.getLiveClasses);
-router.get('/live-classes/:id', studentController.getLiveClassById);
 router.post('/live-classes/:id/enroll', studentController.enrollInLiveClass);
 
 // Student progress
