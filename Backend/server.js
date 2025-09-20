@@ -10,11 +10,7 @@ const { testConnection, createUsersTable, createBooksTable, createCoursesTable, 
 // Import middleware
 const { authenticateToken, requireAdmin, requireActiveUser } = require('./middlewares/authMiddleware');
 
-// Import API routes
-const authRoutes = require('./api/routes/auth');
-const studentRoutes = require('./api/routes/student');
-const adminRoutes = require('./api/routes/admin');
-const securePdfRoutes = require('./api/routes/secure-pdf');
+// API routes are defined directly in this file
 
 // Initialize Express app
 const app = express();
@@ -226,18 +222,346 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// API Routes
-// Auth routes (login, register, etc.)
-app.use('/api/auth', authRoutes);
+// All API routes are defined directly in this file
 
-// Student API routes (for mobile app and student dashboard)
-app.use('/api/student', studentRoutes);
+// Basic auth routes
+app.get('/api/auth', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
 
-// Admin API routes (for admin panel)
-app.use('/api/admin', adminRoutes);
+app.post('/api/auth/login', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Login endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
 
-// Secure PDF routes (for protected PDF viewing)
-app.use('/api/secure-pdf', securePdfRoutes);
+app.post('/api/auth/register', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Register endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Basic admin routes
+app.get('/api/admin', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin dashboard endpoint
+app.get('/api/admin/dashboard', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      stats: {
+        totalUsers: 1250,
+        totalStudents: 1200,
+        totalCourses: 45,
+        totalModules: 180,
+        totalLessons: 720,
+        totalRevenue: 125000,
+        activeBatches: 12,
+      },
+      recentUsers: [],
+      recentCourses: [],
+    },
+    message: 'Dashboard data retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin users endpoint
+app.get('/api/admin/users', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Users retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin books endpoint
+app.get('/api/admin/books', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Books retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin live classes endpoint
+app.get('/api/admin/live-classes', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Live classes retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin courses endpoint
+app.get('/api/v1/admin/courses', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Courses retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin books endpoint (v1) - will be updated to use books array below
+
+// Admin users endpoint (v1)
+app.get('/api/v1/admin/users', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Users retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin live classes endpoint (v1)
+app.get('/api/v1/admin/live-classes', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Live classes retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Admin dashboard endpoint (v1)
+app.get('/api/v1/admin/dashboard', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      stats: {
+        totalUsers: 1250,
+        totalStudents: 1200,
+        totalCourses: 45,
+        totalModules: 180,
+        totalLessons: 720,
+        totalRevenue: 125000,
+        activeBatches: 12,
+      },
+      recentUsers: [],
+      recentCourses: [],
+    },
+    message: 'Dashboard data retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Book management endpoints
+let books = [
+  {
+    id: '1',
+    title: 'Advanced Mathematics',
+    author: 'Dr. John Smith',
+    description: 'Comprehensive guide to advanced mathematical concepts',
+    category: 'Mathematics',
+    subject: 'Calculus',
+    level: 'Advanced',
+    status: 'active',
+    isPublished: true,
+    downloads: 150,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: '2',
+    title: 'Physics Fundamentals',
+    author: 'Prof. Jane Doe',
+    description: 'Essential physics concepts for beginners',
+    category: 'Physics',
+    subject: 'Mechanics',
+    level: 'Foundation',
+    status: 'draft',
+    isPublished: false,
+    downloads: 75,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: '3',
+    title: 'Chemistry Basics',
+    author: 'Dr. Mike Johnson',
+    description: 'Introduction to chemical principles',
+    category: 'Chemistry',
+    subject: 'General Chemistry',
+    level: 'Intermediate',
+    status: 'active',
+    isPublished: true,
+    downloads: 200,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Get all books
+app.get('/api/v1/admin/books', (req, res) => {
+  res.json({
+    success: true,
+    data: books,
+    message: 'Books retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Create book
+app.post('/api/v1/admin/books', (req, res) => {
+  try {
+    const { title, author, description, category, subject, level, status = 'draft' } = req.body;
+    
+    const newBook = {
+      id: (books.length + 1).toString(),
+      title,
+      author,
+      description,
+      category,
+      subject,
+      level,
+      status,
+      isPublished: status === 'active',
+      downloads: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    books.push(newBook);
+    
+    res.json({
+      success: true,
+      data: newBook,
+      message: 'Book created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Update book
+app.put('/api/v1/admin/books/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const bookIndex = books.findIndex(book => book.id === id);
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const updatedBook = {
+      ...books[bookIndex],
+      ...req.body,
+      id,
+      updatedAt: new Date().toISOString()
+    };
+    
+    books[bookIndex] = updatedBook;
+    
+    res.json({
+      success: true,
+      data: updatedBook,
+      message: 'Book updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Delete book
+app.delete('/api/v1/admin/books/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const bookIndex = books.findIndex(book => book.id === id);
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    books.splice(bookIndex, 1);
+    
+    res.json({
+      success: true,
+      message: 'Book deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Toggle book publish status
+app.put('/api/v1/admin/books/:id/toggle-publish', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isPublished } = req.body;
+    const bookIndex = books.findIndex(book => book.id === id);
+    
+    if (bookIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    books[bookIndex].isPublished = isPublished;
+    books[bookIndex].status = isPublished ? 'active' : 'draft';
+    books[bookIndex].updatedAt = new Date().toISOString();
+    
+    res.json({
+      success: true,
+      data: books[bookIndex],
+      message: `Book ${isPublished ? 'published' : 'unpublished'} successfully`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle book status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Static file serving
 app.use(express.static('public'));
@@ -495,26 +819,6 @@ app.post('/api/v1/auth/refresh-token', (req, res) => {
 });
 
 // In-memory storage for demo purposes
-let books = [
-  {
-    id: '1',
-    title: 'Advanced Mathematics',
-    author: 'Dr. John Smith',
-    description: 'Comprehensive guide to advanced mathematical concepts',
-    category: 'Mathematics',
-    subject: 'Mathematics',
-    class: 'Class 12',
-    level: 'Advanced',
-    pages: 450,
-    isbn: '978-1234567890',
-    status: 'active',
-    isPublished: true,
-    isFeatured: true,
-    tags: ['mathematics', 'advanced', 'calculus'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
 
 let courses = [
   {

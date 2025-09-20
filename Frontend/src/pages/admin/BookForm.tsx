@@ -198,7 +198,7 @@ const BookForm: React.FC<BookFormProps> = ({ book, isEditing, onSuccess }) => {
         formDataToSend.append('coverImage', coverImageFile);
       }
       if (pdfFile) {
-        formDataToSend.append('pdfFile', pdfFile);
+        formDataToSend.append('pdf', pdfFile);
       }
 
       if (isEditing && id) {
