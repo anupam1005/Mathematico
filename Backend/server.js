@@ -249,7 +249,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
 });
 
-// Initialize database and start server
+// Initialize database function
 const initializeDatabase = async () => {
   try {
     console.log('Testing database connection...');
@@ -269,10 +269,17 @@ const initializeDatabase = async () => {
   }
 };
 
-// start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
-  console.log(`Server listening on ${PORT}`);
-  await initializeDatabase();
-});
-module.exports = app;
+// For Vercel serverless deployment
+if (process.env.VERCEL) {
+  // Initialize database on Vercel
+  initializeDatabase();
+  module.exports = app;
+} else {
+  // For local development
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, async () => {
+    console.log(`Server listening on ${PORT}`);
+    await initializeDatabase();
+  });
+  module.exports = app;
+}
