@@ -84,24 +84,78 @@ app.post("/api/v1/auth/test", (req, res) => {
 });
 
 // ----------------- Import Controllers and Middleware -----------------
+let authController, adminController, mobileController, profileController, studentController;
+let authenticateToken, requireAdmin, uploadFilesForBook;
+
 try {
   console.log("🔧 Loading controllers...");
-  const authController = require("./controllers/authController");
-  console.log("✅ Auth controller loaded");
-  const adminController = require("./controllers/adminController");
-  console.log("✅ Admin controller loaded");
-  const mobileController = require("./controllers/mobileController");
-  console.log("✅ Mobile controller loaded");
-  const profileController = require("./controllers/profileController");
-  console.log("✅ Profile controller loaded");
-  const studentController = require("./controllers/studentController");
-  console.log("✅ Student controller loaded");
-  const { authenticateToken } = require("./middlewares/auth");
-  console.log("✅ Auth middleware loaded");
-  const { requireAdmin } = require("./middlewares/authMiddleware");
-  console.log("✅ Admin middleware loaded");
-  const { uploadFilesForBook } = require("./controllers/adminController");
-  console.log("✅ Upload middleware loaded");
+  
+  // Load controllers with individual error handling
+  try {
+    authController = require("./controllers/authController");
+    console.log("✅ Auth controller loaded");
+  } catch (err) {
+    console.error("❌ Failed to load authController:", err.message);
+    throw err;
+  }
+  
+  try {
+    adminController = require("./controllers/adminController");
+    console.log("✅ Admin controller loaded");
+  } catch (err) {
+    console.error("❌ Failed to load adminController:", err.message);
+    throw err;
+  }
+  
+  try {
+    mobileController = require("./controllers/mobileController");
+    console.log("✅ Mobile controller loaded");
+  } catch (err) {
+    console.error("❌ Failed to load mobileController:", err.message);
+    throw err;
+  }
+  
+  try {
+    profileController = require("./controllers/profileController");
+    console.log("✅ Profile controller loaded");
+  } catch (err) {
+    console.error("❌ Failed to load profileController:", err.message);
+    throw err;
+  }
+  
+  try {
+    studentController = require("./controllers/studentController");
+    console.log("✅ Student controller loaded");
+  } catch (err) {
+    console.error("❌ Failed to load studentController:", err.message);
+    throw err;
+  }
+  
+  try {
+    const authMiddleware = require("./middlewares/auth");
+    authenticateToken = authMiddleware.authenticateToken;
+    console.log("✅ Auth middleware loaded");
+  } catch (err) {
+    console.error("❌ Failed to load auth middleware:", err.message);
+    throw err;
+  }
+  
+  try {
+    const adminMiddleware = require("./middlewares/authMiddleware");
+    requireAdmin = adminMiddleware.requireAdmin;
+    console.log("✅ Admin middleware loaded");
+  } catch (err) {
+    console.error("❌ Failed to load admin middleware:", err.message);
+    throw err;
+  }
+  
+  try {
+    uploadFilesForBook = adminController.uploadFilesForBook;
+    console.log("✅ Upload middleware loaded");
+  } catch (err) {
+    console.error("❌ Failed to load upload middleware:", err.message);
+    throw err;
+  }
 
   // ----------------- Auth Routes -----------------
   app.post("/api/v1/auth/login", authController.login);
@@ -190,6 +244,37 @@ try {
     name: err.name,
     code: err.code
   });
+  
+  // Fallback: Register basic routes even if controllers fail
+  console.log("🔧 Setting up fallback routes...");
+  
+  // Basic auth fallback routes
+  app.post("/api/v1/auth/login", (req, res) => {
+    res.status(500).json({
+      success: false,
+      message: "Controller not loaded - server error",
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  app.post("/api/v1/auth/register", (req, res) => {
+    res.status(500).json({
+      success: false,
+      message: "Controller not loaded - server error",
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Basic mobile fallback routes
+  app.get("/api/v1/mobile/courses", (req, res) => {
+    res.status(500).json({
+      success: false,
+      message: "Controller not loaded - server error",
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  console.log("⚠️ Fallback routes registered");
 }
 
 // Initialize database connection (non-blocking)
