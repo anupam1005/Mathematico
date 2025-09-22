@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "Backend/server.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "Backend/server.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "/Backend/server.js" }
   ]
