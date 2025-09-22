@@ -107,13 +107,16 @@ app.get('/health', (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   try {
+    console.log('Root endpoint hit:', req.url);
     res.json({
       success: true,
       message: 'Mathematico Backend API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      vercel: !!process.env.VERCEL
+      vercel: !!process.env.VERCEL,
+      url: req.url,
+      method: req.method
     });
   } catch (error) {
     console.error('Root endpoint error:', error);
@@ -310,6 +313,7 @@ if (process.env.VERCEL) {
   console.log('Running on Vercel - minimal server setup');
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Vercel region:', process.env.VERCEL_REGION);
+  console.log('Request URL:', process.env.VERCEL_URL);
   module.exports = app;
 } else {
   // For local development - try to initialize database

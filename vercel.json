@@ -2,30 +2,19 @@
     "version": 2,
     "builds": [
       {
-        "src": "Backend/server.js",
+        "src": "api/index.js",
         "use": "@vercel/node"
       }
     ],
+    "functions": {
+      "api/index.js": {
+        "maxDuration": 30
+      }
+    },
     "routes": [
       {
-        "src": "/favicon.ico",
-        "dest": "/Backend/server.js"
-      },
-      {
-        "src": "/robots.txt",
-        "dest": "/Backend/server.js"
-      },
-      {
-        "src": "/api/(.*)",
-        "dest": "/Backend/server.js"
-      },
-      {
-        "src": "/health",
-        "dest": "/Backend/server.js"
-      },
-      {
         "src": "/(.*)",
-        "dest": "/Backend/server.js"
+        "dest": "/api/index.js"
       }
     ],
     "env": {
