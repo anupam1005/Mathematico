@@ -85,29 +85,25 @@ async function initializeDatabase() {
   }
 }
 
-// ----------------- Initialize and Setup Routes -----------------
-async function setupRoutes() {
-  try {
-    // Initialize database first
-    await initializeDatabase();
-    
-    console.log("🔧 Loading controllers...");
-    const authController = require("./controllers/authController");
-    console.log("✅ Auth controller loaded");
-    const adminController = require("./controllers/adminController");
-    console.log("✅ Admin controller loaded");
-    const mobileController = require("./controllers/mobileController");
-    console.log("✅ Mobile controller loaded");
-    const profileController = require("./controllers/profileController");
-    console.log("✅ Profile controller loaded");
-    const studentController = require("./controllers/studentController");
-    console.log("✅ Student controller loaded");
-    const { authenticateToken } = require("./middlewares/auth");
-    console.log("✅ Auth middleware loaded");
-    const { requireAdmin } = require("./middlewares/authMiddleware");
-    console.log("✅ Admin middleware loaded");
-    const { uploadFilesForBook } = require("./controllers/adminController");
-    console.log("✅ Upload middleware loaded");
+// ----------------- Import routes dynamically -----------------
+try {
+  console.log("🔧 Loading controllers...");
+  const authController = require("./controllers/authController");
+  console.log("✅ Auth controller loaded");
+  const adminController = require("./controllers/adminController");
+  console.log("✅ Admin controller loaded");
+  const mobileController = require("./controllers/mobileController");
+  console.log("✅ Mobile controller loaded");
+  const profileController = require("./controllers/profileController");
+  console.log("✅ Profile controller loaded");
+  const studentController = require("./controllers/studentController");
+  console.log("✅ Student controller loaded");
+  const { authenticateToken } = require("./middlewares/auth");
+  console.log("✅ Auth middleware loaded");
+  const { requireAdmin } = require("./middlewares/authMiddleware");
+  console.log("✅ Admin middleware loaded");
+  const { uploadFilesForBook } = require("./controllers/adminController");
+  console.log("✅ Upload middleware loaded");
 
   // ----------------- Auth Routes -----------------
   app.post("/api/v1/auth/login", authController.login);
@@ -153,20 +149,19 @@ async function setupRoutes() {
   app.put("/api/v1/profile", authenticateToken, profileController.updateProfile);
   app.put("/api/v1/profile/password", authenticateToken, profileController.changePassword);
 
-    console.log("✅ All routes registered successfully");
-  } catch (err) {
-    console.error("❌ Route setup failed:", err);
-    console.error("❌ Error stack:", err.stack);
-    console.error("❌ Error details:", {
-      message: err.message,
-      name: err.name,
-      code: err.code
-    });
-  }
+  console.log("✅ All routes registered successfully");
+} catch (err) {
+  console.error("❌ Route setup failed:", err);
+  console.error("❌ Error stack:", err.stack);
+  console.error("❌ Error details:", {
+    message: err.message,
+    name: err.name,
+    code: err.code
+  });
 }
 
-// Call the setup function
-setupRoutes();
+// Initialize database after routes are set up
+initializeDatabase();
 
 // ----------------- 404 & Error Handler -----------------
 app.use("*", (req, res) => {
