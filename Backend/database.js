@@ -19,21 +19,29 @@ const dbConfig = {
   }
 };
 
-console.log('Database Config:', {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  user: dbConfig.user,
-  database: dbConfig.database,
-  ssl: dbConfig.ssl ? 'enabled' : 'disabled'
-});
+// Lazy database connection
+let pool;
 
-// Create connection pool
-const pool = mysql.createPool(dbConfig);
+const getPool = () => {
+  if (!pool) {
+    console.log('Database Config:', {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      ssl: dbConfig.ssl ? 'enabled' : 'disabled'
+    });
+    
+    // Create connection pool
+    pool = mysql.createPool(dbConfig);
+  }
+  return pool;
+};
 
 // Test database connection
 async function testConnection() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
     console.log('✅ Database connected successfully');
     console.log('Database:', dbConfig.database);
     console.log('Host:', dbConfig.host);
@@ -85,7 +93,7 @@ let nextFallbackId = 3;
 // Create users table if it doesn't exist
 async function createUsersTable() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
     
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
@@ -125,7 +133,7 @@ async function createUsersTable() {
 // Create books table if it doesn't exist
 async function createBooksTable() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
     
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS books (
@@ -204,7 +212,7 @@ async function createBooksTable() {
 // Create courses table
 async function createCoursesTable() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
 
     // Temporarily disable foreign key checks
     await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
@@ -281,7 +289,7 @@ async function createCoursesTable() {
 // Create live_classes table
 async function createLiveClassesTable() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
     
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS live_classes (
@@ -313,7 +321,7 @@ async function createLiveClassesTable() {
 // Create enrollments table
 async function createEnrollmentsTable() {
   try {
-    const connection = await pool.getConnection();
+    const connection = await getPool().getConnection();
 
     // First, drop the enrollments table if it exists to avoid foreign key conflicts
     try {
@@ -367,7 +375,7 @@ const Book = {
   // Get all books with pagination and filtering
   async getAll(page = 1, limit = 10, category = null, search = null) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       let whereClause = '';
       let params = [];
@@ -454,7 +462,7 @@ const Book = {
   // Get book by ID
   async getById(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
       connection.release();
       
@@ -475,7 +483,7 @@ const Book = {
   // Create new book
   async create(bookData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const fields = Object.keys(bookData);
       const values = Object.values(bookData);
@@ -508,7 +516,7 @@ const Book = {
   // Update book
   async update(id, bookData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const fields = Object.keys(bookData);
       const values = Object.values(bookData);
@@ -546,7 +554,7 @@ const Book = {
   // Delete book
   async delete(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       // Get the book before deleting
       const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
@@ -578,7 +586,7 @@ const Book = {
   // Toggle publish status
   async togglePublish(id, isPublished) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const status = isPublished ? 'published' : 'draft';
       const query = 'UPDATE books SET isPublished = ?, status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
@@ -609,7 +617,7 @@ const Book = {
 };
 
 module.exports = {
-  pool,
+  get pool() { return getPool(); },
   testConnection,
   createUsersTable,
   createBooksTable,
