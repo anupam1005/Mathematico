@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "Backend/server.js": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node",
+      "maxDuration": 30
     }
   },
   "routes": [

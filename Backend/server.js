@@ -63,14 +63,23 @@ app.get("/api/v1/health", (req, res) => {
 
 // ----------------- Import routes dynamically -----------------
 try {
+  console.log("🔧 Loading controllers...");
   const authController = require("./controllers/authController");
+  console.log("✅ Auth controller loaded");
   const adminController = require("./controllers/adminController");
+  console.log("✅ Admin controller loaded");
   const mobileController = require("./controllers/mobileController");
+  console.log("✅ Mobile controller loaded");
   const profileController = require("./controllers/profileController");
+  console.log("✅ Profile controller loaded");
   const studentController = require("./controllers/studentController");
+  console.log("✅ Student controller loaded");
   const { authenticateToken } = require("./middlewares/auth");
+  console.log("✅ Auth middleware loaded");
   const { requireAdmin } = require("./middlewares/authMiddleware");
+  console.log("✅ Admin middleware loaded");
   const { uploadFilesForBook } = require("./controllers/adminController");
+  console.log("✅ Upload middleware loaded");
 
   // ----------------- Auth Routes -----------------
   app.post("/api/v1/auth/login", authController.login);
