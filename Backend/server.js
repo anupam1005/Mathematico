@@ -15,6 +15,16 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 // controllers
 const adminController = require('./controllers/adminController');
 
+// database initialization
+const { 
+  testConnection, 
+  createUsersTable, 
+  createBooksTable, 
+  createCoursesTable, 
+  createLiveClassesTable,
+  createEnrollmentsTable 
+} = require('./database');
+
 // middleware for auth (simple placeholder — keep your own implementation)
 const { authenticateToken, requireAdmin } = require('./middlewares/authMiddleware') || {
   // fallback stubs if you don't have middlewares yet
@@ -239,7 +249,30 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
 });
 
+// Initialize database and start server
+const initializeDatabase = async () => {
+  try {
+    console.log('Testing database connection...');
+    await testConnection();
+    console.log('Database connection successful!');
+    
+    console.log('Creating database tables...');
+    await createUsersTable();
+    await createBooksTable();
+    await createCoursesTable();
+    await createLiveClassesTable();
+    await createEnrollmentsTable();
+    console.log('Database tables created successfully!');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    // Don't exit the process, let the server start with fallback data
+  }
+};
+
 // start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server listening on ${PORT}`);
+  await initializeDatabase();
+});
 module.exports = app;

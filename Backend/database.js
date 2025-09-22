@@ -147,6 +147,37 @@ async function createBooksTable() {
     `;
     
     await connection.execute(createTableQuery);
+    
+    // Add level column if it doesn't exist
+    try {
+      await connection.execute('ALTER TABLE books ADD COLUMN level VARCHAR(50)');
+      console.log('✅ Added level column to books table');
+    } catch (alterError) {
+      // Column already exists, ignore error
+      if (!alterError.message.includes('Duplicate column name')) {
+        console.log('Level column already exists or other error:', alterError.message);
+      }
+    }
+    
+    // Add is_published column if it doesn't exist
+    try {
+      await connection.execute('ALTER TABLE books ADD COLUMN is_published BOOLEAN DEFAULT FALSE');
+      console.log('✅ Added is_published column to books table');
+    } catch (alterError) {
+      // Column already exists, ignore error
+      if (!alterError.message.includes('Duplicate column name')) {
+        console.log('is_published column already exists or other error:', alterError.message);
+      }
+    }
+    
+    // Update status column ENUM if needed
+    try {
+      await connection.execute('ALTER TABLE books MODIFY COLUMN status ENUM(\'draft\', \'active\', \'archived\') DEFAULT \'draft\'');
+      console.log('✅ Updated books status column ENUM');
+    } catch (alterError) {
+      console.log('Status column ENUM update error:', alterError.message);
+    }
+    
     console.log('✅ Books table created/verified successfully');
     
     // Insert sample data if table is empty
@@ -174,9 +205,35 @@ async function createBooksTable() {
 async function createCoursesTable() {
   try {
     const connection = await pool.getConnection();
-    
+
+    // Temporarily disable foreign key checks
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+
+    // Drop all dependent tables first
+    try {
+      await connection.execute('DROP TABLE IF EXISTS enrollments');
+      console.log('✅ Dropped enrollments table');
+    } catch (dropError) {
+      console.log('No enrollments table to drop');
+    }
+
+    try {
+      await connection.execute('DROP TABLE IF EXISTS modules');
+      console.log('✅ Dropped modules table');
+    } catch (dropError) {
+      console.log('No modules table to drop');
+    }
+
+    // Now drop and recreate courses table
+    try {
+      await connection.execute('DROP TABLE IF EXISTS courses');
+      console.log('✅ Dropped existing courses table');
+    } catch (dropError) {
+      console.log('No existing courses table to drop');
+    }
+
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS courses (
+      CREATE TABLE courses (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         description TEXT,
@@ -190,25 +247,33 @@ async function createCoursesTable() {
     `;
     
     await connection.execute(createTableQuery);
+    console.log('✅ Created courses table with AUTO_INCREMENT');
+
+    // Re-enable foreign key checks
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+    
     console.log('✅ Courses table created/verified successfully');
-    
-    // Insert sample data if table is empty
-    const [rows] = await connection.execute('SELECT COUNT(*) as count FROM courses');
-    if (rows[0].count === 0) {
-      const insertSampleData = `
-        INSERT INTO courses (title, description, category, level, price, status) VALUES
-        ('Advanced Mathematics', 'Comprehensive course covering advanced mathematical concepts', 'Mathematics', 'Advanced', 99.99, 'active'),
-        ('Basic Algebra', 'Introduction to algebraic concepts and problem solving', 'Mathematics', 'Foundation', 49.99, 'active')
-      `;
-      
-      await connection.execute(insertSampleData);
-      console.log('✅ Sample courses data inserted successfully');
-    }
-    
+
+    // Insert sample data
+    const insertSampleData = `
+      INSERT INTO courses (title, description, category, level, price, status) VALUES
+      ('Advanced Mathematics', 'Comprehensive course covering advanced mathematical concepts', 'Mathematics', 'Advanced', 99.99, 'active'),
+      ('Basic Algebra', 'Introduction to algebraic concepts and problem solving', 'Mathematics', 'Foundation', 49.99, 'active')
+    `;
+
+    await connection.execute(insertSampleData);
+    console.log('✅ Sample courses data inserted successfully');
+
     connection.release();
     return true;
   } catch (error) {
     console.error('❌ Error creating courses table:', error.message);
+    // Try to re-enable foreign key checks even if there was an error
+    try {
+      await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+    } catch (fkError) {
+      console.log('Could not re-enable foreign key checks:', fkError.message);
+    }
     return false;
   }
 }
@@ -249,11 +314,22 @@ async function createLiveClassesTable() {
 async function createEnrollmentsTable() {
   try {
     const connection = await pool.getConnection();
+
+    // First, drop the enrollments table if it exists to avoid foreign key conflicts
+    try {
+      await connection.execute('DROP TABLE IF EXISTS enrollments');
+      console.log('✅ Dropped existing enrollments table');
+    } catch (dropError) {
+      console.log('No existing enrollments table to drop');
+    }
+
+    // Temporarily disable foreign key checks
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
     
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS enrollments (
+      CREATE TABLE enrollments (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
+        user_id VARCHAR(36) NOT NULL,
         course_id INT NOT NULL,
         enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         payment_status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
@@ -265,12 +341,23 @@ async function createEnrollmentsTable() {
     `;
     
     await connection.execute(createTableQuery);
+    console.log('✅ Created enrollments table with proper foreign keys');
+
+    // Re-enable foreign key checks
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+    
     console.log('✅ Enrollments table created/verified successfully');
     
     connection.release();
     return true;
   } catch (error) {
     console.error('❌ Error creating enrollments table:', error.message);
+    // Try to re-enable foreign key checks even if there was an error
+    try {
+      await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+    } catch (fkError) {
+      console.log('Could not re-enable foreign key checks:', fkError.message);
+    }
     return false;
   }
 }
