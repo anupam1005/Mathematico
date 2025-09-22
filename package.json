@@ -8,12 +8,11 @@
     "dev": "cd Frontend && npm run dev",
     "dev:backend": "cd Backend && npm run dev",
     "dev:mobile": "cd mathematico && npm start",
-    "install": "npm install --force --legacy-peer-deps",
-    "install:frontend": "cd Frontend && npm install --force --legacy-peer-deps",
+    "install:frontend": "cd Frontend && npm install",
     "install:backend": "cd Backend && npm install --force --legacy-peer-deps",
-    "install:mobile": "cd mathematico && npm install --force --legacy-peer-deps",
+    "install:mobile": "cd mathematico && npm install",
     "install:all": "npm run install:frontend && npm run install:backend && npm run install:mobile",
-    "vercel-build": "cd Backend && npm install --force --legacy-peer-deps"
+    "vercel-build": "cd Backend && npm install"
   },
   "workspaces": [
     "Frontend",
@@ -24,12 +23,6 @@
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-  "os": [
-    "win32"
-  ],
-  "cpu": [
-    "x64"
-  ],
   "keywords": [
     "education",
     "mathematics",
