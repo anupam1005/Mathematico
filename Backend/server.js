@@ -72,6 +72,17 @@ app.get("/api/v1/test", (req, res) => {
   });
 });
 
+// Simple auth test route
+app.post("/api/v1/auth/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Auth route is working ✅",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    vercel: !!process.env.VERCEL,
+  });
+});
+
 // ----------------- Import Controllers and Middleware -----------------
 try {
   console.log("🔧 Loading controllers...");
