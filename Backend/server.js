@@ -62,6 +62,27 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Explicit favicon route - try to serve favicon, fallback to 404
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
+  res.sendFile(faviconPath, (err) => {
+    if (err) {
+      console.log('Favicon not found, returning 404');
+      res.status(404).end();
+    }
+  });
+});
+
+// Robots.txt route
+app.get('/robots.txt', (req, res) => {
+  const robotsPath = path.join(__dirname, 'public', 'robots.txt');
+  res.sendFile(robotsPath, (err) => {
+    if (err) {
+      res.status(404).end();
+    }
+  });
+});
+
 // Health check (simple, no database dependency)
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
@@ -287,6 +308,8 @@ app.use((err, req, res, next) => {
 // For Vercel serverless deployment
 if (process.env.VERCEL) {
   console.log('Running on Vercel - minimal server setup');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Vercel region:', process.env.VERCEL_REGION);
   module.exports = app;
 } else {
   // For local development - try to initialize database

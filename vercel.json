@@ -8,6 +8,22 @@
     ],
     "routes": [
       {
+        "src": "/favicon.ico",
+        "dest": "/Backend/server.js"
+      },
+      {
+        "src": "/robots.txt",
+        "dest": "/Backend/server.js"
+      },
+      {
+        "src": "/api/(.*)",
+        "dest": "/Backend/server.js"
+      },
+      {
+        "src": "/health",
+        "dest": "/Backend/server.js"
+      },
+      {
         "src": "/(.*)",
         "dest": "/Backend/server.js"
       }
