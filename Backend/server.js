@@ -54,19 +54,46 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Health
+// Health check (simple, no database dependency)
 app.get('/api/v1/health', (req, res) => {
-  res.json({ success: true, message: 'healthy', timestamp: new Date().toISOString() });
+  res.json({ 
+    success: true, 
+    message: 'healthy', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    vercel: !!process.env.VERCEL
+  });
+});
+
+// Simple root endpoint for testing
+app.get('/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Server is running', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Mathematico Backend API',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    res.json({
+      success: true,
+      message: 'Mathematico Backend API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      vercel: !!process.env.VERCEL
+    });
+  } catch (error) {
+    console.error('Root endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Auth login endpoint
@@ -271,8 +298,8 @@ const initializeDatabase = async () => {
 
 // For Vercel serverless deployment
 if (process.env.VERCEL) {
-  // Initialize database on Vercel
-  initializeDatabase();
+  console.log('Running on Vercel - skipping database initialization');
+  // Don't initialize database on Vercel to avoid crashes
   module.exports = app;
 } else {
   // For local development
