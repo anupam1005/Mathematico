@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "install": "npm install --force --legacy-peer-deps",
     "vercel-build": "echo 'Using unified backend server'"
   },
   "dependencies": {
@@ -21,12 +22,29 @@
     "mysql2": "3.14.3",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6",
-    "pdf-poppler": "^0.2.1",
-    "sharp": "^0.34.4",
     "uuid": "^13.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "resolutions": {
+    "@rollup/rollup-linux-x64-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-arm64-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-arm64-musl": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-arm-gnueabihf": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-arm-musleabihf": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-riscv64-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-riscv64-musl": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-ppc64-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-s390x-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-x64-musl": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0",
+    "@rollup/rollup-linux-loong64-gnu": "npm:@rollup/rollup-win32-x64-msvc@^4.52.0"
   },
   "keywords": [
     "mathematics",
