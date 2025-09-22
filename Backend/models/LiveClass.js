@@ -1,4 +1,12 @@
-const { pool } = require('../database');
+// Lazy load database connection
+let pool;
+const getPool = () => {
+  if (!pool) {
+    const database = require('../database');
+    pool = database.pool;
+  }
+  return pool;
+};
 
 // LiveClass Model - Handles live class-related database operations
 
@@ -8,7 +16,7 @@ class LiveClass {
    */
   static async create(liveClassData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const {
         title,
@@ -48,7 +56,7 @@ class LiveClass {
    */
   static async findById(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
       
@@ -65,7 +73,7 @@ class LiveClass {
    */
   static async getAll(page = 1, limit = 10, filters = {}) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       let whereClause = '';
       let params = [];
@@ -133,7 +141,7 @@ class LiveClass {
    */
   static async update(id, updateData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const fields = Object.keys(updateData);
       const values = Object.values(updateData);
@@ -158,7 +166,7 @@ class LiveClass {
    */
   static async delete(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       // Get the live class before deleting
       const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
@@ -184,7 +192,7 @@ class LiveClass {
    */
   static async updateStatus(id, status) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const query = 'UPDATE live_classes SET status = ?, updated_at = NOW() WHERE id = ?';
       await connection.execute(query, [status, id]);
@@ -205,7 +213,7 @@ class LiveClass {
    */
   static async getStats() {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [totalRows] = await connection.execute('SELECT COUNT(*) as total FROM live_classes');
       const [upcomingRows] = await connection.execute('SELECT COUNT(*) as upcoming FROM live_classes WHERE status = "upcoming"');
@@ -229,7 +237,7 @@ class LiveClass {
    */
   static async getUpcoming(limit = 5) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const query = `
         SELECT * FROM live_classes 

@@ -1,4 +1,12 @@
-const { pool } = require('../database');
+// Lazy load database connection
+let pool;
+const getPool = () => {
+  if (!pool) {
+    const database = require('../database');
+    pool = database.pool;
+  }
+  return pool;
+};
 
 // Course Model - Handles course-related database operations
 
@@ -8,7 +16,7 @@ class Course {
    */
   static async create(courseData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const {
         title,
@@ -48,7 +56,7 @@ class Course {
    */
   static async findById(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
       
@@ -65,7 +73,7 @@ class Course {
    */
   static async getAll(page = 1, limit = 10, filters = {}) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       let whereClause = '';
       let params = [];
@@ -132,7 +140,7 @@ class Course {
    */
   static async update(id, updateData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const fields = Object.keys(updateData);
       const values = Object.values(updateData);
@@ -157,7 +165,7 @@ class Course {
    */
   static async delete(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       // Get the course before deleting
       const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
@@ -183,7 +191,7 @@ class Course {
    */
   static async updateStatus(id, status, isPublished) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const query = 'UPDATE courses SET status = ?, is_published = ?, updated_at = NOW() WHERE id = ?';
       await connection.execute(query, [status, isPublished, id]);
@@ -204,7 +212,7 @@ class Course {
    */
   static async getStats() {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [totalRows] = await connection.execute('SELECT COUNT(*) as total FROM courses');
       const [publishedRows] = await connection.execute('SELECT COUNT(*) as published FROM courses WHERE is_published = 1');

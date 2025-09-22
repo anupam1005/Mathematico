@@ -1,6 +1,15 @@
-const { pool } = require('../database');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+
+// Lazy load database connection
+let pool;
+const getPool = () => {
+  if (!pool) {
+    const database = require('../database');
+    pool = database.pool;
+  }
+  return pool;
+};
 
 // User Model - Handles user-related database operations
 
@@ -10,7 +19,7 @@ class User {
    */
   static async create(userData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const { name, email, password, role = 'user' } = userData;
       
@@ -44,7 +53,7 @@ class User {
    */
   static async findByEmail(email) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [rows] = await connection.execute('SELECT * FROM users WHERE email = ?', [email]);
       
@@ -73,7 +82,7 @@ class User {
    */
   static async findById(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
       
@@ -90,7 +99,7 @@ class User {
    */
   static async update(id, updateData) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const fields = Object.keys(updateData);
       const values = Object.values(updateData);
@@ -115,7 +124,7 @@ class User {
    */
   static async delete(id) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       // Get the user before deleting
       const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
@@ -141,7 +150,7 @@ class User {
    */
   static async getAll(page = 1, limit = 10, filters = {}) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       let whereClause = '';
       let params = [];
@@ -198,7 +207,7 @@ class User {
    */
   static async updateStatus(id, status) {
     try {
-      const connection = await pool.getConnection();
+      const connection = await getPool().getConnection();
       
       const query = 'UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?';
       await connection.execute(query, [status, id]);
