@@ -72,10 +72,51 @@ try {
   const { requireAdmin } = require("./middlewares/authMiddleware");
   const { uploadFilesForBook } = require("./controllers/adminController");
 
-  // (Register routes exactly as before…)
-  // Example:
+  // ----------------- Auth Routes -----------------
   app.post("/api/v1/auth/login", authController.login);
-  // 🔽 Continue all your routes like before…
+  app.post("/api/v1/auth/register", authController.register);
+  app.post("/api/v1/auth/logout", authController.logout);
+  app.post("/api/v1/auth/refresh", authController.refreshToken);
+  app.post("/api/v1/auth/forgot-password", authController.forgotPassword);
+  app.post("/api/v1/auth/reset-password", authController.resetPassword);
+  app.post("/api/v1/auth/verify-email", authController.verifyEmail);
+  app.get("/api/v1/auth/profile", authenticateToken, authController.getProfile);
+
+  // ----------------- Admin Routes -----------------
+  app.get("/api/v1/admin/users", authenticateToken, requireAdmin, adminController.getUsers);
+  app.get("/api/v1/admin/courses", authenticateToken, requireAdmin, adminController.getCourses);
+  app.post("/api/v1/admin/courses", authenticateToken, requireAdmin, adminController.createCourse);
+  app.put("/api/v1/admin/courses/:id", authenticateToken, requireAdmin, adminController.updateCourse);
+  app.delete("/api/v1/admin/courses/:id", authenticateToken, requireAdmin, adminController.deleteCourse);
+  app.get("/api/v1/admin/books", authenticateToken, requireAdmin, adminController.getBooks);
+  app.post("/api/v1/admin/books", authenticateToken, requireAdmin, uploadFilesForBook, adminController.createBook);
+  app.put("/api/v1/admin/books/:id", authenticateToken, requireAdmin, uploadFilesForBook, adminController.updateBook);
+  app.delete("/api/v1/admin/books/:id", authenticateToken, requireAdmin, adminController.deleteBook);
+  app.get("/api/v1/admin/live-classes", authenticateToken, requireAdmin, adminController.getLiveClasses);
+  app.post("/api/v1/admin/live-classes", authenticateToken, requireAdmin, adminController.createLiveClass);
+  app.put("/api/v1/admin/live-classes/:id", authenticateToken, requireAdmin, adminController.updateLiveClass);
+  app.delete("/api/v1/admin/live-classes/:id", authenticateToken, requireAdmin, adminController.deleteLiveClass);
+
+  // ----------------- Student Routes -----------------
+  app.get("/api/v1/student/dashboard", authenticateToken, studentController.getDashboard);
+  app.get("/api/v1/student/courses", authenticateToken, studentController.getCourses);
+  app.get("/api/v1/student/books", authenticateToken, studentController.getBooks);
+  app.get("/api/v1/student/live-classes", authenticateToken, studentController.getLiveClasses);
+
+  // ----------------- Mobile Routes -----------------
+  app.get("/api/v1/mobile/courses", mobileController.getCourses);
+  app.get("/api/v1/mobile/books", mobileController.getBooks);
+  app.get("/api/v1/mobile/live-classes", mobileController.getLiveClasses);
+  app.get("/api/v1/mobile/course/:id", mobileController.getCourseById);
+  app.get("/api/v1/mobile/book/:id", mobileController.getBookById);
+  app.get("/api/v1/mobile/live-class/:id", mobileController.getLiveClassById);
+
+  // ----------------- Profile Routes -----------------
+  app.get("/api/v1/profile", authenticateToken, profileController.getProfile);
+  app.put("/api/v1/profile", authenticateToken, profileController.updateProfile);
+  app.put("/api/v1/profile/password", authenticateToken, profileController.changePassword);
+
+  console.log("✅ All routes registered successfully");
 } catch (err) {
   console.error("❌ Route setup failed:", err.message);
 }
