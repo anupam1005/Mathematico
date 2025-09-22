@@ -1,4 +1,8 @@
-Backend/
+Backend/node_modules/
+Backend/uploads/
+Backend/config.env
+Backend/config.env.example
+Backend/*.md
 Database.sql
 DATABASE_SETUP_README.md
 PROJECT_SETUP.md
