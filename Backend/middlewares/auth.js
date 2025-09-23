@@ -1,8 +1,5 @@
-const jwt = require('jsonwebtoken');
+const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
-
-// JWT Secret from environment
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 /**
  * Middleware to authenticate JWT token
@@ -21,8 +18,8 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    // Verify JWT token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Verify JWT token using the proper utility function
+    const decoded = verifyAccessToken(token);
     
     // Check if it's the hardcoded admin
     if (decoded.email === 'dc2006089@gmail.com' && decoded.role === 'admin') {
@@ -31,14 +28,17 @@ const authenticateToken = async (req, res, next) => {
         email: 'dc2006089@gmail.com',
         name: 'Admin User',
         role: 'admin',
-        isAdmin: true
+        isAdmin: true,
+        is_admin: true,
+        email_verified: true,
+        is_active: true
       };
       next();
       return;
     }
     
-    // Find user in database
-    const user = await User.findById(decoded.userId);
+    // Find user in database using the correct field name
+    const user = await User.findById(decoded.id);
     
     if (!user) {
       return res.status(401).json({
@@ -54,8 +54,11 @@ const authenticateToken = async (req, res, next) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
-      isAdmin: user.role === 'admin'
+      role: user.role || 'user',
+      isAdmin: user.role === 'admin',
+      is_admin: user.role === 'admin',
+      email_verified: user.email_verified || true,
+      is_active: user.is_active !== false
     };
 
     next();
@@ -64,7 +67,7 @@ const authenticateToken = async (req, res, next) => {
     return res.status(401).json({
       success: false,
       error: 'Unauthorized',
-      message: 'Invalid token',
+      message: 'Invalid or expired token',
       timestamp: new Date().toISOString()
     });
   }
@@ -115,30 +118,10 @@ const requireUser = requireRole('user');
  */
 const requireUserOrAdmin = requireRole(['user', 'admin']);
 
-/**
- * Generate JWT token
- */
-const generateJWT = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-};
-
-/**
- * Verify JWT token (for production)
- */
-const verifyJWT = (token) => {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    throw new Error('Invalid token');
-  }
-};
-
 module.exports = {
   authenticateToken,
   requireRole,
   requireAdmin,
   requireUser,
-  requireUserOrAdmin,
-  generateJWT,
-  verifyJWT
+  requireUserOrAdmin
 };

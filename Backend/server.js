@@ -205,22 +205,25 @@ try {
   app.put("/api/v1/student/notifications/:id/read", authenticateToken, studentController.markNotificationAsRead);
 
   // ----------------- Mobile Routes -----------------
+  // Public routes (no authentication required)
   app.get("/api/v1/mobile/courses", mobileController.getCourses);
   app.get("/api/v1/mobile/books", mobileController.getBooks);
   app.get("/api/v1/mobile/live-classes", mobileController.getLiveClasses);
   app.get("/api/v1/mobile/course/:id", mobileController.getCourseById);
   app.get("/api/v1/mobile/book/:id", mobileController.getBookById);
   app.get("/api/v1/mobile/live-class/:id", mobileController.getLiveClassById);
-  app.post("/api/v1/mobile/course/:id/enroll", mobileController.enrollInCourse);
-  app.post("/api/v1/mobile/book/:id/purchase", mobileController.purchaseBook);
-  app.post("/api/v1/mobile/live-class/:id/enroll", mobileController.enrollInLiveClass);
-  app.get("/api/v1/mobile/my-courses", mobileController.getMyCourses);
-  app.get("/api/v1/mobile/my-books", mobileController.getMyBooks);
-  app.get("/api/v1/mobile/my-live-classes", mobileController.getMyLiveClasses);
-  app.get("/api/v1/mobile/course/:courseId/progress", mobileController.getCourseProgress);
-  app.put("/api/v1/mobile/course/:courseId/progress", mobileController.updateCourseProgress);
-  app.get("/api/v1/mobile/notifications", mobileController.getNotifications);
-  app.put("/api/v1/mobile/notifications/:id/read", mobileController.markNotificationAsRead);
+  
+  // Protected routes (authentication required)
+  app.post("/api/v1/mobile/course/:id/enroll", authenticateToken, mobileController.enrollInCourse);
+  app.post("/api/v1/mobile/book/:id/purchase", authenticateToken, mobileController.purchaseBook);
+  app.post("/api/v1/mobile/live-class/:id/enroll", authenticateToken, mobileController.enrollInLiveClass);
+  app.get("/api/v1/mobile/my-courses", authenticateToken, mobileController.getMyCourses);
+  app.get("/api/v1/mobile/my-books", authenticateToken, mobileController.getMyBooks);
+  app.get("/api/v1/mobile/my-live-classes", authenticateToken, mobileController.getMyLiveClasses);
+  app.get("/api/v1/mobile/course/:courseId/progress", authenticateToken, mobileController.getCourseProgress);
+  app.put("/api/v1/mobile/course/:courseId/progress", authenticateToken, mobileController.updateCourseProgress);
+  app.get("/api/v1/mobile/notifications", authenticateToken, mobileController.getNotifications);
+  app.put("/api/v1/mobile/notifications/:id/read", authenticateToken, mobileController.markNotificationAsRead);
 
   // ----------------- Profile Routes -----------------
   app.get("/api/v1/profile", authenticateToken, profileController.getProfile);
