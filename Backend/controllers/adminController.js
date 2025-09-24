@@ -44,7 +44,7 @@ const getBooks = async (req, res) => {
   try {
     // If you use DB:
     if (pool) {
-      const [rows] = await pool.execute('SELECT id, title, author, description, category, pages, isbn, cover_image AS coverImage, pdf_url AS pdfUrl, status, is_published AS isPublished, created_at AS createdAt, updated_at AS updatedAt FROM books ORDER BY created_at DESC');
+      const [rows] = await pool.execute('SELECT id, title, author, description, category, pages, isbn, status FROM books ORDER BY id DESC');
       return res.json({ success: true, data: rows, message: 'Admin books retrieved successfully' });
     }
     // fallback demo:
@@ -101,7 +101,7 @@ const createBook = async (req, res) => {
     const coverImageUrl = `/uploads/covers/${path.basename(coverFile.path)}`;
 
     if (pool) {
-      const insertQuery = `INSERT INTO books (title, author, description, category, pages, isbn, cover_image, pdf_url, status, is_published, created_at, updated_at)
+      const insertQuery = `INSERT INTO books (title, author, description, category, pages, isbn, cover_image_url, pdf_url, status, is_published, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
       const [result] = await pool.execute(insertQuery, [
         title,
@@ -187,7 +187,7 @@ const updateBookStatus = async (req, res) => {
     const id = req.params.id;
     const { isPublished } = req.body;
     if (pool) {
-      await pool.execute('UPDATE books SET is_published = ?, status = ?, updated_at = NOW() WHERE id = ?', [isPublished ? 1 : 0, isPublished ? 'published' : 'draft', id]);
+      await pool.execute('UPDATE books SET is_published = ?, status = ? WHERE id = ?', [isPublished ? 1 : 0, isPublished ? 'active' : 'draft', id]);
       const [rows] = await pool.execute('SELECT * FROM books WHERE id = ?', [id]);
       return res.json({ success: true, data: rows[0], message: 'Book status updated' });
     }
@@ -204,7 +204,7 @@ const updateBookStatus = async (req, res) => {
 const getCourses = async (req, res) => {
   try {
     if (pool) {
-      const [rows] = await pool.execute('SELECT id, title, description, category, level, price, status, created_at as createdAt FROM courses ORDER BY created_at DESC');
+      const [rows] = await pool.execute('SELECT id, title, description, category, level, price, status FROM courses ORDER BY id DESC');
       return res.json({ success: true, data: rows, message: 'Admin courses retrieved successfully' });
     }
     return res.json({ success: true, data: [], message: 'Admin courses (no DB)' });
@@ -258,7 +258,19 @@ const deleteCourse = async (req, res) => {
 };
 
 const updateCourseStatus = async (req, res) => {
-  try { return res.json({ success: true, message: 'Course status updated (stub)' }); } catch (err) { console.error(err); res.status(500).json({ success: false, message: 'Failed to update' }); }
+  try {
+    const id = req.params.id;
+    const { isPublished } = req.body;
+    if (pool) {
+      await pool.execute('UPDATE courses SET is_published = ?, status = ? WHERE id = ?', [isPublished ? 1 : 0, isPublished ? 'active' : 'draft', id]);
+      const [rows] = await pool.execute('SELECT * FROM courses WHERE id = ?', [id]);
+      return res.json({ success: true, data: rows[0], message: 'Course status updated' });
+    }
+    res.json({ success: true, message: 'Course status updated (no DB)' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to update course status', error: err.message });
+  }
 };
 
 /**
@@ -305,7 +317,21 @@ const createLiveClass = async (req, res) => {
 const getLiveClassById = async (req, res) => { res.json({ success: true, data: null, message: 'Get live class (stub)' }); };
 const updateLiveClass = async (req, res) => { res.json({ success: true, message: 'Update live class (stub)' }); };
 const deleteLiveClass = async (req, res) => { res.json({ success: true, message: 'Delete live class (stub)' }); };
-const updateLiveClassStatus = async (req, res) => { res.json({ success: true, message: 'Update liveclass status (stub)' }); };
+const updateLiveClassStatus = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { isPublished } = req.body;
+    if (pool) {
+      await pool.execute('UPDATE live_classes SET is_published = ?, status = ? WHERE id = ?', [isPublished ? 1 : 0, isPublished ? 'scheduled' : 'draft', id]);
+      const [rows] = await pool.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
+      return res.json({ success: true, data: rows[0], message: 'Live class status updated' });
+    }
+    res.json({ success: true, message: 'Live class status updated (no DB)' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to update live class status', error: err.message });
+  }
+};
 
 // USERS (paging example)
 const getUsers = async (req, res) => {
@@ -314,12 +340,58 @@ const getUsers = async (req, res) => {
       const page = parseInt(req.query.page || '1', 10);
       const limit = parseInt(req.query.limit || '10', 10);
       const offset = (page - 1) * limit;
-      const [rows] = await pool.execute('SELECT id, name, email, role, is_active as isActive, created_at as createdAt FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
+      const [rows] = await pool.execute('SELECT id, name, email, role FROM users ORDER BY id DESC');
       return res.json({ success: true, data: rows });
     }
     return res.json({ success: true, data: [] });
   } catch (err) {
-    console.error(err); res.status(500).json({ success: false, message: 'Failed to get users', error: err.message });
+    console.error(err); 
+    res.status(500).json({ success: false, message: 'Failed to get users', error: err.message });
+  }
+};
+
+// DASHBOARD STATS
+const getDashboardStats = async (req, res) => {
+  try {
+    if (pool) {
+      // Get total counts
+      const [usersResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
+      const [coursesResult] = await pool.execute('SELECT COUNT(*) as total FROM courses');
+      const [booksResult] = await pool.execute('SELECT COUNT(*) as total FROM books');
+      const [liveClassesResult] = await pool.execute('SELECT COUNT(*) as total FROM live_classes');
+      
+      // Get recent activity (last 7 days) - simplified for now
+      const [recentUsers] = await pool.execute('SELECT COUNT(*) as count FROM users');
+      const [recentCourses] = await pool.execute('SELECT COUNT(*) as count FROM courses');
+      
+      const stats = {
+        totalUsers: usersResult[0].total,
+        totalCourses: coursesResult[0].total,
+        totalBooks: booksResult[0].total,
+        totalLiveClasses: liveClassesResult[0].total,
+        recentUsers: recentUsers[0].count,
+        recentCourses: recentCourses[0].count,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      return res.json({ success: true, data: stats, message: 'Dashboard stats retrieved successfully' });
+    }
+    
+    // Fallback data if no database
+    const fallbackStats = {
+      totalUsers: 0,
+      totalCourses: 0,
+      totalBooks: 0,
+      totalLiveClasses: 0,
+      recentUsers: 0,
+      recentCourses: 0,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    return res.json({ success: true, data: fallbackStats, message: 'Dashboard stats retrieved (no DB)' });
+  } catch (err) {
+    console.error('Dashboard stats error:', err);
+    res.status(500).json({ success: false, message: 'Failed to get dashboard stats', error: err.message });
   }
 };
 
@@ -347,4 +419,5 @@ module.exports = {
   updateLiveClassStatus,
 
   getUsers,
+  getDashboardStats,
 };

@@ -168,6 +168,7 @@ try {
   app.get("/api/v1/auth/profile", authenticateToken, authController.getProfile);
 
   // ----------------- Admin Routes -----------------
+  app.get("/api/v1/admin/dashboard/stats", authenticateToken, requireAdmin, adminController.getDashboardStats);
   app.get("/api/v1/admin/users", authenticateToken, requireAdmin, adminController.getUsers);
   app.get("/api/v1/admin/courses", authenticateToken, requireAdmin, adminController.getCourses);
   app.get("/api/v1/admin/course/:id", authenticateToken, requireAdmin, adminController.getCourseById);

@@ -145,8 +145,8 @@ async function createBooksTable() {
         level VARCHAR(50),
         pages INT,
         isbn VARCHAR(20),
-        coverImage VARCHAR(500),
-        pdfUrl VARCHAR(500),
+        cover_image_url VARCHAR(500),
+        pdf_url VARCHAR(500),
         status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
         is_published BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -175,6 +175,25 @@ async function createBooksTable() {
       // Column already exists, ignore error
       if (!alterError.message.includes('Duplicate column name')) {
         console.log('is_published column already exists or other error:', alterError.message);
+      }
+    }
+    
+    // Rename columns to match the expected schema
+    try {
+      await connection.execute('ALTER TABLE books CHANGE COLUMN coverImage cover_image_url VARCHAR(500)');
+      console.log('✅ Renamed coverImage to cover_image_url');
+    } catch (alterError) {
+      if (!alterError.message.includes('Duplicate column name') && !alterError.message.includes('Unknown column')) {
+        console.log('Column rename error:', alterError.message);
+      }
+    }
+    
+    try {
+      await connection.execute('ALTER TABLE books CHANGE COLUMN pdfUrl pdf_url VARCHAR(500)');
+      console.log('✅ Renamed pdfUrl to pdf_url');
+    } catch (alterError) {
+      if (!alterError.message.includes('Duplicate column name') && !alterError.message.includes('Unknown column')) {
+        console.log('Column rename error:', alterError.message);
       }
     }
     
@@ -249,6 +268,7 @@ async function createCoursesTable() {
         level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
         price DECIMAL(10,2) DEFAULT 0.00,
         status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+        is_published BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -256,6 +276,16 @@ async function createCoursesTable() {
     
     await connection.execute(createTableQuery);
     console.log('✅ Created courses table with AUTO_INCREMENT');
+    
+    // Add is_published column if it doesn't exist
+    try {
+      await connection.execute('ALTER TABLE courses ADD COLUMN is_published BOOLEAN DEFAULT FALSE');
+      console.log('✅ Added is_published column to courses table');
+    } catch (alterError) {
+      if (!alterError.message.includes('Duplicate column name') && !alterError.message.includes('Unknown column')) {
+        console.log('is_published column already exists or other error:', alterError.message);
+      }
+    }
 
     // Re-enable foreign key checks
     await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
@@ -302,6 +332,7 @@ async function createLiveClassesTable() {
         duration INT DEFAULT 60,
         max_students INT DEFAULT 50,
         status ENUM('draft', 'scheduled', 'live', 'completed', 'cancelled') DEFAULT 'draft',
+        is_published BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -309,6 +340,16 @@ async function createLiveClassesTable() {
     
     await connection.execute(createTableQuery);
     console.log('✅ Live classes table created/verified successfully');
+    
+    // Add is_published column if it doesn't exist
+    try {
+      await connection.execute('ALTER TABLE live_classes ADD COLUMN is_published BOOLEAN DEFAULT FALSE');
+      console.log('✅ Added is_published column to live_classes table');
+    } catch (alterError) {
+      if (!alterError.message.includes('Duplicate column name') && !alterError.message.includes('Unknown column')) {
+        console.log('is_published column already exists or other error:', alterError.message);
+      }
+    }
     
     connection.release();
     return true;
