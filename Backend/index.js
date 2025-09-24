@@ -28,6 +28,17 @@ app.get("/", (req, res) => {
   });
 });
 
+// API v1 base route
+app.get("/api/v1", (req, res) => {
+  res.json({
+    success: true,
+    message: "Mathematico Backend API v1 is running ✅",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    serverless: true,
+  });
+});
+
 // Health
 app.get("/api/v1/health", (req, res) => {
   res.json({
@@ -128,6 +139,71 @@ app.post("/api/v1/auth/login", (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Login failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Register route
+app.post("/api/v1/auth/register", (req, res) => {
+  try {
+    const { name, email, password, confirmPassword } = req.body;
+    
+    if (!name || !email || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'All fields are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Passwords do not match',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Mock registration - in real app, save to database
+    const userPayload = {
+      id: Date.now(),
+      name: name,
+      email: email,
+      role: 'user',
+      isAdmin: false,
+      is_admin: false,
+      email_verified: false,
+      is_active: true
+    };
+    
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+    
+    res.json({
+      success: true,
+      message: 'Registration successful',
+      data: {
+        user: {
+          ...userPayload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        tokens: {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          expiresIn: 3600
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed',
       timestamp: new Date().toISOString()
     });
   }
