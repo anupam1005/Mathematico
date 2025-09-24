@@ -4,15 +4,10 @@
   "description": "Mathematico Learning Platform - Mobile App, Backend, and Web Frontend",
   "private": true,
   "scripts": {
-    "build": "cd Frontend && npm run build",
-    "dev": "cd Frontend && npm run dev",
-    "dev:backend": "cd Backend && npm run dev",
-    "dev:mobile": "cd mathematico && npm start",
-    "install:frontend": "cd Frontend && npm install",
-    "install:backend": "cd Backend && npm install --force --legacy-peer-deps",
-    "install:mobile": "cd mathematico && npm install",
-    "install:all": "npm run install:frontend && npm run install:backend && npm run install:mobile",
-    "vercel-build": "cd Backend && npm install"
+    "dev": "npm run dev --workspace=Frontend",
+    "dev:backend": "npm run dev --workspace=Backend",
+    "dev:mobile": "npm run start --workspace=mathematico",
+    "install:all": "npm install --workspaces"
   },
   "workspaces": [
     "Frontend",
@@ -33,5 +28,11 @@
     "nodejs"
   ],
   "author": "Mathematico Team",
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "@rollup/rollup-linux-x64-gnu": "npm:rollup",
+    "@rollup/rollup-linux-x64-musl": "npm:rollup",
+    "@rollup/rollup-darwin-x64": "npm:rollup",
+    "@rollup/rollup-darwin-arm64": "npm:rollup"
+  }
 }

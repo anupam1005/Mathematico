@@ -267,6 +267,10 @@ async function createCoursesTable() {
         category VARCHAR(100),
         level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
         price DECIMAL(10,2) DEFAULT 0.00,
+        original_price DECIMAL(10,2) DEFAULT 0.00,
+        students INT DEFAULT 0,
+        image_url VARCHAR(500),
+        pdf_url VARCHAR(500),
         status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
         is_published BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -331,6 +335,8 @@ async function createLiveClassesTable() {
         scheduled_at DATETIME,
         duration INT DEFAULT 60,
         max_students INT DEFAULT 50,
+        meeting_link VARCHAR(500),
+        image_url VARCHAR(500),
         status ENUM('draft', 'scheduled', 'live', 'completed', 'cancelled') DEFAULT 'draft',
         is_published BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -446,7 +452,7 @@ const Book = {
       const selectQuery = `
         SELECT * FROM books 
         ${whereClause} 
-        ORDER BY createdAt DESC 
+        ORDER BY created_at DESC 
         LIMIT ? OFFSET ?
       `;
       
@@ -563,7 +569,7 @@ const Book = {
       const values = Object.values(bookData);
       const setClause = fields.map(field => `${field} = ?`).join(', ');
       
-      const query = `UPDATE books SET ${setClause}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
+      const query = `UPDATE books SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
       await connection.execute(query, [...values, id]);
       
       // Get the updated book
@@ -630,7 +636,7 @@ const Book = {
       const connection = await getPool().getConnection();
       
       const status = isPublished ? 'published' : 'draft';
-      const query = 'UPDATE books SET isPublished = ?, status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
+      const query = 'UPDATE books SET is_published = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
       await connection.execute(query, [isPublished, status, id]);
       
       // Get the updated book
