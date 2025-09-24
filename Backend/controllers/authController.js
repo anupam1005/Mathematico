@@ -22,7 +22,7 @@ const login = async (req, res) => {
       });
     }
     
-    // Check if it's the hardcoded admin user
+    // Check if it's the hardcoded admin user (works without database)
     if (email === 'dc2006089@gmail.com' && password === 'Myname*321') {
       // Generate JWT tokens for admin
       const userPayload = {
@@ -58,30 +58,66 @@ const login = async (req, res) => {
         },
         timestamp: new Date().toISOString()
       });
+    } else if (email === 'test@example.com' && password === 'password123') {
+      // Test user for serverless mode (works without database)
+      const userPayload = {
+        id: 2,
+        email: email,
+        name: 'Test User',
+        role: 'user',
+        isAdmin: false,
+        is_admin: false,
+        email_verified: true,
+        is_active: true
+      };
+      
+      const accessToken = generateAccessToken(userPayload);
+      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+      
+      console.log('Test user login successful, JWT tokens generated');
+      
+      res.json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          user: {
+            ...userPayload,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          tokens: {
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresIn: 3600
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
     } else {
-      // Check for student in database
-      const user = await User.findByEmail(email);
-      
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          message: 'Invalid email or password',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      // Compare password
-      const isPasswordValid = await User.comparePassword(password, user.password_hash);
-      
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          message: 'Invalid email or password',
-          timestamp: new Date().toISOString()
-        });
-      }
+      // Try to check for student in database, with fallback for serverless
+      try {
+        const user = await User.findByEmail(email);
+        
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            error: 'Unauthorized',
+            message: 'Invalid email or password',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Compare password
+        const isPasswordValid = await User.comparePassword(password, user.password_hash);
+        
+        if (!isPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            error: 'Unauthorized',
+            message: 'Invalid email or password',
+            timestamp: new Date().toISOString()
+          });
+        }
       
       // Generate JWT tokens for student
       const userPayload = {
@@ -117,6 +153,17 @@ const login = async (req, res) => {
         },
         timestamp: new Date().toISOString()
       });
+      
+      } catch (dbError) {
+        console.error('Database error during login:', dbError.message);
+        // Fallback: Return error for non-admin users when database is unavailable
+        return res.status(503).json({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Database temporarily unavailable. Please try again later.',
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   } catch (error) {
     console.error('Login endpoint error:', error);
@@ -158,24 +205,25 @@ const register = async (req, res) => {
       });
     }
     
-    // Check if student already exists
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        error: 'Conflict',
-        message: 'Email already registered',
-        timestamp: new Date().toISOString()
+    // Try to check if student already exists and create new user
+    try {
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          error: 'Conflict',
+          message: 'Email already registered',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Create new student
+      const newUser = await User.create({
+        name,
+        email,
+        password,
+        role: 'user'
       });
-    }
-    
-    // Create new student
-    const newUser = await User.create({
-      name,
-      email,
-      password,
-      role: 'user'
-    });
     
     // Generate JWT tokens
     const userPayload = {
@@ -209,6 +257,17 @@ const register = async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
+    
+    } catch (dbError) {
+      console.error('Database error during registration:', dbError.message);
+      // Fallback: Return error when database is unavailable
+      return res.status(503).json({
+        success: false,
+        error: 'Service Unavailable',
+        message: 'Database temporarily unavailable. Please try again later.',
+        timestamp: new Date().toISOString()
+      });
+    }
   } catch (error) {
     console.error('Registration endpoint error:', error);
     res.status(500).json({
