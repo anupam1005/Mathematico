@@ -157,15 +157,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve favicon.ico (serverless-friendly)
-app.get('/favicon.ico', (req, res) => {
-  try {
-    res.setHeader('Content-Type', 'image/x-icon');
-    res.status(200).sendFile(path.join(__dirname, 'public', 'favicon.ico'));
-  } catch (err) {
-    // Fallback for serverless - return 204 No Content
-    res.status(204).end();
-  }
-});
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // Rate limiting
 const generalLimiter = rateLimit({
