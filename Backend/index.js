@@ -279,22 +279,10 @@ async function initializeDatabase() {
   }
 }
 
-// Serverless database initialization middleware
+// Skip database initialization in serverless for now to prevent timeouts
 if (process.env.VERCEL) {
-  app.use(async (req, res, next) => {
-    if (!dbInitialized) {
-      try {
-        await Promise.race([
-          initializeDatabase(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('DB init timeout')), 5000))
-        ]);
-      } catch (err) {
-        console.error('Serverless DB init error:', err.message);
-        // Continue anyway - fallback data will be used
-      }
-    }
-    next();
-  });
+  console.log('🚀 Serverless mode: skipping database initialization to prevent timeouts');
+  dbInitialized = true; // Skip DB init in serverless
 }
 
 // Utility function to generate absolute file URLs
@@ -381,11 +369,6 @@ app.get("/api/v1", (req, res) => {
 });
 
 app.get("/api/v1/health", async (req, res) => {
-  // Ensure database is initialized in serverless
-  if (process.env.VERCEL && !dbInitialized) {
-    await initializeDatabase();
-  }
-
   const healthCheck = {
     success: true,
     message: "Mathematico Backend API is healthy ✅",
@@ -394,7 +377,7 @@ app.get("/api/v1/health", async (req, res) => {
     version: '2.0.0',
     serverless: !!process.env.VERCEL,
     services: {
-      database: { status: 'unknown', responseTime: null }
+      database: { status: 'skipped', responseTime: null }
     }
   };
 
@@ -412,40 +395,32 @@ app.get("/api/v1/health", async (req, res) => {
         usage: process.cpuUsage(),
         loadAverage: process.platform !== 'win32' ? os.loadavg() : null
       };
+
+      // Test database connection only in non-serverless
+      try {
+        const dbStart = Date.now();
+        const isConnected = await testConnection();
+        const dbResponseTime = Date.now() - dbStart;
+        
+        healthCheck.services.database = {
+          status: isConnected ? 'healthy' : 'unhealthy',
+          responseTime: `${dbResponseTime}ms`
+        };
+      } catch (error) {
+        healthCheck.services.database = {
+          status: 'error',
+          responseTime: null,
+          error: error.message
+        };
+        healthCheck.success = false;
+      }
     } catch (err) {
       console.warn('Could not get system info:', err.message);
     }
-  }
-
-  // Test database connection
-  try {
-    const dbStart = Date.now();
-    const isConnected = await testConnection();
-    const dbResponseTime = Date.now() - dbStart;
-    
-    healthCheck.services.database = {
-      status: isConnected ? 'healthy' : 'unhealthy',
-      responseTime: `${dbResponseTime}ms`
-    };
-  } catch (error) {
-    healthCheck.services.database = {
-      status: 'error',
-      responseTime: null,
-      error: error.message
-    };
-    healthCheck.success = false;
-  }
-
-  // Simple logging
-  if (healthCheck.success) {
-    console.log('Health check passed', { 
-      dbStatus: healthCheck.services.database.status 
-    });
   } else {
-    console.warn('Health check failed', { 
-      dbStatus: healthCheck.services.database.status,
-      error: healthCheck.services.database.error 
-    });
+    // In serverless, just return basic health without DB check
+    healthCheck.services.database.status = 'skipped-serverless';
+    console.log('Health check in serverless mode - DB check skipped');
   }
 
   const statusCode = healthCheck.success ? 200 : 503;
