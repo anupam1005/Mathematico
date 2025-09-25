@@ -337,6 +337,25 @@ app.get("/api/v1/mobile/test", (req, res) => {
 
 // ----------------- BUILT-IN ROUTES FOR SERVERLESS -----------------
 
+// Built-in auth endpoints
+app.get('/api/v1/auth', (req, res) => {
+  res.json({
+    success: true,
+    message: "Auth API is working ✅",
+    data: {
+      serverless: true,
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        login: "/api/v1/auth/login",
+        register: "/api/v1/auth/register",
+        logout: "/api/v1/auth/logout",
+        profile: "/api/v1/auth/profile",
+        refreshToken: "/api/v1/auth/refresh-token"
+      }
+    }
+  });
+});
+
 // Built-in auth routes to avoid import issues
 app.post('/api/v1/auth/login', (req, res) => {
   try {
@@ -398,8 +417,79 @@ app.post('/api/v1/auth/login', (req, res) => {
   }
 });
 
-// Built-in mobile test endpoint
-app.get('/api/v1/mobile/test', (req, res) => {
+// Additional auth endpoints
+app.post('/api/v1/auth/register', (req, res) => {
+  res.status(503).json({
+    success: false,
+    message: "Registration temporarily unavailable in serverless mode"
+  });
+});
+
+app.post('/api/v1/auth/logout', (req, res) => {
+  res.json({
+    success: true,
+    message: "Logout successful"
+  });
+});
+
+app.get('/api/v1/auth/profile', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      id: req.user?.id || 1,
+      email: req.user?.email || "unknown@example.com",
+      name: req.user?.name || "Unknown User",
+      role: req.user?.role || "user",
+      isAdmin: req.user?.isAdmin || false
+    }
+  });
+});
+
+app.post('/api/v1/auth/refresh-token', (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required"
+      });
+    }
+
+    // For demo purposes, generate new tokens
+    const userPayload = {
+      id: 1,
+      email: "dc2006089@gmail.com",
+      name: "Admin User",
+      role: "admin",
+      isAdmin: true,
+    };
+
+    const newAccessToken = generateAccessToken(userPayload);
+    const newRefreshToken = generateRefreshToken({ id: userPayload.id });
+
+    res.json({
+      success: true,
+      message: "Token refreshed successfully",
+      data: {
+        tokens: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          expiresIn: 3600
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to refresh token"
+    });
+  }
+});
+
+// Built-in mobile endpoints
+app.get('/api/v1/mobile', (req, res) => {
   res.json({
     success: true,
     message: "Mobile API is working ✅",
@@ -407,11 +497,56 @@ app.get('/api/v1/mobile/test', (req, res) => {
       serverless: true,
       timestamp: new Date().toISOString(),
       endpoints: {
+        test: "/api/v1/mobile/test",
         courses: "/api/v1/mobile/courses",
         books: "/api/v1/mobile/books",
         liveClasses: "/api/v1/mobile/live-classes"
       }
     }
+  });
+});
+
+app.get('/api/v1/mobile/test', (req, res) => {
+  res.json({
+    success: true,
+    message: "Mobile API test endpoint working ✅",
+    data: {
+      serverless: true,
+      timestamp: new Date().toISOString(),
+      version: "2.0.0"
+    }
+  });
+});
+
+app.get('/api/v1/mobile/courses', (req, res) => {
+  res.json({
+    success: true,
+    message: "Mobile courses (fallback data)",
+    data: [
+      { id: 1, title: "Mathematics Basics", status: "published", price: 99 },
+      { id: 2, title: "Advanced Calculus", status: "published", price: 149 }
+    ]
+  });
+});
+
+app.get('/api/v1/mobile/books', (req, res) => {
+  res.json({
+    success: true,
+    message: "Mobile books (fallback data)",
+    data: [
+      { id: 1, title: "Math Fundamentals", status: "published", price: 29 },
+      { id: 2, title: "Algebra Guide", status: "published", price: 39 }
+    ]
+  });
+});
+
+app.get('/api/v1/mobile/live-classes', (req, res) => {
+  res.json({
+    success: true,
+    message: "Mobile live classes (fallback data)",
+    data: [
+      { id: 1, title: "Live Math Session", status: "upcoming", price: 19 }
+    ]
   });
 });
 
