@@ -621,16 +621,23 @@ app.get("/api/v1/auth/profile", authenticateToken, (req, res) => {
 
 // ----------------- ROUTE IMPORTS & MOUNTING -----------------
 
-// Import route modules
-const authRoutes = require('./routes/auth');
-const adminRoutes = require('./routes/admin');
-const mobileRoutes = require('./routes/mobile');
-const studentRoutes = require('./routes/student');
+// Import route modules - wrapped in try-catch for serverless debugging
+let authRoutes, adminRoutes, mobileRoutes, studentRoutes;
+try {
+  authRoutes = require('./routes/auth');
+  adminRoutes = require('./routes/admin');
+  mobileRoutes = require('./routes/mobile');
+  studentRoutes = require('./routes/student');
+  console.log('✅ All route modules loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading route modules:', error.message);
+  console.error('Stack:', error.stack);
+}
 
-// Mount routes
-app.use('/api/v1/admin', adminRoutes);
-app.use('/api/v1/mobile', mobileRoutes);
-app.use('/api/v1/student', studentRoutes);
+// Mount routes - only if they loaded successfully
+if (adminRoutes) app.use('/api/v1/admin', adminRoutes);
+if (mobileRoutes) app.use('/api/v1/mobile', mobileRoutes);
+if (studentRoutes) app.use('/api/v1/student', studentRoutes);
 
 // Backward compatibility - redirect old endpoints
 app.use('/api/v1/books', (req, res, next) => {
