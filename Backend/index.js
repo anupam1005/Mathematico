@@ -119,15 +119,24 @@ if (process.env.VERCEL) {
   }));
 }
 
-// CORS configuration
+// CORS configuration - mobile-friendly
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Always allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
+    // In serverless/production, be more permissive for mobile apps
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      // Allow all origins in serverless for mobile compatibility
+      // Mobile apps often have dynamic origins or no origin
+      console.log('CORS: Allowing origin in serverless mode:', origin);
+      return callback(null, true);
+    }
+    
+    // In development, use specific allowed origins
     const allowedOrigins = [
       'http://localhost:3000',
-      'http://localhost:3001',
+      'http://localhost:3001', 
       'http://localhost:5173',
       'http://localhost:8081',
       'http://192.168.1.100:8081',
@@ -138,13 +147,14 @@ const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow for now, but log
+      console.log('CORS: Unknown origin in development:', origin);
+      callback(null, true); // Allow but log for debugging
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 };
 
 app.use(cors(corsOptions));
@@ -190,60 +200,65 @@ if (httpLogger && !process.env.VERCEL) {
   app.use(httpLogger);
 }
 
-// Configure multer for file uploads (serverless-optimized)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    let uploadPath = './uploads/temp';
-    
-    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
-      uploadPath = './uploads/covers';
-    } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
-      uploadPath = './uploads/pdfs';
+// File upload configuration - serverless compatible
+let upload;
+if (process.env.VERCEL) {
+  // In serverless, disable file uploads (no persistent storage)
+  console.log('🚀 Serverless mode: File uploads disabled (use cloud storage instead)');
+  upload = {
+    single: () => (req, res, next) => {
+      req.fileUploadError = 'File uploads not available in serverless mode. Please use cloud storage (S3, Cloudinary, etc.)';
+      next();
+    },
+    fields: () => (req, res, next) => {
+      req.fileUploadError = 'File uploads not available in serverless mode. Please use cloud storage (S3, Cloudinary, etc.)';
+      next();
     }
-    
-    // In serverless, ensure directory exists
-    if (process.env.VERCEL) {
-      try {
-        const fs = require('fs');
-        if (!fs.existsSync(uploadPath)) {
-          fs.mkdirSync(uploadPath, { recursive: true });
-        }
-      } catch (err) {
-        console.warn('Could not create upload directory:', err.message);
+  };
+} else {
+  // Traditional server - use multer
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      let uploadPath = './uploads/temp';
+      
+      if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+        uploadPath = './uploads/covers';
+      } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
+        uploadPath = './uploads/pdfs';
       }
+      
+      cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
-    
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+  });
 
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: function (req, file, cb) {
-    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
+  upload = multer({ 
+    storage: storage,
+    limits: {
+      fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: function (req, file, cb) {
+      if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only image files are allowed for cover images'), false);
+        }
+      } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
+        if (file.mimetype === 'application/pdf') {
+          cb(null, true);
+        } else {
+          cb(new Error('Only PDF files are allowed'), false);
+        }
       } else {
-        cb(new Error('Only image files are allowed for cover images'), false);
-      }
-    } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
-      if (file.mimetype === 'application/pdf') {
         cb(null, true);
-      } else {
-        cb(new Error('Only PDF files are allowed'), false);
       }
-    } else {
-      cb(null, true);
     }
-  }
-});
+  });
+}
 
 // Database initialization flag
 let dbInitialized = false;
@@ -279,10 +294,30 @@ async function initializeDatabase() {
   }
 }
 
-// Skip database initialization in serverless for now to prevent timeouts
+// Serverless database handling - initialize on first request if needed
 if (process.env.VERCEL) {
-  console.log('🚀 Serverless mode: skipping database initialization to prevent timeouts');
-  dbInitialized = true; // Skip DB init in serverless
+  console.log('🚀 Serverless mode: database will be initialized on demand');
+  dbInitialized = false; // Allow on-demand initialization
+  
+  // Middleware to initialize database on first request (with timeout)
+  app.use(async (req, res, next) => {
+    if (!dbInitialized && req.path.includes('/api/') && !req.path.includes('/test')) {
+      try {
+        console.log('🔄 On-demand database initialization...');
+        await Promise.race([
+          initializeDatabase(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('DB init timeout')), 8000))
+        ]);
+        console.log('✅ Database initialized successfully');
+      } catch (err) {
+        console.warn('⚠️ Database initialization failed, using fallback data:', err.message);
+        dbInitialized = true; // Prevent repeated attempts
+      }
+    }
+    next();
+  });
+} else {
+  dbInitialized = true; // Skip DB init in serverless initially
 }
 
 // Utility function to generate absolute file URLs

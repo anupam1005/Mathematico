@@ -1,45 +1,52 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-
-// Import controllers
-const adminController = require('../controllers/adminController');
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
-// File upload configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = file.mimetype.startsWith('image/') 
-      ? path.join(__dirname, '../uploads/covers')
-      : path.join(__dirname, '../uploads/pdfs');
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const fileFilter = (req, file, cb) => {
-  // Validate file types
-  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const allowedDocTypes = ['application/pdf'];
+// Import admin controller with fallback
+let adminController;
+try {
+  adminController = require('../controllers/adminController');
+} catch (error) {
+  console.warn('AdminController not available, using fallback handlers');
+  // Fallback handlers
+  const fallbackHandler = (req, res) => res.status(503).json({ 
+    success: false, 
+    message: 'Admin service temporarily unavailable - database connection required',
+    serverless: true
+  });
   
-  if (allowedImageTypes.includes(file.mimetype) || allowedDocTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, WebP images and PDF documents are allowed.'), false);
-  }
-};
-
-const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
+  adminController = {
+    getDashboard: fallbackHandler,
+    getUsers: fallbackHandler,
+    createUser: fallbackHandler,
+    updateUser: fallbackHandler,
+    deleteUser: fallbackHandler,
+    updateUserStatus: fallbackHandler,
+    getBooks: fallbackHandler,
+    createBook: fallbackHandler,
+    updateBook: fallbackHandler,
+    deleteBook: fallbackHandler,
+    updateBookStatus: fallbackHandler,
+    getCourses: fallbackHandler,
+    createCourse: fallbackHandler,
+    updateCourse: fallbackHandler,
+    deleteCourse: fallbackHandler,
+    updateCourseStatus: fallbackHandler,
+    getLiveClasses: fallbackHandler,
+    createLiveClass: fallbackHandler,
+    updateLiveClass: fallbackHandler,
+    deleteLiveClass: fallbackHandler,
+    updateLiveClassStatus: fallbackHandler,
+    getPayments: fallbackHandler,
+    updatePaymentStatus: fallbackHandler,
+    uploadFile: fallbackHandler,
+    getBookStats: fallbackHandler,
+    getCourseStats: fallbackHandler,
+    getLiveClassStats: fallbackHandler,
+    getSettings: fallbackHandler,
+    updateSettings: fallbackHandler
+  };
+}
 
 // Apply auth middleware to all admin routes
 router.use(authenticateToken);
@@ -49,53 +56,41 @@ router.use(requireAdmin);
 router.get('/dashboard', adminController.getDashboard);
 
 // User management routes
-router.get('/users', adminController.getAllUsers);
-router.get('/users/:id', adminController.getUserById);
+router.get('/users', adminController.getUsers);
+router.post('/users', adminController.createUser);
 router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deleteUser);
 router.put('/users/:id/status', adminController.updateUserStatus);
 
 // Book management routes
-router.get('/books', adminController.getAllBooks);
-router.get('/books/:id', adminController.getBookById);
-router.post('/books', upload.fields([
-  { name: 'cover_image', maxCount: 1 },
-  { name: 'pdf_file', maxCount: 1 }
-]), adminController.createBook);
-router.put('/books/:id', upload.fields([
-  { name: 'cover_image', maxCount: 1 },
-  { name: 'pdf_file', maxCount: 1 }
-]), adminController.updateBook);
+router.get('/books', adminController.getBooks);
+router.post('/books', adminController.createBook);
+router.put('/books/:id', adminController.updateBook);
 router.delete('/books/:id', adminController.deleteBook);
 router.put('/books/:id/status', adminController.updateBookStatus);
 
 // Course management routes
-router.get('/courses', adminController.getAllCourses);
-router.get('/courses/:id', adminController.getCourseById);
-router.post('/courses', upload.single('thumbnail'), adminController.createCourse);
-router.put('/courses/:id', upload.single('thumbnail'), adminController.updateCourse);
+router.get('/courses', adminController.getCourses);
+router.post('/courses', adminController.createCourse);
+router.put('/courses/:id', adminController.updateCourse);
 router.delete('/courses/:id', adminController.deleteCourse);
 router.put('/courses/:id/status', adminController.updateCourseStatus);
 
 // Live class management routes
-router.get('/live-classes', adminController.getAllLiveClasses);
-router.get('/live-classes/:id', adminController.getLiveClassById);
-router.post('/live-classes', upload.single('thumbnail'), adminController.createLiveClass);
-router.put('/live-classes/:id', upload.single('thumbnail'), adminController.updateLiveClass);
+router.get('/live-classes', adminController.getLiveClasses);
+router.post('/live-classes', adminController.createLiveClass);
+router.put('/live-classes/:id', adminController.updateLiveClass);
 router.delete('/live-classes/:id', adminController.deleteLiveClass);
 router.put('/live-classes/:id/status', adminController.updateLiveClassStatus);
 
 // Payment management routes
-router.get('/payments', adminController.getAllPayments);
-router.get('/payments/:id', adminController.getPaymentById);
+router.get('/payments', adminController.getPayments);
 router.put('/payments/:id/status', adminController.updatePaymentStatus);
-router.get('/payments/stats', adminController.getPaymentStats);
 
 // File upload route
-router.post('/upload', upload.single('file'), adminController.uploadFile);
+router.post('/upload', adminController.uploadFile);
 
 // Statistics routes
-router.get('/stats/overview', adminController.getOverviewStats);
 router.get('/stats/books', adminController.getBookStats);
 router.get('/stats/courses', adminController.getCourseStats);
 router.get('/stats/live-classes', adminController.getLiveClassStats);
@@ -103,5 +98,15 @@ router.get('/stats/live-classes', adminController.getLiveClassStats);
 // Settings routes
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
+
+// Test endpoint
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin routes are working ✅',
+    user: req.user,
+    timestamp: new Date().toISOString()
+  });
+});
 
 module.exports = router;
