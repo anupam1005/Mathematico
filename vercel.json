@@ -2,13 +2,13 @@
   "version": 2,
   "name": "mathematico-backend",
   "functions": {
-    "Backend/index.js": {
+    "Backend/test-minimal.js": {
       "runtime": "@vercel/node",
       "maxDuration": 30
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/Backend/index.js" }
+    { "src": "/(.*)", "dest": "/Backend/test-minimal.js" }
   ],
   "env": {
     "NODE_ENV": "production",
