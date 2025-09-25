@@ -2,17 +2,19 @@
   "version": 2,
   "name": "mathematico-backend",
   "functions": {
-    "Backend/test-minimal.js": {
+    "Backend/index.js": {
       "runtime": "@vercel/node",
       "maxDuration": 30
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/Backend/test-minimal.js" }
+    { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
   "env": {
     "NODE_ENV": "production",
-    "VERCEL": "1"
+    "VERCEL": "1",
+    "BACKEND_URL": "https://mathematico-backend-new.vercel.app",
+    "FRONTEND_URL": "https://mathematico-frontend.vercel.app"
   },
   "regions": ["iad1"]
 }
