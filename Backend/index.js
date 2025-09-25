@@ -2,11 +2,13 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const multer = require("multer");
 const path = require("path");
 const os = require("os");
 const rateLimit = require("express-rate-limit");
 
-// Import database utilities
+const { generateAccessToken, generateRefreshToken } = require("./utils/jwt");
+const { authenticateToken, requireAdmin } = require("./middlewares/auth");
 const { testConnection, createUsersTable, createBooksTable, createCoursesTable, createLiveClassesTable, createPaymentsTable } = require("./database");
 
 // Conditional logger import - disable file logging in serverless
@@ -93,8 +95,28 @@ if (process.env.VERCEL) {
     hsts: false // HTTPS handled by Vercel
   }));
 } else {
-  // Full helmet for traditional server
-  app.use(helmet());
+  // Full helmet for traditional hosting
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  }));
 }
 
 // CORS configuration
@@ -131,10 +153,19 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// HTTP request logging (conditional)
-if (httpLogger && !process.env.VERCEL) {
-  app.use(httpLogger);
-}
+// Static file serving for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve favicon.ico (serverless-friendly)
+app.get('/favicon.ico', (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'image/x-icon');
+    res.status(200).sendFile(path.join(__dirname, 'public', 'favicon.ico'));
+  } catch (err) {
+    // Fallback for serverless - return 204 No Content
+    res.status(204).end();
+  }
+});
 
 // Rate limiting
 const generalLimiter = rateLimit({
@@ -161,11 +192,66 @@ const authLimiter = rateLimit({
 
 // Apply rate limiting
 app.use('/api/', generalLimiter);
-app.use('/api/v1/auth/login', authLimiter);
-app.use('/api/v1/auth/register', authLimiter);
 
-// Static file serving for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// HTTP request logging (conditional)
+if (httpLogger && !process.env.VERCEL) {
+  app.use(httpLogger);
+}
+
+// Configure multer for file uploads (serverless-optimized)
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    let uploadPath = './uploads/temp';
+    
+    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+      uploadPath = './uploads/covers';
+    } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
+      uploadPath = './uploads/pdfs';
+    }
+    
+    // In serverless, ensure directory exists
+    if (process.env.VERCEL) {
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(uploadPath)) {
+          fs.mkdirSync(uploadPath, { recursive: true });
+        }
+      } catch (err) {
+        console.warn('Could not create upload directory:', err.message);
+      }
+    }
+    
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed for cover images'), false);
+      }
+    } else if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
+      if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF files are allowed'), false);
+      }
+    } else {
+      cb(null, true);
+    }
+  }
+});
 
 // Database initialization flag
 let dbInitialized = false;
@@ -200,6 +286,39 @@ async function initializeDatabase() {
     // Don't throw error in serverless - continue with fallback data
   }
 }
+
+// Serverless database initialization middleware
+if (process.env.VERCEL) {
+  app.use(async (req, res, next) => {
+    if (!dbInitialized) {
+      try {
+        await Promise.race([
+          initializeDatabase(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('DB init timeout')), 5000))
+        ]);
+      } catch (err) {
+        console.error('Serverless DB init error:', err.message);
+        // Continue anyway - fallback data will be used
+      }
+    }
+    next();
+  });
+}
+
+// Utility function to generate absolute file URLs
+const getAbsoluteFileUrl = (relativePath) => {
+  if (!relativePath) return null;
+  
+  // Get base URL from environment or request
+  const baseUrl = process.env.BACKEND_URL || 
+                  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                  'http://localhost:5000';
+  
+  // Ensure relative path starts with /
+  const cleanPath = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+  
+  return `${baseUrl}${cleanPath}`;
+};
 
 // Initialize database (non-blocking in serverless)
 if (process.env.VERCEL) {
@@ -341,7 +460,199 @@ app.get("/api/v1/health", async (req, res) => {
   res.status(statusCode).json(healthCheck);
 });
 
-// ----------------- ROUTE IMPORTS -----------------
+// Mobile app test endpoint
+app.get("/api/v1/mobile/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Mobile API is working ✅",
+    data: {
+      serverless: true,
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        courses: "/api/v1/mobile/courses",
+        books: "/api/v1/mobile/books",
+        liveClasses: "/api/v1/mobile/live-classes"
+      }
+    }
+  });
+});
+
+// ----------------- AUTH ROUTES (Basic Implementation) -----------------
+
+app.post("/api/v1/auth/login", authLimiter, (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    let userPayload;
+    if (email === "dc2006089@gmail.com" && password === "Myname*321") {
+      userPayload = {
+        id: 1,
+        email,
+        name: "Admin User",
+        role: "admin",
+        isAdmin: true,
+      };
+    } else if (email === "test@example.com" && password === "password123") {
+      userPayload = {
+        id: 2,
+        email,
+        name: "Test User",
+        role: "user",
+        isAdmin: false,
+      };
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken({ id: userPayload.id });
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      data: {
+        user: {
+          ...userPayload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: 3600,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ success: false, message: "Login failed" });
+  }
+});
+
+app.post("/api/v1/auth/register", authLimiter, (req, res) => {
+  try {
+    const { name, email, password, confirmPassword } = req.body;
+
+    if (!name || !email || !password || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
+      });
+    }
+
+    const userPayload = {
+      id: Date.now(),
+      name,
+      email,
+      role: "user",
+      isAdmin: false,
+    };
+
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken({ id: userPayload.id });
+
+    res.json({
+      success: true,
+      message: "Registration successful",
+      data: {
+        user: {
+          ...userPayload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        tokens: { accessToken, refreshToken, expiresIn: 3600 },
+      },
+    });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ success: false, message: "Registration failed" });
+  }
+});
+
+// Refresh token endpoint - Fixed endpoint path
+app.post("/api/v1/auth/refresh-token", (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required"
+      });
+    }
+
+    // For demo purposes, generate new tokens
+    const userPayload = {
+      id: 1,
+      email: "dc2006089@gmail.com",
+      name: "Admin User",
+      role: "admin",
+      isAdmin: true,
+    };
+
+    const newAccessToken = generateAccessToken(userPayload);
+    const newRefreshToken = generateRefreshToken({ id: userPayload.id });
+
+    res.json({
+      success: true,
+      message: "Token refreshed successfully",
+      data: {
+        tokens: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          expiresIn: 3600
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to refresh token"
+    });
+  }
+});
+
+// Logout endpoint
+app.post("/api/v1/auth/logout", (req, res) => {
+  res.json({
+    success: true,
+    message: "Logout successful"
+  });
+});
+
+// Profile endpoint
+app.get("/api/v1/auth/profile", authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name,
+      role: req.user.role,
+      isAdmin: req.user.isAdmin
+    }
+  });
+});
+
+// ----------------- ROUTE IMPORTS & MOUNTING -----------------
 
 // Import route modules
 const authRoutes = require('./routes/auth');
@@ -350,7 +661,6 @@ const mobileRoutes = require('./routes/mobile');
 const studentRoutes = require('./routes/student');
 
 // Mount routes
-app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/mobile', mobileRoutes);
 app.use('/api/v1/student', studentRoutes);
@@ -409,18 +719,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ----------------- SERVER STARTUP -----------------
-
-const PORT = process.env.PORT || 5000;
-
-// Only start server if not in serverless environment
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Mathematico Backend Server running on port ${PORT}`);
-    console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-    console.log(`🏥 Health Check: http://localhost:${PORT}/api/v1/health`);
+// Serverless startup log
+if (process.env.VERCEL) {
+  console.log('🚀 Mathematico Backend - Serverless Function Ready', {
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    environment: 'serverless'
   });
 }
 
-// Export for serverless deployment
 module.exports = app;

@@ -1,36 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticateToken } = require('../middlewares/auth');
 
 // Apply auth middleware to all student routes
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // Student course routes
-router.get('/courses', studentController.getAllCourses);
+router.get('/courses', studentController.getCourses);
 router.get('/courses/:id', studentController.getCourseById);
-router.post('/courses/:id/enroll', studentController.enrollCourse);
-router.get('/courses/enrolled', studentController.getEnrolledCourses);
+router.post('/courses/:id/enroll', studentController.enrollInCourse);
 
 // Student book routes  
-router.get('/books', studentController.getAllBooks);
+router.get('/books', studentController.getBooks);
 router.get('/books/:id', studentController.getBookById);
 router.post('/books/:id/purchase', studentController.purchaseBook);
-router.get('/books/purchased', studentController.getPurchasedBooks);
 
 // Student live class routes
-router.get('/live-classes', studentController.getAllLiveClasses);
+router.get('/live-classes', studentController.getLiveClasses);
 router.get('/live-classes/:id', studentController.getLiveClassById);
-router.post('/live-classes/:id/register', studentController.registerLiveClass);
-router.get('/live-classes/registered', studentController.getRegisteredLiveClasses);
+router.post('/live-classes/:id/enroll', studentController.enrollInLiveClass);
 
-// Student profile and progress
-router.get('/profile', studentController.getProfile);
-router.put('/profile', studentController.updateProfile);
-router.get('/progress', studentController.getProgress);
+// Student progress routes
+router.get('/progress/:courseId', studentController.getCourseProgress);
+router.put('/progress/:courseId', studentController.updateCourseProgress);
 
-// Student payments and purchases
-router.get('/payments', studentController.getPaymentHistory);
-router.post('/payments', studentController.createPayment);
+// Student notifications
+router.get('/notifications', studentController.getNotifications);
+router.put('/notifications/:id/read', studentController.markNotificationAsRead);
 
 module.exports = router;

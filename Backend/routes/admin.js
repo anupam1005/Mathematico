@@ -5,7 +5,7 @@ const path = require('path');
 
 // Import controllers
 const adminController = require('../controllers/adminController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
 // File upload configuration
 const storage = multer.diskStorage({
@@ -42,7 +42,8 @@ const upload = multer({
 });
 
 // Apply auth middleware to all admin routes
-router.use(authMiddleware);
+router.use(authenticateToken);
+router.use(requireAdmin);
 
 // Dashboard routes
 router.get('/dashboard', adminController.getDashboard);
