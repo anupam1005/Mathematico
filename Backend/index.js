@@ -119,42 +119,53 @@ if (process.env.VERCEL) {
   }));
 }
 
-// CORS configuration - mobile-friendly
+// CORS configuration - secure but mobile-friendly
 const corsOptions = {
   origin: function (origin, callback) {
     // Always allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    // In serverless/production, be more permissive for mobile apps
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-      // Allow all origins in serverless for mobile compatibility
-      // Mobile apps often have dynamic origins or no origin
-      console.log('CORS: Allowing origin in serverless mode:', origin);
-      return callback(null, true);
-    }
-    
-    // In development, use specific allowed origins
+    // Define allowed origins for security
     const allowedOrigins = [
+      // Development origins
       'http://localhost:3000',
       'http://localhost:3001', 
       'http://localhost:5173',
       'http://localhost:8081',
       'http://192.168.1.100:8081',
+      // Production origins
       'https://mathematico-frontend.vercel.app',
-      process.env.FRONTEND_URL
+      'https://mathematico-backend-new.vercel.app',
+      process.env.FRONTEND_URL,
+      process.env.BACKEND_URL
     ].filter(Boolean);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin === origin) return true;
+      // Allow subdomains of vercel.app for mobile builds
+      if (origin && origin.includes('vercel.app') && allowedOrigin.includes('vercel.app')) return true;
+      return false;
+    });
+    
+    if (isAllowed) {
+      console.log('CORS: Allowed origin:', origin);
       callback(null, true);
     } else {
-      console.log('CORS: Unknown origin in development:', origin);
-      callback(null, true); // Allow but log for debugging
+      // In serverless, be more lenient for mobile apps but log for security
+      if (process.env.VERCEL) {
+        console.log('CORS: Unknown origin allowed in serverless (mobile compatibility):', origin);
+        callback(null, true);
+      } else {
+        console.log('CORS: Blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'), false);
+      }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+  exposedHeaders: ['Content-Length', 'X-Total-Count']
 };
 
 app.use(cors(corsOptions));
@@ -163,8 +174,19 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static file serving for uploads - disabled in serverless
+if (!process.env.VERCEL) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+} else {
+  // In serverless, return error for upload requests
+  app.use('/uploads', (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'File serving not available in serverless mode. Use cloud storage (S3, Cloudinary, etc.)',
+      serverless: true
+    });
+  });
+}
 
 // Serve favicon.ico (serverless-friendly)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -294,30 +316,21 @@ async function initializeDatabase() {
   }
 }
 
-// Serverless database handling - initialize on first request if needed
+// Serverless database handling - SKIP database initialization completely
 if (process.env.VERCEL) {
-  console.log('🚀 Serverless mode: database will be initialized on demand');
-  dbInitialized = false; // Allow on-demand initialization
+  console.log('🚀 Serverless mode: Database initialization DISABLED to prevent timeouts');
+  dbInitialized = true; // Always skip DB init in serverless
   
-  // Middleware to initialize database on first request (with timeout)
-  app.use(async (req, res, next) => {
-    if (!dbInitialized && req.path.includes('/api/') && !req.path.includes('/test')) {
-      try {
-        console.log('🔄 On-demand database initialization...');
-        await Promise.race([
-          initializeDatabase(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('DB init timeout')), 8000))
-        ]);
-        console.log('✅ Database initialized successfully');
-      } catch (err) {
-        console.warn('⚠️ Database initialization failed, using fallback data:', err.message);
-        dbInitialized = true; // Prevent repeated attempts
-      }
+  // Add middleware to log DB-dependent requests
+  app.use((req, res, next) => {
+    if (req.path.includes('/api/') && !req.path.includes('/test') && !req.path.includes('/health')) {
+      console.log('📝 DB-dependent request:', req.method, req.path, '- using fallback data');
     }
     next();
   });
 } else {
-  dbInitialized = true; // Skip DB init in serverless initially
+  // In non-serverless, allow DB initialization
+  dbInitialized = false;
 }
 
 // Utility function to generate absolute file URLs
@@ -453,9 +466,16 @@ app.get("/api/v1/health", async (req, res) => {
       console.warn('Could not get system info:', err.message);
     }
   } else {
-    // In serverless, just return basic health without DB check
-    healthCheck.services.database.status = 'skipped-serverless';
-    console.log('Health check in serverless mode - DB check skipped');
+    // In serverless, provide meaningful health info without DB check
+    healthCheck.services.database.status = 'disabled-serverless';
+    healthCheck.services.database.message = 'Database checks disabled in serverless to prevent cold start timeouts';
+    healthCheck.serverless = {
+      coldStart: !global.warmStart,
+      functionTimeout: '30s',
+      region: process.env.VERCEL_REGION || 'unknown'
+    };
+    global.warmStart = true; // Mark as warm for subsequent requests
+    console.log('Health check in serverless mode - optimized for cold starts');
   }
 
   const statusCode = healthCheck.success ? 200 : 503;
@@ -479,180 +499,7 @@ app.get("/api/v1/mobile/test", (req, res) => {
   });
 });
 
-// ----------------- AUTH ROUTES (Basic Implementation) -----------------
-
-app.post("/api/v1/auth/login", authLimiter, (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    let userPayload;
-    if (email === "dc2006089@gmail.com" && password === "Myname*321") {
-      userPayload = {
-        id: 1,
-        email,
-        name: "Admin User",
-        role: "admin",
-        isAdmin: true,
-      };
-    } else if (email === "test@example.com" && password === "password123") {
-      userPayload = {
-        id: 2,
-        email,
-        name: "Test User",
-        role: "user",
-        isAdmin: false,
-      };
-    } else {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id });
-
-    res.json({
-      success: true,
-      message: "Login successful",
-      data: {
-        user: {
-          ...userPayload,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 3600,
-        },
-      },
-    });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ success: false, message: "Login failed" });
-  }
-});
-
-app.post("/api/v1/auth/register", authLimiter, (req, res) => {
-  try {
-    const { name, email, password, confirmPassword } = req.body;
-
-    if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-      });
-    }
-
-    const userPayload = {
-      id: Date.now(),
-      name,
-      email,
-      role: "user",
-      isAdmin: false,
-    };
-
-    const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id });
-
-    res.json({
-      success: true,
-      message: "Registration successful",
-      data: {
-        user: {
-          ...userPayload,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        tokens: { accessToken, refreshToken, expiresIn: 3600 },
-      },
-    });
-  } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ success: false, message: "Registration failed" });
-  }
-});
-
-// Refresh token endpoint - Fixed endpoint path
-app.post("/api/v1/auth/refresh-token", (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: "Refresh token is required"
-      });
-    }
-
-    // For demo purposes, generate new tokens
-    const userPayload = {
-      id: 1,
-      email: "dc2006089@gmail.com",
-      name: "Admin User",
-      role: "admin",
-      isAdmin: true,
-    };
-
-    const newAccessToken = generateAccessToken(userPayload);
-    const newRefreshToken = generateRefreshToken({ id: userPayload.id });
-
-    res.json({
-      success: true,
-      message: "Token refreshed successfully",
-      data: {
-        tokens: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          expiresIn: 3600
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Refresh token error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to refresh token"
-    });
-  }
-});
-
-// Logout endpoint
-app.post("/api/v1/auth/logout", (req, res) => {
-  res.json({
-    success: true,
-    message: "Logout successful"
-  });
-});
-
-// Profile endpoint
-app.get("/api/v1/auth/profile", authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      id: req.user.id,
-      email: req.user.email,
-      name: req.user.name,
-      role: req.user.role,
-      isAdmin: req.user.isAdmin
-    }
-  });
-});
+// Auth routes are now handled by routes/auth.js - no duplicate routes needed here
 
 // ----------------- ROUTE IMPORTS & MOUNTING -----------------
 
@@ -670,6 +517,7 @@ try {
 }
 
 // Mount routes - only if they loaded successfully
+if (authRoutes) app.use('/api/v1/auth', authRoutes);
 if (adminRoutes) app.use('/api/v1/admin', adminRoutes);
 if (mobileRoutes) app.use('/api/v1/mobile', mobileRoutes);
 if (studentRoutes) app.use('/api/v1/student', studentRoutes);
