@@ -663,6 +663,647 @@ const Book = {
   }
 };
 
+// Fallback data for courses
+let fallbackCourses = [
+  {
+    id: 1,
+    title: "Advanced Mathematics",
+    description: "Comprehensive course covering advanced mathematical concepts",
+    category: "Mathematics",
+    level: "Advanced", 
+    price: 99.99,
+    original_price: 149.99,
+    students: 25,
+    image_url: "/placeholder.svg",
+    pdf_url: null,
+    status: "active",
+    is_published: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+// Fallback data for live classes
+let fallbackLiveClasses = [
+  {
+    id: 1,
+    title: "Advanced Calculus Live Session",
+    description: "Interactive live session covering advanced calculus topics",
+    category: "Mathematics",
+    level: "Advanced",
+    scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    duration: 60,
+    max_students: 50,
+    meeting_link: "https://meet.google.com/abc-defg-hij",
+    image_url: "/placeholder.svg",
+    status: "scheduled",
+    is_published: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+// Fallback data for users
+let fallbackUsers = [
+  {
+    id: "1",
+    name: "Admin User",
+    email: "dc2006089@gmail.com",
+    role: "admin",
+    is_active: true,
+    email_verified: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "2", 
+    name: "Test User",
+    email: "test@example.com",
+    role: "user",
+    is_active: true,
+    email_verified: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+// Course operations
+const Course = {
+  async getAll(page = 1, limit = 10, category = null, search = null) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      let whereClause = '';
+      let params = [];
+      
+      if (category) {
+        whereClause += ' WHERE category LIKE ?';
+        params.push(`%${category}%`);
+      }
+      
+      if (search) {
+        const searchCondition = 'title LIKE ? OR description LIKE ?';
+        if (whereClause) {
+          whereClause += ` AND (${searchCondition})`;
+        } else {
+          whereClause = ` WHERE ${searchCondition}`;
+        }
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as total FROM courses${whereClause}`;
+      const [countRows] = await connection.execute(countQuery, params);
+      const total = countRows[0].total;
+      
+      const offset = (page - 1) * limit;
+      const selectQuery = `
+        SELECT * FROM courses 
+        ${whereClause} 
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+      `;
+      
+      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
+      
+      connection.release();
+      
+      return {
+        data: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: total,
+          totalPages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      return {
+        data: fallbackCourses,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: fallbackCourses.length,
+          totalPages: Math.ceil(fallbackCourses.length / parseInt(limit))
+        }
+      };
+    }
+  },
+
+  async getById(id) {
+    try {
+      const connection = await getPool().getConnection();
+      const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
+      connection.release();
+      
+      if (rows.length === 0) {
+        return null;
+      }
+      
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      const course = fallbackCourses.find(c => c.id === parseInt(id));
+      return course || null;
+    }
+  },
+
+  async create(courseData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(courseData);
+      const values = Object.values(courseData);
+      const placeholders = fields.map(() => '?').join(', ');
+      
+      const query = `INSERT INTO courses (${fields.join(', ')}) VALUES (${placeholders})`;
+      const [result] = await connection.execute(query, values);
+      
+      const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [result.insertId]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const newCourse = {
+        id: Date.now(),
+        ...courseData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackCourses.push(newCourse);
+      return newCourse;
+    }
+  },
+
+  async update(id, courseData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(courseData);
+      const values = Object.values(courseData);
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      const query = `UPDATE courses SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+      await connection.execute(query, [...values, id]);
+      
+      const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const courseIndex = fallbackCourses.findIndex(c => c.id === parseInt(id));
+      if (courseIndex === -1) {
+        return null;
+      }
+      
+      const updatedCourse = {
+        ...fallbackCourses[courseIndex],
+        ...courseData,
+        id: parseInt(id),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackCourses[courseIndex] = updatedCourse;
+      return updatedCourse;
+    }
+  },
+
+  async delete(id) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
+      
+      if (rows.length === 0) {
+        connection.release();
+        return null;
+      }
+      
+      await connection.execute('DELETE FROM courses WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const courseIndex = fallbackCourses.findIndex(c => c.id === parseInt(id));
+      if (courseIndex === -1) {
+        return null;
+      }
+      
+      const deletedCourse = fallbackCourses.splice(courseIndex, 1)[0];
+      return deletedCourse;
+    }
+  }
+};
+
+// LiveClass operations
+const LiveClass = {
+  async getAll(page = 1, limit = 10, category = null, search = null) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      let whereClause = '';
+      let params = [];
+      
+      if (category) {
+        whereClause += ' WHERE category LIKE ?';
+        params.push(`%${category}%`);
+      }
+      
+      if (search) {
+        const searchCondition = 'title LIKE ? OR description LIKE ?';
+        if (whereClause) {
+          whereClause += ` AND (${searchCondition})`;
+        } else {
+          whereClause = ` WHERE ${searchCondition}`;
+        }
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as total FROM live_classes${whereClause}`;
+      const [countRows] = await connection.execute(countQuery, params);
+      const total = countRows[0].total;
+      
+      const offset = (page - 1) * limit;
+      const selectQuery = `
+        SELECT * FROM live_classes 
+        ${whereClause} 
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+      `;
+      
+      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
+      
+      connection.release();
+      
+      return {
+        data: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: total,
+          totalPages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      return {
+        data: fallbackLiveClasses,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: fallbackLiveClasses.length,
+          totalPages: Math.ceil(fallbackLiveClasses.length / parseInt(limit))
+        }
+      };
+    }
+  },
+
+  async getById(id) {
+    try {
+      const connection = await getPool().getConnection();
+      const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
+      connection.release();
+      
+      if (rows.length === 0) {
+        return null;
+      }
+      
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      const liveClass = fallbackLiveClasses.find(lc => lc.id === parseInt(id));
+      return liveClass || null;
+    }
+  },
+
+  async create(liveClassData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(liveClassData);
+      const values = Object.values(liveClassData);
+      const placeholders = fields.map(() => '?').join(', ');
+      
+      const query = `INSERT INTO live_classes (${fields.join(', ')}) VALUES (${placeholders})`;
+      const [result] = await connection.execute(query, values);
+      
+      const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [result.insertId]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const newLiveClass = {
+        id: Date.now(),
+        ...liveClassData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackLiveClasses.push(newLiveClass);
+      return newLiveClass;
+    }
+  },
+
+  async update(id, liveClassData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(liveClassData);
+      const values = Object.values(liveClassData);
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      const query = `UPDATE live_classes SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+      await connection.execute(query, [...values, id]);
+      
+      const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const liveClassIndex = fallbackLiveClasses.findIndex(lc => lc.id === parseInt(id));
+      if (liveClassIndex === -1) {
+        return null;
+      }
+      
+      const updatedLiveClass = {
+        ...fallbackLiveClasses[liveClassIndex],
+        ...liveClassData,
+        id: parseInt(id),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackLiveClasses[liveClassIndex] = updatedLiveClass;
+      return updatedLiveClass;
+    }
+  },
+
+  async delete(id) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
+      
+      if (rows.length === 0) {
+        connection.release();
+        return null;
+      }
+      
+      await connection.execute('DELETE FROM live_classes WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const liveClassIndex = fallbackLiveClasses.findIndex(lc => lc.id === parseInt(id));
+      if (liveClassIndex === -1) {
+        return null;
+      }
+      
+      const deletedLiveClass = fallbackLiveClasses.splice(liveClassIndex, 1)[0];
+      return deletedLiveClass;
+    }
+  },
+
+  async updateStatus(id, status) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const query = 'UPDATE live_classes SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      await connection.execute(query, [status, id]);
+      
+      const [rows] = await connection.execute('SELECT * FROM live_classes WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const liveClassIndex = fallbackLiveClasses.findIndex(lc => lc.id === parseInt(id));
+      if (liveClassIndex === -1) {
+        return null;
+      }
+      
+      fallbackLiveClasses[liveClassIndex].status = status;
+      fallbackLiveClasses[liveClassIndex].updated_at = new Date().toISOString();
+      
+      return fallbackLiveClasses[liveClassIndex];
+    }
+  }
+};
+
+// User operations
+const User = {
+  async getAll(page = 1, limit = 10, role = null, search = null) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      let whereClause = '';
+      let params = [];
+      
+      if (role) {
+        whereClause += ' WHERE role = ?';
+        params.push(role);
+      }
+      
+      if (search) {
+        const searchCondition = 'name LIKE ? OR email LIKE ?';
+        if (whereClause) {
+          whereClause += ` AND (${searchCondition})`;
+        } else {
+          whereClause = ` WHERE ${searchCondition}`;
+        }
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as total FROM users${whereClause}`;
+      const [countRows] = await connection.execute(countQuery, params);
+      const total = countRows[0].total;
+      
+      const offset = (page - 1) * limit;
+      const selectQuery = `
+        SELECT * FROM users 
+        ${whereClause} 
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+      `;
+      
+      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
+      
+      connection.release();
+      
+      return {
+        data: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: total,
+          totalPages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      return {
+        data: fallbackUsers,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: fallbackUsers.length,
+          totalPages: Math.ceil(fallbackUsers.length / parseInt(limit))
+        }
+      };
+    }
+  },
+
+  async getById(id) {
+    try {
+      const connection = await getPool().getConnection();
+      const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
+      connection.release();
+      
+      if (rows.length === 0) {
+        return null;
+      }
+      
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      const user = fallbackUsers.find(u => u.id === id.toString());
+      return user || null;
+    }
+  },
+
+  async create(userData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(userData);
+      const values = Object.values(userData);
+      const placeholders = fields.map(() => '?').join(', ');
+      
+      const query = `INSERT INTO users (${fields.join(', ')}) VALUES (${placeholders})`;
+      const [result] = await connection.execute(query, values);
+      
+      const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const newUser = {
+        id: Date.now().toString(),
+        ...userData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackUsers.push(newUser);
+      return newUser;
+    }
+  },
+
+  async update(id, userData) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const fields = Object.keys(userData);
+      const values = Object.values(userData);
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      const query = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+      await connection.execute(query, [...values, id]);
+      
+      const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const userIndex = fallbackUsers.findIndex(u => u.id === id.toString());
+      if (userIndex === -1) {
+        return null;
+      }
+      
+      const updatedUser = {
+        ...fallbackUsers[userIndex],
+        ...userData,
+        id: id.toString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      fallbackUsers[userIndex] = updatedUser;
+      return updatedUser;
+    }
+  },
+
+  async delete(id) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
+      
+      if (rows.length === 0) {
+        connection.release();
+        return null;
+      }
+      
+      await connection.execute('DELETE FROM users WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const userIndex = fallbackUsers.findIndex(u => u.id === id.toString());
+      if (userIndex === -1) {
+        return null;
+      }
+      
+      const deletedUser = fallbackUsers.splice(userIndex, 1)[0];
+      return deletedUser;
+    }
+  },
+
+  async updateStatus(id, isActive) {
+    try {
+      const connection = await getPool().getConnection();
+      
+      const query = 'UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      await connection.execute(query, [isActive, id]);
+      
+      const [rows] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
+      
+      connection.release();
+      return rows[0];
+    } catch (error) {
+      console.error('Database error, using fallback data:', error.message);
+      
+      const userIndex = fallbackUsers.findIndex(u => u.id === id.toString());
+      if (userIndex === -1) {
+        return null;
+      }
+      
+      fallbackUsers[userIndex].is_active = isActive;
+      fallbackUsers[userIndex].updated_at = new Date().toISOString();
+      
+      return fallbackUsers[userIndex];
+    }
+  }
+};
+
 module.exports = {
   get pool() { return getPool(); },
   testConnection,
@@ -671,5 +1312,8 @@ module.exports = {
   createCoursesTable,
   createLiveClassesTable,
   createEnrollmentsTable,
-  Book
+  Book,
+  Course,
+  LiveClass,
+  User
 };
