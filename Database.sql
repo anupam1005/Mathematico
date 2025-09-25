@@ -13,10 +13,11 @@ DROP TABLE IF EXISTS modules;
 DROP TABLE IF EXISTS live_classes;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS users;
 
--- Users table
+-- Users table - FIXED: Consistent field naming
 CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -25,7 +26,7 @@ CREATE TABLE users (
     email_verified BOOLEAN DEFAULT FALSE,
     email_verification_token VARCHAR(255) NULL,
     avatar_url VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
+    status ENUM('active', 'inactive') DEFAULT 'active', -- FIXED: Use status instead of is_active
     last_login DATETIME,
     login_attempts INT DEFAULT 0,
     lock_until DATETIME NULL,
@@ -35,28 +36,23 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY `email` (`email`),
     INDEX `idx_users_role` (`role`),
-    INDEX `idx_users_is_active` (`is_active`),
+    INDEX `idx_users_status` (`status`), -- FIXED: Updated index name
     INDEX `idx_users_email_verified` (`email_verified`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Admin user will be created by the INSERT statement below
--- This ensures the admin user exists before any other operations
-
--- Courses table
+-- Courses table - FIXED: Simplified status management
 CREATE TABLE courses (
-    id VARCHAR(36) PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY, -- FIXED: Use auto-increment for easier management
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
     description TEXT,
-    thumbnail_url VARCHAR(255),
+    thumbnail VARCHAR(255), -- FIXED: Simplified field name
     price DECIMAL(10, 2) DEFAULT 0.00,
-    is_published BOOLEAN DEFAULT FALSE,
-    status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+    status ENUM('draft', 'published', 'archived') DEFAULT 'draft', -- FIXED: Single status field
     level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
     category VARCHAR(100),
-    class VARCHAR(100),
-    subject VARCHAR(100),
-    duration VARCHAR(100),
+    instructor VARCHAR(255), -- FIXED: Store instructor name directly for simplicity
+    duration INT DEFAULT 0, -- FIXED: Duration in minutes
     content TEXT,
     requirements TEXT,
     what_you_will_learn JSON,
@@ -71,15 +67,14 @@ CREATE TABLE courses (
     UNIQUE KEY `slug` (`slug`),
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
     INDEX `idx_courses_status` (`status`),
-    INDEX `idx_courses_is_published` (`is_published`),
     INDEX `idx_courses_category` (`category`),
     INDEX `idx_courses_level` (`level`),
     INDEX `idx_courses_created_by` (`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Books table
+-- Books table - FIXED: Simplified status management
 CREATE TABLE books (
-    id VARCHAR(36) PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY, -- FIXED: Use auto-increment for easier management
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
     description TEXT,
@@ -93,8 +88,8 @@ CREATE TABLE books (
     pdf_url VARCHAR(255),
     pages INT,
     isbn VARCHAR(50) NULL,
-    status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
-    is_published BOOLEAN DEFAULT FALSE,
+    price DECIMAL(10, 2) DEFAULT 0.00, -- FIXED: Added price field
+    status ENUM('draft', 'published', 'archived') DEFAULT 'draft', -- FIXED: Single status field
     is_featured BOOLEAN DEFAULT FALSE,
     downloads INT DEFAULT 0,
     tags JSON,
@@ -106,7 +101,6 @@ CREATE TABLE books (
     UNIQUE KEY `slug` (`slug`),
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
     INDEX `idx_books_status` (`status`),
-    INDEX `idx_books_is_published` (`is_published`),
     INDEX `idx_books_is_featured` (`is_featured`),
     INDEX `idx_books_category` (`category`),
     INDEX `idx_books_subject` (`subject`),
@@ -115,9 +109,9 @@ CREATE TABLE books (
     INDEX `idx_books_isbn` (`isbn`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Live Classes table
+-- Live Classes table - FIXED: Consistent field naming
 CREATE TABLE live_classes (
-    id VARCHAR(36) PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY, -- FIXED: Use auto-increment for easier management
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
     description TEXT,
@@ -125,11 +119,11 @@ CREATE TABLE live_classes (
     subject VARCHAR(100),
     class VARCHAR(100),
     level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
-    thumbnail_url VARCHAR(255),
-    meeting_url VARCHAR(255),
+    thumbnail VARCHAR(255), -- FIXED: Simplified field name
+    meeting_link VARCHAR(255), -- FIXED: Simplified field name
     meeting_id VARCHAR(255),
     meeting_password VARCHAR(255),
-    scheduled_at TIMESTAMP,
+    date TIMESTAMP, -- FIXED: Simplified field name (was scheduled_at)
     started_at TIMESTAMP NULL,
     ended_at TIMESTAMP NULL,
     duration INT NOT NULL DEFAULT 60,
@@ -137,8 +131,7 @@ CREATE TABLE live_classes (
     enrolled_students INT DEFAULT 0,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     original_price DECIMAL(10, 2),
-    status ENUM('draft', 'scheduled', 'live', 'completed', 'cancelled') DEFAULT 'draft',
-    is_published BOOLEAN DEFAULT FALSE,
+    status ENUM('draft', 'upcoming', 'live', 'completed', 'cancelled') DEFAULT 'draft', -- FIXED: Consistent with frontend expectations
     is_featured BOOLEAN DEFAULT FALSE,
     is_recording_enabled BOOLEAN DEFAULT FALSE,
     recording_url VARCHAR(255),
@@ -146,30 +139,49 @@ CREATE TABLE live_classes (
     prerequisites TEXT,
     materials TEXT,
     notes TEXT,
-    instructor_id VARCHAR(36) NOT NULL,
-    course_id VARCHAR(255) NOT NULL,
+    instructor VARCHAR(255), -- FIXED: Store instructor name directly for simplicity
     created_by VARCHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY `slug` (`slug`),
-    FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
     INDEX `idx_live_classes_status` (`status`),
-    INDEX `idx_live_classes_is_published` (`is_published`),
     INDEX `idx_live_classes_is_featured` (`is_featured`),
     INDEX `idx_live_classes_category` (`category`),
     INDEX `idx_live_classes_subject` (`subject`),
     INDEX `idx_live_classes_level` (`level`),
-    INDEX `idx_live_classes_scheduled_at` (`scheduled_at`),
-    INDEX `idx_live_classes_instructor_id` (`instructor_id`),
-    INDEX `idx_live_classes_course_id` (`course_id`),
+    INDEX `idx_live_classes_date` (`date`), -- FIXED: Updated index name
     INDEX `idx_live_classes_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Payments table - NEW: Added missing payments table
+CREATE TABLE payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    item_type ENUM('course', 'book', 'live_class') NOT NULL,
+    item_id INT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    payment_method VARCHAR(50),
+    payment_gateway VARCHAR(50),
+    transaction_id VARCHAR(255),
+    gateway_response JSON,
+    metadata JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX `idx_payments_user_id` (`user_id`),
+    INDEX `idx_payments_status` (`status`),
+    INDEX `idx_payments_item_type` (`item_type`),
+    INDEX `idx_payments_item_id` (`item_id`),
+    INDEX `idx_payments_transaction_id` (`transaction_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Modules table (for organizing course content)
 CREATE TABLE modules (
     id VARCHAR(36) PRIMARY KEY,
-    course_id VARCHAR(36) NOT NULL,
+    course_id INT NOT NULL, -- FIXED: Updated to match courses table
     title VARCHAR(255) NOT NULL,
     description TEXT,
     position INT NOT NULL DEFAULT 0,
@@ -206,7 +218,7 @@ CREATE TABLE lessons (
 CREATE TABLE enrollments (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL,
-    course_id VARCHAR(36) NOT NULL,
+    course_id INT NOT NULL, -- FIXED: Updated to match courses table
     enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
     status ENUM('active', 'completed', 'dropped') DEFAULT 'active',
@@ -319,7 +331,7 @@ INSERT IGNORE INTO users (
     is_admin, 
     role, 
     email_verified,
-    is_active,
+    status, -- FIXED: Use status instead of is_active
     created_at, 
     updated_at
 ) VALUES (
@@ -330,14 +342,32 @@ INSERT IGNORE INTO users (
     TRUE,
     'admin',
     TRUE,
-    TRUE,
+    'active', -- FIXED: Use status instead of is_active
     NOW(),
     NOW()
 ) ON DUPLICATE KEY UPDATE
     is_admin = TRUE,
     role = 'admin',
     email_verified = TRUE,
-    is_active = TRUE,
+    status = 'active', -- FIXED: Use status instead of is_active
     updated_at = NOW();
 
+-- Insert sample data for testing
 
+-- Sample courses
+INSERT INTO courses (title, slug, description, thumbnail, price, status, level, category, instructor, duration, created_by) VALUES
+('Algebra Fundamentals', 'algebra-fundamentals', 'Master the basics of algebra with step-by-step explanations', '/uploads/covers/algebra-thumb.jpg', 29.99, 'published', 'Foundation', 'Algebra', 'Dr. Sarah Johnson', 480, 'admin-user-001'),
+('Calculus Made Easy', 'calculus-made-easy', 'Learn calculus concepts with real-world applications', '/uploads/covers/calculus-thumb.jpg', 49.99, 'published', 'Advanced', 'Calculus', 'Prof. Michael Chen', 720, 'admin-user-001'),
+('Statistics for Beginners', 'statistics-beginners', 'Introduction to statistical concepts and methods', '/uploads/covers/stats-thumb.jpg', 39.99, 'published', 'Intermediate', 'Statistics', 'Dr. Emily Davis', 600, 'admin-user-001');
+
+-- Sample books
+INSERT INTO books (title, slug, description, author, category, cover_image_url, pdf_url, price, status, created_by) VALUES
+('Mathematics Grade 10', 'math-grade-10', 'Complete mathematics textbook for grade 10 students', 'Mathematics Department', 'Textbooks', '/uploads/covers/math10-cover.jpg', '/uploads/pdfs/math10.pdf', 19.99, 'published', 'admin-user-001'),
+('Algebra Workbook', 'algebra-workbook', 'Practice problems and solutions for algebra students', 'Prof. John Smith', 'Workbooks', '/uploads/covers/algebra-workbook.jpg', '/uploads/pdfs/algebra-workbook.pdf', 14.99, 'published', 'admin-user-001'),
+('Geometry Reference Guide', 'geometry-reference', 'Quick reference guide for geometry formulas and theorems', 'Dr. Lisa Wang', 'Reference', '/uploads/covers/geometry-ref.jpg', '/uploads/pdfs/geometry-ref.pdf', 9.99, 'published', 'admin-user-001');
+
+-- Sample live classes
+INSERT INTO live_classes (title, slug, description, thumbnail, meeting_link, date, duration, max_students, price, status, instructor, created_by) VALUES
+('Algebra Problem Solving Session', 'algebra-problem-solving', 'Interactive session to solve complex algebra problems', '/uploads/covers/algebra-live.jpg', 'https://meet.google.com/abc-defg-hij', '2024-12-01 15:00:00', 90, 30, 15.00, 'upcoming', 'Dr. Sarah Johnson', 'admin-user-001'),
+('Calculus Q&A Session', 'calculus-qa', 'Ask your calculus questions and get expert answers', '/uploads/covers/calculus-live.jpg', 'https://zoom.us/j/123456789', '2024-12-05 18:00:00', 60, 25, 20.00, 'upcoming', 'Prof. Michael Chen', 'admin-user-001'),
+('Statistics Workshop', 'statistics-workshop', 'Hands-on workshop on statistical analysis', '/uploads/covers/stats-live.jpg', 'https://meet.google.com/xyz-uvwx-123', '2024-12-10 16:00:00', 120, 20, 25.00, 'upcoming', 'Dr. Emily Davis', 'admin-user-001');

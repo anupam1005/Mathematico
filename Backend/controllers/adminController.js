@@ -1,538 +1,1081 @@
-// Vercel serverless function entry point - SIMPLIFIED VERSION
-const express = require('express');
-const cors = require('cors');
+const User = require('../models/User');
+const Book = require('../models/Book');
+const Course = require('../models/Course');
+const LiveClass = require('../models/LiveClass');
+const Payment = require('../models/Payment');
+const path = require('path');
 
-const app = express();
+// Admin Controller - Handles admin panel operations
 
-// CORS
-app.use(cors({
-  origin: "*",
-  credentials: true,
-}));
-
-// Body parsers
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
-
-// JWT Utils
-const { generateAccessToken, generateRefreshToken } = require('./utils/jwt');
-
-// Root
-app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Mathematico Backend API is running ✅",
-    version: "1.0.0",
-    timestamp: new Date().toISOString(),
-    serverless: true,
-  });
-});
-
-// API v1 base route
-app.get("/api/v1", (req, res) => {
-  res.json({
-    success: true,
-    message: "Mathematico Backend API v1 is running ✅",
-    version: "1.0.0",
-    timestamp: new Date().toISOString(),
-    serverless: true,
-  });
-});
-
-// Health
-app.get("/api/v1/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "Mathematico Backend API is healthy ✅",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// AUTH ROUTES
-app.post("/api/v1/auth/login", (req, res) => {
+/**
+ * Get dashboard statistics
+ */
+const getDashboard = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Bad Request',
-        message: 'Email and password are required',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    if (email === 'dc2006089@gmail.com' && password === 'Myname*321') {
-      const userPayload = {
-        id: 1,
-        email: email,
-        name: 'Admin User',
-        role: 'admin',
-        isAdmin: true,
-        is_admin: true,
-        email_verified: true,
-        is_active: true
-      };
-      
-      const accessToken = generateAccessToken(userPayload);
-      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-      
-      res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
-          user: {
-            ...userPayload,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          tokens: {
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            expiresIn: 3600
-          }
-        },
-        timestamp: new Date().toISOString()
-      });
-    } else if (email === 'test@example.com' && password === 'password123') {
-      const userPayload = {
-        id: 2,
-        email: email,
-        name: 'Test User',
-        role: 'user',
-        isAdmin: false,
-        is_admin: false,
-        email_verified: true,
-        is_active: true
-      };
-      
-      const accessToken = generateAccessToken(userPayload);
-      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-      
-      res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
-          user: {
-            ...userPayload,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          tokens: {
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            expiresIn: 3600
-          }
-        },
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-        message: 'Invalid email or password',
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Get stats from all models
+    const [userStats, bookStats, courseStats, liveClassStats, paymentStats] = await Promise.allSettled([
+      User.getAll(1, 1).then(result => ({ total: result.pagination.total })).catch(() => ({ total: 0 })),
+      Book.getAll(1, 1).then(result => ({ total: result.pagination.total })).catch(() => ({ total: 0 })),
+      Course.getStats().catch(() => ({ total: 0, published: 0, draft: 0 })),
+      LiveClass.getStats().catch(() => ({ total: 0, upcoming: 0, completed: 0 })),
+      Payment.getStats().catch(() => ({ total: 0, totalAmount: 0 }))
+    ]);
+
+    const dashboardData = {
+      totalUsers: userStats.status === 'fulfilled' ? userStats.value.total : 0,
+      totalBooks: bookStats.status === 'fulfilled' ? bookStats.value.total : 0,
+      totalCourses: courseStats.status === 'fulfilled' ? courseStats.value.total : 0,
+      totalLiveClasses: liveClassStats.status === 'fulfilled' ? liveClassStats.value.total : 0,
+      totalRevenue: paymentStats.status === 'fulfilled' ? paymentStats.value.totalAmount : 0,
+      courseStats: courseStats.status === 'fulfilled' ? courseStats.value : { total: 0, published: 0, draft: 0 },
+      liveClassStats: liveClassStats.status === 'fulfilled' ? liveClassStats.value : { total: 0, upcoming: 0, completed: 0 }
+    };
+
+    res.json({
+      success: true,
+      data: dashboardData,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Dashboard error:', error);
     res.status(500).json({
       success: false,
-      message: 'Login failed',
+      message: 'Failed to fetch dashboard data',
       timestamp: new Date().toISOString()
     });
   }
-});
+};
 
-// Register route
-app.post("/api/v1/auth/register", (req, res) => {
+// ============= USER MANAGEMENT =============
+
+const getAllUsers = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword } = req.body;
-    
-    if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Bad Request',
-        message: 'All fields are required',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Bad Request',
-        message: 'Passwords do not match',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Mock registration - in real app, save to database
-    const userPayload = {
-      id: Date.now(),
-      name: name,
-      email: email,
-      role: 'user',
-      isAdmin: false,
-      is_admin: false,
-      email_verified: false,
-      is_active: true
-    };
-    
-    const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+    const { page = 1, limit = 10, role, status } = req.query;
+    const filters = {};
+    if (role) filters.role = role;
+    if (status) filters.status = status;
+
+    const result = await User.getAll(parseInt(page), parseInt(limit), filters);
     
     res.json({
       success: true,
-      message: 'Registration successful',
-      data: {
-        user: {
-          ...userPayload,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        tokens: {
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          expiresIn: 3600
-        }
-      },
+      data: result.data,
+      pagination: result.pagination,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Get users error:', error);
     res.status(500).json({
       success: false,
-      message: 'Registration failed',
+      message: 'Failed to fetch users',
       timestamp: new Date().toISOString()
     });
   }
-});
+};
 
-// MOBILE ROUTES
-app.get("/api/v1/mobile/courses", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Mathematics",
-        description: "Comprehensive course covering advanced mathematical concepts",
-        category: "Mathematics",
-        level: "Advanced",
-        price: 99.99,
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const user = await User.update(id, updateData);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'User updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.delete(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    
+    const status = is_active ? 'active' : 'inactive';
+    const user = await User.updateStatus(id, status);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'User status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= BOOK MANAGEMENT =============
+
+const getAllBooks = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, status } = req.query;
+    const filters = {};
+    if (category) filters.category = category;
+    if (status) filters.status = status;
+
+    const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get books error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch books',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getBookById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const book = await Book.findById(id);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: book,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const createBook = async (req, res) => {
+  try {
+    const bookData = req.body;
+    
+    // Handle file uploads
+    if (req.files) {
+      if (req.files.cover_image) {
+        bookData.cover_image_url = `/uploads/covers/${req.files.cover_image[0].filename}`;
+      }
+      if (req.files.pdf_file) {
+        bookData.pdf_url = `/uploads/pdfs/${req.files.pdf_file[0].filename}`;
+      }
+    }
+    
+    // Add created_by from authenticated user
+    bookData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    
+    const book = await Book.create(bookData);
+    
+    res.status(201).json({
+      success: true,
+      data: book,
+      message: 'Book created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateBook = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Handle file uploads
+    if (req.files) {
+      if (req.files.cover_image) {
+        updateData.cover_image_url = `/uploads/covers/${req.files.cover_image[0].filename}`;
+      }
+      if (req.files.pdf_file) {
+        updateData.pdf_url = `/uploads/pdfs/${req.files.pdf_file[0].filename}`;
+      }
+    }
+    
+    const book = await Book.update(id, updateData);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: book,
+      message: 'Book updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const deleteBook = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const book = await Book.delete(id);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Book deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateBookStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const book = await Book.updateStatus(id, status);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: book,
+      message: 'Book status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update book status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= COURSE MANAGEMENT =============
+
+const getAllCourses = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, status } = req.query;
+    const filters = {};
+    if (category) filters.category = category;
+    if (status) filters.status = status;
+
+    const result = await Course.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get courses error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch courses',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getCourseById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const course = await Course.findById(id);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const createCourse = async (req, res) => {
+  try {
+    const courseData = req.body;
+    
+    // Handle file upload
+    if (req.file) {
+      courseData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    }
+    
+    // Add created_by from authenticated user
+    courseData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    
+    const course = await Course.create(courseData);
+    
+    res.status(201).json({
+      success: true,
+      data: course,
+      message: 'Course created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Handle file upload
+    if (req.file) {
+      updateData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    }
+    
+    const course = await Course.update(id, updateData);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
+      message: 'Course updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const deleteCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const course = await Course.delete(id);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Course deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateCourseStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const course = await Course.updateStatus(id, status);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
+      message: 'Course status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update course status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= LIVE CLASS MANAGEMENT =============
+
+const getAllLiveClasses = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, instructor } = req.query;
+    const filters = {};
+    if (status) filters.status = status;
+    if (instructor) filters.instructor = instructor;
+
+    const result = await LiveClass.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get live classes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live classes',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getLiveClassById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const liveClass = await LiveClass.findById(id);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const createLiveClass = async (req, res) => {
+  try {
+    const liveClassData = req.body;
+    
+    // Handle file upload
+    if (req.file) {
+      liveClassData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    }
+    
+    // Convert field names to match database schema
+    if (liveClassData.scheduledAt) {
+      liveClassData.date = liveClassData.scheduledAt;
+      delete liveClassData.scheduledAt;
+    }
+    if (liveClassData.maxStudents) {
+      liveClassData.max_students = liveClassData.maxStudents;
+      delete liveClassData.maxStudents;
+    }
+    if (liveClassData.meetingLink) {
+      liveClassData.meeting_link = liveClassData.meetingLink;
+      delete liveClassData.meetingLink;
+    }
+    
+    // Add created_by from authenticated user
+    liveClassData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    
+    const liveClass = await LiveClass.create(liveClassData);
+    
+    res.status(201).json({
+      success: true,
+      data: liveClass,
+      message: 'Live class created successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateLiveClass = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Handle file upload
+    if (req.file) {
+      updateData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    }
+    
+    // Convert field names to match database schema
+    if (updateData.scheduledAt) {
+      updateData.date = updateData.scheduledAt;
+      delete updateData.scheduledAt;
+    }
+    if (updateData.maxStudents) {
+      updateData.max_students = updateData.maxStudents;
+      delete updateData.maxStudents;
+    }
+    if (updateData.meetingLink) {
+      updateData.meeting_link = updateData.meetingLink;
+      delete updateData.meetingLink;
+    }
+    
+    const liveClass = await LiveClass.update(id, updateData);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
+      message: 'Live class updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const deleteLiveClass = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const liveClass = await LiveClass.delete(id);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Live class deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateLiveClassStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const liveClass = await LiveClass.updateStatus(id, status);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
+      message: 'Live class status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update live class status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update live class status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= PAYMENT MANAGEMENT =============
+
+const getAllPayments = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, item_type } = req.query;
+    const filters = {};
+    if (status) filters.status = status;
+    if (item_type) filters.item_type = item_type;
+
+    const result = await Payment.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payments',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getPaymentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const payment = await Payment.findById(id);
+    
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: payment,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, metadata } = req.body;
+    
+    const payment = await Payment.updateStatus(id, status, metadata);
+    
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: payment,
+      message: 'Payment status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update payment status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update payment status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getPaymentStats = async (req, res) => {
+  try {
+    const stats = await Payment.getStats();
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get payment stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= FILE UPLOAD =============
+
+const uploadFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const fileUrl = `/uploads/${req.file.mimetype.startsWith('image/') ? 'covers' : 'pdfs'}/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      data: { 
+        url: fileUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
       },
-      {
-        id: 2,
-        title: "Basic Algebra",
-        description: "Introduction to algebraic concepts and problem solving",
-        category: "Mathematics",
-        level: "Foundation",
-        price: 49.99,
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 2,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+      message: 'File uploaded successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload file',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-app.get("/api/v1/mobile/books", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Calculus Textbook",
-        author: "Dr. John Smith",
-        description: "Comprehensive textbook covering advanced calculus topics",
-        category: "Mathematics",
-        level: "Advanced",
-        pages: 450,
-        isbn: "978-1234567890",
-        cover_image_url: "/placeholder.svg",
-        pdf_url: "/uploads/advanced-calculus.pdf",
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: "Linear Algebra Fundamentals",
-        author: "Prof. Jane Doe",
-        description: "Essential guide to linear algebra concepts and applications",
-        category: "Mathematics",
-        level: "Intermediate",
-        pages: 320,
-        isbn: "978-0987654321",
-        cover_image_url: "/placeholder.svg",
-        pdf_url: "/uploads/linear-algebra.pdf",
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 2,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+// ============= STATISTICS =============
 
-app.get("/api/v1/mobile/live-classes", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Calculus Live Session",
-        description: "Interactive live session covering advanced calculus topics",
-        category: "Mathematics",
-        level: "Advanced",
-        scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        duration: 60,
-        max_students: 50,
-        status: "scheduled",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 1,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const getOverviewStats = async (req, res) => {
+  try {
+    const stats = await getDashboard(req, res);
+    return stats;
+  } catch (error) {
+    console.error('Get overview stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch overview statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-// ADMIN ROUTES
-app.get("/api/v1/admin/dashboard", (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      totalUsers: 150,
-      totalCourses: 25,
-      totalBooks: 40,
-      totalLiveClasses: 12,
-      totalRevenue: 125000,
-      recentActivity: [
-        {
-          id: 1,
-          type: "user_registration",
-          message: "New user registered",
-          timestamp: new Date().toISOString()
-        }
-      ]
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const getBookStats = async (req, res) => {
+  try {
+    const stats = await Book.getStats();
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get book stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-app.get("/api/v1/admin/books", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Calculus Textbook",
-        author: "Dr. John Smith",
-        description: "Comprehensive textbook covering advanced calculus topics",
-        category: "Mathematics",
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 1,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const getCourseStats = async (req, res) => {
+  try {
+    const stats = await Course.getStats();
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get course stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-app.get("/api/v1/admin/courses", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Mathematics",
-        description: "Comprehensive course covering advanced mathematical concepts",
-        category: "Mathematics",
-        level: "Advanced",
-        price: 99.99,
-        status: "active",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 1,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const getLiveClassStats = async (req, res) => {
+  try {
+    const stats = await LiveClass.getStats();
+    
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get live class stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live class statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-app.get("/api/v1/admin/live-classes", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        title: "Advanced Calculus Live Session",
-        description: "Interactive live session covering advanced calculus topics",
-        category: "Mathematics",
-        level: "Advanced",
-        scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        duration: 60,
-        max_students: 50,
-        status: "scheduled",
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 1,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+// ============= SETTINGS MANAGEMENT =============
 
-app.get("/api/v1/admin/users", (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        name: "Admin User",
-        email: "dc2006089@gmail.com",
-        role: "admin",
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      page: 1,
-      limit: 10,
-      total: 1,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const getSettings = async (req, res) => {
+  try {
+    // For now, return default settings
+    const settings = {
+      siteName: 'Mathematico',
+      siteDescription: 'Your ultimate mathematics learning companion',
+      contactEmail: 'support@mathematico.com',
+      maxFileSize: 10, // MB
+      allowedFileTypes: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      enableRegistration: true,
+      enablePayments: true,
+      currency: 'USD',
+      timezone: 'UTC',
+      maintenanceMode: false,
+      emailNotifications: true,
+      smsNotifications: false
+    };
+    
+    res.json({
+      success: true,
+      data: settings,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch settings',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-// POST routes for creating content
-app.post("/api/v1/admin/books", (req, res) => {
-  res.json({
-    success: true,
-    message: "Book created successfully (serverless mode)",
-    data: {
-      id: Date.now(),
-      title: req.body.title || "New Book",
-      author: req.body.author || "Unknown Author",
-      description: req.body.description || "Book description",
-      category: req.body.category || "Mathematics",
-      status: "draft",
-      is_published: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+const updateSettings = async (req, res) => {
+  try {
+    const settings = req.body;
+    
+    // For now, just return the updated settings
+    // In a real implementation, you would save to database
+    
+    res.json({
+      success: true,
+      data: settings,
+      message: 'Settings updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update settings',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
 
-app.post("/api/v1/admin/courses", (req, res) => {
-  res.json({
-    success: true,
-    message: "Course created successfully (serverless mode)",
-    data: {
-      id: Date.now(),
-      title: req.body.title || "New Course",
-      description: req.body.description || "Course description",
-      category: req.body.category || "Mathematics",
-      level: req.body.level || "Foundation",
-      price: req.body.price || 0,
-      status: "draft",
-      is_published: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.post("/api/v1/admin/live-classes", (req, res) => {
-  res.json({
-    success: true,
-    message: "Live class created successfully (serverless mode)",
-    data: {
-      id: Date.now(),
-      title: req.body.title || "New Live Class",
-      description: req.body.description || "Live class description",
-      category: req.body.category || "Mathematics",
-      level: req.body.level || "Foundation",
-      scheduled_at: req.body.scheduledAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      duration: req.body.duration || 60,
-      max_students: req.body.maxStudents || 50,
-      status: "draft",
-      is_published: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error("🔥 Global error:", err);
-  res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
-});
-
-module.exports = app;
+module.exports = {
+  getDashboard,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  updateUserStatus,
+  getAllBooks,
+  getBookById,
+  createBook,
+  updateBook,
+  deleteBook,
+  updateBookStatus,
+  getAllCourses,
+  getCourseById,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  updateCourseStatus,
+  getAllLiveClasses,
+  getLiveClassById,
+  createLiveClass,
+  updateLiveClass,
+  deleteLiveClass,
+  updateLiveClassStatus,
+  getAllPayments,
+  getPaymentById,
+  updatePaymentStatus,
+  getPaymentStats,
+  uploadFile,
+  getOverviewStats,
+  getBookStats,
+  getCourseStats,
+  getLiveClassStats,
+  getSettings,
+  updateSettings
+};

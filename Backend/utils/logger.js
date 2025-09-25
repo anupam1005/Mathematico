@@ -46,8 +46,8 @@ const transports = [
   }),
 ];
 
-// Add file transports only in production or when explicitly enabled
-if (process.env.NODE_ENV === 'production' || process.env.ENABLE_FILE_LOGGING === 'true') {
+// Add file transports only in non-serverless production or when explicitly enabled
+if ((process.env.NODE_ENV === 'production' && !process.env.VERCEL) || process.env.ENABLE_FILE_LOGGING === 'true') {
   // Error log file
   transports.push(
     new DailyRotateFile({

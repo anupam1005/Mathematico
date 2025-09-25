@@ -28,16 +28,16 @@ class Course {
         category,
         thumbnail,
         status = 'draft',
-        isPublished = false
+        created_by
       } = courseData;
       
       const query = `
-        INSERT INTO courses (title, description, instructor, price, duration, level, category, thumbnail, status, is_published, created_at, updated_at) 
+        INSERT INTO courses (title, description, instructor, price, duration, level, category, thumbnail, status, created_by, created_at, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       const [result] = await connection.execute(query, [
-        title, description, instructor, price, duration, level, category, thumbnail, status, isPublished
+        title, description, instructor, price, duration, level, category, thumbnail, status, created_by
       ]);
       
       // Get the created course
@@ -84,12 +84,13 @@ class Course {
       }
       
       if (filters.status) {
-        const statusCondition = filters.status === 'published' ? 'is_published = 1' : 'is_published = 0';
+        const statusCondition = `status = ?`;
         if (whereClause) {
           whereClause += ` AND ${statusCondition}`;
         } else {
           whereClause = ` WHERE ${statusCondition}`;
         }
+        params.push(filters.status);
       }
       
       if (filters.search) {
@@ -189,12 +190,12 @@ class Course {
   /**
    * Update course status
    */
-  static async updateStatus(id, status, isPublished) {
+  static async updateStatus(id, status) {
     try {
       const connection = await getPool().getConnection();
       
-      const query = 'UPDATE courses SET status = ?, is_published = ?, updated_at = NOW() WHERE id = ?';
-      await connection.execute(query, [status, isPublished, id]);
+      const query = 'UPDATE courses SET status = ?, updated_at = NOW() WHERE id = ?';
+      await connection.execute(query, [status, id]);
       
       // Get the updated course
       const [rows] = await connection.execute('SELECT * FROM courses WHERE id = ?', [id]);
@@ -215,8 +216,8 @@ class Course {
       const connection = await getPool().getConnection();
       
       const [totalRows] = await connection.execute('SELECT COUNT(*) as total FROM courses');
-      const [publishedRows] = await connection.execute('SELECT COUNT(*) as published FROM courses WHERE is_published = 1');
-      const [draftRows] = await connection.execute('SELECT COUNT(*) as draft FROM courses WHERE is_published = 0');
+      const [publishedRows] = await connection.execute('SELECT COUNT(*) as published FROM courses WHERE status = "published"');
+      const [draftRows] = await connection.execute('SELECT COUNT(*) as draft FROM courses WHERE status = "draft"');
       
       connection.release();
       

@@ -1304,6 +1304,45 @@ const User = {
   }
 };
 
+// Create payments table
+async function createPaymentsTable() {
+  try {
+    const connection = await getPool().getConnection();
+    
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS payments (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        item_type ENUM('course', 'book', 'live_class') NOT NULL,
+        item_id INT NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        currency VARCHAR(3) DEFAULT 'USD',
+        payment_method VARCHAR(50) DEFAULT 'card',
+        payment_gateway VARCHAR(50) DEFAULT 'razorpay',
+        gateway_payment_id VARCHAR(255),
+        gateway_order_id VARCHAR(255),
+        status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+        metadata JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status),
+        INDEX idx_item (item_type, item_id),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.execute(createTableQuery);
+    console.log('✅ Payments table created/verified successfully');
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating payments table:', error.message);
+    return false;
+  }
+}
+
 module.exports = {
   get pool() { return getPool(); },
   testConnection,
@@ -1312,6 +1351,7 @@ module.exports = {
   createCoursesTable,
   createLiveClassesTable,
   createEnrollmentsTable,
+  createPaymentsTable,
   Book,
   Course,
   LiveClass,

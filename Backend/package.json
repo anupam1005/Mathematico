@@ -2,10 +2,14 @@
   "name": "mathematico-unified-backend",
   "version": "2.0.0",
   "description": "Unified Backend for Mathematico - Android Only",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "vercel-build": "echo 'Build complete'",
+    "postinstall": "echo 'Dependencies installed'",
+    "export-docs": "node scripts/export-swagger.js",
+    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\""
   },
   "dependencies": {
     "axios": "^1.12.2",
@@ -25,7 +29,8 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

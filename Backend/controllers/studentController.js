@@ -1,4 +1,8 @@
-const { Book } = require('../database');
+const Book = require('../models/Book');
+const Course = require('../models/Course');
+const LiveClass = require('../models/LiveClass');
+const Payment = require('../models/Payment');
+const User = require('../models/User');
 
 // Student Controller - Handles requests from students
 

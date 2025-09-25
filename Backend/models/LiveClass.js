@@ -28,16 +28,17 @@ class LiveClass {
         price,
         status = 'upcoming',
         meetingLink,
-        thumbnail
+        thumbnail,
+        created_by
       } = liveClassData;
       
       const query = `
-        INSERT INTO live_classes (title, description, instructor, date, duration, max_students, price, status, meeting_link, thumbnail, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO live_classes (title, description, instructor, date, duration, max_students, price, status, meeting_link, thumbnail, created_by, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       const [result] = await connection.execute(query, [
-        title, description, instructor, date, duration, maxStudents, price, status, meetingLink, thumbnail
+        title, description, instructor, date, duration, maxStudents, price, status, meetingLink, thumbnail, created_by
       ]);
       
       // Get the created live class

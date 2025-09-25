@@ -1,679 +1,258 @@
-const { Book } = require('../database');
+const Book = require('../models/Book');
+const Course = require('../models/Course');
+const LiveClass = require('../models/LiveClass');
 
 // Mobile Controller - Handles requests from React Native mobile app
 
 /**
  * Get all courses for mobile app
  */
-const getCourses = async (req, res) => {
+const getAllCourses = async (req, res) => {
   try {
     const { page = 1, limit = 10, category, search } = req.query;
+    const filters = {};
     
-    // Sample courses data for mobile
-    const sampleCourses = [
-      {
-        id: 1,
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive course covering advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        price: 99.99,
-        duration: '12 weeks',
-        level: 'Advanced',
-        category: 'Mathematics',
-        thumbnail: '/placeholder.svg',
-        rating: 4.8,
-        studentsCount: 150,
-        status: 'published',
-        isEnrolled: false,
-        progress: 0,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: 'Calculus Fundamentals',
-        description: 'Learn the basics of calculus from scratch',
-        instructor: 'Prof. Jane Doe',
-        price: 79.99,
-        duration: '8 weeks',
-        level: 'Beginner',
-        category: 'Mathematics',
-        thumbnail: '/placeholder.svg',
-        rating: 4.6,
-        studentsCount: 200,
-        status: 'published',
-        isEnrolled: true,
-        progress: 25,
-        createdAt: new Date().toISOString()
-      }
-    ];
+    if (category) filters.category = category;
+    if (search) filters.search = search;
+    filters.status = 'published'; // Only show published courses
+    
+    const result = await Course.getAll(parseInt(page), parseInt(limit), filters);
     
     res.json({
       success: true,
-      data: sampleCourses,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: sampleCourses.length,
-        totalPages: Math.ceil(sampleCourses.length / parseInt(limit))
-      },
-      message: 'Courses retrieved successfully',
+      data: result.data,
+      pagination: result.pagination,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting courses:', error);
+    console.error('Get mobile courses error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve courses',
-      error: error.message,
+      message: 'Failed to fetch courses',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Get course by ID for mobile app
- */
 const getCourseById = async (req, res) => {
   try {
-    const courseId = req.params.id;
+    const { id } = req.params;
+    const course = await Course.findById(id);
     
-    // Sample course detail for mobile
-    const course = {
-      id: parseInt(courseId),
-      title: 'Advanced Mathematics',
-      description: 'Comprehensive course covering advanced mathematical concepts including differential equations, linear algebra, and complex analysis.',
-      instructor: 'Dr. John Smith',
-      price: 99.99,
-      duration: '12 weeks',
-      level: 'Advanced',
-      category: 'Mathematics',
-      thumbnail: '/placeholder.svg',
-      rating: 4.8,
-      studentsCount: 150,
-      status: 'published',
-      isEnrolled: false,
-      progress: 0,
-      modules: [
-        {
-          id: 1,
-          title: 'Introduction to Advanced Mathematics',
-          lessons: [
-            { id: 1, title: 'Overview of Course', duration: '15 min', type: 'video', isCompleted: false },
-            { id: 2, title: 'Mathematical Foundations', duration: '30 min', type: 'video', isCompleted: false }
-          ]
-        },
-        {
-          id: 2,
-          title: 'Differential Equations',
-          lessons: [
-            { id: 3, title: 'First Order Equations', duration: '45 min', type: 'video', isCompleted: false },
-            { id: 4, title: 'Second Order Equations', duration: '50 min', type: 'video', isCompleted: false }
-          ]
-        }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    
+    if (!course || course.status !== 'published') {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     res.json({
       success: true,
       data: course,
-      message: 'Course details retrieved successfully',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting course by ID:', error);
+    console.error('Get mobile course error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve course',
-      error: error.message,
+      message: 'Failed to fetch course',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Enroll in course
- */
-const enrollInCourse = async (req, res) => {
-  try {
-    const courseId = req.params.id;
-    const { paymentMethod, amount } = req.body;
-    
-    // Simulate payment processing
-    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    res.json({
-      success: true,
-      data: {
-        paymentId: paymentId,
-        courseId: parseInt(courseId),
-        amount: amount || 99.99,
-        status: 'completed',
-        enrolledAt: new Date().toISOString(),
-        accessExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      message: 'Course enrolled successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error enrolling in course:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to enroll in course',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get all books for mobile app
- */
-const getBooks = async (req, res) => {
+const getAllBooks = async (req, res) => {
   try {
     const { page = 1, limit = 10, category, search } = req.query;
+    const filters = {};
     
-    const result = await Book.getAll(page, limit, category, search);
+    if (category) filters.category = category;
+    if (search) filters.search = search;
+    filters.status = 'published'; // Only show published books
     
-    // Add mobile-specific fields
-    const booksWithMobileData = result.data.map(book => ({
-      ...book,
-      isPurchased: false,
-      canPreview: true,
-      previewPages: 5
-    }));
+    const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
     
     res.json({
       success: true,
-      data: booksWithMobileData,
+      data: result.data,
       pagination: result.pagination,
-      message: 'Books retrieved successfully',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting books:', error);
+    console.error('Get mobile books error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve books',
-      error: error.message,
+      message: 'Failed to fetch books',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Get book by ID for mobile app
- */
 const getBookById = async (req, res) => {
   try {
-    const bookId = parseInt(req.params.id);
+    const { id } = req.params;
+    const book = await Book.findById(id);
     
-    const book = await Book.getById(bookId);
-    
-    if (!book) {
+    if (!book || book.status !== 'published') {
       return res.status(404).json({
         success: false,
         message: 'Book not found',
         timestamp: new Date().toISOString()
       });
     }
-    
-    // Add mobile-specific fields
-    const bookWithMobileData = {
-      ...book,
-      isPurchased: false,
-      canPreview: true,
-      previewPages: 5,
-      totalPages: book.pages || 0
-    };
-    
+
     res.json({
       success: true,
-      data: bookWithMobileData,
-      message: 'Book details retrieved successfully',
+      data: book,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting book by ID:', error);
+    console.error('Get mobile book error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve book',
-      error: error.message,
+      message: 'Failed to fetch book',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Purchase book
- */
-const purchaseBook = async (req, res) => {
+const getAllLiveClasses = async (req, res) => {
   try {
-    const bookId = req.params.id;
-    const { paymentMethod, amount } = req.body;
+    const { page = 1, limit = 10, status, search } = req.query;
+    const filters = {};
     
-    // Simulate payment processing
-    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (status) filters.status = status;
+    if (search) filters.search = search;
+    
+    const result = await LiveClass.getAll(parseInt(page), parseInt(limit), filters);
     
     res.json({
       success: true,
-      data: {
-        paymentId: paymentId,
-        bookId: parseInt(bookId),
-        amount: amount || 49.99,
-        status: 'completed',
-        purchasedAt: new Date().toISOString(),
-        accessExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      message: 'Book purchased successfully',
+      data: result.data,
+      pagination: result.pagination,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error purchasing book:', error);
+    console.error('Get mobile live classes error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to purchase book',
-      error: error.message,
+      message: 'Failed to fetch live classes',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Get live classes for mobile app
- */
-const getLiveClasses = async (req, res) => {
-  try {
-    const { page = 1, limit = 10, status } = req.query;
-    
-    // Sample live classes data for mobile
-    const sampleLiveClasses = [
-      {
-        id: 1,
-        title: 'Advanced Mathematics Live Session',
-        description: 'Interactive live session on advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 120,
-        maxStudents: 50,
-        currentStudents: 25,
-        price: 29.99,
-        status: 'upcoming',
-        meetingLink: 'https://meet.example.com/advanced-math',
-        thumbnail: '/placeholder.svg',
-        isEnrolled: false,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: 'Calculus Problem Solving',
-        description: 'Live problem-solving session for calculus students',
-        instructor: 'Prof. Jane Doe',
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 90,
-        maxStudents: 30,
-        currentStudents: 18,
-        price: 19.99,
-        status: 'upcoming',
-        meetingLink: 'https://meet.example.com/calculus-problems',
-        thumbnail: '/placeholder.svg',
-        isEnrolled: true,
-        createdAt: new Date().toISOString()
-      }
-    ];
-    
-    res.json({
-      success: true,
-      data: sampleLiveClasses,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: sampleLiveClasses.length,
-        totalPages: Math.ceil(sampleLiveClasses.length / parseInt(limit))
-      },
-      message: 'Live classes retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting live classes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve live classes',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get live class by ID for mobile app
- */
 const getLiveClassById = async (req, res) => {
   try {
-    const classId = req.params.id;
+    const { id } = req.params;
+    const liveClass = await LiveClass.findById(id);
     
-    const liveClass = {
-      id: parseInt(classId),
-      title: 'Advanced Mathematics Live Session',
-      description: 'Interactive live session on advanced mathematical concepts including differential equations and linear algebra.',
-      instructor: 'Dr. John Smith',
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: 120,
-      maxStudents: 50,
-      currentStudents: 25,
-      price: 29.99,
-      status: 'upcoming',
-      meetingLink: 'https://meet.example.com/advanced-math',
-      thumbnail: '/placeholder.svg',
-      isEnrolled: false,
-      agenda: [
-        { time: '0-30 min', topic: 'Introduction and Overview' },
-        { time: '30-60 min', topic: 'Differential Equations' },
-        { time: '60-90 min', topic: 'Linear Algebra' },
-        { time: '90-120 min', topic: 'Q&A Session' }
-      ],
-      materials: [
-        { name: 'Course Notes', url: '/uploads/advanced-math-notes.pdf' },
-        { name: 'Practice Problems', url: '/uploads/practice-problems.pdf' }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     res.json({
       success: true,
       data: liveClass,
-      message: 'Live class details retrieved successfully',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting live class by ID:', error);
+    console.error('Get mobile live class error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve live class',
-      error: error.message,
+      message: 'Failed to fetch live class',
       timestamp: new Date().toISOString()
     });
   }
 };
 
-/**
- * Enroll in live class
- */
-const enrollInLiveClass = async (req, res) => {
+const search = async (req, res) => {
   try {
-    const classId = req.params.id;
-    const { paymentMethod, amount } = req.body;
+    const { q: query, type, page = 1, limit = 10 } = req.query;
     
-    // Simulate payment processing
-    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const results = {};
+    const searchFilters = { search: query, status: 'published' };
     
+    if (!type || type === 'courses') {
+      const courses = await Course.getAll(parseInt(page), parseInt(limit), searchFilters);
+      results.courses = courses;
+    }
+    
+    if (!type || type === 'books') {
+      const books = await Book.getAll(parseInt(page), parseInt(limit), searchFilters);
+      results.books = books;
+    }
+    
+    if (!type || type === 'live-classes') {
+      const liveClasses = await LiveClass.getAll(parseInt(page), parseInt(limit), { search: query });
+      results.liveClasses = liveClasses;
+    }
+
+    res.json({
+      success: true,
+      data: results,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Search failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getAppInfo = async (req, res) => {
+  try {
     res.json({
       success: true,
       data: {
-        paymentId: paymentId,
-        liveClassId: parseInt(classId),
-        amount: amount || 29.99,
-        status: 'completed',
-        enrolledAt: new Date().toISOString(),
-        meetingLink: 'https://meet.example.com/advanced-math'
+        version: '1.0.0',
+        name: 'Mathematico',
+        description: 'Your ultimate mathematics learning companion',
+        features: [
+          'Interactive courses',
+          'Digital books',
+          'Live classes',
+          'Progress tracking'
+        ],
+        supportEmail: 'support@mathematico.com',
+        termsUrl: 'https://mathematico.com/terms',
+        privacyUrl: 'https://mathematico.com/privacy'
       },
-      message: 'Live class enrolled successfully',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error enrolling in live class:', error);
+    console.error('Get app info error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to enroll in live class',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get user's enrolled courses
- */
-const getMyCourses = async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: [
-        {
-          id: 1,
-          courseId: 1,
-          title: 'Advanced Mathematics',
-          instructor: 'Dr. John Smith',
-          thumbnail: '/placeholder.svg',
-          progress: 25,
-          enrolledAt: new Date().toISOString(),
-          lastAccessed: new Date().toISOString(),
-          accessExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ],
-      message: 'User courses retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting user courses:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve user courses',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get user's purchased books
- */
-const getMyBooks = async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: [
-        {
-          id: 1,
-          bookId: 1,
-          title: 'Advanced Calculus Textbook',
-          author: 'Dr. John Smith',
-          coverImage: '/placeholder.svg',
-          purchasedAt: new Date().toISOString(),
-          lastAccessed: new Date().toISOString(),
-          accessExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ],
-      message: 'User books retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting user books:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve user books',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get user's enrolled live classes
- */
-const getMyLiveClasses = async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: [
-        {
-          id: 1,
-          liveClassId: 1,
-          title: 'Advanced Mathematics Live Session',
-          instructor: 'Dr. John Smith',
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          enrolledAt: new Date().toISOString(),
-          meetingLink: 'https://meet.example.com/advanced-math'
-        }
-      ],
-      message: 'User live classes retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting user live classes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve user live classes',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get course progress
- */
-const getCourseProgress = async (req, res) => {
-  try {
-    const courseId = req.params.courseId;
-    
-    res.json({
-      success: true,
-      data: {
-        courseId: parseInt(courseId),
-        progress: 25,
-        completedLessons: 2,
-        totalLessons: 8,
-        lastAccessed: new Date().toISOString(),
-        timeSpent: 120 // minutes
-      },
-      message: 'Course progress retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting course progress:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve course progress',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Update course progress
- */
-const updateCourseProgress = async (req, res) => {
-  try {
-    const courseId = req.params.courseId;
-    const { lessonId, completed } = req.body;
-    
-    res.json({
-      success: true,
-      data: {
-        courseId: parseInt(courseId),
-        lessonId: lessonId,
-        completed: completed,
-        progress: 30,
-        updatedAt: new Date().toISOString()
-      },
-      message: 'Course progress updated successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error updating course progress:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update course progress',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get notifications
- */
-const getNotifications = async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: [
-        {
-          id: 1,
-          title: 'New Course Available',
-          message: 'Advanced Mathematics course is now available',
-          type: 'course',
-          isRead: false,
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 2,
-          title: 'Live Class Reminder',
-          message: 'Your live class starts in 1 hour',
-          type: 'live_class',
-          isRead: false,
-          createdAt: new Date().toISOString()
-        }
-      ],
-      message: 'Notifications retrieved successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error getting notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve notifications',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Mark notification as read
- */
-const markNotificationAsRead = async (req, res) => {
-  try {
-    const notificationId = req.params.id;
-    
-    res.json({
-      success: true,
-      data: {
-        notificationId: parseInt(notificationId),
-        isRead: true,
-        readAt: new Date().toISOString()
-      },
-      message: 'Notification marked as read',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notification as read',
-      error: error.message,
+      message: 'Failed to fetch app info',
       timestamp: new Date().toISOString()
     });
   }
 };
 
 module.exports = {
-  getCourses,
+  getAllCourses,
   getCourseById,
-  enrollInCourse,
-  getBooks,
+  getAllBooks,
   getBookById,
-  purchaseBook,
-  getLiveClasses,
+  getAllLiveClasses,
   getLiveClassById,
-  enrollInLiveClass,
-  getMyCourses,
-  getMyBooks,
-  getMyLiveClasses,
-  getCourseProgress,
-  updateCourseProgress,
-  getNotifications,
-  markNotificationAsRead
+  search,
+  getAppInfo
 };
