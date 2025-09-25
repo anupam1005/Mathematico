@@ -1,14 +1,18 @@
 {
   "version": 2,
+  "name": "mathematico-backend",
   "functions": {
     "Backend/index.js": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node",
+      "maxDuration": 30
     }
   },
   "routes": [
     { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
   "env": {
-    "NODE_ENV": "production"
-  }
+    "NODE_ENV": "production",
+    "VERCEL": "1"
+  },
+  "regions": ["iad1"]
 }
