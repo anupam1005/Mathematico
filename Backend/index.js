@@ -568,6 +568,65 @@ app.get('/api/v1/admin/users', (req, res) => {
   });
 });
 
+// Admin dashboard endpoint
+app.get('/api/v1/admin/dashboard', (req, res) => {
+  res.json({
+    success: true,
+    message: "Admin dashboard data (fallback)",
+    data: {
+      stats: {
+        totalUsers: 150,
+        totalStudents: 120,
+        totalCourses: 25,
+        totalModules: 150,
+        totalLessons: 500,
+        totalRevenue: 12500.00,
+        activeBatches: 8
+      },
+      recentUsers: [
+        { id: 1, name: "John Doe", email: "john@example.com", role: "student", createdAt: new Date().toISOString() },
+        { id: 2, name: "Jane Smith", email: "jane@example.com", role: "student", createdAt: new Date().toISOString() }
+      ],
+      recentCourses: [
+        { id: 1, title: "Mathematics Basics", status: "published", createdAt: new Date().toISOString() },
+        { id: 2, title: "Advanced Calculus", status: "published", createdAt: new Date().toISOString() }
+      ]
+    },
+    serverless: true
+  });
+});
+
+// Admin books endpoint
+app.get('/api/v1/admin/books', (req, res) => {
+  res.json({
+    success: true,
+    message: "Admin books data (fallback)",
+    data: [
+      {
+        id: 1,
+        title: "Mathematics Fundamentals",
+        author: "Dr. Smith",
+        description: "Basic mathematics concepts",
+        level: "Foundation",
+        status: "published",
+        price: 29.99,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        title: "Advanced Algebra",
+        author: "Prof. Johnson",
+        description: "Advanced algebraic concepts",
+        level: "Advanced",
+        status: "published",
+        price: 39.99,
+        createdAt: new Date().toISOString()
+      }
+    ],
+    serverless: true
+  });
+});
+
 console.log('✅ Built-in routes configured for serverless');
 
 // ----------------- ERROR HANDLING -----------------
