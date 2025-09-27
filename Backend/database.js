@@ -54,41 +54,9 @@ async function testConnection() {
   }
 }
 
-// Fallback in-memory data store
-let fallbackBooks = [
-  {
-    id: 1,
-    title: 'Advanced Calculus Textbook',
-    author: 'Dr. John Smith',
-    description: 'Comprehensive textbook covering advanced calculus topics',
-    category: 'Mathematics',
-    pages: 450,
-    isbn: '978-1234567890',
-    coverImage: '/placeholder.svg',
-    pdfUrl: '/uploads/advanced-calculus.pdf',
-    status: 'published',
-    isPublished: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 2,
-    title: 'Linear Algebra Fundamentals',
-    author: 'Prof. Jane Doe',
-    description: 'Essential guide to linear algebra concepts and applications',
-    category: 'Mathematics',
-    pages: 320,
-    isbn: '978-0987654321',
-    coverImage: '/placeholder.svg',
-    pdfUrl: '/uploads/linear-algebra.pdf',
-    status: 'published',
-    isPublished: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-let nextFallbackId = 3;
+// In-memory data store for production (empty)
+let fallbackBooks = [];
+let nextFallbackId = 1;
 
 // Create users table if it doesn't exist
 async function createUsersTable() {
@@ -207,18 +175,7 @@ async function createBooksTable() {
     
     console.log('✅ Books table created/verified successfully');
     
-    // Insert sample data if table is empty
-    const [rows] = await connection.execute('SELECT COUNT(*) as count FROM books');
-    if (rows[0].count === 0) {
-      const insertSampleData = `
-        INSERT INTO books (title, author, description, category, level, pages, isbn, coverImage, pdfUrl, status, is_published) VALUES
-        ('Advanced Calculus Textbook', 'Dr. John Smith', 'Comprehensive textbook covering advanced calculus topics', 'Mathematics', 'Advanced', 450, '978-1234567890', '/placeholder.svg', '/uploads/advanced-calculus.pdf', 'active', TRUE),
-        ('Linear Algebra Fundamentals', 'Prof. Jane Doe', 'Essential guide to linear algebra concepts and applications', 'Mathematics', 'Intermediate', 320, '978-0987654321', '/placeholder.svg', '/uploads/linear-algebra.pdf', 'active', TRUE)
-      `;
-      
-      await connection.execute(insertSampleData);
-      console.log('✅ Sample books data inserted successfully');
-    }
+    // Database ready for production - no sample data
     
     connection.release();
     return true;
@@ -296,15 +253,7 @@ async function createCoursesTable() {
     
     console.log('✅ Courses table created/verified successfully');
 
-    // Insert sample data
-    const insertSampleData = `
-      INSERT INTO courses (title, description, category, level, price, status) VALUES
-      ('Advanced Mathematics', 'Comprehensive course covering advanced mathematical concepts', 'Mathematics', 'Advanced', 99.99, 'active'),
-      ('Basic Algebra', 'Introduction to algebraic concepts and problem solving', 'Mathematics', 'Foundation', 49.99, 'active')
-    `;
-
-    await connection.execute(insertSampleData);
-    console.log('✅ Sample courses data inserted successfully');
+    // Database ready for production - no sample data
 
     connection.release();
     return true;
@@ -663,63 +612,19 @@ const Book = {
   }
 };
 
-// Fallback data for courses
-let fallbackCourses = [
-  {
-    id: 1,
-    title: "Advanced Mathematics",
-    description: "Comprehensive course covering advanced mathematical concepts",
-    category: "Mathematics",
-    level: "Advanced", 
-    price: 99.99,
-    original_price: 149.99,
-    students: 25,
-    image_url: "/placeholder.svg",
-    pdf_url: null,
-    status: "active",
-    is_published: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
+// In-memory data store for courses (empty)
+let fallbackCourses = [];
 
-// Fallback data for live classes
-let fallbackLiveClasses = [
-  {
-    id: 1,
-    title: "Advanced Calculus Live Session",
-    description: "Interactive live session covering advanced calculus topics",
-    category: "Mathematics",
-    level: "Advanced",
-    scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    duration: 60,
-    max_students: 50,
-    meeting_link: "https://meet.google.com/abc-defg-hij",
-    image_url: "/placeholder.svg",
-    status: "scheduled",
-    is_published: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
+// In-memory data store for live classes (empty)
+let fallbackLiveClasses = [];
 
-// Fallback data for users
+// In-memory data store for users (admin only)
 let fallbackUsers = [
   {
     id: "1",
     name: "Admin User",
     email: "dc2006089@gmail.com",
     role: "admin",
-    is_active: true,
-    email_verified: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: "2", 
-    name: "Test User",
-    email: "test@example.com",
-    role: "user",
     is_active: true,
     email_verified: true,
     created_at: new Date().toISOString(),

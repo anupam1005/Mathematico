@@ -1,3 +1,9 @@
+# ===========================================
+# MATHEMATICO PROJECT - ROOT .GITIGNORE
+# ===========================================
+# This is the main .gitignore for the entire project
+# Subdirectory .gitignore files can override specific rules
+
 # Dependencies
 node_modules/
 */node_modules/
@@ -7,6 +13,7 @@ dist/
 */dist/
 build/
 */build/
+web-build/
 
 # Environment variables
 .env
@@ -19,6 +26,9 @@ build/
 */.env.development.local
 */.env.test.local
 */.env.production.local
+config.env
+config.env.example
+config.env.production
 
 # Logs
 logs/
@@ -120,3 +130,36 @@ $RECYCLE.BIN/
 # Uploads (if you don't want to commit uploaded files)
 uploads/
 */uploads/
+
+# ===========================================
+# PROJECT-SPECIFIC IGNORES
+# ===========================================
+
+# Expo specific
+.expo/
+expo-env.d.ts
+
+# Native development
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Test files
+test-*.js
+test-*.html
+test-*.pdf
+test-*.png
+migrate-database.js
+admin-book-form.html
+setup-db-simple.js
+
+# Generated native folders
+/ios
+/android

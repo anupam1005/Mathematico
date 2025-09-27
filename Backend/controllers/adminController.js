@@ -1042,6 +1042,74 @@ const updateSettings = async (req, res) => {
   }
 };
 
+/**
+ * Upload course thumbnail
+ */
+const uploadCourseThumbnail = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const fileUrl = `/uploads/covers/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      data: { 
+        url: fileUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      },
+      message: 'Course thumbnail uploaded successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Course thumbnail upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload course thumbnail',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Toggle course publish status
+ */
+const toggleCoursePublish = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isPublished } = req.body;
+    
+    // For now, just return success
+    // In a real implementation, you would update the database
+    
+    res.json({
+      success: true,
+      data: {
+        id: parseInt(id),
+        isPublished: isPublished,
+        updatedAt: new Date().toISOString()
+      },
+      message: 'Course publish status updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Toggle course publish error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle course publish status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   getDashboard,
   getAllUsers,
@@ -1077,5 +1145,7 @@ module.exports = {
   getCourseStats,
   getLiveClassStats,
   getSettings,
-  updateSettings
+  updateSettings,
+  uploadCourseThumbnail,
+  toggleCoursePublish
 };

@@ -352,22 +352,5 @@ INSERT IGNORE INTO users (
     status = 'active', -- FIXED: Use status instead of is_active
     updated_at = NOW();
 
--- Insert sample data for testing
-
--- Sample courses
-INSERT INTO courses (title, slug, description, thumbnail, price, status, level, category, instructor, duration, created_by) VALUES
-('Algebra Fundamentals', 'algebra-fundamentals', 'Master the basics of algebra with step-by-step explanations', '/uploads/covers/algebra-thumb.jpg', 29.99, 'published', 'Foundation', 'Algebra', 'Dr. Sarah Johnson', 480, 'admin-user-001'),
-('Calculus Made Easy', 'calculus-made-easy', 'Learn calculus concepts with real-world applications', '/uploads/covers/calculus-thumb.jpg', 49.99, 'published', 'Advanced', 'Calculus', 'Prof. Michael Chen', 720, 'admin-user-001'),
-('Statistics for Beginners', 'statistics-beginners', 'Introduction to statistical concepts and methods', '/uploads/covers/stats-thumb.jpg', 39.99, 'published', 'Intermediate', 'Statistics', 'Dr. Emily Davis', 600, 'admin-user-001');
-
--- Sample books
-INSERT INTO books (title, slug, description, author, category, cover_image_url, pdf_url, price, status, created_by) VALUES
-('Mathematics Grade 10', 'math-grade-10', 'Complete mathematics textbook for grade 10 students', 'Mathematics Department', 'Textbooks', '/uploads/covers/math10-cover.jpg', '/uploads/pdfs/math10.pdf', 19.99, 'published', 'admin-user-001'),
-('Algebra Workbook', 'algebra-workbook', 'Practice problems and solutions for algebra students', 'Prof. John Smith', 'Workbooks', '/uploads/covers/algebra-workbook.jpg', '/uploads/pdfs/algebra-workbook.pdf', 14.99, 'published', 'admin-user-001'),
-('Geometry Reference Guide', 'geometry-reference', 'Quick reference guide for geometry formulas and theorems', 'Dr. Lisa Wang', 'Reference', '/uploads/covers/geometry-ref.jpg', '/uploads/pdfs/geometry-ref.pdf', 9.99, 'published', 'admin-user-001');
-
--- Sample live classes
-INSERT INTO live_classes (title, slug, description, thumbnail, meeting_link, date, duration, max_students, price, status, instructor, created_by) VALUES
-('Algebra Problem Solving Session', 'algebra-problem-solving', 'Interactive session to solve complex algebra problems', '/uploads/covers/algebra-live.jpg', 'https://meet.google.com/abc-defg-hij', '2024-12-01 15:00:00', 90, 30, 15.00, 'upcoming', 'Dr. Sarah Johnson', 'admin-user-001'),
-('Calculus Q&A Session', 'calculus-qa', 'Ask your calculus questions and get expert answers', '/uploads/covers/calculus-live.jpg', 'https://zoom.us/j/123456789', '2024-12-05 18:00:00', 60, 25, 20.00, 'upcoming', 'Prof. Michael Chen', 'admin-user-001'),
-('Statistics Workshop', 'statistics-workshop', 'Hands-on workshop on statistical analysis', '/uploads/covers/stats-live.jpg', 'https://meet.google.com/xyz-uvwx-123', '2024-12-10 16:00:00', 120, 20, 25.00, 'upcoming', 'Dr. Emily Davis', 'admin-user-001');
+-- Database is ready for production use
+-- No sample data inserted - ready for real content

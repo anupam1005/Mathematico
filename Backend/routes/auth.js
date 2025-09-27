@@ -33,14 +33,6 @@ try {
             role: "admin",
             isAdmin: true,
           };
-        } else if (email === "test@example.com" && password === "password123") {
-          userPayload = {
-            id: 2,
-            email,
-            name: "Test User",
-            role: "user",
-            isAdmin: false,
-          };
         } else {
           return res.status(401).json({
             success: false,

@@ -7,103 +7,48 @@ try {
   mobileController = require('../controllers/mobileController');
 } catch (error) {
   console.warn('MobileController not available, using fallback data');
-  // Fallback handlers with sample data
+  // Fallback handlers - no mock data
   mobileController = {
     getAllCourses: (req, res) => {
       res.json({
         success: true,
-        data: [
-          {
-            id: 1,
-            title: "Sample Course",
-            description: "This is sample data - database not connected",
-            price: 99.99,
-            level: "Foundation",
-            status: "published",
-            serverless: true
-          }
-        ],
-        message: "Sample data - database connection required for real data",
-        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 }
+        data: [],
+        message: "No courses available",
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
       });
     },
     getCourseById: (req, res) => {
       res.json({
-        success: true,
-        data: {
-          id: parseInt(req.params.id),
-          title: "Sample Course",
-          description: "This is sample data - database not connected",
-          price: 99.99,
-          level: "Foundation",
-          status: "published",
-          serverless: true
-        },
-        message: "Sample data - database connection required for real data"
+        success: false,
+        message: "Course not found"
       });
     },
     getAllBooks: (req, res) => {
       res.json({
         success: true,
-        data: [
-          {
-            id: 1,
-            title: "Sample Book",
-            author: "Sample Author",
-            description: "This is sample data - database not connected",
-            level: "Foundation",
-            status: "published",
-            serverless: true
-          }
-        ],
-        message: "Sample data - database connection required for real data",
-        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 }
+        data: [],
+        message: "No books available",
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
       });
     },
     getBookById: (req, res) => {
       res.json({
-        success: true,
-        data: {
-          id: parseInt(req.params.id),
-          title: "Sample Book",
-          author: "Sample Author",
-          description: "This is sample data - database not connected",
-          level: "Foundation",
-          status: "published",
-          serverless: true
-        },
-        message: "Sample data - database connection required for real data"
+        success: false,
+        message: "Book not found"
       });
     },
     getAllLiveClasses: (req, res) => {
       res.json({
         success: true,
-        data: [
-          {
-            id: 1,
-            title: "Sample Live Class",
-            description: "This is sample data - database not connected",
-            scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            status: "scheduled",
-            serverless: true
-          }
-        ],
-        message: "Sample data - database connection required for real data",
-        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 }
+        data: [],
+        message: "No live classes available",
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
       });
     },
     getLiveClassById: (req, res) => {
       res.json({
-        success: true,
-        data: {
-          id: parseInt(req.params.id),
-          title: "Sample Live Class",
-          description: "This is sample data - database not connected",
-          scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          status: "scheduled",
-          serverless: true
-        },
-        message: "Sample data - database connection required for real data"
+        success: false,
+        message: "Live class not found"
       });
     },
     search: (req, res) => {
@@ -114,7 +59,7 @@ try {
           books: [],
           liveClasses: []
         },
-        message: "Search requires database connection",
+        message: "No results found",
         query: req.query.q || ''
       });
     },

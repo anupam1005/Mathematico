@@ -1,19 +1,22 @@
-node_modules
-dist
-logs
-*.log
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-config.env
-config.env.example
-uploads
+# Backend-specific .vercelignore
+# Root .vercelignore handles most patterns
+# This file only contains Backend-specific ignores
+
+# Backend-specific test files
 test-*.js
 test-*.html
 test-*.pdf
 test-*.png
-setup-db-simple.js
 migrate-database.js
 admin-book-form.html
+setup-db-simple.js
+
+# Backend-specific uploads
+uploads/
+covers/
+pdfs/
+temp/
+
+# Backend-specific config files
+config.env
+config.env.example

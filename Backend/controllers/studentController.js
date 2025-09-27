@@ -64,54 +64,16 @@ const getCourses = async (req, res) => {
   try {
     const { page = 1, limit = 10, category, search } = req.query;
     
-    // Sample courses data for students
-    const sampleCourses = [
-      {
-        id: 1,
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive course covering advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        price: 99.99,
-        duration: '12 weeks',
-        level: 'Advanced',
-        category: 'Mathematics',
-        thumbnail: '/placeholder.svg',
-        rating: 4.8,
-        studentsCount: 150,
-        status: 'published',
-        isEnrolled: false,
-        progress: 0,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: 'Calculus Fundamentals',
-        description: 'Learn the basics of calculus from scratch',
-        instructor: 'Prof. Jane Doe',
-        price: 79.99,
-        duration: '8 weeks',
-        level: 'Beginner',
-        category: 'Mathematics',
-        thumbnail: '/placeholder.svg',
-        rating: 4.6,
-        studentsCount: 200,
-        status: 'published',
-        isEnrolled: true,
-        progress: 25,
-        createdAt: new Date().toISOString()
-      }
-    ];
-    
     res.json({
       success: true,
-      data: sampleCourses,
+      data: [],
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: sampleCourses.length,
-        totalPages: Math.ceil(sampleCourses.length / parseInt(limit))
+        total: 0,
+        totalPages: 0
       },
-      message: 'Courses retrieved successfully',
+      message: 'No courses available',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -132,47 +94,9 @@ const getCourseById = async (req, res) => {
   try {
     const courseId = req.params.id;
     
-    // Sample course detail for students
-    const course = {
-      id: parseInt(courseId),
-      title: 'Advanced Mathematics',
-      description: 'Comprehensive course covering advanced mathematical concepts including differential equations, linear algebra, and complex analysis.',
-      instructor: 'Dr. John Smith',
-      price: 99.99,
-      duration: '12 weeks',
-      level: 'Advanced',
-      category: 'Mathematics',
-      thumbnail: '/placeholder.svg',
-      rating: 4.8,
-      studentsCount: 150,
-      status: 'published',
-      isEnrolled: false,
-      progress: 0,
-      modules: [
-        {
-          id: 1,
-          title: 'Introduction to Advanced Mathematics',
-          lessons: [
-            { id: 1, title: 'Overview of Course', duration: '15 min', type: 'video', isCompleted: false },
-            { id: 2, title: 'Mathematical Foundations', duration: '30 min', type: 'video', isCompleted: false }
-          ]
-        },
-        {
-          id: 2,
-          title: 'Differential Equations',
-          lessons: [
-            { id: 3, title: 'First Order Equations', duration: '45 min', type: 'video', isCompleted: false },
-            { id: 4, title: 'Second Order Equations', duration: '50 min', type: 'video', isCompleted: false }
-          ]
-        }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    
     res.json({
-      success: true,
-      data: course,
-      message: 'Course details retrieved successfully',
+      success: false,
+      message: 'Course not found',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -341,52 +265,16 @@ const getLiveClasses = async (req, res) => {
   try {
     const { page = 1, limit = 10, status } = req.query;
     
-    // Sample live classes data for students
-    const sampleLiveClasses = [
-      {
-        id: 1,
-        title: 'Advanced Mathematics Live Session',
-        description: 'Interactive live session on advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 120,
-        maxStudents: 50,
-        currentStudents: 25,
-        price: 29.99,
-        status: 'upcoming',
-        meetingLink: 'https://meet.example.com/advanced-math',
-        thumbnail: '/placeholder.svg',
-        isEnrolled: false,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: 'Calculus Problem Solving',
-        description: 'Live problem-solving session for calculus students',
-        instructor: 'Prof. Jane Doe',
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 90,
-        maxStudents: 30,
-        currentStudents: 18,
-        price: 19.99,
-        status: 'upcoming',
-        meetingLink: 'https://meet.example.com/calculus-problems',
-        thumbnail: '/placeholder.svg',
-        isEnrolled: true,
-        createdAt: new Date().toISOString()
-      }
-    ];
-    
     res.json({
       success: true,
-      data: sampleLiveClasses,
+      data: [],
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: sampleLiveClasses.length,
-        totalPages: Math.ceil(sampleLiveClasses.length / parseInt(limit))
+        total: 0,
+        totalPages: 0
       },
-      message: 'Live classes retrieved successfully',
+      message: 'No live classes available',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -407,37 +295,9 @@ const getLiveClassById = async (req, res) => {
   try {
     const classId = req.params.id;
     
-    const liveClass = {
-      id: parseInt(classId),
-      title: 'Advanced Mathematics Live Session',
-      description: 'Interactive live session on advanced mathematical concepts including differential equations and linear algebra.',
-      instructor: 'Dr. John Smith',
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: 120,
-      maxStudents: 50,
-      currentStudents: 25,
-      price: 29.99,
-      status: 'upcoming',
-      meetingLink: 'https://meet.example.com/advanced-math',
-      thumbnail: '/placeholder.svg',
-      isEnrolled: false,
-      agenda: [
-        { time: '0-30 min', topic: 'Introduction and Overview' },
-        { time: '30-60 min', topic: 'Differential Equations' },
-        { time: '60-90 min', topic: 'Linear Algebra' },
-        { time: '90-120 min', topic: 'Q&A Session' }
-      ],
-      materials: [
-        { name: 'Course Notes', url: '/uploads/advanced-math-notes.pdf' },
-        { name: 'Practice Problems', url: '/uploads/practice-problems.pdf' }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    
     res.json({
-      success: true,
-      data: liveClass,
-      message: 'Live class details retrieved successfully',
+      success: false,
+      message: 'Live class not found',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -615,6 +475,98 @@ const markNotificationAsRead = async (req, res) => {
   }
 };
 
+/**
+ * Get student's enrolled courses
+ */
+const getMyCourses = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: [],
+      message: 'No enrolled courses found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting my courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve enrolled courses',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get student's purchased books
+ */
+const getMyBooks = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: [],
+      message: 'No purchased books found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting my books:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve purchased books',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get student's enrolled live classes
+ */
+const getMyLiveClasses = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: [],
+      message: 'No enrolled live classes found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting my live classes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve enrolled live classes',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get book statistics
+ */
+const getBookStats = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        totalBooks: 0,
+        purchasedBooks: 0,
+        availableBooks: 0
+      },
+      message: 'Book statistics retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting book stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve book statistics',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   getDashboard,
   getCourses,
@@ -629,5 +581,9 @@ module.exports = {
   getCourseProgress,
   updateCourseProgress,
   getNotifications,
-  markNotificationAsRead
+  markNotificationAsRead,
+  getMyCourses,
+  getMyBooks,
+  getMyLiveClasses,
+  getBookStats
 };

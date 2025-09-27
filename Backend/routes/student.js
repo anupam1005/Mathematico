@@ -44,6 +44,7 @@ router.post('/courses/:id/enroll', studentController.enrollInCourse);
 router.get('/books', studentController.getBooks);
 router.get('/books/:id', studentController.getBookById);
 router.post('/books/:id/purchase', studentController.purchaseBook);
+router.get('/books/stats', studentController.getBookStats);
 
 // Student live class routes
 router.get('/live-classes', studentController.getLiveClasses);
@@ -57,6 +58,11 @@ router.put('/progress/:courseId', studentController.updateCourseProgress);
 // Student notifications
 router.get('/notifications', studentController.getNotifications);
 router.put('/notifications/:id/read', studentController.markNotificationAsRead);
+
+// Student personal data endpoints
+router.get('/my-courses', studentController.getMyCourses);
+router.get('/my-books', studentController.getMyBooks);
+router.get('/my-live-classes', studentController.getMyLiveClasses);
 
 // Test endpoint
 router.get('/test', (req, res) => {

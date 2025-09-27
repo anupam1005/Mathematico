@@ -165,12 +165,35 @@ if (httpLogger && !process.env.VERCEL) {
   app.use(httpLogger);
 }
 
-// File uploads completely disabled in serverless
-console.log('🚀 Serverless mode: File uploads completely disabled');
+// File upload service configuration
+let fileUploadService = null;
+try {
+  const { upload, processFileUpload, processMultipleFileUpload, handleUploadError } = require('./utils/fileUpload');
+  fileUploadService = { upload, processFileUpload, processMultipleFileUpload, handleUploadError };
+  console.log('✅ File upload service configured');
+} catch (error) {
+  console.log('⚠️ File upload service not available:', error.message);
+}
 
-// Database completely disabled in serverless to prevent crashes
-console.log('🚀 Serverless mode: Database completely disabled');
-const dbInitialized = true; // Always skip DB in serverless
+// Database connection with fallback for serverless
+let dbInitialized = false;
+try {
+  const { testConnection, initializeDatabase } = require('./utils/database');
+  
+  // Test database connection
+  const isConnected = await testConnection();
+  if (isConnected) {
+    await initializeDatabase();
+    dbInitialized = true;
+    console.log('✅ Database initialized successfully');
+  } else {
+    console.log('⚠️ Database connection failed, using fallback mode');
+    dbInitialized = false;
+  }
+} catch (error) {
+  console.log('⚠️ Database not available, using serverless fallback mode');
+  dbInitialized = false;
+}
 
 // Utility function to generate absolute file URLs
 const getAbsoluteFileUrl = (relativePath) => {
@@ -521,43 +544,47 @@ app.get('/api/v1/mobile/test', (req, res) => {
 app.get('/api/v1/mobile/courses', (req, res) => {
   res.json({
     success: true,
-    message: "Mobile courses (fallback data)",
-    data: [
-      { id: 1, title: "Mathematics Basics", status: "published", price: 99 },
-      { id: 2, title: "Advanced Calculus", status: "published", price: 149 }
-    ]
+    message: "No courses available",
+    data: []
   });
 });
 
 app.get('/api/v1/mobile/books', (req, res) => {
   res.json({
     success: true,
-    message: "Mobile books (fallback data)",
-    data: [
-      { id: 1, title: "Math Fundamentals", status: "published", price: 29 },
-      { id: 2, title: "Algebra Guide", status: "published", price: 39 }
-    ]
+    message: "No books available",
+    data: []
   });
 });
 
 app.get('/api/v1/mobile/live-classes', (req, res) => {
   res.json({
     success: true,
-    message: "Mobile live classes (fallback data)",
-    data: [
-      { id: 1, title: "Live Math Session", status: "upcoming", price: 19 }
-    ]
+    message: "No live classes available",
+    data: []
   });
 });
+
+// File upload endpoints
+if (fileUploadService) {
+  app.post('/api/v1/upload', fileUploadService.upload.single('file'), fileUploadService.processFileUpload);
+  app.post('/api/v1/upload/multiple', fileUploadService.upload.array('files', 5), fileUploadService.processMultipleFileUpload);
+  app.use(fileUploadService.handleUploadError);
+} else {
+  app.post('/api/v1/upload', (req, res) => {
+    res.status(503).json({
+      success: false,
+      message: 'File upload service not available. Please configure Cloudinary or AWS S3.'
+    });
+  });
+}
 
 // Built-in fallback endpoints
 app.get('/api/v1/student/courses', (req, res) => {
   res.json({
     success: true,
-    message: "Student courses (fallback data)",
-    data: [
-      { id: 1, title: "Sample Course", status: "published" }
-    ]
+    message: "No courses available",
+    data: []
   });
 });
 
@@ -572,25 +599,19 @@ app.get('/api/v1/admin/users', (req, res) => {
 app.get('/api/v1/admin/dashboard', (req, res) => {
   res.json({
     success: true,
-    message: "Admin dashboard data (fallback)",
+    message: "Admin dashboard data",
     data: {
       stats: {
-        totalUsers: 150,
-        totalStudents: 120,
-        totalCourses: 25,
-        totalModules: 150,
-        totalLessons: 500,
-        totalRevenue: 12500.00,
-        activeBatches: 8
+        totalUsers: 0,
+        totalStudents: 0,
+        totalCourses: 0,
+        totalModules: 0,
+        totalLessons: 0,
+        totalRevenue: 0.00,
+        activeBatches: 0
       },
-      recentUsers: [
-        { id: 1, name: "John Doe", email: "john@example.com", role: "student", createdAt: new Date().toISOString() },
-        { id: 2, name: "Jane Smith", email: "jane@example.com", role: "student", createdAt: new Date().toISOString() }
-      ],
-      recentCourses: [
-        { id: 1, title: "Mathematics Basics", status: "published", createdAt: new Date().toISOString() },
-        { id: 2, title: "Advanced Calculus", status: "published", createdAt: new Date().toISOString() }
-      ]
+      recentUsers: [],
+      recentCourses: []
     },
     serverless: true
   });
@@ -600,31 +621,65 @@ app.get('/api/v1/admin/dashboard', (req, res) => {
 app.get('/api/v1/admin/books', (req, res) => {
   res.json({
     success: true,
-    message: "Admin books data (fallback)",
-    data: [
-      {
-        id: 1,
-        title: "Mathematics Fundamentals",
-        author: "Dr. Smith",
-        description: "Basic mathematics concepts",
-        level: "Foundation",
-        status: "published",
-        price: 29.99,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        title: "Advanced Algebra",
-        author: "Prof. Johnson",
-        description: "Advanced algebraic concepts",
-        level: "Advanced",
-        status: "published",
-        price: 39.99,
-        createdAt: new Date().toISOString()
-      }
-    ],
+    message: "Admin books data",
+    data: [],
     serverless: true
   });
+});
+
+// API Testing endpoint
+app.get('/api/v1/test', async (req, res) => {
+  try {
+    const APITester = require('./utils/apiTester');
+    const tester = new APITester(process.env.BACKEND_URL || 'http://localhost:5000');
+    const report = await tester.testAllEndpoints();
+    
+    res.json({
+      success: true,
+      message: 'API testing completed',
+      data: report,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'API testing failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// API Health Check endpoint
+app.get('/api/v1/status', (req, res) => {
+  const status = {
+    success: true,
+    message: 'Mathematico API Status',
+    data: {
+      serverless: !!process.env.VERCEL,
+      database: dbInitialized ? 'connected' : 'fallback',
+      fileUpload: fileUploadService ? 'configured' : 'disabled',
+      version: '2.0.0',
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        unit: 'MB'
+      },
+      endpoints: {
+        health: '/api/v1/health',
+        test: '/api/v1/test',
+        auth: '/api/v1/auth/*',
+        admin: '/api/v1/admin/*',
+        mobile: '/api/v1/mobile/*',
+        student: '/api/v1/student/*',
+        upload: '/api/v1/upload'
+      }
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  res.json(status);
 });
 
 console.log('✅ Built-in routes configured for serverless');
