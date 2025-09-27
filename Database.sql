@@ -48,6 +48,7 @@ CREATE TABLE courses (
     description TEXT,
     thumbnail VARCHAR(255), -- FIXED: Simplified field name
     price DECIMAL(10, 2) DEFAULT 0.00,
+    currency VARCHAR(3) DEFAULT 'INR',
     status ENUM('draft', 'published', 'archived') DEFAULT 'draft', -- FIXED: Single status field
     level ENUM('Foundation', 'Intermediate', 'Advanced', 'Expert') DEFAULT 'Foundation',
     category VARCHAR(100),
@@ -89,6 +90,7 @@ CREATE TABLE books (
     pages INT,
     isbn VARCHAR(50) NULL,
     price DECIMAL(10, 2) DEFAULT 0.00, -- FIXED: Added price field
+    currency VARCHAR(3) DEFAULT 'INR',
     status ENUM('draft', 'published', 'archived') DEFAULT 'draft', -- FIXED: Single status field
     is_featured BOOLEAN DEFAULT FALSE,
     downloads INT DEFAULT 0,
@@ -130,6 +132,7 @@ CREATE TABLE live_classes (
     max_students INT NOT NULL DEFAULT 50,
     enrolled_students INT DEFAULT 0,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    currency VARCHAR(3) DEFAULT 'INR',
     original_price DECIMAL(10, 2),
     status ENUM('draft', 'upcoming', 'live', 'completed', 'cancelled') DEFAULT 'draft', -- FIXED: Consistent with frontend expectations
     is_featured BOOLEAN DEFAULT FALSE,
@@ -161,7 +164,7 @@ CREATE TABLE payments (
     item_type ENUM('course', 'book', 'live_class') NOT NULL,
     item_id INT NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(3) DEFAULT 'USD',
+    currency VARCHAR(3) DEFAULT 'INR',
     status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
     payment_method VARCHAR(50),
     payment_gateway VARCHAR(50),

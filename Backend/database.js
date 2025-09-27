@@ -38,6 +38,181 @@ const getPool = () => {
   return pool;
 };
 
+// Update database with INR currency and clean test data
+async function updateDatabaseToINR() {
+  let connection;
+  
+  try {
+    console.log('🔗 Connecting to Railway database...');
+    connection = await getPool().getConnection();
+    console.log('✅ Connected to Railway database');
+
+    // 1. Add currency columns if they don't exist
+    console.log('📝 Adding currency columns...');
+    
+    try {
+      await connection.execute('ALTER TABLE courses ADD COLUMN currency VARCHAR(3) DEFAULT "INR"');
+      console.log('✅ Added currency column to courses table');
+    } catch (error) {
+      if (error.message.includes('Duplicate column name')) {
+        console.log('ℹ️ Currency column already exists in courses table');
+      } else {
+        console.log('⚠️ Error adding currency to courses:', error.message);
+      }
+    }
+
+    try {
+      await connection.execute('ALTER TABLE books ADD COLUMN currency VARCHAR(3) DEFAULT "INR"');
+      console.log('✅ Added currency column to books table');
+    } catch (error) {
+      if (error.message.includes('Duplicate column name')) {
+        console.log('ℹ️ Currency column already exists in books table');
+      } else {
+        console.log('⚠️ Error adding currency to books:', error.message);
+      }
+    }
+
+    try {
+      await connection.execute('ALTER TABLE live_classes ADD COLUMN currency VARCHAR(3) DEFAULT "INR"');
+      console.log('✅ Added currency column to live_classes table');
+    } catch (error) {
+      if (error.message.includes('Duplicate column name')) {
+        console.log('ℹ️ Currency column already exists in live_classes table');
+      } else {
+        console.log('⚠️ Error adding currency to live_classes:', error.message);
+      }
+    }
+
+    // 2. Update existing records to use INR currency
+    console.log('💰 Updating existing records to INR currency...');
+    
+    await connection.execute('UPDATE courses SET currency = "INR" WHERE currency IS NULL OR currency = "USD"');
+    console.log('✅ Updated courses currency to INR');
+
+    await connection.execute('UPDATE books SET currency = "INR" WHERE currency IS NULL OR currency = "USD"');
+    console.log('✅ Updated books currency to INR');
+
+    await connection.execute('UPDATE live_classes SET currency = "INR" WHERE currency IS NULL OR currency = "USD"');
+    console.log('✅ Updated live_classes currency to INR');
+
+    await connection.execute('UPDATE payments SET currency = "INR" WHERE currency IS NULL OR currency = "USD"');
+    console.log('✅ Updated payments currency to INR');
+
+    // 3. Clean up test data
+    console.log('🧹 Cleaning up test data...');
+    
+    // Delete ALL books (clean slate)
+    try {
+      const [bookResult] = await connection.execute('DELETE FROM books');
+      console.log(`✅ Deleted ALL ${bookResult.affectedRows} books`);
+    } catch (error) {
+      console.log('⚠️ Error deleting books:', error.message);
+    }
+
+    // Delete ALL courses (clean slate)
+    try {
+      const [courseResult] = await connection.execute('DELETE FROM courses');
+      console.log(`✅ Deleted ALL ${courseResult.affectedRows} courses`);
+    } catch (error) {
+      console.log('⚠️ Error deleting courses:', error.message);
+    }
+
+    // Delete ALL live classes (clean slate)
+    try {
+      const [liveClassResult] = await connection.execute('DELETE FROM live_classes');
+      console.log(`✅ Deleted ALL ${liveClassResult.affectedRows} live classes`);
+    } catch (error) {
+      console.log('⚠️ Error deleting live classes:', error.message);
+    }
+
+    // Delete ALL users except admin
+    try {
+      const [userResult] = await connection.execute('DELETE FROM users WHERE email != "dc2006089@gmail.com"');
+      console.log(`✅ Deleted ALL ${userResult.affectedRows} users (except admin)`);
+    } catch (error) {
+      console.log('⚠️ Error deleting users:', error.message);
+    }
+
+    // Delete ALL payments (clean slate)
+    try {
+      const [paymentResult] = await connection.execute('DELETE FROM payments');
+      console.log(`✅ Deleted ALL ${paymentResult.affectedRows} payments`);
+    } catch (error) {
+      console.log('⚠️ Error deleting payments:', error.message);
+    }
+
+    // 4. Update default currency in settings
+    console.log('⚙️ Updating default currency in settings...');
+    
+    try {
+      // First check if settings table exists
+      const [tables] = await connection.execute("SHOW TABLES LIKE 'settings'");
+      if (tables.length > 0) {
+        await connection.execute(`
+          INSERT INTO settings (key_name, value, description, category, data_type, created_at, updated_at) 
+          VALUES ('default_currency', 'INR', 'Default currency for the platform', 'general', 'string', NOW(), NOW())
+          ON DUPLICATE KEY UPDATE value = 'INR', updated_at = NOW()
+        `);
+        console.log('✅ Updated default currency setting');
+      } else {
+        console.log('ℹ️ Settings table does not exist, skipping currency setting update');
+      }
+    } catch (error) {
+      console.log('⚠️ Error updating settings:', error.message);
+    }
+
+    // 5. Show final statistics
+    console.log('📊 Final database statistics:');
+    
+    try {
+      const [bookCount] = await connection.execute('SELECT COUNT(*) as count FROM books');
+      console.log(`📚 Books: ${bookCount[0].count}`);
+    } catch (error) {
+      console.log('📚 Books: Table not found');
+    }
+
+    try {
+      const [courseCount] = await connection.execute('SELECT COUNT(*) as count FROM courses');
+      console.log(`🎓 Courses: ${courseCount[0].count}`);
+    } catch (error) {
+      console.log('🎓 Courses: Table not found');
+    }
+
+    try {
+      const [liveClassCount] = await connection.execute('SELECT COUNT(*) as count FROM live_classes');
+      console.log(`📺 Live Classes: ${liveClassCount[0].count}`);
+    } catch (error) {
+      console.log('📺 Live Classes: Table not found');
+    }
+
+    try {
+      const [userCount] = await connection.execute('SELECT COUNT(*) as count FROM users');
+      console.log(`👥 Users: ${userCount[0].count}`);
+    } catch (error) {
+      console.log('👥 Users: Table not found');
+    }
+
+    try {
+      const [paymentCount] = await connection.execute('SELECT COUNT(*) as count FROM payments');
+      console.log(`💳 Payments: ${paymentCount[0].count}`);
+    } catch (error) {
+      console.log('💳 Payments: Table not found');
+    }
+
+    console.log('🎉 Railway database update completed successfully!');
+
+  } catch (error) {
+    console.error('❌ Error updating Railway database:', error.message);
+    console.error('Stack trace:', error.stack);
+    throw error;
+  } finally {
+    if (connection) {
+      await connection.end();
+      console.log('🔌 Database connection closed');
+    }
+  }
+}
+
 // Test database connection
 async function testConnection() {
   try {
@@ -481,6 +656,11 @@ const Book = {
     try {
       const connection = await getPool().getConnection();
       
+      // Ensure currency is set to INR if not provided
+      if (!bookData.currency) {
+        bookData.currency = 'INR';
+      }
+      
       const fields = Object.keys(bookData);
       const values = Object.values(bookData);
       const placeholders = fields.map(() => '?').join(', ');
@@ -500,6 +680,7 @@ const Book = {
       const newBook = {
         id: nextFallbackId++,
         ...bookData,
+        currency: bookData.currency || 'INR',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -717,6 +898,11 @@ const Course = {
     try {
       const connection = await getPool().getConnection();
       
+      // Ensure currency is set to INR if not provided
+      if (!courseData.currency) {
+        courseData.currency = 'INR';
+      }
+      
       const fields = Object.keys(courseData);
       const values = Object.values(courseData);
       const placeholders = fields.map(() => '?').join(', ');
@@ -734,6 +920,7 @@ const Course = {
       const newCourse = {
         id: Date.now(),
         ...courseData,
+        currency: courseData.currency || 'INR',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -892,6 +1079,11 @@ const LiveClass = {
     try {
       const connection = await getPool().getConnection();
       
+      // Ensure currency is set to INR if not provided
+      if (!liveClassData.currency) {
+        liveClassData.currency = 'INR';
+      }
+      
       const fields = Object.keys(liveClassData);
       const values = Object.values(liveClassData);
       const placeholders = fields.map(() => '?').join(', ');
@@ -909,6 +1101,7 @@ const LiveClass = {
       const newLiveClass = {
         id: Date.now(),
         ...liveClassData,
+        currency: liveClassData.currency || 'INR',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -1251,6 +1444,7 @@ async function createPaymentsTable() {
 module.exports = {
   get pool() { return getPool(); },
   testConnection,
+  updateDatabaseToINR,
   createUsersTable,
   createBooksTable,
   createCoursesTable,

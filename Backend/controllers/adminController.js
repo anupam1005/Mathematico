@@ -997,7 +997,7 @@ const getSettings = async (req, res) => {
       allowedFileTypes: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
       enableRegistration: true,
       enablePayments: true,
-      currency: 'USD',
+      currency: 'INR',
       timezone: 'UTC',
       maintenanceMode: false,
       emailNotifications: true,
