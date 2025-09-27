@@ -4,6 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
 const os = require("os");
+const jwt = require("jsonwebtoken");
 
 // Safe imports with fallbacks
 let generateAccessToken, generateRefreshToken, authenticateToken, requireAdmin;
@@ -625,21 +626,48 @@ app.post('/api/v1/auth/logout', (req, res) => {
 
 app.get('/api/v1/auth/profile', (req, res) => {
   try {
-    // For serverless mode, return a default profile
-    // In a real app, you'd verify the token and get user data from database
+    // Get user info from Authorization header if available
+    const authHeader = req.headers.authorization;
+    let userData = {
+      id: 1,
+      email: "dc2006089@gmail.com",
+      name: "Admin User",
+      role: "admin",
+      isAdmin: true,
+      email_verified: true,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // If there's an auth header, try to extract user info from token
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production');
+        
+        // If token contains user data, use it
+        if (decoded.id && decoded.email) {
+          userData = {
+            id: decoded.id,
+            email: decoded.email,
+            name: decoded.name || "User",
+            role: decoded.role || "user",
+            isAdmin: decoded.isAdmin || false,
+            email_verified: decoded.email_verified || true,
+            is_active: decoded.is_active || true,
+            created_at: decoded.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        }
+      } catch (tokenError) {
+        console.log('Token verification failed, using default user data');
+      }
+    }
+
     res.json({
       success: true,
-      data: {
-        id: 1,
-        email: "dc2006089@gmail.com",
-        name: "Admin User",
-        role: "admin",
-        isAdmin: true,
-        email_verified: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
+      data: userData,
       message: "Profile retrieved successfully",
       timestamp: new Date().toISOString()
     });
