@@ -1,8 +1,29 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
-const { uploadToCloudinary } = require('./cloudinary');
-const { uploadToS3 } = require('./aws-s3');
+
+// Optional cloud storage imports
+let uploadToCloudinary;
+let cloudinaryAvailable = false;
+
+try {
+  const cloudinary = require('./cloudinary');
+  uploadToCloudinary = cloudinary.uploadToCloudinary;
+  
+  // Check if Cloudinary credentials are configured
+  if (process.env.CLOUDINARY_CLOUD_NAME && 
+      process.env.CLOUDINARY_API_KEY && 
+      process.env.CLOUDINARY_API_SECRET) {
+    cloudinaryAvailable = true;
+    console.log('✅ Cloudinary configured and available');
+  } else {
+    console.log('⚠️ Cloudinary module loaded but credentials not configured');
+    console.log('   Required: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET');
+  }
+} catch (error) {
+  console.log('⚠️ Cloudinary not available:', error.message);
+  uploadToCloudinary = null;
+}
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -36,36 +57,33 @@ const upload = multer({
 });
 
 /**
- * Upload file to cloud storage (Cloudinary or S3)
+ * Upload file to cloud storage (Cloudinary only)
  * @param {Object} file - Multer file object
  * @param {string} folder - Storage folder
- * @param {string} service - 'cloudinary' or 's3'
+ * @param {string} service - 'cloudinary' (only supported service)
  * @returns {Promise<Object>} Upload result
  */
 async function uploadFileToCloud(file, folder = 'mathematico', service = 'cloudinary') {
   try {
-    if (service === 'cloudinary') {
-      const result = await uploadToCloudinary(file.buffer, folder, getResourceType(file.mimetype));
-      return {
-        success: true,
-        url: result.secure_url,
-        publicId: result.public_id,
-        service: 'cloudinary'
-      };
-    } else if (service === 's3') {
-      const key = `${folder}/${Date.now()}-${file.originalname}`;
-      const result = await uploadToS3(file.buffer, key, file.mimetype);
-      return {
-        success: true,
-        url: result.Location,
-        key: key,
-        service: 's3'
-      };
-    } else {
-      throw new Error('Invalid storage service');
+    // Only Cloudinary is supported now
+    if (service !== 'cloudinary') {
+      console.log(`⚠️ Service '${service}' not supported, using Cloudinary instead`);
+      service = 'cloudinary';
     }
+
+    if (!cloudinaryAvailable || !uploadToCloudinary) {
+      throw new Error('Cloudinary service not available. Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+    }
+    
+    const result = await uploadToCloudinary(file.buffer, folder, getResourceType(file.mimetype));
+    return {
+      success: true,
+      url: result.secure_url,
+      publicId: result.public_id,
+      service: 'cloudinary'
+    };
   } catch (error) {
-    console.error('Cloud upload failed:', error);
+    console.error('Cloudinary upload failed:', error);
     throw error;
   }
 }
@@ -96,8 +114,8 @@ async function processFileUpload(req, res, next) {
       });
     }
 
-    // Determine storage service based on environment
-    const storageService = process.env.STORAGE_SERVICE || 'cloudinary';
+    // Use Cloudinary as the only storage service
+    const storageService = 'cloudinary';
     const folder = req.body.folder || 'mathematico';
 
     const result = await uploadFileToCloud(req.file, folder, storageService);
@@ -140,7 +158,7 @@ async function processMultipleFileUpload(req, res, next) {
       });
     }
 
-    const storageService = process.env.STORAGE_SERVICE || 'cloudinary';
+    const storageService = 'cloudinary';
     const folder = req.body.folder || 'mathematico';
 
     const uploadPromises = req.files.map(file => 

@@ -1,10 +1,42 @@
 // Vercel serverless backend entry point for Mathematico - MINIMAL VERSION
+require('dotenv').config({ path: `${__dirname}/config.env` });
+console.log('✅ Environment variables loaded from config.env');
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
+
+// Startup environment validation
+(function validateEnvironment() {
+  try {
+    const missing = [];
+    const requiredVars = [
+      'JWT_SECRET',
+      'JWT_REFRESH_SECRET',
+      'CLOUDINARY_CLOUD_NAME',
+      'CLOUDINARY_API_KEY',
+      'CLOUDINARY_API_SECRET'
+    ];
+    requiredVars.forEach((key) => { if (!process.env[key]) missing.push(key); });
+
+    if (missing.length) {
+      console.warn('⚠️ Missing required environment variables:', missing);
+    } else {
+      console.log('✅ Core environment variables present');
+    }
+
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+      const isGmail = /@gmail\.com$/i.test(process.env.EMAIL_USER);
+      if (!isGmail) {
+        console.warn('⚠️ EMAIL_USER is not a Gmail account. Ensure provider and credentials match.');
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ Environment validation skipped:', e.message);
+  }
+})();
 
 // Safe imports with fallbacks
 let generateAccessToken, generateRefreshToken, authenticateToken, requireAdmin;
@@ -13,9 +45,8 @@ try {
   generateAccessToken = jwtUtils.generateAccessToken;
   generateRefreshToken = jwtUtils.generateRefreshToken;
 } catch (err) {
-  console.warn('JWT utils not available:', err.message);
-  generateAccessToken = () => 'fake-access-token';
-  generateRefreshToken = () => 'fake-refresh-token';
+  console.error('JWT utils not available. Failing fast for security:', err.message);
+  throw err;
 }
 
 try {
@@ -23,9 +54,8 @@ try {
   authenticateToken = authMiddleware.authenticateToken;
   requireAdmin = authMiddleware.requireAdmin;
 } catch (err) {
-  console.warn('Auth middleware not available:', err.message);
-  authenticateToken = (req, res, next) => { req.user = { id: 1, role: 'admin' }; next(); };
-  requireAdmin = (req, res, next) => next();
+  console.error('Auth middleware not available. Failing fast for security:', err.message);
+  throw err;
 }
 
 // Simple console logging for serverless - no file dependencies
@@ -37,11 +67,56 @@ const logger = {
 };
 const httpLogger = (req, res, next) => next(); // No-op for serverless
 
-// Swagger disabled in serverless for safety
-const swaggerUi = null;
-const specs = null;
-const swaggerOptions = null;
-console.log('Swagger disabled in serverless mode');
+// Swagger configuration
+let swaggerUi, specs, swaggerOptions;
+try {
+  const swaggerJSDoc = require('swagger-jsdoc');
+  swaggerUi = require('swagger-ui-express');
+  
+  const swaggerDefinition = {
+    openapi: '3.0.0',
+    info: {
+      title: 'Mathematico API',
+      version: '2.0.0',
+      description: 'Backend API for Mathematico Educational Platform',
+    },
+    servers: [
+      {
+        url: process.env.BACKEND_URL || 'http://localhost:5000',
+        description: 'Mathematico Backend Server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  };
+
+  const options = {
+    definition: swaggerDefinition,
+    apis: ['./index.js', './controllers/*.js', './routes/*.js'],
+  };
+
+  specs = swaggerJSDoc(options);
+  swaggerOptions = {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  };
+  
+  console.log('✅ Swagger configured successfully');
+} catch (error) {
+  console.log('⚠️ Swagger not available:', error.message);
+  swaggerUi = null;
+  specs = null;
+  swaggerOptions = null;
+}
 
 const app = express();
 
@@ -61,8 +136,16 @@ process.on('unhandledRejection', (reason, promise) => {
   }
 });
 
-// Minimal security - no helmet to avoid import issues
-console.log('Security middleware disabled in serverless mode');
+// Security middleware
+try {
+  const helmet = require('helmet');
+  app.use(helmet({
+    contentSecurityPolicy: false
+  }));
+  console.log('✅ Helmet security middleware enabled');
+} catch (error) {
+  console.warn('⚠️ Helmet not available:', error.message);
+}
 
 // CORS configuration - secure but mobile-friendly
 const corsOptions = {
@@ -97,14 +180,8 @@ const corsOptions = {
       console.log('CORS: Allowed origin:', origin);
       callback(null, true);
     } else {
-      // In serverless, be more lenient for mobile apps but log for security
-      if (process.env.VERCEL) {
-        console.log('CORS: Unknown origin allowed in serverless (mobile compatibility):', origin);
-        callback(null, true);
-      } else {
-        console.log('CORS: Blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'), false);
-      }
+      console.log('CORS: Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'), false);
     }
   },
   credentials: true,
@@ -119,16 +196,17 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving for uploads - disabled in serverless
+// Static file serving for uploads
 if (!process.env.VERCEL) {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 } else {
-  // In serverless, return error for upload requests
+  // In serverless, redirect to cloud storage URLs
   app.use('/uploads', (req, res) => {
-    res.status(501).json({
+    res.status(301).json({
       success: false,
-      message: 'File serving not available in serverless mode. Use cloud storage (S3, Cloudinary, etc.)',
-      serverless: true
+      message: 'File serving not available in serverless mode. Files are stored in cloud storage.',
+      serverless: true,
+      redirect: 'Use cloud storage URLs directly (Cloudinary)'
     });
   });
 }
@@ -191,22 +269,48 @@ let databaseUtils = null;
 // Initialize database connection asynchronously (non-blocking)
 (async () => {
   try {
-    databaseUtils = require('./utils/database');
-    const { testConnection, initializeDatabase } = databaseUtils;
-    
-    // Test database connection
-    const isConnected = await testConnection();
+    // Try to use the database.js file directly first
+    const database = require('./database');
+    databaseUtils = database;
+    const isConnected = await database.testConnection();
     if (isConnected) {
-      await initializeDatabase();
       dbInitialized = true;
-      console.log('✅ Database initialized successfully');
+      console.log('✅ Database connected via database.js');
+      
+      // Initialize database tables
+      try {
+        await database.createUsersTable();
+        await database.createBooksTable();
+        await database.createCoursesTable();
+        await database.createLiveClassesTable();
+        await database.createPaymentsTable();
+        console.log('✅ Database tables initialized');
+      } catch (tableError) {
+        console.log('⚠️ Table initialization warning:', tableError.message);
+      }
     } else {
       console.log('⚠️ Database connection failed, using fallback mode');
       dbInitialized = false;
     }
   } catch (error) {
-    console.log('⚠️ Database not available, using serverless fallback mode');
+    console.log('⚠️ Database not available, using fallback mode:', error.message);
     dbInitialized = false;
+    
+    // Try to load database utilities as fallback
+    try {
+      databaseUtils = require('./utils/database');
+      const { testConnection, initializeDatabase } = databaseUtils;
+      
+      const isConnected = await testConnection();
+      if (isConnected) {
+        await initializeDatabase();
+        dbInitialized = true;
+        console.log('✅ Database initialized via utils/database');
+      }
+    } catch (utilsError) {
+      console.log('⚠️ Utils database also failed:', utilsError.message);
+      dbInitialized = false;
+    }
   }
 })().catch(err => {
   console.log('⚠️ Database initialization failed:', err.message);
@@ -782,6 +886,41 @@ app.get('/api/v1/mobile/live-classes', (req, res) => {
   });
 });
 
+// Database test endpoint
+app.get('/api/v1/db/test', async (req, res) => {
+  try {
+    let db = databaseUtils;
+    if (!db) {
+      try {
+        db = require('./database');
+      } catch (e) {
+        return res.status(500).json({ success: false, message: 'Database module not available', error: e.message });
+      }
+    }
+
+    const start = Date.now();
+    const ok = await db.testConnection();
+    const ms = Date.now() - start;
+
+    if (!ok) {
+      return res.status(503).json({ success: false, message: 'Database connection failed', responseTimeMs: ms });
+    }
+
+    res.json({
+      success: true,
+      message: 'Database connection successful',
+      responseTimeMs: ms,
+      config: {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_DATABASE
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'DB test error', error: error.message });
+  }
+});
+
 // File upload endpoints
 if (fileUploadService) {
   app.post('/api/v1/upload', fileUploadService.upload.single('file'), fileUploadService.processFileUpload);
@@ -791,7 +930,19 @@ if (fileUploadService) {
   app.post('/api/v1/upload', (req, res) => {
     res.status(503).json({
       success: false,
-      message: 'File upload service not available. Please configure Cloudinary or AWS S3.'
+      message: 'File upload service not available. Please configure Cloudinary.',
+      serverless: true,
+      instructions: {
+        cloudinary: 'Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET'
+      }
+    });
+  });
+  
+  app.post('/api/v1/upload/multiple', (req, res) => {
+    res.status(503).json({
+      success: false,
+      message: 'Multiple file upload service not available. Please configure Cloudinary.',
+      serverless: true
     });
   });
 }
@@ -805,33 +956,236 @@ app.get('/api/v1/student/courses', (req, res) => {
   });
 });
 
-app.get('/api/v1/admin/users', (req, res) => {
-  res.json({
-    success: false,
-    message: "Admin service temporarily unavailable in serverless mode"
-  });
+app.get('/api/v1/admin/users', async (req, res) => {
+  try {
+    // Check if database is available
+    if (!dbInitialized || !databaseUtils) {
+      return res.json({
+        success: true,
+        message: "Users data (fallback mode)",
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        },
+        serverless: true,
+        fallback: true
+      });
+    }
+
+    // Import User model - try models first, then fallback to database.js
+    let User;
+    
+    try {
+      User = require('./models/User');
+    } catch (modelError) {
+      console.log('⚠️ User model not available, using database.js:', modelError.message);
+      User = databaseUtils.User;
+    }
+    
+    // Get query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const role = req.query.role || null;
+    const search = req.query.search || null;
+    
+    // Fetch users from database
+    const result = await User.getAll(page, limit, { role, search });
+    
+    res.json({
+      success: true,
+      message: "Users retrieved successfully",
+      data: result.data,
+      pagination: result.pagination,
+      serverless: true,
+      database: true
+    });
+
+  } catch (error) {
+    console.error('Admin users error:', error);
+    
+    // Fallback to empty data on error
+    res.json({
+      success: true,
+      message: "Users data (error fallback)",
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0
+      },
+      serverless: true,
+      error: error.message
+    });
+  }
 });
 
 // Admin dashboard endpoint
-app.get('/api/v1/admin/dashboard', (req, res) => {
-  res.json({
-    success: true,
-    message: "Admin dashboard data",
-    data: {
-      stats: {
-        totalUsers: 0,
-        totalStudents: 0,
-        totalCourses: 0,
-        totalModules: 0,
-        totalLessons: 0,
-        totalRevenue: 0.00,
-        activeBatches: 0
+app.get('/api/v1/admin/dashboard', async (req, res) => {
+  try {
+    // Check if database is available
+    if (!dbInitialized || !databaseUtils) {
+      return res.json({
+        success: true,
+        message: "Admin dashboard data (fallback mode)",
+        data: {
+          stats: {
+            totalUsers: 0,
+            totalStudents: 0,
+            totalCourses: 0,
+            totalModules: 0,
+            totalLessons: 0,
+            totalRevenue: 0.00,
+            activeBatches: 0
+          },
+          recentUsers: [],
+          recentCourses: []
+        },
+        serverless: true,
+        fallback: true
+      });
+    }
+
+    // Import models - try models first, then fallback to database.js
+    let User, Course, Book, Payment;
+    
+    try {
+      User = require('./models/User');
+      Course = require('./models/Course');
+      Book = require('./models/Book');
+      Payment = require('./models/Payment');
+    } catch (modelError) {
+      console.log('⚠️ Models not available, using database.js:', modelError.message);
+      // Fallback to database.js models
+      User = databaseUtils.User;
+      Course = databaseUtils.Course;
+      Book = databaseUtils.Book;
+      Payment = databaseUtils.Payment;
+    }
+
+    // Fetch real data from database with error handling
+    let userStats = { total: 0 };
+    let courseStats = { total: 0, published: 0, draft: 0 };
+    let bookStats = { total: 0, published: 0, draft: 0 };
+    let paymentStats = { totalAmount: 0, completed: 0 };
+    let recentUsers = [];
+    let recentCourses = [];
+
+    try {
+      // Get user statistics
+      const userResult = await User.getAll(1, 1);
+      userStats = { total: userResult.pagination.total };
+    } catch (error) {
+      console.log('⚠️ Error fetching user stats:', error.message);
+    }
+
+    try {
+      // Get course statistics
+      if (Course.getStats) {
+        courseStats = await Course.getStats();
+      } else {
+        const courseResult = await Course.getAll(1, 1);
+        courseStats = { 
+          total: courseResult.pagination.total,
+          published: 0,
+          draft: 0
+        };
+      }
+    } catch (error) {
+      console.log('⚠️ Error fetching course stats:', error.message);
+    }
+
+    try {
+      // Get book statistics
+      if (Book.getStats) {
+        bookStats = await Book.getStats();
+      } else {
+        const bookResult = await Book.getAll(1, 1);
+        bookStats = { 
+          total: bookResult.pagination.total,
+          published: 0,
+          draft: 0
+        };
+      }
+    } catch (error) {
+      console.log('⚠️ Error fetching book stats:', error.message);
+    }
+
+    try {
+      // Get payment statistics
+      if (Payment.getStats) {
+        paymentStats = await Payment.getStats();
+      }
+    } catch (error) {
+      console.log('⚠️ Error fetching payment stats:', error.message);
+    }
+
+    try {
+      // Get recent users (last 5)
+      const recentUsersResult = await User.getAll(1, 5);
+      recentUsers = recentUsersResult.data || [];
+    } catch (error) {
+      console.log('⚠️ Error fetching recent users:', error.message);
+    }
+
+    try {
+      // Get recent courses (last 5)
+      const recentCoursesResult = await Course.getAll(1, 5);
+      recentCourses = recentCoursesResult.data || [];
+    } catch (error) {
+      console.log('⚠️ Error fetching recent courses:', error.message);
+    }
+
+    // Calculate statistics
+    const stats = {
+      totalUsers: userStats.total || 0,
+      totalStudents: userStats.total || 0, // Assuming all users are students for now
+      totalCourses: courseStats.total || 0,
+      totalModules: 0, // Not implemented yet
+      totalLessons: 0, // Not implemented yet
+      totalRevenue: paymentStats.totalAmount || 0,
+      activeBatches: 0 // Not implemented yet
+    };
+
+    res.json({
+      success: true,
+      message: "Admin dashboard data",
+      data: {
+        stats,
+        recentUsers: recentUsers || [],
+        recentCourses: recentCourses || []
       },
-      recentUsers: [],
-      recentCourses: []
-    },
-    serverless: true
-  });
+      serverless: true,
+      database: true
+    });
+
+  } catch (error) {
+    console.error('Admin dashboard error:', error);
+    
+    // Fallback to empty data on error
+    res.json({
+      success: true,
+      message: "Admin dashboard data (error fallback)",
+      data: {
+        stats: {
+          totalUsers: 0,
+          totalStudents: 0,
+          totalCourses: 0,
+          totalModules: 0,
+          totalLessons: 0,
+          totalRevenue: 0.00,
+          activeBatches: 0
+        },
+        recentUsers: [],
+        recentCourses: []
+      },
+      serverless: true,
+      error: error.message
+    });
+  }
 });
 
 // Admin books endpoint
@@ -975,6 +1329,15 @@ if (process.env.VERCEL) {
     version: '2.0.0',
     timestamp: new Date().toISOString(),
     environment: 'serverless'
+  });
+} else {
+  // Start server for local development
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Mathematico Backend Server running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/v1/health`);
+    console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
+    console.log(`🔧 Admin dashboard: http://localhost:${PORT}/api/v1/admin/dashboard`);
   });
 }
 
