@@ -23,7 +23,11 @@ const login = async (req, res) => {
     }
     
     // Check if it's the hardcoded admin user (works without database)
-    if (email === 'dc2006089@gmail.com' && password === 'Myname*321') {
+    // SECURITY: Use environment variables for admin credentials
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mathematico.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+    
+    if (email === adminEmail && password === adminPassword) {
       // Generate JWT tokens for admin
       const userPayload = {
         id: 1,
@@ -196,7 +200,8 @@ const register = async (req, res) => {
     }
     
     // Check if email is already taken (admin email)
-    if (email === 'dc2006089@gmail.com') {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mathematico.com';
+    if (email === adminEmail) {
       return res.status(409).json({
         success: false,
         error: 'Conflict',
@@ -418,11 +423,12 @@ const refreshToken = async (req, res) => {
     try {
       const decoded = verifyRefreshToken(refreshToken);
       
-      // For admin user (hardcoded)
-      if (decoded.id === 1 || decoded.email === 'dc2006089@gmail.com') {
+      // For admin user (environment-based)
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@mathematico.com';
+      if (decoded.id === 1 || decoded.email === adminEmail) {
         const userPayload = {
           id: 1,
-          email: 'dc2006089@gmail.com',
+          email: adminEmail,
           name: 'Admin User',
           role: 'admin',
           isAdmin: true,

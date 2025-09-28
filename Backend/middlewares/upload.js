@@ -39,34 +39,45 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter for validation
+// File filter for validation with enhanced security
 const fileFilter = (req, file, cb) => {
+  // Security: Check file extension against mimetype
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedPdfTypes = ['application/pdf'];
+  
+  // Security: Validate file extension
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+  const allowedImageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  const allowedPdfExtensions = ['.pdf'];
+  
   if (file.fieldname === 'pdf') {
-    // Only allow PDF files
-    if (file.mimetype === 'application/pdf') {
+    // Only allow PDF files with proper validation
+    if (allowedPdfTypes.includes(file.mimetype) && allowedPdfExtensions.includes(fileExtension)) {
       cb(null, true);
     } else {
       cb(new Error('Only PDF files are allowed for book content'), false);
     }
   } else if (file.fieldname === 'coverImage') {
-    // Only allow image files
-    if (file.mimetype.startsWith('image/')) {
+    // Only allow specific image types with proper validation
+    if (allowedImageTypes.includes(file.mimetype) && allowedImageExtensions.includes(fileExtension)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed for cover images'), false);
+      cb(new Error('Only JPEG, PNG, and WebP images are allowed for cover images'), false);
     }
   } else {
     cb(new Error('Invalid file field'), false);
   }
 };
 
-// Configure multer
+// Configure multer with enhanced security
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 2 // Maximum 2 files (PDF + cover image)
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB default, configurable
+    files: 2, // Maximum 2 files (PDF + cover image)
+    fieldSize: 1024 * 1024, // 1MB for field data
+    fieldNameSize: 100 // Max field name length
   }
 });
 

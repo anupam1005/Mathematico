@@ -8,7 +8,7 @@ const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
 
-// Startup environment validation
+// Startup environment validation with enhanced security checks
 (function validateEnvironment() {
   try {
     const missing = [];
@@ -19,20 +19,54 @@ const jwt = require("jsonwebtoken");
       'CLOUDINARY_API_KEY',
       'CLOUDINARY_API_SECRET'
     ];
-    requiredVars.forEach((key) => { if (!process.env[key]) missing.push(key); });
+    
+    // Check for required variables
+    requiredVars.forEach((key) => { 
+      if (!process.env[key]) {
+        missing.push(key);
+      } else if (process.env[key].length < 32) {
+        console.warn(`⚠️ ${key} is too short (minimum 32 characters recommended)`);
+      }
+    });
+
+    // Security warnings
+    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 64) {
+      console.warn('⚠️ JWT_SECRET should be at least 64 characters for production');
+    }
+    
+    if (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 8) {
+      console.warn('⚠️ ADMIN_PASSWORD should be at least 8 characters');
+    }
+    
+    if (process.env.DB_PASSWORD && process.env.DB_PASSWORD.length < 8) {
+      console.warn('⚠️ DB_PASSWORD should be at least 8 characters');
+    }
 
     if (missing.length) {
       console.warn('⚠️ Missing required environment variables:', missing);
+      console.warn('⚠️ Some features may not work properly');
     } else {
       console.log('✅ Core environment variables present');
     }
 
+    // Email configuration validation
     if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
       const isGmail = /@gmail\.com$/i.test(process.env.EMAIL_USER);
       if (!isGmail) {
         console.warn('⚠️ EMAIL_USER is not a Gmail account. Ensure provider and credentials match.');
       }
     }
+    
+    // Database security check
+    if (process.env.DB_HOST && process.env.DB_HOST.includes('localhost')) {
+      console.warn('⚠️ Using localhost database in production is not recommended');
+    }
+    
+    // CORS security check
+    if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN === '*') {
+      console.warn('⚠️ CORS_ORIGIN is set to "*" - this allows all origins (security risk)');
+    }
+    
   } catch (e) {
     console.warn('⚠️ Environment validation skipped:', e.message);
   }

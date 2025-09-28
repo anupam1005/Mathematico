@@ -15,7 +15,7 @@ build/
 */build/
 web-build/
 
-# Environment variables
+# Environment variables - CRITICAL SECURITY
 .env
 .env.local
 .env.development.local
@@ -27,8 +27,11 @@ web-build/
 */.env.test.local
 */.env.production.local
 config.env
-config.env.example
+config.env.local
 config.env.production
+*/config.env
+*/config.env.local
+*/config.env.production
 
 # Logs
 logs/
@@ -163,3 +166,27 @@ setup-db-simple.js
 # Generated native folders
 /ios
 /android
+
+# SSL certificates and keys
+*.pem
+*.crt
+*.p12
+*.jks
+
+# Backup files
+*.bak
+*.backup
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

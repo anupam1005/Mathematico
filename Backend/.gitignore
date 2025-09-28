@@ -2,6 +2,14 @@
 # Root .gitignore handles most common patterns
 # This file only contains Backend-specific ignores
 
+# CRITICAL: Environment files with sensitive data
+config.env
+config.env.local
+config.env.production
+.env
+.env.local
+.env.production
+
 # Backend-specific test files
 test-*.js
 test-*.html
@@ -24,3 +32,19 @@ logs/
 # Backend-specific cache
 .cache/
 .temp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# Backup files
+*.bak
+*.backup
