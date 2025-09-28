@@ -38,15 +38,18 @@ const jwt = require("jsonwebtoken");
   }
 })();
 
-// Safe imports with fallbacks
+// Safe imports with fallbacks (do NOT crash serverless)
 let generateAccessToken, generateRefreshToken, authenticateToken, requireAdmin;
 try {
   const jwtUtils = require("./utils/jwt");
   generateAccessToken = jwtUtils.generateAccessToken;
   generateRefreshToken = jwtUtils.generateRefreshToken;
 } catch (err) {
-  console.error('JWT utils not available. Failing fast for security:', err.message);
-  throw err;
+  console.warn('JWT utils not available, using inline jwt fallback:', err.message);
+  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-not-for-production';
+  const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-not-for-production';
+  generateAccessToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' });
+  generateRefreshToken = (payload) => jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
 }
 
 try {
@@ -54,8 +57,13 @@ try {
   authenticateToken = authMiddleware.authenticateToken;
   requireAdmin = authMiddleware.requireAdmin;
 } catch (err) {
-  console.error('Auth middleware not available. Failing fast for security:', err.message);
-  throw err;
+  console.warn('Auth middleware not available, securing routes with deny-by-default stubs:', err.message);
+  authenticateToken = (req, res, next) => {
+    return res.status(401).json({ success: false, message: 'Auth middleware unavailable', timestamp: new Date().toISOString() });
+  };
+  requireAdmin = (req, res, next) => {
+    return res.status(403).json({ success: false, message: 'Admin access denied', timestamp: new Date().toISOString() });
+  };
 }
 
 // Simple console logging for serverless - no file dependencies
@@ -211,20 +219,17 @@ if (!process.env.VERCEL) {
   });
 }
 
-// Serve favicon.ico (serverless-friendly)
+// Serve favicon.ico (always non-blocking, serverless-safe)
 app.get('/favicon.ico', (req, res) => {
   try {
-    // Try to serve actual favicon file
+    if (process.env.VERCEL) {
+      return res.status(204).end();
+    }
     const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
     res.sendFile(faviconPath, (err) => {
-      if (err) {
-        // If file doesn't exist, return 204 No Content
-        res.status(204).end();
-      }
+      if (err) return res.status(204).end();
     });
   } catch (error) {
-    console.error('Favicon error:', error);
-    // Fallback: return 204 No Content
     res.status(204).end();
   }
 });
