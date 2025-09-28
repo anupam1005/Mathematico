@@ -214,10 +214,18 @@ if (!process.env.VERCEL) {
 // Serve favicon.ico (serverless-friendly)
 app.get('/favicon.ico', (req, res) => {
   try {
-    res.status(204).end();
+    // Try to serve actual favicon file
+    const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
+    res.sendFile(faviconPath, (err) => {
+      if (err) {
+        // If file doesn't exist, return 204 No Content
+        res.status(204).end();
+      }
+    });
   } catch (error) {
     console.error('Favicon error:', error);
-    res.status(200).end();
+    // Fallback: return 204 No Content
+    res.status(204).end();
   }
 });
 
@@ -1314,6 +1322,11 @@ app.use((err, req, res, next) => {
   
   // Don't expose error details in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  // Ensure response hasn't been sent already
+  if (res.headersSent) {
+    return next(err);
+  }
   
   res.status(err.status || 500).json({
     success: false,
