@@ -274,33 +274,46 @@ try {
 let dbInitialized = false;
 let databaseUtils = null;
 
-// Initialize database connection asynchronously (non-blocking)
-(async () => {
+// Initialize database connection asynchronously (non-blocking) with timeout
+const initDatabase = async () => {
+  const timeout = setTimeout(() => {
+    console.log('⚠️ Database initialization timeout - using fallback mode');
+    dbInitialized = false;
+  }, 10000); // 10 second timeout
+
   try {
     // Try to use the database.js file directly first
     const database = require('./database');
     databaseUtils = database;
-    const isConnected = await database.testConnection();
+    
+    const isConnected = await Promise.race([
+      database.testConnection(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+    ]);
+    
+    clearTimeout(timeout);
+    
     if (isConnected) {
       dbInitialized = true;
       console.log('✅ Database connected via database.js');
       
-      // Initialize database tables
-      try {
-        await database.createUsersTable();
-        await database.createBooksTable();
-        await database.createCoursesTable();
-        await database.createLiveClassesTable();
-        await database.createPaymentsTable();
-        console.log('✅ Database tables initialized');
-      } catch (tableError) {
-        console.log('⚠️ Table initialization warning:', tableError.message);
-      }
+      // Initialize database tables with individual error handling
+      const tableInitPromises = [
+        database.createUsersTable().catch(err => console.log('⚠️ Users table warning:', err.message)),
+        database.createBooksTable().catch(err => console.log('⚠️ Books table warning:', err.message)),
+        database.createCoursesTable().catch(err => console.log('⚠️ Courses table warning:', err.message)),
+        database.createLiveClassesTable().catch(err => console.log('⚠️ Live classes table warning:', err.message)),
+        database.createPaymentsTable().catch(err => console.log('⚠️ Payments table warning:', err.message))
+      ];
+      
+      await Promise.allSettled(tableInitPromises);
+      console.log('✅ Database tables initialization completed');
     } else {
       console.log('⚠️ Database connection failed, using fallback mode');
       dbInitialized = false;
     }
   } catch (error) {
+    clearTimeout(timeout);
     console.log('⚠️ Database not available, using fallback mode:', error.message);
     dbInitialized = false;
     
@@ -309,7 +322,11 @@ let databaseUtils = null;
       databaseUtils = require('./utils/database');
       const { testConnection, initializeDatabase } = databaseUtils;
       
-      const isConnected = await testConnection();
+      const isConnected = await Promise.race([
+        testConnection(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Utils connection timeout')), 3000))
+      ]);
+      
       if (isConnected) {
         await initializeDatabase();
         dbInitialized = true;
@@ -320,7 +337,10 @@ let databaseUtils = null;
       dbInitialized = false;
     }
   }
-})().catch(err => {
+};
+
+// Start database initialization but don't await it
+initDatabase().catch(err => {
   console.log('⚠️ Database initialization failed:', err.message);
   dbInitialized = false;
 });
@@ -894,24 +914,47 @@ app.get('/api/v1/mobile/live-classes', (req, res) => {
   });
 });
 
-// Database test endpoint
+// Database test endpoint with timeout protection
 app.get('/api/v1/db/test', async (req, res) => {
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({ 
+        success: false, 
+        message: 'Database test timeout', 
+        timeout: true 
+      });
+    }
+  }, 8000); // 8 second timeout
+
   try {
     let db = databaseUtils;
     if (!db) {
       try {
         db = require('./database');
       } catch (e) {
-        return res.status(500).json({ success: false, message: 'Database module not available', error: e.message });
+        clearTimeout(timeout);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Database module not available', 
+          error: e.message 
+        });
       }
     }
 
     const start = Date.now();
-    const ok = await db.testConnection();
+    const ok = await Promise.race([
+      db.testConnection(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+    ]);
     const ms = Date.now() - start;
+    clearTimeout(timeout);
 
     if (!ok) {
-      return res.status(503).json({ success: false, message: 'Database connection failed', responseTimeMs: ms });
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database connection failed', 
+        responseTimeMs: ms 
+      });
     }
 
     res.json({
@@ -925,7 +968,14 @@ app.get('/api/v1/db/test', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'DB test error', error: error.message });
+    clearTimeout(timeout);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'DB test error', 
+        error: error.message 
+      });
+    }
   }
 });
 
@@ -965,9 +1015,27 @@ app.get('/api/v1/student/courses', (req, res) => {
 });
 
 app.get('/api/v1/admin/users', async (req, res) => {
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({
+        success: false,
+        message: 'Users request timeout',
+        timeout: true,
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        }
+      });
+    }
+  }, 10000); // 10 second timeout
+
   try {
     // Check if database is available
     if (!dbInitialized || !databaseUtils) {
+      clearTimeout(timeout);
       return res.json({
         success: true,
         message: "Users data (fallback mode)",
@@ -999,9 +1067,13 @@ app.get('/api/v1/admin/users', async (req, res) => {
     const role = req.query.role || null;
     const search = req.query.search || null;
     
-    // Fetch users from database
-    const result = await User.getAll(page, limit, { role, search });
+    // Fetch users from database with timeout
+    const result = await Promise.race([
+      User.getAll(page, limit, { role, search }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Database query timeout')), 8000))
+    ]);
     
+    clearTimeout(timeout);
     res.json({
       success: true,
       message: "Users retrieved successfully",
@@ -1012,30 +1084,57 @@ app.get('/api/v1/admin/users', async (req, res) => {
     });
 
   } catch (error) {
+    clearTimeout(timeout);
     console.error('Admin users error:', error);
     
     // Fallback to empty data on error
-    res.json({
-      success: true,
-      message: "Users data (error fallback)",
-      data: [],
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 0,
-        totalPages: 0
-      },
-      serverless: true,
-      error: error.message
-    });
+    if (!res.headersSent) {
+      res.json({
+        success: true,
+        message: "Users data (error fallback)",
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0
+        },
+        serverless: true,
+        error: error.message
+      });
+    }
   }
 });
 
-// Admin dashboard endpoint
+// Admin dashboard endpoint with timeout protection
 app.get('/api/v1/admin/dashboard', async (req, res) => {
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({
+        success: false,
+        message: 'Dashboard request timeout',
+        timeout: true,
+        data: {
+          stats: {
+            totalUsers: 0,
+            totalStudents: 0,
+            totalCourses: 0,
+            totalModules: 0,
+            totalLessons: 0,
+            totalRevenue: 0.00,
+            activeBatches: 0
+          },
+          recentUsers: [],
+          recentCourses: []
+        }
+      });
+    }
+  }, 15000); // 15 second timeout
+
   try {
     // Check if database is available
     if (!dbInitialized || !databaseUtils) {
+      clearTimeout(timeout);
       return res.json({
         success: true,
         message: "Admin dashboard data (fallback mode)",
@@ -1158,6 +1257,7 @@ app.get('/api/v1/admin/dashboard', async (req, res) => {
       activeBatches: 0 // Not implemented yet
     };
 
+    clearTimeout(timeout);
     res.json({
       success: true,
       message: "Admin dashboard data",
@@ -1171,28 +1271,31 @@ app.get('/api/v1/admin/dashboard', async (req, res) => {
     });
 
   } catch (error) {
+    clearTimeout(timeout);
     console.error('Admin dashboard error:', error);
     
     // Fallback to empty data on error
-    res.json({
-      success: true,
-      message: "Admin dashboard data (error fallback)",
-      data: {
-        stats: {
-          totalUsers: 0,
-          totalStudents: 0,
-          totalCourses: 0,
-          totalModules: 0,
-          totalLessons: 0,
-          totalRevenue: 0.00,
-          activeBatches: 0
+    if (!res.headersSent) {
+      res.json({
+        success: true,
+        message: "Admin dashboard data (error fallback)",
+        data: {
+          stats: {
+            totalUsers: 0,
+            totalStudents: 0,
+            totalCourses: 0,
+            totalModules: 0,
+            totalLessons: 0,
+            totalRevenue: 0.00,
+            activeBatches: 0
+          },
+          recentUsers: [],
+          recentCourses: []
         },
-        recentUsers: [],
-        recentCourses: []
-      },
-      serverless: true,
-      error: error.message
-    });
+        serverless: true,
+        error: error.message
+      });
+    }
   }
 });
 
@@ -1315,6 +1418,50 @@ app.use('*', (req, res) => {
   });
 });
 
+// Comprehensive error boundary wrapper
+const wrapAsync = (fn) => {
+  return (req, res, next) => {
+    const timeout = setTimeout(() => {
+      if (!res.headersSent) {
+        console.error('Request timeout for:', req.method, req.path);
+        res.status(504).json({
+          success: false,
+          message: 'Request timeout',
+          timeout: true,
+          path: req.path,
+          method: req.method,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }, 30000); // 30 second global timeout
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+    };
+
+    // Wrap the original function
+    Promise.resolve(fn(req, res, next))
+      .then(() => cleanup())
+      .catch((error) => {
+        cleanup();
+        console.error('Async route error:', error.message);
+        console.error('Stack:', error.stack);
+        
+        if (!res.headersSent) {
+          const isDevelopment = process.env.NODE_ENV !== 'production';
+          res.status(error.status || 500).json({
+            success: false,
+            message: isDevelopment ? error.message : 'Internal server error',
+            ...(isDevelopment && { stack: error.stack }),
+            path: req.path,
+            method: req.method,
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+  };
+};
+
 // Global error handler
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err.message);
@@ -1336,12 +1483,62 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Serverless startup log
+// Memory cleanup and resource management for serverless
+const cleanup = () => {
+  try {
+    // Clear any pending timeouts
+    if (global.timeouts) {
+      global.timeouts.forEach(timeout => clearTimeout(timeout));
+      global.timeouts = [];
+    }
+    
+    // Clear intervals
+    if (global.intervals) {
+      global.intervals.forEach(interval => clearInterval(interval));
+      global.intervals = [];
+    }
+    
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+    
+    console.log('🧹 Cleanup completed');
+  } catch (error) {
+    console.error('Cleanup error:', error.message);
+  }
+};
+
+// Track timeouts and intervals for cleanup
+const originalSetTimeout = global.setTimeout;
+const originalSetInterval = global.setInterval;
+
+global.setTimeout = (...args) => {
+  const timeout = originalSetTimeout(...args);
+  if (!global.timeouts) global.timeouts = [];
+  global.timeouts.push(timeout);
+  return timeout;
+};
+
+global.setInterval = (...args) => {
+  const interval = originalSetInterval(...args);
+  if (!global.intervals) global.intervals = [];
+  global.intervals.push(interval);
+  return interval;
+};
+
+// Serverless cleanup on exit
 if (process.env.VERCEL) {
+  process.on('SIGTERM', cleanup);
+  process.on('SIGINT', cleanup);
+  process.on('beforeExit', cleanup);
+  
   console.log('🚀 Mathematico Backend - Serverless Function Ready', {
     version: '2.0.0',
     timestamp: new Date().toISOString(),
-    environment: 'serverless'
+    environment: 'serverless',
+    memoryLimit: process.env.VERCEL_FUNCTION_MEMORY || '1024MB',
+    timeout: process.env.VERCEL_FUNCTION_TIMEOUT || '30s'
   });
 } else {
   // Start server for local development
@@ -1351,6 +1548,7 @@ if (process.env.VERCEL) {
     console.log(`📊 Health check: http://localhost:${PORT}/api/v1/health`);
     console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
     console.log(`🔧 Admin dashboard: http://localhost:${PORT}/api/v1/admin/dashboard`);
+    console.log(`🗄️ Database test: http://localhost:${PORT}/api/v1/db/test`);
   });
 }
 
