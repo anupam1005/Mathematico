@@ -1348,6 +1348,29 @@ app.get('/api/v1/admin/books', (req, res) => {
   });
 });
 
+// Admin courses endpoint (fallback to prevent 404s from mobile admin panel)
+app.get('/api/v1/admin/courses', (req, res) => {
+  try {
+    // Provide empty list with standard shape expected by client
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '10', 10);
+    res.json({
+      success: true,
+      message: 'Admin courses data',
+      data: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0
+      },
+      serverless: true
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching admin courses', error: error.message });
+  }
+});
+
 // API Testing endpoint
 app.get('/api/v1/test', async (req, res) => {
   try {
