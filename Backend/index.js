@@ -161,6 +161,10 @@ try {
 }
 
 const app = express();
+// Simple in-memory store so creates are visible to both admin and mobile lists
+if (!global.__STORE__) {
+  global.__STORE__ = { books: [], courses: [], liveClasses: [] };
+}
 
 // Global error boundary for serverless
 process.on('uncaughtException', (err) => {
@@ -930,27 +934,39 @@ app.get('/api/v1/mobile/test', (req, res) => {
 });
 
 app.get('/api/v1/mobile/courses', (req, res) => {
-  res.json({
-    success: true,
-    message: "No courses available",
-    data: []
-  });
+  try {
+    res.json({
+      success: true,
+      message: "Courses",
+      data: (global.__STORE__ && global.__STORE__.courses) || []
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error listing courses' });
+  }
 });
 
 app.get('/api/v1/mobile/books', (req, res) => {
-  res.json({
-    success: true,
-    message: "No books available",
-    data: []
-  });
+  try {
+    res.json({
+      success: true,
+      message: "Books",
+      data: (global.__STORE__ && global.__STORE__.books) || []
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error listing books' });
+  }
 });
 
 app.get('/api/v1/mobile/live-classes', (req, res) => {
-  res.json({
-    success: true,
-    message: "No live classes available",
-    data: []
-  });
+  try {
+    res.json({
+      success: true,
+      message: "Live classes",
+      data: (global.__STORE__ && global.__STORE__.liveClasses) || []
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error listing live classes' });
+  }
 });
 
 // Database test endpoint with timeout protection
@@ -1343,7 +1359,7 @@ app.get('/api/v1/admin/books', (req, res) => {
   res.json({
     success: true,
     message: "Admin books data",
-    data: [],
+    data: global.__STORE__.books,
     serverless: true
   });
 });
@@ -1357,7 +1373,7 @@ app.get('/api/v1/admin/courses', (req, res) => {
     res.json({
       success: true,
       message: 'Admin courses data',
-      data: [],
+      data: global.__STORE__.courses,
       pagination: {
         page,
         limit,
@@ -1368,6 +1384,97 @@ app.get('/api/v1/admin/courses', (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching admin courses', error: error.message });
+  }
+});
+
+// Admin live-classes endpoint (fallback)
+app.get('/api/v1/admin/live-classes', (req, res) => {
+  try {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '10', 10);
+    res.json({
+      success: true,
+      message: 'Admin live classes data',
+      data: global.__STORE__.liveClasses,
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0
+      },
+      serverless: true
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching admin live classes', error: error.message });
+  }
+});
+
+// ---------- CREATE endpoints (serverless-friendly, in-memory) ----------
+app.post('/api/v1/admin/books', (req, res) => {
+  try {
+    const body = req.body || {};
+    const now = new Date().toISOString();
+    const item = {
+      id: String(Date.now()),
+      title: body.title || 'Untitled Book',
+      author: body.author || 'Unknown',
+      price: body.price || 0,
+      status: body.status || 'draft',
+      createdAt: now,
+      updatedAt: now,
+    };
+    global.__STORE__.books.unshift(item);
+    res.status(201).json({ success: true, message: 'Book created', data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Create book failed', error: error.message });
+  }
+});
+
+app.post('/api/v1/admin/courses', (req, res) => {
+  try {
+    const body = req.body || {};
+    const now = new Date().toISOString();
+    const item = {
+      id: String(Date.now()),
+      title: body.title || 'Untitled Course',
+      category: body.category || 'General',
+      subject: body.subject || 'General',
+      level: body.level || 'Foundation',
+      students: body.students || 0,
+      price: body.price || 0,
+      status: body.status || 'draft',
+      createdAt: now,
+      updatedAt: now,
+    };
+    global.__STORE__.courses.unshift(item);
+    res.status(201).json({ success: true, message: 'Course created', data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Create course failed', error: error.message });
+  }
+});
+
+app.post('/api/v1/admin/live-classes', (req, res) => {
+  try {
+    const body = req.body || {};
+    const now = new Date().toISOString();
+    const item = {
+      id: String(Date.now()),
+      title: body.title || 'Untitled Live Class',
+      category: body.category || 'General',
+      subject: body.subject || 'General',
+      level: body.level || 'Foundation',
+      status: body.status || 'draft',
+      scheduledAt: body.scheduledAt || null,
+      duration: body.duration || 60,
+      maxStudents: body.maxStudents || 100,
+      isPublished: body.isPublished || false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    global.__STORE__.liveClasses.unshift(item);
+    res.status(201).json({ success: true, message: 'Live class created', data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Create live class failed', error: error.message });
   }
 });
 
