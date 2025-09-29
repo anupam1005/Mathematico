@@ -163,7 +163,12 @@ try {
 const app = express();
 // Simple in-memory store so creates are visible to both admin and mobile lists
 if (!global.__STORE__) {
-  global.__STORE__ = { books: [], courses: [], liveClasses: [] };
+  global.__STORE__ = { books: [], courses: [], liveClasses: [], settings: {
+    siteName: 'Mathematico',
+    supportEmail: 'support@mathematico.example',
+    currency: 'INR',
+    theme: 'light'
+  } };
 }
 
 // Global error boundary for serverless
@@ -1409,9 +1414,28 @@ app.get('/api/v1/admin/live-classes', (req, res) => {
   }
 });
 
+// Admin settings endpoints (fallback)
+app.get('/api/v1/admin/settings', (req, res) => {
+  try {
+    res.json({ success: true, data: global.__STORE__.settings, serverless: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching settings', error: error.message });
+  }
+});
+
+app.put('/api/v1/admin/settings', (req, res) => {
+  try {
+    const body = req.body || {};
+    global.__STORE__.settings = { ...global.__STORE__.settings, ...body, updatedAt: new Date().toISOString() };
+    res.json({ success: true, message: 'Settings updated', data: global.__STORE__.settings, serverless: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating settings', error: error.message });
+  }
+});
+
 // ---------- CREATE endpoints (serverless-friendly, in-memory) ----------
 app.post('/api/v1/admin/books', (req, res) => {
-  try {
+  const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
     const item = {
@@ -1425,13 +1449,19 @@ app.post('/api/v1/admin/books', (req, res) => {
     };
     global.__STORE__.books.unshift(item);
     res.status(201).json({ success: true, message: 'Book created', data: item });
+  };
+  try {
+    if (fileUploadService && fileUploadService.upload) {
+      return fileUploadService.upload.any()(req, res, handler);
+    }
+    handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create book failed', error: error.message });
   }
 });
 
 app.post('/api/v1/admin/courses', (req, res) => {
-  try {
+  const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
     const item = {
@@ -1448,13 +1478,19 @@ app.post('/api/v1/admin/courses', (req, res) => {
     };
     global.__STORE__.courses.unshift(item);
     res.status(201).json({ success: true, message: 'Course created', data: item });
+  };
+  try {
+    if (fileUploadService && fileUploadService.upload) {
+      return fileUploadService.upload.any()(req, res, handler);
+    }
+    handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create course failed', error: error.message });
   }
 });
 
 app.post('/api/v1/admin/live-classes', (req, res) => {
-  try {
+  const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
     const item = {
@@ -1473,6 +1509,12 @@ app.post('/api/v1/admin/live-classes', (req, res) => {
     };
     global.__STORE__.liveClasses.unshift(item);
     res.status(201).json({ success: true, message: 'Live class created', data: item });
+  };
+  try {
+    if (fileUploadService && fileUploadService.upload) {
+      return fileUploadService.upload.any()(req, res, handler);
+    }
+    handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create live class failed', error: error.message });
   }
