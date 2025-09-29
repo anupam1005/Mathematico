@@ -243,6 +243,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Explicitly handle CORS preflight for admin routes (some devices send OPTIONS)
+app.options('/api/v1/admin/*', cors(corsOptions));
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -1448,13 +1451,14 @@ app.post('/api/v1/admin/books', (req, res) => {
       updatedAt: now,
     };
     global.__STORE__.books.unshift(item);
-    res.status(201).json({ success: true, message: 'Book created', data: item });
+    return res.status(201).json({ success: true, message: 'Book created', data: item });
   };
   try {
-    if (fileUploadService && fileUploadService.upload) {
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (fileUploadService && fileUploadService.upload && req.headers['content-type'] && req.headers['content-type'].includes('multipart')) {
       return fileUploadService.upload.any()(req, res, handler);
     }
-    handler();
+    return handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create book failed', error: error.message });
   }
@@ -1477,13 +1481,14 @@ app.post('/api/v1/admin/courses', (req, res) => {
       updatedAt: now,
     };
     global.__STORE__.courses.unshift(item);
-    res.status(201).json({ success: true, message: 'Course created', data: item });
+    return res.status(201).json({ success: true, message: 'Course created', data: item });
   };
   try {
-    if (fileUploadService && fileUploadService.upload) {
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (fileUploadService && fileUploadService.upload && req.headers['content-type'] && req.headers['content-type'].includes('multipart')) {
       return fileUploadService.upload.any()(req, res, handler);
     }
-    handler();
+    return handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create course failed', error: error.message });
   }
@@ -1508,13 +1513,14 @@ app.post('/api/v1/admin/live-classes', (req, res) => {
       updatedAt: now,
     };
     global.__STORE__.liveClasses.unshift(item);
-    res.status(201).json({ success: true, message: 'Live class created', data: item });
+    return res.status(201).json({ success: true, message: 'Live class created', data: item });
   };
   try {
-    if (fileUploadService && fileUploadService.upload) {
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (fileUploadService && fileUploadService.upload && req.headers['content-type'] && req.headers['content-type'].includes('multipart')) {
       return fileUploadService.upload.any()(req, res, handler);
     }
-    handler();
+    return handler();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Create live class failed', error: error.message });
   }
