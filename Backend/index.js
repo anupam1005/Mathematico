@@ -109,6 +109,50 @@ const logger = {
 };
 const httpLogger = (req, res, next) => next(); // No-op for serverless
 
+// Lightweight inline JWT helpers to secure routes in serverless mode
+const JWT_SECRET_SAFE = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const getUserFromAuthHeader = (req) => {
+  try {
+    const authHeader = req.headers && req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, JWT_SECRET_SAFE);
+    return decoded || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const requireAuthInline = (req, res, next) => {
+  try {
+    const user = getUserFromAuthHeader(req);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    req.user = user;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+};
+
+const requireAdminInline = (req, res, next) => {
+  try {
+    const user = getUserFromAuthHeader(req);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const isAdmin = user.isAdmin === true || String(user.role).toLowerCase() === 'admin';
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+    req.user = user;
+    return next();
+  } catch (e) {
+    return res.status(403).json({ success: false, message: 'Admin access required' });
+  }
+};
+
 // Swagger configuration
 let swaggerUi, specs, swaggerOptions;
 try {
@@ -864,6 +908,32 @@ app.get('/api/v1/auth/profile', (req, res) => {
   }
 });
 
+// Update profile endpoint (allow users to change their display name)
+// Secured: requires valid JWT; user can only update their own profile fields (name)
+app.put('/api/v1/auth/profile', requireAuthInline, (req, res) => {
+  try {
+    const { name } = req.body || {};
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Valid name is required' });
+    }
+
+    const updated = {
+      id: req.user.id,
+      email: req.user.email,
+      name: name.trim(),
+      role: req.user.role || 'user',
+      isAdmin: req.user.isAdmin === true,
+      email_verified: req.user.email_verified !== false,
+      is_active: req.user.is_active !== false,
+      updated_at: new Date().toISOString()
+    };
+
+    return res.json({ success: true, message: 'Profile updated', data: updated });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Failed to update profile' });
+  }
+});
+
 app.post('/api/v1/auth/refresh-token', (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -1426,7 +1496,7 @@ app.get('/api/v1/admin/settings', (req, res) => {
   }
 });
 
-app.put('/api/v1/admin/settings', (req, res) => {
+app.put('/api/v1/admin/settings', requireAdminInline, (req, res) => {
   try {
     const body = req.body || {};
     global.__STORE__.settings = { ...global.__STORE__.settings, ...body, updatedAt: new Date().toISOString() };
@@ -1437,7 +1507,7 @@ app.put('/api/v1/admin/settings', (req, res) => {
 });
 
 // ---------- CREATE endpoints (serverless-friendly, in-memory) ----------
-app.post('/api/v1/admin/books', (req, res) => {
+app.post('/api/v1/admin/books', requireAdminInline, (req, res) => {
   const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
@@ -1464,7 +1534,7 @@ app.post('/api/v1/admin/books', (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/courses', (req, res) => {
+app.post('/api/v1/admin/courses', requireAdminInline, (req, res) => {
   const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
@@ -1494,7 +1564,7 @@ app.post('/api/v1/admin/courses', (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/live-classes', (req, res) => {
+app.post('/api/v1/admin/live-classes', requireAdminInline, (req, res) => {
   const handler = () => {
     const body = req.body || {};
     const now = new Date().toISOString();
