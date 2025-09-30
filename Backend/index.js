@@ -1003,6 +1003,51 @@ app.put('/api/v1/auth/profile', requireAuthInline, (req, res) => {
   }
 });
 
+// Change password endpoint (serverless-friendly)
+// Rules:
+// - Requires JWT
+// - If user exists in memory, currentPassword must match
+// - If user not found (cold start), we create/update record with new password
+app.put('/api/v1/auth/change-password', requireAuthInline, (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    // Disallow password change for admin accounts in this environment
+    if (req.user && (req.user.isAdmin === true || String(req.user.role).toLowerCase() === 'admin')) {
+      return res.status(403).json({ success: false, message: 'Admin password cannot be changed in serverless mode' });
+    }
+
+    if (!global.__STORE__.users) global.__STORE__.users = [];
+
+    // Find user by id or email
+    const userIndex = global.__STORE__.users.findIndex(u => String(u.id) === String(req.user.id) || u.email === req.user.email);
+    if (userIndex >= 0) {
+      const existing = global.__STORE__.users[userIndex];
+      if (!currentPassword || existing.password !== currentPassword) {
+        return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+      }
+      global.__STORE__.users[userIndex] = { ...existing, password: newPassword };
+    } else {
+      // Cold start: create or update an entry
+      global.__STORE__.users.push({
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name || 'User',
+        role: req.user.role || 'user',
+        isAdmin: !!req.user.isAdmin,
+        password: newPassword
+      });
+    }
+
+    return res.json({ success: true, message: 'Password changed successfully' });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Password change failed' });
+  }
+});
+
 app.post('/api/v1/auth/refresh-token', (req, res) => {
   try {
     const { refreshToken } = req.body;
