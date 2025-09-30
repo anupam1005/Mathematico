@@ -289,6 +289,8 @@ app.use(cors(corsOptions));
 
 // Explicitly handle CORS preflight for admin routes (some devices send OPTIONS)
 app.options('/api/v1/admin/*', cors(corsOptions));
+// Generic preflight for all api routes
+app.options('/api/v1/*', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -790,6 +792,11 @@ app.post('/api/v1/auth/login', (req, res) => {
   }
 });
 
+// Admin ping to diagnose Network Error quickly
+app.post('/api/v1/admin/ping', requireAdminInline, (req, res) => {
+  res.json({ success: true, message: 'Admin ping OK', timestamp: new Date().toISOString() });
+});
+
 // Additional auth endpoints
 app.post('/api/v1/auth/register', (req, res) => {
   try {
@@ -1153,6 +1160,10 @@ if (fileUploadService) {
   app.post('/api/v1/upload', fileUploadService.upload.single('file'), fileUploadService.processFileUpload);
   app.post('/api/v1/upload/multiple', fileUploadService.upload.array('files', 5), fileUploadService.processMultipleFileUpload);
   app.use(fileUploadService.handleUploadError);
+
+  // Admin-scoped aliases used by mobile app service
+  app.post('/api/v1/admin/upload', requireAdminInline, fileUploadService.upload.single('file'), fileUploadService.processFileUpload);
+  app.post('/api/v1/admin/upload/multiple', requireAdminInline, fileUploadService.upload.array('files', 5), fileUploadService.processMultipleFileUpload);
 } else {
   app.post('/api/v1/upload', (req, res) => {
     res.status(503).json({
@@ -1166,6 +1177,22 @@ if (fileUploadService) {
   });
   
   app.post('/api/v1/upload/multiple', (req, res) => {
+    res.status(503).json({
+      success: false,
+      message: 'Multiple file upload service not available. Please configure Cloudinary.',
+      serverless: true
+    });
+  });
+
+  // Admin-scoped aliases (unavailable state)
+  app.post('/api/v1/admin/upload', (req, res) => {
+    res.status(503).json({
+      success: false,
+      message: 'File upload service not available. Please configure Cloudinary.',
+      serverless: true
+    });
+  });
+  app.post('/api/v1/admin/upload/multiple', (req, res) => {
     res.status(503).json({
       success: false,
       message: 'Multiple file upload service not available. Please configure Cloudinary.',
