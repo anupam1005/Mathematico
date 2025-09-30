@@ -74,16 +74,17 @@ const jwt = require("jsonwebtoken");
 
 // Safe imports with fallbacks (do NOT crash serverless)
 let generateAccessToken, generateRefreshToken, authenticateToken, requireAdmin;
+// Unified JWT secrets to avoid sign/verify mismatches
+const JWT_SECRET_SAFE = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const JWT_REFRESH_SECRET_SAFE = process.env.JWT_REFRESH_SECRET || 'your-super-refresh-secret-change-in-production';
 try {
   const jwtUtils = require("./utils/jwt");
   generateAccessToken = jwtUtils.generateAccessToken;
   generateRefreshToken = jwtUtils.generateRefreshToken;
 } catch (err) {
   console.warn('JWT utils not available, using inline jwt fallback:', err.message);
-  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-not-for-production';
-  const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-not-for-production';
-  generateAccessToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' });
-  generateRefreshToken = (payload) => jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
+  generateAccessToken = (payload) => jwt.sign(payload, JWT_SECRET_SAFE, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' });
+  generateRefreshToken = (payload) => jwt.sign(payload, JWT_REFRESH_SECRET_SAFE, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
 }
 
 try {
@@ -110,7 +111,6 @@ const logger = {
 const httpLogger = (req, res, next) => next(); // No-op for serverless
 
 // Lightweight inline JWT helpers to secure routes in serverless mode
-const JWT_SECRET_SAFE = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const getUserFromAuthHeader = (req) => {
   try {
     const authHeader = req.headers && req.headers.authorization;
@@ -207,7 +207,7 @@ try {
 const app = express();
 // Simple in-memory store so creates are visible to both admin and mobile lists
 if (!global.__STORE__) {
-  global.__STORE__ = { books: [], courses: [], liveClasses: [], settings: {
+  global.__STORE__ = { books: [], courses: [], liveClasses: [], users: [], settings: {
     siteName: 'Mathematico',
     supportEmail: 'support@mathematico.example',
     currency: 'INR',
@@ -733,28 +733,36 @@ app.post('/api/v1/auth/login', (req, res) => {
       });
     }
 
-    let userPayload;
-    if (email === "dc2006089@gmail.com" && password === "Myname*321") {
-      userPayload = {
-        id: 1,
-        email,
-        name: "Admin User",
-        role: "admin",
-        isAdmin: true,
-      };
-    } else if (email === "test@example.com" && password === "password123") {
-      userPayload = {
-        id: 2,
-        email,
-        name: "Test User",
-        role: "user",
-        isAdmin: false,
-      };
-    } else {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+    // First, try in-memory users from registration
+    let userPayload = null;
+    if (global.__STORE__ && Array.isArray(global.__STORE__.users)) {
+      const found = global.__STORE__.users.find(u => u.email === email && u.password === password);
+      if (found) {
+        userPayload = { id: found.id, email: found.email, name: found.name, role: found.role || 'user', isAdmin: !!found.isAdmin };
+      }
+    }
+
+    // Fallback to built-in demo accounts if not found
+    if (!userPayload) {
+      if (email === "dc2006089@gmail.com" && password === "Myname*321") {
+        userPayload = {
+          id: 1,
+          email,
+          name: "Admin User",
+          role: "admin",
+          isAdmin: true,
+        };
+      } else if (email === "test@example.com" && password === "password123") {
+        userPayload = {
+          id: 2,
+          email,
+          name: "Test User",
+          role: "user",
+          isAdmin: false,
+        };
+      } else {
+        return res.status(401).json({ success: false, message: "Invalid email or password" });
+      }
     }
 
     const accessToken = generateAccessToken(userPayload);
@@ -802,7 +810,7 @@ app.post('/api/v1/auth/register', (req, res) => {
       });
     }
     
-    // For serverless mode, create a simple user response
+    // For serverless mode, create a simple user response and persist in-memory
     const userPayload = {
       id: Date.now(),
       email: email,
@@ -812,6 +820,17 @@ app.post('/api/v1/auth/register', (req, res) => {
       email_verified: true,
       is_active: true
     };
+
+    // Store user in in-memory store for subsequent logins
+    try {
+      if (!global.__STORE__.users) global.__STORE__.users = [];
+      const exists = global.__STORE__.users.find(u => u.email === email);
+      if (!exists) {
+        global.__STORE__.users.push({ ...userPayload, password });
+      }
+    } catch (e) {
+      console.warn('Could not persist user in memory:', e.message);
+    }
     
     // Generate JWT tokens
     const accessToken = generateAccessToken(userPayload);
@@ -947,15 +966,32 @@ app.post('/api/v1/auth/refresh-token', (req, res) => {
 
     // For serverless mode, generate new tokens for any user
     // In a real app, you'd verify the refresh token and get user data from database
-    const userPayload = {
-      id: 1,
-      email: "dc2006089@gmail.com",
-      name: "Admin User",
-      role: "admin",
-      isAdmin: true,
-      email_verified: true,
-      is_active: true
-    };
+    // Try to derive user from refresh token if it is a signed token
+    let uid = null;
+    try {
+      const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET_SAFE);
+      uid = decoded && decoded.id;
+    } catch (e) {}
+
+    let userPayload = null;
+    if (uid && global.__STORE__ && Array.isArray(global.__STORE__.users)) {
+      const found = global.__STORE__.users.find(u => String(u.id) === String(uid));
+      if (found) {
+        userPayload = { id: found.id, email: found.email, name: found.name, role: found.role || 'user', isAdmin: !!found.isAdmin, email_verified: true, is_active: true };
+      }
+    }
+    // Fallback to admin if not found
+    if (!userPayload) {
+      userPayload = {
+        id: 1,
+        email: "dc2006089@gmail.com",
+        name: "Admin User",
+        role: "admin",
+        isAdmin: true,
+        email_verified: true,
+        is_active: true
+      };
+    }
 
     const newAccessToken = generateAccessToken(userPayload);
     const newRefreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
@@ -1828,15 +1864,8 @@ if (process.env.VERCEL) {
     timeout: process.env.VERCEL_FUNCTION_TIMEOUT || '30s'
   });
 } else {
-  // Start server for local development
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Mathematico Backend Server running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/v1/health`);
-    console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-    console.log(`🔧 Admin dashboard: http://localhost:${PORT}/api/v1/admin/dashboard`);
-    console.log(`🗄️ Database test: http://localhost:${PORT}/api/v1/db/test`);
-  });
+  // Local server is intentionally disabled for this deployment.
+  console.log('ℹ️ Local listening is disabled. Deploy this app on your serverless platform (e.g., Vercel).');
 }
 
 module.exports = app;
