@@ -194,6 +194,9 @@ try {
     swaggerOptions: {
       persistAuthorization: true,
     },
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Mathematico API Documentation',
+    customfavIcon: '/icon.png'
   };
   
   console.log('✅ Swagger configured successfully');
@@ -311,14 +314,20 @@ if (!process.env.VERCEL) {
   });
 }
 
-// Serve favicon.ico (always non-blocking, serverless-safe)
-app.get('/favicon.ico', (req, res) => {
+// Serve app icon across common favicon paths (serverless-safe)
+app.get([
+  '/icon.png',
+  '/favicon.ico',
+  '/apple-touch-icon.png',
+  '/favicon-16x16.png',
+  '/favicon-32x32.png',
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png',
+  '/mstile-150x150.png'
+], (req, res) => {
   try {
-    if (process.env.VERCEL) {
-      return res.status(204).end();
-    }
-    const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
-    res.sendFile(faviconPath, (err) => {
+    const iconPath = path.join(__dirname, 'public', 'icon.png');
+    res.sendFile(iconPath, (err) => {
       if (err) return res.status(204).end();
     });
   } catch (error) {

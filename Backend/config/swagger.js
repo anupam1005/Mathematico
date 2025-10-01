@@ -347,6 +347,6 @@ module.exports = {
   swaggerOptions: {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Mathematico API Documentation',
-    customfavIcon: '/favicon.ico'
+    customfavIcon: '/icon.png'
   }
 };
