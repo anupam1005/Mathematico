@@ -310,7 +310,7 @@ let dbConnected = false;
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // Import route handlers with MongoDB models
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes, profileRoutes;
+let authRoutes, adminRoutes, mobileRoutes, studentRoutes;
 
 try {
   // Auth routes
@@ -368,25 +368,11 @@ try {
   }));
 }
 
-try {
-  // Profile routes
-  profileRoutes = require('./routes/profile');
-  console.log('✅ Profile routes loaded successfully');
-} catch (err) {
-  console.warn('⚠️ Profile routes not available:', err.message);
-  profileRoutes = express.Router();
-  profileRoutes.all('*', (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Profile service unavailable - MongoDB connection required',
-    serverless: true 
-  }));
-}
 
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-app.use(`${API_PREFIX}/profile`, profileRoutes);
 app.use(`${API_PREFIX}`, studentRoutes);
 
 // Swagger documentation
