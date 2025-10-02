@@ -19,7 +19,9 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     // Verify JWT token using the proper utility function
+    console.log('🔍 Attempting to verify token...');
     const decoded = verifyAccessToken(token);
+    console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, idType: typeof decoded.id });
     
     // Check if it's the hardcoded admin
     if (decoded.email === 'dc2006089@gmail.com' && decoded.role === 'admin') {
@@ -38,7 +40,37 @@ const authenticateToken = async (req, res, next) => {
     }
     
     // Find user in database using the correct field name
-    const user = await User.findById(decoded.id);
+    // Convert string ID to MongoDB ObjectId if needed
+    const mongoose = require('mongoose');
+    let userId = decoded.id;
+    
+    // Handle different ID formats
+    if (typeof userId === 'string') {
+      if (userId.length === 24) {
+        // Valid MongoDB ObjectId string
+        userId = new mongoose.Types.ObjectId(userId);
+      } else {
+        // Try to find by string ID as well
+        const userByString = await User.findById(userId);
+        if (userByString) {
+          const user = userByString;
+          req.user = {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            role: user.role || 'user',
+            isAdmin: user.role === 'admin',
+            is_admin: user.role === 'admin',
+            email_verified: user.email_verified || true,
+            is_active: user.is_active !== false
+          };
+          next();
+          return;
+        }
+      }
+    }
+    
+    const user = await User.findById(userId);
     
     if (!user) {
       return res.status(401).json({
@@ -63,7 +95,7 @@ const authenticateToken = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Token validation error:', error);
+    console.error('❌ Token validation error:', error.message);
     return res.status(401).json({
       success: false,
       error: 'Unauthorized',

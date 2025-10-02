@@ -64,6 +64,173 @@ router.get('/my-courses', studentController.getMyCourses);
 router.get('/my-books', studentController.getMyBooks);
 router.get('/my-live-classes', studentController.getMyLiveClasses);
 
+// ============= STUDENT PROFILE MANAGEMENT =============
+
+/**
+ * Get current student profile
+ */
+const getStudentProfile = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const { ensureDatabaseConnection } = require('../utils/database');
+    
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        email_verified: user.email_verified,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt
+      },
+      message: 'Student profile retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get student profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve student profile',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Update student profile
+ */
+const updateStudentProfile = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const { ensureDatabaseConnection } = require('../utils/database');
+    
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { name, email } = req.body;
+    const updateData = {};
+    
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+
+    const user = await User.updateUser(req.user.id, updateData);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        email_verified: user.email_verified,
+        updated_at: user.updatedAt
+      },
+      message: 'Student profile updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update student profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update student profile',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get student statistics
+ */
+const getStudentStats = async (req, res) => {
+  try {
+    const Book = require('../models/Book');
+    const Course = require('../models/Course');
+    const LiveClass = require('../models/LiveClass');
+    const { ensureDatabaseConnection } = require('../utils/database');
+    
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Get student's enrolled courses, purchased books, and live classes
+    const [courses, books, liveClasses] = await Promise.all([
+      Course.countDocuments({ status: 'published' }),
+      Book.countDocuments({ status: 'published' }),
+      LiveClass.countDocuments({ status: { $in: ['upcoming', 'live'] } })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        total_courses: courses,
+        total_books: books,
+        total_live_classes: liveClasses,
+        student_since: req.user.created_at || new Date().toISOString()
+      },
+      message: 'Student statistics retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get student stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve student statistics',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// Student profile management routes
+router.get('/profile', getStudentProfile);
+router.put('/profile', updateStudentProfile);
+router.get('/stats', getStudentStats);
+
 // Test endpoint
 router.get('/test', (req, res) => {
   res.json({

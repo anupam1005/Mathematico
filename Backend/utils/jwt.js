@@ -3,6 +3,8 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-in-production';
+
+console.log('🔑 JWT_SECRET loaded:', JWT_SECRET ? 'YES' : 'NO', JWT_SECRET ? JWT_SECRET.substring(0, 10) + '...' : 'NOT_FOUND');
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '1d';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 

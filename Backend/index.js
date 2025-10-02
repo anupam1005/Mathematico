@@ -297,7 +297,7 @@ app.use(async (req, res, next) => {
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // Import route handlers with MongoDB models
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes;
+let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
 
 try {
   // Auth routes
@@ -356,10 +356,26 @@ try {
 }
 
 
+try {
+  // Users routes
+  usersRoutes = require('./routes/users');
+  console.log('✅ Users routes loaded');
+} catch (err) {
+  console.warn('⚠️ Users routes not available:', err.message);
+  usersRoutes = express.Router();
+  usersRoutes.all('*', (req, res) => res.status(503).json({ 
+    success: false, 
+    message: 'Users service unavailable - MongoDB connection required',
+    serverless: true 
+  }));
+}
+
+
 // Mount routes (database connection handled in individual controllers)
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+app.use(`${API_PREFIX}/users`, usersRoutes);
 app.use(`${API_PREFIX}`, studentRoutes);
 
 // Swagger documentation
