@@ -138,6 +138,24 @@ router.post('/verify-email', authController.verifyEmail);
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);
 
+// Import profile controller
+let profileController;
+try {
+  profileController = require('../controllers/profileController');
+  
+  // Profile management routes
+  router.put('/profile', authenticateToken, profileController.updateProfile);
+  router.put('/change-password', authenticateToken, profileController.changePassword);
+  
+  // User preferences routes
+  router.get('/preferences', authenticateToken, profileController.getPreferences);
+  router.put('/preferences', authenticateToken, profileController.updatePreferences);
+  
+  console.log('✅ Profile routes loaded successfully');
+} catch (error) {
+  console.warn('⚠️ ProfileController not available, profile routes disabled');
+}
+
 // Test endpoint
 router.get('/test', (req, res) => {
   res.json({

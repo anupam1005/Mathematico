@@ -9,7 +9,9 @@
     "vercel-build": "echo 'Build complete'",
     "postinstall": "echo 'Dependencies installed'",
     "export-docs": "node scripts/export-swagger.js",
-    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\""
+    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\"",
+    "migrate:user-settings": "node migrations/add-user-settings-table.js",
+    "db:migrate": "node migrations/add-user-settings-table.js"
   },
   "dependencies": {
     "axios": "^1.12.2",

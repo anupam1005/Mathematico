@@ -40,6 +40,31 @@ CREATE TABLE users (
     INDEX `idx_users_email_verified` (`email_verified`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- User Settings table - Store user preferences and settings
+CREATE TABLE user_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    
+    -- Notification Settings
+    push_notifications BOOLEAN DEFAULT TRUE,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    course_updates BOOLEAN DEFAULT TRUE,
+    live_class_reminders BOOLEAN DEFAULT TRUE,
+    
+    -- App Preferences
+    dark_mode BOOLEAN DEFAULT FALSE,
+    auto_play_videos BOOLEAN DEFAULT TRUE,
+    download_quality ENUM('Low', 'Medium', 'High') DEFAULT 'High',
+    language VARCHAR(10) DEFAULT 'en',
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY `unique_user_settings` (`user_id`),
+    INDEX `idx_user_settings_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Courses table - FIXED: Simplified status management
 CREATE TABLE courses (
     id INT AUTO_INCREMENT PRIMARY KEY, -- FIXED: Use auto-increment for easier management
