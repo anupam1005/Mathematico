@@ -1,5 +1,6 @@
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
+const { ensureDatabaseConnection } = require('../utils/database');
 
 // Auth Controller - Handles authentication requests
 
@@ -100,6 +101,17 @@ const login = async (req, res) => {
     } else {
       // Try to check for student in database, with fallback for serverless
       try {
+        // Ensure database connection
+        const isConnected = await ensureDatabaseConnection();
+        if (!isConnected) {
+          return res.status(503).json({
+            success: false,
+            error: 'Service Unavailable',
+            message: 'Database connection failed',
+            timestamp: new Date().toISOString()
+          });
+        }
+
         const user = await User.findByEmail(email);
         
         if (!user) {
@@ -195,6 +207,17 @@ const register = async (req, res) => {
         success: false,
         error: 'Bad Request',
         message: 'Email, password, and name are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        error: 'Service Unavailable',
+        message: 'Database connection failed',
         timestamp: new Date().toISOString()
       });
     }

@@ -5,13 +5,14 @@ const { authenticateToken } = require('../middlewares/auth');
 // Import dependencies for auth logic
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 
-// Import auth controller or use built-in logic
+// Import auth controller with database connection
 let authController;
 try {
   authController = require('../controllers/authController');
+  console.log('✅ AuthController loaded successfully');
 } catch (error) {
-  console.warn('AuthController not available, using built-in auth handlers');
-  // Built-in auth handlers for serverless
+  console.warn('⚠️ AuthController not available, using fallback handlers:', error.message);
+  // Fallback auth handlers for serverless
   authController = {
     login: (req, res) => {
       try {
