@@ -9,7 +9,8 @@ const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
 
-// Import MongoDB database connection
+// Import MongoDB database connection utility
+const { connectToDatabase, getConnectionStatus } = require('./utils/database');
 const mongoose = require('mongoose');
 
 // Startup environment validation with enhanced security checks
@@ -183,26 +184,27 @@ app.get('/health', async (req, res) => {
   try {
     let dbHealth = { status: 'disconnected', type: 'mongodb' };
     
-    // Check MongoDB connection
-    if (mongoose.connection.readyState === 1) {
-      try {
-        await mongoose.connection.db.admin().ping();
+    // Try to connect to database if not connected
+    try {
+      const connection = await connectToDatabase();
+      if (connection && connection.readyState === 1) {
+        await connection.db.admin().ping();
         dbHealth = { 
           status: 'healthy', 
           type: 'mongodb',
-          host: mongoose.connection.host,
-          port: mongoose.connection.port,
-          name: mongoose.connection.name
+          host: connection.host,
+          port: connection.port,
+          name: connection.name
         };
-      } catch (error) {
-        dbHealth = { status: 'error', type: 'mongodb', error: error.message };
+      } else {
+        dbHealth = { 
+          status: 'disconnected', 
+          type: 'mongodb',
+          message: 'MongoDB not connected - running in fallback mode'
+        };
       }
-    } else {
-      dbHealth = { 
-        status: 'disconnected', 
-        type: 'mongodb',
-        message: 'MongoDB not connected - running in fallback mode'
-      };
+    } catch (error) {
+      dbHealth = { status: 'error', type: 'mongodb', error: error.message };
     }
     
     const systemInfo = {
@@ -251,60 +253,18 @@ app.get('/', (req, res) => {
   });
 });
 
-// Initialize database connection with graceful fallback
-let dbConnected = false;
-(async () => {
-  try {
-    console.log('🔗 Initializing MongoDB connection...');
-    const mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri) {
-      console.warn('⚠️ MONGODB_URI not found, running in fallback mode');
-      return;
-    }
-    
-    // Try to connect with a timeout
-    const connectionPromise = mongoose.connect(mongoUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000, // Increased timeout
-      socketTimeoutMS: 45000,
-      bufferCommands: false,
-      retryWrites: true,
-      w: 'majority'
-    });
-    
-    // Race between connection and timeout
-    await Promise.race([
-      connectionPromise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), 15000)
-      )
-    ]);
-    
-    dbConnected = true;
-    console.log('✅ MongoDB connection established');
-    
-    // Set up connection event handlers
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err.message);
-      dbConnected = false;
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
-      dbConnected = false;
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
-      dbConnected = true;
-    });
-    
-  } catch (error) {
-    console.warn('⚠️ MongoDB connection failed, running in fallback mode:', error.message);
-    console.warn('⚠️ Some features may be limited without database connection');
-    dbConnected = false;
-  }
-})();
+// Initialize connection for serverless
+if (process.env.VERCEL === '1') {
+  // In serverless, don't await the connection
+  connectToDatabase().catch(err => {
+    console.warn('⚠️ Initial MongoDB connection failed in serverless mode:', err.message);
+  });
+} else {
+  // In local development, await the connection
+  (async () => {
+    await connectToDatabase();
+  })();
+}
 
 // API Routes
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
@@ -451,6 +411,7 @@ if (require.main === module) {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-    console.log(`🔗 Database: ${dbConnected ? 'Connected' : 'Disconnected'}`);
+    const connectionStatus = getConnectionStatus();
+    console.log(`🔗 Database: ${connectionStatus.isConnected ? 'Connected' : 'Disconnected'}`);
   });
 }

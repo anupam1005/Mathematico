@@ -12,6 +12,12 @@ try {
   console.error('❌ MongoDB models failed to load:', error.message);
 }
 
+// Helper function to ensure database connection
+const ensureDbConnection = async () => {
+  const { ensureDatabaseConnection } = require('../utils/database');
+  return await ensureDatabaseConnection();
+};
+
 // ============= BOOKS =============
 
 const getAllBooks = async (req, res) => {
@@ -21,6 +27,17 @@ const getAllBooks = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
         serverless: true,
         timestamp: new Date().toISOString()
       });
@@ -57,6 +74,17 @@ const getBookById = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
         serverless: true,
         timestamp: new Date().toISOString()
       });
@@ -100,6 +128,17 @@ const getAllCourses = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
         serverless: true,
         timestamp: new Date().toISOString()
       });
@@ -166,6 +205,17 @@ const getAllLiveClasses = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
         serverless: true,
         timestamp: new Date().toISOString()
       });
