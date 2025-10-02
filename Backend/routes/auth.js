@@ -10,8 +10,10 @@ let authController;
 try {
   authController = require('../controllers/authController');
   console.log('✅ AuthController loaded successfully');
+  console.log('AuthController methods:', Object.keys(authController));
 } catch (error) {
   console.warn('⚠️ AuthController not available, using fallback handlers:', error.message);
+  console.error('AuthController error details:', error);
   // Fallback auth handlers for serverless
   authController = {
     login: (req, res) => {

@@ -246,12 +246,14 @@ const register = async (req, res) => {
       }
       
       // Create new student
-      const newUser = await User.create({
+      console.log('Creating new user with data:', { name, email, role: 'user' });
+      const newUser = await User.createUser({
         name,
         email,
         password,
         role: 'user'
       });
+      console.log('User created successfully:', newUser.name);
     
     // Generate JWT tokens
     const userPayload = {

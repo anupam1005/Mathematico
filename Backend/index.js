@@ -13,6 +13,9 @@ const jwt = require("jsonwebtoken");
 const { connectToDatabase, getConnectionStatus } = require('./utils/database');
 const mongoose = require('mongoose');
 
+// Import database middleware
+const { ensureDatabase } = require('./middlewares/database');
+
 // Startup environment validation with enhanced security checks
 (function validateEnvironment() {
   try {
@@ -255,8 +258,11 @@ app.get('/', (req, res) => {
 
 // Initialize connection for serverless
 if (process.env.VERCEL === '1') {
-  // In serverless, don't await the connection
-  connectToDatabase().catch(err => {
+  // In serverless, initialize connection but don't block
+  console.log('🔗 Initializing MongoDB connection for serverless...');
+  connectToDatabase().then(() => {
+    console.log('✅ MongoDB connection ready for serverless');
+  }).catch(err => {
     console.warn('⚠️ Initial MongoDB connection failed in serverless mode:', err.message);
   });
 } else {
@@ -265,6 +271,27 @@ if (process.env.VERCEL === '1') {
     await connectToDatabase();
   })();
 }
+
+// Global database connection handler for serverless functions
+app.use(async (req, res, next) => {
+  // Skip for health and root endpoints
+  if (req.path === '/health' || req.path === '/') {
+    return next();
+  }
+  
+  // Ensure database connection for all API requests
+  try {
+    const { ensureDatabaseConnection } = require('./utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      console.warn('⚠️ Database not connected for request:', req.method, req.path);
+    }
+  } catch (error) {
+    console.error('❌ Database connection error for request:', req.method, req.path, error.message);
+  }
+  
+  next();
+});
 
 // API Routes
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
@@ -329,7 +356,7 @@ try {
 }
 
 
-// Mount routes
+// Mount routes (database middleware removed for now)
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);

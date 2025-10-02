@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
     lowercase: true,
     trim: true,
     maxlength: 100
@@ -112,6 +111,14 @@ userSchema.statics.findByEmail = function(email) {
 
 userSchema.statics.createUser = async function(userData) {
   const { name, email, password, role = 'user', is_admin = false } = userData;
+  
+  // Ensure database connection
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState !== 1) {
+    console.log('🔗 Database not connected, attempting to connect...');
+    const { connectToDatabase } = require('../utils/database');
+    await connectToDatabase();
+  }
   
   // Hash password
   const saltRounds = 10;

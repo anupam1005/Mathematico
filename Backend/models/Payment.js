@@ -43,9 +43,7 @@ const paymentSchema = new mongoose.Schema({
   },
   transaction_id: {
     type: String,
-    default: null,
-    unique: true,
-    sparse: true
+    default: null
   },
   gateway_response: {
     type: mongoose.Schema.Types.Mixed,
