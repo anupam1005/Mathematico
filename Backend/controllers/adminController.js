@@ -1,8 +1,8 @@
-const User = require('../models/User-mongodb');
-const Book = require('../models/Book-mongodb');
-const Course = require('../models/Course-mongodb');
-const LiveClass = require('../models/LiveClass-mongodb');
-const Payment = require('../models/Payment-mongodb');
+const User = require('../models/User');
+const Book = require('../models/Book');
+const Course = require('../models/Course');
+const LiveClass = require('../models/LiveClass');
+const Payment = require('../models/Payment');
 
 // Admin Controller - Handles admin panel operations with MongoDB
 

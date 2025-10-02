@@ -9,7 +9,7 @@ const os = require("os");
 const jwt = require("jsonwebtoken");
 
 // Import MongoDB database connection
-const { connectDB, healthCheck } = require('./database-mongodb');
+const mongoose = require('mongoose');
 
 // Startup environment validation with enhanced security checks
 (function validateEnvironment() {
@@ -103,6 +103,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security middleware
+const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for API
   crossOriginEmbedderPolicy: false
@@ -162,7 +163,30 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const dbHealth = await healthCheck();
+    let dbHealth = { status: 'disconnected', type: 'mongodb' };
+    
+    // Check MongoDB connection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.db.admin().ping();
+        dbHealth = { 
+          status: 'healthy', 
+          type: 'mongodb',
+          host: mongoose.connection.host,
+          port: mongoose.connection.port,
+          name: mongoose.connection.name
+        };
+      } catch (error) {
+        dbHealth = { status: 'error', type: 'mongodb', error: error.message };
+      }
+    } else {
+      dbHealth = { 
+        status: 'disconnected', 
+        type: 'mongodb',
+        message: 'MongoDB not connected - running in fallback mode'
+      };
+    }
+    
     const systemInfo = {
       platform: os.platform(),
       arch: os.arch(),
@@ -178,6 +202,7 @@ app.get('/health', async (req, res) => {
       database: dbHealth,
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
+      serverless: process.env.VERCEL === '1',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -208,16 +233,57 @@ app.get('/', (req, res) => {
   });
 });
 
-// Initialize database connection
+// Initialize database connection with graceful fallback
 let dbConnected = false;
 (async () => {
   try {
     console.log('🔗 Initializing MongoDB connection...');
-    await connectDB();
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      console.warn('⚠️ MONGODB_URI not found, running in fallback mode');
+      return;
+    }
+    
+    // Try to connect with a timeout
+    const connectionPromise = mongoose.connect(mongoUri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000, // Increased timeout
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      retryWrites: true,
+      w: 'majority'
+    });
+    
+    // Race between connection and timeout
+    await Promise.race([
+      connectionPromise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 15000)
+      )
+    ]);
+    
     dbConnected = true;
     console.log('✅ MongoDB connection established');
+    
+    // Set up connection event handlers
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err.message);
+      dbConnected = false;
+    });
+    
+    mongoose.connection.on('disconnected', () => {
+      console.log('⚠️ MongoDB disconnected');
+      dbConnected = false;
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+      dbConnected = true;
+    });
+    
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
+    console.warn('⚠️ MongoDB connection failed, running in fallback mode:', error.message);
+    console.warn('⚠️ Some features may be limited without database connection');
     dbConnected = false;
   }
 })();
@@ -244,7 +310,7 @@ try {
 
 try {
   // Admin routes with MongoDB
-  adminRoutes = require('./routes/admin-mongodb');
+  adminRoutes = require('./routes/admin');
   console.log('✅ Admin routes loaded');
 } catch (err) {
   console.warn('⚠️ Admin routes not available:', err.message);
@@ -258,7 +324,7 @@ try {
 
 try {
   // Mobile routes
-  mobileRoutes = require('./routes/mobile-mongodb');
+  mobileRoutes = require('./routes/mobile');
   console.log('✅ Mobile routes loaded');
 } catch (err) {
   console.warn('⚠️ Mobile routes not available:', err.message);
@@ -272,7 +338,7 @@ try {
 
 try {
   // Student routes
-  studentRoutes = require('./routes/student-mongodb');
+  studentRoutes = require('./routes/student');
   console.log('✅ Student routes loaded');
 } catch (err) {
   console.warn('⚠️ Student routes not available:', err.message);

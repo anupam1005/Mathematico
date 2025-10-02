@@ -4,9 +4,9 @@ const router = express.Router();
 // Import MongoDB models
 let Book, Course, LiveClass;
 try {
-  Book = require('../models/Book-mongodb');
-  Course = require('../models/Course-mongodb');
-  LiveClass = require('../models/LiveClass-mongodb');
+  Book = require('../models/Book');
+  Course = require('../models/Course');
+  LiveClass = require('../models/LiveClass');
   console.log('✅ MongoDB models loaded for mobile routes');
 } catch (error) {
   console.error('❌ MongoDB models failed to load:', error.message);

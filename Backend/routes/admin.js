@@ -61,7 +61,7 @@ const upload = multer({
 // Import admin controller with MongoDB
 let adminController;
 try {
-  adminController = require('../controllers/adminController-mongodb');
+  adminController = require('../controllers/adminController');
   console.log('✅ MongoDB AdminController loaded successfully');
 } catch (error) {
   console.error('❌ MongoDB AdminController failed to load:', error.message);
