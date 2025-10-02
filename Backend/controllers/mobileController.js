@@ -14,7 +14,8 @@ const getAllCourses = async (req, res) => {
     
     if (category) filters.category = category;
     if (search) filters.search = search;
-    filters.status = 'published'; // Only show published courses
+    // Only show published courses to normal users
+    filters.status = 'published';
     
     const result = await Course.getAll(parseInt(page), parseInt(limit), filters);
     
@@ -69,7 +70,8 @@ const getAllBooks = async (req, res) => {
     
     if (category) filters.category = category;
     if (search) filters.search = search;
-    filters.status = 'published'; // Only show published books
+    // Only show published books to normal users
+    filters.status = 'published';
     
     const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
     
@@ -122,7 +124,14 @@ const getAllLiveClasses = async (req, res) => {
     const { page = 1, limit = 10, status, search } = req.query;
     const filters = {};
     
-    if (status) filters.status = status;
+    // Only show published live classes (upcoming, live, completed) - not draft or cancelled
+    if (status) {
+      filters.status = status;
+    } else {
+      // By default, show only upcoming and live classes
+      filters.statusIn = ['upcoming', 'live'];
+    }
+    
     if (search) filters.search = search;
     
     const result = await LiveClass.getAll(parseInt(page), parseInt(limit), filters);

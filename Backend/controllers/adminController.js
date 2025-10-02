@@ -251,18 +251,28 @@ const createBook = async (req, res) => {
   try {
     const bookData = req.body;
     
-    // Handle file uploads
+    // Handle file uploads from FormData (using field names from frontend)
     if (req.files) {
-      if (req.files.cover_image) {
-        bookData.cover_image_url = `/uploads/covers/${req.files.cover_image[0].filename}`;
+      if (req.files.coverImage && req.files.coverImage[0]) {
+        bookData.cover_image_url = `/uploads/covers/${req.files.coverImage[0].filename}`;
       }
-      if (req.files.pdf_file) {
-        bookData.pdf_url = `/uploads/pdfs/${req.files.pdf_file[0].filename}`;
+      if (req.files.pdfFile && req.files.pdfFile[0]) {
+        bookData.pdf_url = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
       }
     }
     
+    // Convert numeric string fields
+    if (bookData.pages) {
+      bookData.pages = parseInt(bookData.pages);
+    }
+    
+    // Ensure status defaults to draft
+    if (!bookData.status) {
+      bookData.status = 'draft';
+    }
+    
     // Add created_by from authenticated user
-    bookData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    bookData.created_by = req.user?.id || '1';
     
     const book = await Book.create(bookData);
     
@@ -276,7 +286,8 @@ const createBook = async (req, res) => {
     console.error('Create book error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create book',
+      message: error.message || 'Failed to create book',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -287,14 +298,19 @@ const updateBook = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Handle file uploads
+    // Handle file uploads from FormData (using field names from frontend)
     if (req.files) {
-      if (req.files.cover_image) {
-        updateData.cover_image_url = `/uploads/covers/${req.files.cover_image[0].filename}`;
+      if (req.files.coverImage && req.files.coverImage[0]) {
+        updateData.cover_image_url = `/uploads/covers/${req.files.coverImage[0].filename}`;
       }
-      if (req.files.pdf_file) {
-        updateData.pdf_url = `/uploads/pdfs/${req.files.pdf_file[0].filename}`;
+      if (req.files.pdfFile && req.files.pdfFile[0]) {
+        updateData.pdf_url = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
       }
+    }
+    
+    // Convert numeric string fields
+    if (updateData.pages) {
+      updateData.pages = parseInt(updateData.pages);
     }
     
     const book = await Book.update(id, updateData);
@@ -317,7 +333,8 @@ const updateBook = async (req, res) => {
     console.error('Update book error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update book',
+      message: error.message || 'Failed to update book',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -441,13 +458,44 @@ const createCourse = async (req, res) => {
   try {
     const courseData = req.body;
     
-    // Handle file upload
-    if (req.file) {
-      courseData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    // Handle file uploads from FormData
+    if (req.files) {
+      if (req.files.image && req.files.image[0]) {
+        courseData.thumbnail = `/uploads/covers/${req.files.image[0].filename}`;
+      }
+      if (req.files.pdf && req.files.pdf[0]) {
+        courseData.pdf_url = `/uploads/pdfs/${req.files.pdf[0].filename}`;
+      }
+    }
+    
+    // Convert numeric string fields
+    if (courseData.price) {
+      courseData.price = parseFloat(courseData.price);
+    }
+    if (courseData.originalPrice) {
+      courseData.original_price = parseFloat(courseData.originalPrice);
+      delete courseData.originalPrice;
+    }
+    if (courseData.duration) {
+      courseData.duration = parseInt(courseData.duration);
+    }
+    if (courseData.students) {
+      courseData.enrolled_count = parseInt(courseData.students);
+      delete courseData.students;
+    }
+    
+    // Set instructor from user if not provided
+    if (!courseData.instructor) {
+      courseData.instructor = req.user?.name || 'Admin';
+    }
+    
+    // Ensure status defaults to draft
+    if (!courseData.status) {
+      courseData.status = 'draft';
     }
     
     // Add created_by from authenticated user
-    courseData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    courseData.created_by = req.user?.id || '1';
     
     const course = await Course.create(courseData);
     
@@ -461,7 +509,8 @@ const createCourse = async (req, res) => {
     console.error('Create course error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create course',
+      message: error.message || 'Failed to create course',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -472,9 +521,30 @@ const updateCourse = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Handle file upload
-    if (req.file) {
-      updateData.thumbnail = `/uploads/covers/${req.file.filename}`;
+    // Handle file uploads from FormData
+    if (req.files) {
+      if (req.files.image && req.files.image[0]) {
+        updateData.thumbnail = `/uploads/covers/${req.files.image[0].filename}`;
+      }
+      if (req.files.pdf && req.files.pdf[0]) {
+        updateData.pdf_url = `/uploads/pdfs/${req.files.pdf[0].filename}`;
+      }
+    }
+    
+    // Convert numeric string fields
+    if (updateData.price) {
+      updateData.price = parseFloat(updateData.price);
+    }
+    if (updateData.originalPrice) {
+      updateData.original_price = parseFloat(updateData.originalPrice);
+      delete updateData.originalPrice;
+    }
+    if (updateData.duration) {
+      updateData.duration = parseInt(updateData.duration);
+    }
+    if (updateData.students) {
+      updateData.enrolled_count = parseInt(updateData.students);
+      delete updateData.students;
     }
     
     const course = await Course.update(id, updateData);
@@ -497,7 +567,8 @@ const updateCourse = async (req, res) => {
     console.error('Update course error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update course',
+      message: error.message || 'Failed to update course',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -621,27 +692,38 @@ const createLiveClass = async (req, res) => {
   try {
     const liveClassData = req.body;
     
-    // Handle file upload
+    // Handle file upload - check for image field from FormData
     if (req.file) {
       liveClassData.thumbnail = `/uploads/covers/${req.file.filename}`;
     }
     
-    // Convert field names to match database schema
+    // Convert field names to match LiveClass model expectations (camelCase)
     if (liveClassData.scheduledAt) {
       liveClassData.date = liveClassData.scheduledAt;
       delete liveClassData.scheduledAt;
     }
-    if (liveClassData.maxStudents) {
-      liveClassData.max_students = liveClassData.maxStudents;
-      delete liveClassData.maxStudents;
+    // Keep maxStudents and meetingLink in camelCase as LiveClass.create expects them
+    
+    // Ensure required fields have default values
+    if (!liveClassData.instructor) {
+      liveClassData.instructor = req.user?.name || 'Admin';
     }
-    if (liveClassData.meetingLink) {
-      liveClassData.meeting_link = liveClassData.meetingLink;
-      delete liveClassData.meetingLink;
+    
+    if (!liveClassData.price) {
+      liveClassData.price = 0;
+    }
+    
+    // Convert duration and maxStudents to numbers if they're strings
+    if (liveClassData.duration) {
+      liveClassData.duration = parseInt(liveClassData.duration);
+    }
+    
+    if (liveClassData.maxStudents) {
+      liveClassData.maxStudents = parseInt(liveClassData.maxStudents);
     }
     
     // Add created_by from authenticated user
-    liveClassData.created_by = req.user?.id || '1'; // Default to admin user if not available
+    liveClassData.created_by = req.user?.id || '1';
     
     const liveClass = await LiveClass.create(liveClassData);
     
@@ -655,7 +737,8 @@ const createLiveClass = async (req, res) => {
     console.error('Create live class error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create live class',
+      message: error.message || 'Failed to create live class',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -676,13 +759,15 @@ const updateLiveClass = async (req, res) => {
       updateData.date = updateData.scheduledAt;
       delete updateData.scheduledAt;
     }
-    if (updateData.maxStudents) {
-      updateData.max_students = updateData.maxStudents;
-      delete updateData.maxStudents;
+    // Keep maxStudents and meetingLink in camelCase
+    
+    // Convert duration and maxStudents to numbers if they're strings
+    if (updateData.duration) {
+      updateData.duration = parseInt(updateData.duration);
     }
-    if (updateData.meetingLink) {
-      updateData.meeting_link = updateData.meetingLink;
-      delete updateData.meetingLink;
+    
+    if (updateData.maxStudents) {
+      updateData.maxStudents = parseInt(updateData.maxStudents);
     }
     
     const liveClass = await LiveClass.update(id, updateData);
@@ -705,7 +790,8 @@ const updateLiveClass = async (req, res) => {
     console.error('Update live class error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update live class',
+      message: error.message || 'Failed to update live class',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }

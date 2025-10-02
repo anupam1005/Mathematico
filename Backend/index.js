@@ -979,13 +979,37 @@ app.get('/api/v1/auth/me', (req, res) => {
 
 // Update profile endpoint (allow users to change their display name)
 // Secured: requires valid JWT; user can only update their own profile fields (name)
-app.put('/api/v1/auth/profile', requireAuthInline, (req, res) => {
+app.put('/api/v1/auth/profile', requireAuthInline, async (req, res) => {
   try {
     const { name } = req.body || {};
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
       return res.status(400).json({ success: false, message: 'Valid name is required' });
     }
 
+    // Try to update in database if available
+    if (dbInitialized && databaseUtils && databaseUtils.User) {
+      try {
+        const updatedUser = await databaseUtils.User.update(req.user.id, { name: name.trim() });
+        if (updatedUser) {
+          return res.json({ 
+            success: true, 
+            message: 'Profile updated in database', 
+            data: {
+              id: updatedUser.id,
+              email: updatedUser.email,
+              name: updatedUser.name,
+              role: updatedUser.role,
+              isAdmin: updatedUser.is_admin || updatedUser.role === 'admin',
+              updated_at: updatedUser.updated_at
+            }
+          });
+        }
+      } catch (dbError) {
+        console.log('Database update failed, using fallback:', dbError.message);
+      }
+    }
+
+    // Fallback: in-memory update
     const updated = {
       id: req.user.id,
       email: req.user.email,
@@ -997,9 +1021,194 @@ app.put('/api/v1/auth/profile', requireAuthInline, (req, res) => {
       updated_at: new Date().toISOString()
     };
 
-    return res.json({ success: true, message: 'Profile updated', data: updated });
+    return res.json({ success: true, message: 'Profile updated (temporary)', data: updated });
   } catch (e) {
     return res.status(500).json({ success: false, message: 'Failed to update profile' });
+  }
+});
+
+// Get user preferences endpoint
+app.get('/api/v1/auth/preferences', requireAuthInline, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // Try to get settings from database
+    if (dbInitialized && databaseUtils && databaseUtils.pool) {
+      try {
+        const connection = await databaseUtils.pool.getConnection();
+        const [rows] = await connection.execute(
+          'SELECT * FROM user_settings WHERE user_id = ?',
+          [user.id]
+        );
+        connection.release();
+        
+        if (rows.length > 0) {
+          const settings = rows[0];
+          return res.json({
+            success: true,
+            data: {
+              pushNotifications: settings.push_notifications,
+              emailNotifications: settings.email_notifications,
+              courseUpdates: settings.course_updates,
+              liveClassReminders: settings.live_class_reminders,
+              darkMode: settings.dark_mode,
+              autoPlayVideos: settings.auto_play_videos,
+              downloadQuality: settings.download_quality,
+              language: settings.language
+            },
+            message: 'Preferences retrieved successfully',
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (dbError) {
+        console.log('Database error, using default preferences:', dbError.message);
+      }
+    }
+    
+    // Return default preferences if not in database
+    res.json({
+      success: true,
+      data: {
+        pushNotifications: true,
+        emailNotifications: true,
+        courseUpdates: true,
+        liveClassReminders: true,
+        darkMode: false,
+        autoPlayVideos: true,
+        downloadQuality: 'High',
+        language: 'en'
+      },
+      message: 'Default preferences retrieved',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve preferences',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Update user preferences endpoint
+app.put('/api/v1/auth/preferences', requireAuthInline, async (req, res) => {
+  try {
+    const user = req.user;
+    const preferences = req.body;
+    
+    // Try to save to database
+    if (dbInitialized && databaseUtils && databaseUtils.pool) {
+      try {
+        const connection = await databaseUtils.pool.getConnection();
+        
+        // Check if user settings exist
+        const [existing] = await connection.execute(
+          'SELECT id FROM user_settings WHERE user_id = ?',
+          [user.id]
+        );
+        
+        if (existing.length > 0) {
+          // Update existing settings
+          const updateFields = [];
+          const updateValues = [];
+          
+          if (preferences.pushNotifications !== undefined) {
+            updateFields.push('push_notifications = ?');
+            updateValues.push(preferences.pushNotifications);
+          }
+          if (preferences.emailNotifications !== undefined) {
+            updateFields.push('email_notifications = ?');
+            updateValues.push(preferences.emailNotifications);
+          }
+          if (preferences.courseUpdates !== undefined) {
+            updateFields.push('course_updates = ?');
+            updateValues.push(preferences.courseUpdates);
+          }
+          if (preferences.liveClassReminders !== undefined) {
+            updateFields.push('live_class_reminders = ?');
+            updateValues.push(preferences.liveClassReminders);
+          }
+          if (preferences.darkMode !== undefined) {
+            updateFields.push('dark_mode = ?');
+            updateValues.push(preferences.darkMode);
+          }
+          if (preferences.autoPlayVideos !== undefined) {
+            updateFields.push('auto_play_videos = ?');
+            updateValues.push(preferences.autoPlayVideos);
+          }
+          if (preferences.downloadQuality !== undefined) {
+            updateFields.push('download_quality = ?');
+            updateValues.push(preferences.downloadQuality);
+          }
+          if (preferences.language !== undefined) {
+            updateFields.push('language = ?');
+            updateValues.push(preferences.language);
+          }
+          
+          if (updateFields.length > 0) {
+            updateValues.push(user.id);
+            await connection.execute(
+              `UPDATE user_settings SET ${updateFields.join(', ')}, updated_at = NOW() WHERE user_id = ?`,
+              updateValues
+            );
+          }
+        } else {
+          // Insert new settings
+          await connection.execute(
+            `INSERT INTO user_settings 
+             (user_id, push_notifications, email_notifications, course_updates, live_class_reminders, 
+              dark_mode, auto_play_videos, download_quality, language) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              user.id,
+              preferences.pushNotifications !== undefined ? preferences.pushNotifications : true,
+              preferences.emailNotifications !== undefined ? preferences.emailNotifications : true,
+              preferences.courseUpdates !== undefined ? preferences.courseUpdates : true,
+              preferences.liveClassReminders !== undefined ? preferences.liveClassReminders : true,
+              preferences.darkMode !== undefined ? preferences.darkMode : false,
+              preferences.autoPlayVideos !== undefined ? preferences.autoPlayVideos : true,
+              preferences.downloadQuality || 'High',
+              preferences.language || 'en'
+            ]
+          );
+        }
+        
+        connection.release();
+        
+        return res.json({
+          success: true,
+          data: {
+            ...preferences,
+            updated_at: new Date().toISOString()
+          },
+          message: 'Preferences updated successfully in database',
+          timestamp: new Date().toISOString()
+        });
+      } catch (dbError) {
+        console.log('Database error, preferences not saved:', dbError.message);
+      }
+    }
+    
+    // Fallback: return success even if database is unavailable
+    return res.json({
+      success: true,
+      data: {
+        ...preferences,
+        updated_at: new Date().toISOString()
+      },
+      message: 'Preferences updated (temporary - database unavailable)',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update preferences',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

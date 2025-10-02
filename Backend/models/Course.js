@@ -23,21 +23,44 @@ class Course {
         description,
         instructor,
         price,
+        original_price,
         duration,
         level,
         category,
         thumbnail,
+        pdf_url,
+        enrolled_count,
         status = 'draft',
         created_by
       } = courseData;
       
+      // Validate required fields
+      if (!title || !price) {
+        throw new Error('Title and Price are required');
+      }
+      
       const query = `
-        INSERT INTO courses (title, description, instructor, price, duration, level, category, thumbnail, status, created_by, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO courses (
+          title, description, instructor, price, original_price, duration, level, 
+          category, thumbnail, pdf_url, enrolled_count, status, created_by, created_at, updated_at
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       const [result] = await connection.execute(query, [
-        title, description, instructor, price, duration, level, category, thumbnail, status, created_by
+        title, 
+        description || null, 
+        instructor || 'Admin', 
+        price, 
+        original_price || null, 
+        duration || 0, 
+        level || null, 
+        category || null, 
+        thumbnail || null,
+        pdf_url || null,
+        enrolled_count || 0,
+        status, 
+        created_by || '1'
       ]);
       
       // Get the created course

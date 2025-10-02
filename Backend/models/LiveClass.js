@@ -26,19 +26,49 @@ class LiveClass {
         duration,
         maxStudents,
         price,
-        status = 'upcoming',
+        status = 'draft',
         meetingLink,
         thumbnail,
+        category,
+        subject,
+        class: classField,
+        level,
         created_by
       } = liveClassData;
       
+      // Validate required fields
+      if (!title || !meetingLink) {
+        throw new Error('Title and Meeting Link are required');
+      }
+      
+      // Generate slug from title
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      
       const query = `
-        INSERT INTO live_classes (title, description, instructor, date, duration, max_students, price, status, meeting_link, thumbnail, created_by, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO live_classes (
+          title, slug, description, instructor, date, duration, max_students, price, 
+          status, meeting_link, thumbnail, category, subject, class, level, created_by, created_at, updated_at
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       const [result] = await connection.execute(query, [
-        title, description, instructor, date, duration, maxStudents, price, status, meetingLink, thumbnail, created_by
+        title, 
+        slug,
+        description || null, 
+        instructor || 'Admin', 
+        date || null, 
+        duration || 60, 
+        maxStudents || 50, 
+        price || 0, 
+        status, 
+        meetingLink, 
+        thumbnail || null,
+        category || null,
+        subject || null,
+        classField || null,
+        level || null,
+        created_by || '1'
       ]);
       
       // Get the created live class
@@ -82,6 +112,11 @@ class LiveClass {
       if (filters.status) {
         whereClause += ' WHERE status = ?';
         params.push(filters.status);
+      } else if (filters.statusIn && Array.isArray(filters.statusIn)) {
+        // Support filtering by multiple statuses
+        const placeholders = filters.statusIn.map(() => '?').join(', ');
+        whereClause += ` WHERE status IN (${placeholders})`;
+        params.push(...filters.statusIn);
       }
       
       if (filters.instructor) {
@@ -114,7 +149,7 @@ class LiveClass {
       const selectQuery = `
         SELECT * FROM live_classes 
         ${whereClause} 
-        ORDER BY date ASC 
+        ORDER BY date DESC 
         LIMIT ? OFFSET ?
       `;
       

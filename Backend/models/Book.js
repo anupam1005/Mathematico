@@ -32,13 +32,31 @@ class Book {
         created_by
       } = bookData;
       
+      // Validate required fields
+      if (!title || !author) {
+        throw new Error('Title and Author are required');
+      }
+      
       const query = `
-        INSERT INTO books (title, author, description, category, level, pages, isbn, cover_image_url, pdf_url, status, created_by, created_at, updated_at) 
+        INSERT INTO books (
+          title, author, description, category, level, pages, isbn, 
+          cover_image_url, pdf_url, status, created_by, created_at, updated_at
+        ) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       `;
       
       const [result] = await connection.execute(query, [
-        title, author, description, category, level, pages, isbn, cover_image_url, pdf_url, status, created_by
+        title, 
+        author, 
+        description || null, 
+        category || null, 
+        level || null, 
+        pages || null, 
+        isbn || null, 
+        cover_image_url || null, 
+        pdf_url || null, 
+        status, 
+        created_by || '1'
       ]);
       
       // Get the created book
