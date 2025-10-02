@@ -58,18 +58,24 @@ const upload = multer({
   }
 });
 
-// Import admin controller with fallback
+// Import admin controller with MongoDB
 let adminController;
 try {
-  adminController = require('../controllers/adminController');
+  adminController = require('../controllers/adminController-mongodb');
+  console.log('✅ MongoDB AdminController loaded successfully');
 } catch (error) {
-  console.warn('AdminController not available, using fallback handlers');
+  console.error('❌ MongoDB AdminController failed to load:', error.message);
+  
   // Fallback handlers
-  const fallbackHandler = (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Admin service temporarily unavailable - database connection required',
-    serverless: true
-  });
+  const fallbackHandler = (req, res) => {
+    console.error('Fallback handler called for:', req.method, req.path);
+    res.status(503).json({ 
+      success: false, 
+      message: 'Admin service temporarily unavailable - MongoDB connection required',
+      serverless: true,
+      timestamp: new Date().toISOString()
+    });
+  };
   
   adminController = {
     getDashboard: fallbackHandler,
@@ -172,7 +178,7 @@ router.put('/settings', adminController.updateSettings);
 router.get('/test', (req, res) => {
   res.json({
     success: true,
-    message: 'Admin routes are working ✅',
+    message: 'MongoDB Admin routes are working ✅',
     user: req.user,
     timestamp: new Date().toISOString()
   });

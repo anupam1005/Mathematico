@@ -1,322 +1,239 @@
-const { v4: uuidv4 } = require('uuid');
+const mongoose = require('mongoose');
 
-// Lazy load database connection
-let pool;
-const getPool = () => {
-  if (!pool) {
-    const database = require('../database');
-    pool = database.pool;
+// Payment Schema
+const paymentSchema = new mongoose.Schema({
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  item_type: {
+    type: String,
+    enum: ['course', 'book', 'live_class'],
+    required: true
+  },
+  item_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  amount: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  currency: {
+    type: String,
+    default: 'INR',
+    maxlength: 3
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  payment_method: {
+    type: String,
+    default: null,
+    maxlength: 50
+  },
+  payment_gateway: {
+    type: String,
+    default: null,
+    maxlength: 50
+  },
+  transaction_id: {
+    type: String,
+    default: null,
+    unique: true,
+    sparse: true
+  },
+  gateway_response: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
   }
-  return pool;
+}, {
+  timestamps: true,
+  collection: 'payments'
+});
+
+// Indexes
+paymentSchema.index({ user_id: 1 });
+paymentSchema.index({ status: 1 });
+paymentSchema.index({ item_type: 1 });
+paymentSchema.index({ item_id: 1 });
+paymentSchema.index({ transaction_id: 1 }, { unique: true, sparse: true });
+paymentSchema.index({ createdAt: -1 });
+
+// Static methods
+paymentSchema.statics.create = async function(paymentData) {
+  const {
+    user_id, item_type, item_id, amount, currency = 'INR',
+    payment_method, payment_gateway, transaction_id, gateway_response, metadata
+  } = paymentData;
+
+  if (!user_id || !item_type || !item_id || !amount) {
+    throw new Error('user_id, item_type, item_id, and amount are required');
+  }
+
+  const payment = new this({
+    user_id,
+    item_type,
+    item_id,
+    amount,
+    currency,
+    payment_method: payment_method || null,
+    payment_gateway: payment_gateway || null,
+    transaction_id: transaction_id || null,
+    gateway_response: gateway_response || null,
+    metadata: metadata || null
+  });
+
+  return payment.save();
 };
 
-// Payment Model - Handles payment-related database operations
-
-class Payment {
-  /**
-   * Create a new payment record
-   */
-  static async create(paymentData) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const {
-        user_id,
-        item_type, // 'course', 'book', 'live_class'
-        item_id,
-        amount,
-        currency = 'USD',
-        payment_method = 'card',
-        payment_gateway = 'razorpay',
-        gateway_payment_id,
-        gateway_order_id,
-        status = 'pending',
-        metadata = {}
-      } = paymentData;
-      
-      const paymentId = uuidv4();
-      
-      const query = `
-        INSERT INTO payments (
-          id, user_id, item_type, item_id, amount, currency, 
-          payment_method, payment_gateway, gateway_payment_id, 
-          gateway_order_id, status, metadata, created_at, updated_at
-        ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-      `;
-      
-      const [result] = await connection.execute(query, [
-        paymentId, user_id, item_type, item_id, amount, currency,
-        payment_method, payment_gateway, gateway_payment_id,
-        gateway_order_id, status, JSON.stringify(metadata)
-      ]);
-      
-      // Get the created payment
-      const [rows] = await connection.execute('SELECT * FROM payments WHERE id = ?', [paymentId]);
-      
-      connection.release();
-      return rows[0];
-    } catch (error) {
-      console.error('Error creating payment:', error);
-      throw error;
+paymentSchema.statics.getAll = async function(page = 1, limit = 10, filters = {}) {
+  const query = {};
+  
+  // Apply filters
+  if (filters.user_id) query.user_id = filters.user_id;
+  if (filters.status) query.status = filters.status;
+  if (filters.item_type) query.item_type = filters.item_type;
+  if (filters.payment_gateway) query.payment_gateway = filters.payment_gateway;
+  if (filters.transaction_id) query.transaction_id = filters.transaction_id;
+  
+  const skip = (page - 1) * limit;
+  
+  const [data, total] = await Promise.all([
+    this.find(query)
+      .populate('user_id', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    this.countDocuments(query)
+  ]);
+  
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     }
-  }
+  };
+};
 
-  /**
-   * Find payment by ID
-   */
-  static async findById(id) {
-    try {
-      const connection = await getPool().getConnection();
-      const [rows] = await connection.execute('SELECT * FROM payments WHERE id = ?', [id]);
-      connection.release();
-      
-      if (rows.length === 0) {
-        return null;
-      }
-      
-      // Parse metadata JSON
-      const payment = rows[0];
-      if (payment.metadata) {
-        try {
-          payment.metadata = JSON.parse(payment.metadata);
-        } catch (e) {
-          payment.metadata = {};
-        }
-      }
-      
-      return payment;
-    } catch (error) {
-      console.error('Error finding payment by ID:', error);
-      throw error;
-    }
-  }
+paymentSchema.statics.findById = function(id) {
+  return this.findOne({ _id: id })
+    .populate('user_id', 'name email');
+};
 
-  /**
-   * Get all payments with pagination and filtering
-   */
-  static async getAll(page = 1, limit = 10, filters = {}) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      let whereClause = '';
-      let params = [];
-      
-      // Build where clause based on filters
-      const conditions = [];
-      
-      if (filters.user_id) {
-        conditions.push('user_id = ?');
-        params.push(filters.user_id);
-      }
-      
-      if (filters.item_type) {
-        conditions.push('item_type = ?');
-        params.push(filters.item_type);
-      }
-      
-      if (filters.status) {
-        conditions.push('status = ?');
-        params.push(filters.status);
-      }
-      
-      if (filters.payment_method) {
-        conditions.push('payment_method = ?');
-        params.push(filters.payment_method);
-      }
-      
-      if (filters.date_from) {
-        conditions.push('created_at >= ?');
-        params.push(filters.date_from);
-      }
-      
-      if (filters.date_to) {
-        conditions.push('created_at <= ?');
-        params.push(filters.date_to);
-      }
-      
-      if (conditions.length > 0) {
-        whereClause = ' WHERE ' + conditions.join(' AND ');
-      }
-      
-      // Get total count
-      const countQuery = `SELECT COUNT(*) as total FROM payments${whereClause}`;
-      const [countRows] = await connection.execute(countQuery, params);
-      const total = countRows[0].total;
-      
-      // Get paginated results
-      const offset = (page - 1) * limit;
-      const selectQuery = `
-        SELECT p.*, u.name as user_name, u.email as user_email
-        FROM payments p
-        LEFT JOIN users u ON p.user_id = u.id
-        ${whereClause} 
-        ORDER BY p.created_at DESC 
-        LIMIT ? OFFSET ?
-      `;
-      
-      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
-      
-      // Parse metadata for each payment
-      const payments = rows.map(payment => {
-        if (payment.metadata) {
-          try {
-            payment.metadata = JSON.parse(payment.metadata);
-          } catch (e) {
-            payment.metadata = {};
-          }
-        }
-        return payment;
-      });
-      
-      connection.release();
-      
-      return {
-        data: payments,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: total,
-          totalPages: Math.ceil(total / parseInt(limit))
-        }
-      };
-    } catch (error) {
-      console.error('Error getting payments:', error);
-      throw error;
-    }
-  }
+paymentSchema.statics.findByTransactionId = function(transactionId) {
+  return this.findOne({ transaction_id: transactionId })
+    .populate('user_id', 'name email');
+};
 
-  /**
-   * Update payment status
-   */
-  static async updateStatus(id, status, metadata = {}) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const query = `
-        UPDATE payments 
-        SET status = ?, metadata = ?, updated_at = NOW() 
-        WHERE id = ?
-      `;
-      
-      await connection.execute(query, [status, JSON.stringify(metadata), id]);
-      
-      // Get the updated payment
-      const [rows] = await connection.execute('SELECT * FROM payments WHERE id = ?', [id]);
-      
-      connection.release();
-      
-      if (rows.length === 0) {
-        return null;
-      }
-      
-      return rows[0];
-    } catch (error) {
-      console.error('Error updating payment status:', error);
-      throw error;
-    }
-  }
+paymentSchema.statics.updatePayment = async function(id, updateData) {
+  return this.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).populate('user_id', 'name email');
+};
 
-  /**
-   * Get payment statistics
-   */
-  static async getStats() {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const queries = {
-        total: 'SELECT COUNT(*) as count FROM payments',
-        totalAmount: 'SELECT SUM(amount) as total FROM payments WHERE status = "completed"',
-        pending: 'SELECT COUNT(*) as count FROM payments WHERE status = "pending"',
-        completed: 'SELECT COUNT(*) as count FROM payments WHERE status = "completed"',
-        failed: 'SELECT COUNT(*) as count FROM payments WHERE status = "failed"',
-        refunded: 'SELECT COUNT(*) as count FROM payments WHERE status = "refunded"',
-        byMethod: 'SELECT payment_method, COUNT(*) as count FROM payments GROUP BY payment_method',
-        byItemType: 'SELECT item_type, COUNT(*) as count FROM payments GROUP BY item_type',
-        recentRevenue: 'SELECT SUM(amount) as total FROM payments WHERE status = "completed" AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)',
-        monthlyRevenue: `
-          SELECT 
-            DATE_FORMAT(created_at, '%Y-%m') as month,
-            SUM(amount) as revenue,
-            COUNT(*) as transactions
-          FROM payments 
-          WHERE status = 'completed' 
-          GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-          ORDER BY month DESC 
-          LIMIT 12
-        `
-      };
-      
-      const stats = {};
-      
-      for (const [key, query] of Object.entries(queries)) {
-        const [rows] = await connection.execute(query);
-        if (key === 'byMethod' || key === 'byItemType' || key === 'monthlyRevenue') {
-          stats[key] = rows;
-        } else {
-          stats[key] = rows[0].count || rows[0].total || 0;
-        }
-      }
-      
-      connection.release();
-      return stats;
-    } catch (error) {
-      console.error('Error getting payment stats:', error);
-      throw error;
-    }
-  }
+paymentSchema.statics.updatePaymentStatus = async function(id, status, additionalData = {}) {
+  const updateData = { status, ...additionalData };
+  
+  return this.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { new: true }
+  ).populate('user_id', 'name email');
+};
 
-  /**
-   * Get user's payment history
-   */
-  static async getUserPayments(userId, page = 1, limit = 10) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      // Get total count
-      const countQuery = 'SELECT COUNT(*) as total FROM payments WHERE user_id = ?';
-      const [countRows] = await connection.execute(countQuery, [userId]);
-      const total = countRows[0].total;
-      
-      // Get paginated results
-      const offset = (page - 1) * limit;
-      const selectQuery = `
-        SELECT * FROM payments 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC 
-        LIMIT ? OFFSET ?
-      `;
-      
-      const [rows] = await connection.execute(selectQuery, [userId, parseInt(limit), parseInt(offset)]);
-      
-      // Parse metadata for each payment
-      const payments = rows.map(payment => {
-        if (payment.metadata) {
-          try {
-            payment.metadata = JSON.parse(payment.metadata);
-          } catch (e) {
-            payment.metadata = {};
-          }
-        }
-        return payment;
-      });
-      
-      connection.release();
-      
-      return {
-        data: payments,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: total,
-          totalPages: Math.ceil(total / parseInt(limit))
-        }
-      };
-    } catch (error) {
-      console.error('Error getting user payments:', error);
-      throw error;
+paymentSchema.statics.deletePayment = function(id) {
+  return this.findByIdAndDelete(id);
+};
+
+paymentSchema.statics.getStats = async function() {
+  const [total, completed, pending, failed, refunded] = await Promise.all([
+    this.countDocuments(),
+    this.countDocuments({ status: 'completed' }),
+    this.countDocuments({ status: 'pending' }),
+    this.countDocuments({ status: 'failed' }),
+    this.countDocuments({ status: 'refunded' })
+  ]);
+  
+  // Calculate total revenue
+  const revenueResult = await this.aggregate([
+    { $match: { status: 'completed' } },
+    { $group: { _id: null, totalAmount: { $sum: '$amount' } } }
+  ]);
+  
+  const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalAmount : 0;
+  
+  return {
+    total,
+    completed,
+    pending,
+    failed,
+    refunded,
+    totalRevenue
+  };
+};
+
+paymentSchema.statics.getUserPayments = async function(userId, page = 1, limit = 10) {
+  const skip = (page - 1) * limit;
+  
+  const [data, total] = await Promise.all([
+    this.find({ user_id: userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    this.countDocuments({ user_id: userId })
+  ]);
+  
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     }
-  }
-}
+  };
+};
+
+paymentSchema.statics.getRevenueByPeriod = async function(startDate, endDate) {
+  const query = {
+    status: 'completed',
+    createdAt: {
+      $gte: startDate,
+      $lte: endDate
+    }
+  };
+  
+  const result = await this.aggregate([
+    { $match: query },
+    {
+      $group: {
+        _id: null,
+        totalAmount: { $sum: '$amount' },
+        totalTransactions: { $sum: 1 }
+      }
+    }
+  ]);
+  
+  return result.length > 0 ? result[0] : { totalAmount: 0, totalTransactions: 0 };
+};
+
+// Create and export the model
+const Payment = mongoose.model('Payment', paymentSchema);
 
 module.exports = Payment;

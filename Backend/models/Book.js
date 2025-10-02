@@ -1,388 +1,273 @@
-// Lazy load database connection
-let pool;
-const getPool = () => {
-  if (!pool) {
-    const database = require('../database');
-    pool = database.pool;
+const mongoose = require('mongoose');
+
+// Book Schema
+const bookSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 255
+  },
+  slug: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true
+  },
+  description: {
+    type: String,
+    default: null
+  },
+  author: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 255
+  },
+  publisher: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 255
+  },
+  category: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 100
+  },
+  subject: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 100
+  },
+  class: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 100
+  },
+  level: {
+    type: String,
+    enum: ['Foundation', 'Intermediate', 'Advanced', 'Expert'],
+    default: 'Foundation'
+  },
+  cover_image_url: {
+    type: String,
+    default: null
+  },
+  pdf_url: {
+    type: String,
+    default: null
+  },
+  pages: {
+    type: Number,
+    default: null
+  },
+  isbn: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: 50
+  },
+  price: {
+    type: Number,
+    default: 0.00
+  },
+  currency: {
+    type: String,
+    default: 'INR',
+    maxlength: 3
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'published', 'archived'],
+    default: 'draft'
+  },
+  is_featured: {
+    type: Boolean,
+    default: false
+  },
+  downloads: {
+    type: Number,
+    default: 0
+  },
+  tags: {
+    type: [String],
+    default: []
+  },
+  table_of_contents: {
+    type: String,
+    default: null
+  },
+  summary: {
+    type: String,
+    default: null
+  },
+  created_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
-  return pool;
+}, {
+  timestamps: true,
+  collection: 'books'
+});
+
+// Indexes
+bookSchema.index({ slug: 1 }, { unique: true });
+bookSchema.index({ status: 1 });
+bookSchema.index({ is_featured: 1 });
+bookSchema.index({ category: 1 });
+bookSchema.index({ subject: 1 });
+bookSchema.index({ level: 1 });
+bookSchema.index({ created_by: 1 });
+bookSchema.index({ isbn: 1 });
+bookSchema.index({ title: 'text', description: 'text', author: 'text' }); // Text search
+
+// Static methods
+bookSchema.statics.create = async function(bookData) {
+  const {
+    title, author, description, category, level, pages, isbn,
+    cover_image_url, pdf_url, status = 'draft', created_by
+  } = bookData;
+
+  if (!title || !author) {
+    throw new Error('Title and Author are required');
+  }
+
+  // Generate slug from title
+  const slug = title.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  const book = new this({
+    title,
+    slug,
+    author,
+    description: description || null,
+    category: category || null,
+    level: level || 'Foundation',
+    pages: pages || null,
+    isbn: isbn || null,
+    cover_image_url: cover_image_url || null,
+    pdf_url: pdf_url || null,
+    status,
+    created_by: created_by || '1'
+  });
+
+  return book.save();
 };
 
-// Book Model - Handles book-related database operations
-
-class Book {
-  /**
-   * Create a new book
-   */
-  static async create(bookData) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const {
-        title,
-        author,
-        description,
-        category,
-        level,
-        pages,
-        isbn,
-        cover_image_url,
-        pdf_url,
-        status = 'draft',
-        created_by
-      } = bookData;
-      
-      // Validate required fields
-      if (!title || !author) {
-        throw new Error('Title and Author are required');
-      }
-      
-      const query = `
-        INSERT INTO books (
-          title, author, description, category, level, pages, isbn, 
-          cover_image_url, pdf_url, status, created_by, created_at, updated_at
-        ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-      `;
-      
-      const [result] = await connection.execute(query, [
-        title, 
-        author, 
-        description || null, 
-        category || null, 
-        level || null, 
-        pages || null, 
-        isbn || null, 
-        cover_image_url || null, 
-        pdf_url || null, 
-        status, 
-        created_by || '1'
-      ]);
-      
-      // Get the created book
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [result.insertId]);
-      
-      connection.release();
-      return rows[0];
-    } catch (error) {
-      console.error('Error creating book:', error);
-      throw error;
-    }
+bookSchema.statics.getAll = async function(page = 1, limit = 10, filters = {}) {
+  const query = {};
+  
+  // Apply filters
+  if (filters.status) query.status = filters.status;
+  if (filters.statusIn) query.status = { $in: filters.statusIn };
+  if (filters.category) query.category = filters.category;
+  if (filters.level) query.level = filters.level;
+  if (filters.is_featured) query.is_featured = filters.is_featured;
+  if (filters.search) {
+    query.$text = { $search: filters.search };
   }
-
-  /**
-   * Find book by ID
-   */
-  static async findById(id) {
-    try {
-      const connection = await getPool().getConnection();
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
-      connection.release();
-      
-      if (rows.length === 0) {
-        return null;
-      }
-      
-      return rows[0];
-    } catch (error) {
-      console.error('Error finding book by ID:', error);
-      throw error;
+  
+  const skip = (page - 1) * limit;
+  
+  const [data, total] = await Promise.all([
+    this.find(query)
+      .populate('created_by', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    this.countDocuments(query)
+  ]);
+  
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     }
-  }
+  };
+};
 
-  /**
-   * Get all books with pagination and filtering
-   */
-  static async getAll(page = 1, limit = 10, filters = {}) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      let whereClause = '';
-      let params = [];
-      
-      // Build where clause based on filters
-      const conditions = [];
-      
-      if (filters.category) {
-        conditions.push('category LIKE ?');
-        params.push(`%${filters.category}%`);
-      }
-      
-      if (filters.level) {
-        conditions.push('level = ?');
-        params.push(filters.level);
-      }
-      
-      if (filters.status) {
-        conditions.push('status = ?');
-        params.push(filters.status);
-      }
-      
-      if (filters.search) {
-        conditions.push('(title LIKE ? OR author LIKE ? OR description LIKE ?)');
-        params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
-      }
-      
-      if (conditions.length > 0) {
-        whereClause = ' WHERE ' + conditions.join(' AND ');
-      }
-      
-      // Get total count
-      const countQuery = `SELECT COUNT(*) as total FROM books${whereClause}`;
-      const [countRows] = await connection.execute(countQuery, params);
-      const total = countRows[0].total;
-      
-      // Get paginated results
-      const offset = (page - 1) * limit;
-      const selectQuery = `
-        SELECT * FROM books 
-        ${whereClause} 
-        ORDER BY created_at DESC 
-        LIMIT ? OFFSET ?
-      `;
-      
-      const [rows] = await connection.execute(selectQuery, [...params, parseInt(limit), parseInt(offset)]);
-      
-      connection.release();
-      
-      return {
-        data: rows,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: total,
-          totalPages: Math.ceil(total / parseInt(limit))
-        }
-      };
-    } catch (error) {
-      console.error('Error getting books:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.findById = function(id) {
+  return this.findOne({ _id: id })
+    .populate('created_by', 'name email');
+};
 
-  /**
-   * Update book
-   */
-  static async update(id, updateData) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      // Remove undefined values and build update query
-      const cleanData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, value]) => value !== undefined)
-      );
-      
-      if (Object.keys(cleanData).length === 0) {
-        connection.release();
-        return await this.findById(id);
-      }
-      
-      const fields = Object.keys(cleanData);
-      const values = Object.values(cleanData);
-      const setClause = fields.map(field => `${field} = ?`).join(', ');
-      
-      const query = `UPDATE books SET ${setClause}, updated_at = NOW() WHERE id = ?`;
-      await connection.execute(query, [...values, id]);
-      
-      // Get the updated book
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
-      
-      connection.release();
-      
-      if (rows.length === 0) {
-        return null;
-      }
-      
-      return rows[0];
-    } catch (error) {
-      console.error('Error updating book:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.findBySlug = function(slug) {
+  return this.findOne({ slug })
+    .populate('created_by', 'name email');
+};
 
-  /**
-   * Delete book
-   */
-  static async delete(id) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      // Get the book before deleting
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
-      
-      if (rows.length === 0) {
-        connection.release();
-        return null;
-      }
-      
-      const bookToDelete = rows[0];
-      
-      // Delete the book
-      await connection.execute('DELETE FROM books WHERE id = ?', [id]);
-      
-      connection.release();
-      return bookToDelete;
-    } catch (error) {
-      console.error('Error deleting book:', error);
-      throw error;
-    }
+bookSchema.statics.updateBook = async function(id, updateData) {
+  // Generate new slug if title is being updated
+  if (updateData.title) {
+    updateData.slug = updateData.title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
+  
+  return this.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).populate('created_by', 'name email');
+};
 
-  /**
-   * Update book status
-   */
-  static async updateStatus(id, status) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const query = 'UPDATE books SET status = ?, updated_at = NOW() WHERE id = ?';
-      await connection.execute(query, [status, id]);
-      
-      // Get the updated book
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
-      
-      connection.release();
-      
-      if (rows.length === 0) {
-        return null;
-      }
-      
-      return rows[0];
-    } catch (error) {
-      console.error('Error updating book status:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.deleteBook = function(id) {
+  return this.findByIdAndDelete(id);
+};
 
-  /**
-   * Get book statistics
-   */
-  static async getStats() {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const queries = {
-        total: 'SELECT COUNT(*) as count FROM books',
-        published: 'SELECT COUNT(*) as count FROM books WHERE status = "published"',
-        draft: 'SELECT COUNT(*) as count FROM books WHERE status = "draft"',
-        archived: 'SELECT COUNT(*) as count FROM books WHERE status = "archived"',
-        byCategory: 'SELECT category, COUNT(*) as count FROM books GROUP BY category',
-        byLevel: 'SELECT level, COUNT(*) as count FROM books GROUP BY level',
-        recent: 'SELECT COUNT(*) as count FROM books WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'
-      };
-      
-      const stats = {};
-      
-      for (const [key, query] of Object.entries(queries)) {
-        const [rows] = await connection.execute(query);
-        if (key === 'byCategory' || key === 'byLevel') {
-          stats[key] = rows;
-        } else {
-          stats[key] = rows[0].count;
-        }
-      }
-      
-      connection.release();
-      return stats;
-    } catch (error) {
-      console.error('Error getting book stats:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.updateBookStatus = async function(id, status) {
+  return this.findByIdAndUpdate(
+    id,
+    { $set: { status } },
+    { new: true }
+  ).populate('created_by', 'name email');
+};
 
-  /**
-   * Search books by multiple criteria
-   */
-  static async search(searchTerm, filters = {}) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      let whereClause = 'WHERE (title LIKE ? OR author LIKE ? OR description LIKE ? OR isbn LIKE ?)';
-      let params = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`];
-      
-      if (filters.category) {
-        whereClause += ' AND category = ?';
-        params.push(filters.category);
-      }
-      
-      if (filters.level) {
-        whereClause += ' AND level = ?';
-        params.push(filters.level);
-      }
-      
-      if (filters.status) {
-        whereClause += ' AND status = ?';
-        params.push(filters.status);
-      }
-      
-      const query = `SELECT * FROM books ${whereClause} ORDER BY created_at DESC`;
-      const [rows] = await connection.execute(query, params);
-      
-      connection.release();
-      return rows;
-    } catch (error) {
-      console.error('Error searching books:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.getStats = async function() {
+  const [total, published, draft, archived] = await Promise.all([
+    this.countDocuments(),
+    this.countDocuments({ status: 'published' }),
+    this.countDocuments({ status: 'draft' }),
+    this.countDocuments({ status: 'archived' })
+  ]);
+  
+  return {
+    total,
+    published,
+    draft,
+    archived
+  };
+};
 
-  /**
-   * Get books by category
-   */
-  static async getByCategory(category, limit = 10) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      const query = `
-        SELECT * FROM books 
-        WHERE category = ? AND is_published = true 
-        ORDER BY created_at DESC 
-        LIMIT ?
-      `;
-      
-      const [rows] = await connection.execute(query, [category, limit]);
-      
-      connection.release();
-      return rows;
-    } catch (error) {
-      console.error('Error getting books by category:', error);
-      throw error;
-    }
-  }
+bookSchema.statics.incrementDownloads = function(id) {
+  return this.findByIdAndUpdate(
+    id,
+    { $inc: { downloads: 1 } },
+    { new: true }
+  );
+};
 
-  /**
-   * Toggle publication status
-   */
-  static async togglePublish(id) {
-    try {
-      const connection = await getPool().getConnection();
-      
-      // Get current status
-      const [currentRows] = await connection.execute('SELECT is_published FROM books WHERE id = ?', [id]);
-      
-      if (currentRows.length === 0) {
-        connection.release();
-        return null;
-      }
-      
-      const currentStatus = currentRows[0].is_published;
-      const newStatus = !currentStatus;
-      const newStatusText = newStatus ? 'active' : 'draft';
-      
-      // Update status
-      const query = 'UPDATE books SET is_published = ?, status = ?, updated_at = NOW() WHERE id = ?';
-      await connection.execute(query, [newStatus, newStatusText, id]);
-      
-      // Get the updated book
-      const [rows] = await connection.execute('SELECT * FROM books WHERE id = ?', [id]);
-      
-      connection.release();
-      return rows[0];
-    } catch (error) {
-      console.error('Error toggling book publish status:', error);
-      throw error;
-    }
+// Pre-save middleware
+bookSchema.pre('save', function(next) {
+  if (this.isModified('title')) {
+    this.slug = this.title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
-}
+  next();
+});
+
+// Create and export the model
+const Book = mongoose.model('Book', bookSchema);
 
 module.exports = Book;

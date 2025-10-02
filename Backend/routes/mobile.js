@@ -1,106 +1,358 @@
 const express = require('express');
 const router = express.Router();
 
-// Import mobile controller with fallback
-let mobileController;
+// Import MongoDB models
+let Book, Course, LiveClass;
 try {
-  mobileController = require('../controllers/mobileController');
+  Book = require('../models/Book-mongodb');
+  Course = require('../models/Course-mongodb');
+  LiveClass = require('../models/LiveClass-mongodb');
+  console.log('✅ MongoDB models loaded for mobile routes');
 } catch (error) {
-  console.warn('MobileController not available, using fallback data');
-  // Fallback handlers - no mock data
-  mobileController = {
-    getAllCourses: (req, res) => {
-      res.json({
-        success: true,
-        data: [],
-        message: "No courses available",
-        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
-      });
-    },
-    getCourseById: (req, res) => {
-      res.json({
-        success: false,
-        message: "Course not found"
-      });
-    },
-    getAllBooks: (req, res) => {
-      res.json({
-        success: true,
-        data: [],
-        message: "No books available",
-        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
-      });
-    },
-    getBookById: (req, res) => {
-      res.json({
-        success: false,
-        message: "Book not found"
-      });
-    },
-    getAllLiveClasses: (req, res) => {
-      res.json({
-        success: true,
-        data: [],
-        message: "No live classes available",
-        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 }
-      });
-    },
-    getLiveClassById: (req, res) => {
-      res.json({
-        success: false,
-        message: "Live class not found"
-      });
-    },
-    search: (req, res) => {
-      res.json({
-        success: true,
-        data: {
-          courses: [],
-          books: [],
-          liveClasses: []
-        },
-        message: "No results found",
-        query: req.query.q || ''
-      });
-    },
-    getAppInfo: (req, res) => {
-      res.json({
-        success: true,
-        data: {
-          version: "2.0.0",
-          serverless: true,
-          timestamp: new Date().toISOString(),
-          status: "running"
-        }
-      });
-    }
-  };
+  console.error('❌ MongoDB models failed to load:', error.message);
 }
 
-// Public mobile routes (no auth required)
-router.get('/courses', mobileController.getAllCourses);
-router.get('/courses/:id', mobileController.getCourseById);
-router.get('/books', mobileController.getAllBooks);
-router.get('/books/:id', mobileController.getBookById);
-router.get('/live-classes', mobileController.getAllLiveClasses);
-router.get('/live-classes/:id', mobileController.getLiveClassById);
-router.get('/search', mobileController.search);
-router.get('/app-info', mobileController.getAppInfo);
+// ============= BOOKS =============
 
-// Test endpoint
-router.get('/test', (req, res) => {
+const getAllBooks = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, search } = req.query;
+    const filters = {};
+    if (category) filters.category = category;
+    if (search) filters.search = search;
+    filters.status = 'published'; // Only show published books to normal users
+    
+    const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile books error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch books',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getBookById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const book = await Book.findById(id);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Increment download count
+    await Book.incrementDownloads(id);
+
+    res.json({
+      success: true,
+      data: book,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= COURSES =============
+
+const getAllCourses = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, search } = req.query;
+    const filters = {};
+    if (category) filters.category = category;
+    if (search) filters.search = search;
+    filters.status = 'published'; // Only show published courses to normal users
+    
+    const result = await Course.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile courses error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch courses',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getCourseById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const course = await Course.findById(id);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= LIVE CLASSES =============
+
+const getAllLiveClasses = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, search } = req.query;
+    const filters = {};
+    if (status) {
+      filters.status = status;
+    } else {
+      filters.statusIn = ['upcoming', 'live']; // Only show upcoming and live classes to normal users
+    }
+    if (search) filters.search = search;
+    
+    const result = await LiveClass.getAll(parseInt(page), parseInt(limit), filters);
+    
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile live classes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live classes',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getLiveClassById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const liveClass = await LiveClass.findById(id);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get mobile live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= SEARCH =============
+
+const searchContent = async (req, res) => {
+  try {
+    const { q: query, type, page = 1, limit = 10 } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const results = {
+      books: [],
+      courses: [],
+      liveClasses: []
+    };
+
+    // Search books
+    if (!type || type === 'books') {
+      try {
+        const bookResult = await Book.getAll(parseInt(page), parseInt(limit), {
+          search: query,
+          status: 'published'
+        });
+        results.books = bookResult.data;
+      } catch (error) {
+        console.error('Book search error:', error);
+      }
+    }
+
+    // Search courses
+    if (!type || type === 'courses') {
+      try {
+        const courseResult = await Course.getAll(parseInt(page), parseInt(limit), {
+          search: query,
+          status: 'published'
+        });
+        results.courses = courseResult.data;
+      } catch (error) {
+        console.error('Course search error:', error);
+      }
+    }
+
+    // Search live classes
+    if (!type || type === 'live-classes') {
+      try {
+        const liveClassResult = await LiveClass.getAll(parseInt(page), parseInt(limit), {
+          search: query,
+          statusIn: ['upcoming', 'live']
+        });
+        results.liveClasses = liveClassResult.data;
+      } catch (error) {
+        console.error('Live class search error:', error);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: results,
+      query,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Search content error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search content',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= FEATURED CONTENT =============
+
+const getFeaturedContent = async (req, res) => {
+  try {
+    const [featuredBooks, featuredCourses, featuredLiveClasses] = await Promise.allSettled([
+      Book.getAll(1, 5, { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
+      Course.getAll(1, 5, { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
+      LiveClass.getAll(1, 5, { is_featured: true, statusIn: ['upcoming', 'live'] }).catch(() => ({ data: [] }))
+    ]);
+
+    const featuredContent = {
+      books: featuredBooks.status === 'fulfilled' ? featuredBooks.value.data : [],
+      courses: featuredCourses.status === 'fulfilled' ? featuredCourses.value.data : [],
+      liveClasses: featuredLiveClasses.status === 'fulfilled' ? featuredLiveClasses.value.data : []
+    };
+
+    res.json({
+      success: true,
+      data: featuredContent,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get featured content error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured content',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= CATEGORIES =============
+
+const getCategories = async (req, res) => {
+  try {
+    const [bookCategories, courseCategories, liveClassCategories] = await Promise.allSettled([
+      Book.distinct('category').catch(() => []),
+      Course.distinct('category').catch(() => []),
+      LiveClass.distinct('category').catch(() => [])
+    ]);
+
+    const categories = {
+      books: bookCategories.status === 'fulfilled' ? bookCategories.value.filter(Boolean) : [],
+      courses: courseCategories.status === 'fulfilled' ? courseCategories.value.filter(Boolean) : [],
+      liveClasses: liveClassCategories.status === 'fulfilled' ? liveClassCategories.value.filter(Boolean) : []
+    };
+
+    res.json({
+      success: true,
+      data: categories,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get categories error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch categories',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= ROUTES =============
+
+// Books
+router.get('/books', getAllBooks);
+router.get('/books/:id', getBookById);
+
+// Courses
+router.get('/courses', getAllCourses);
+router.get('/courses/:id', getCourseById);
+
+// Live Classes
+router.get('/live-classes', getAllLiveClasses);
+router.get('/live-classes/:id', getLiveClassById);
+
+// Search
+router.get('/search', searchContent);
+
+// Featured content
+router.get('/featured', getFeaturedContent);
+
+// Categories
+router.get('/categories', getCategories);
+
+// Health check
+router.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Mobile routes are working ✅',
-    serverless: true,
-    timestamp: new Date().toISOString(),
-    endpoints: [
-      '/api/v1/mobile/courses',
-      '/api/v1/mobile/books', 
-      '/api/v1/mobile/live-classes',
-      '/api/v1/mobile/search',
-      '/api/v1/mobile/app-info'
-    ]
+    message: 'Mobile API is healthy',
+    database: 'MongoDB Atlas',
+    timestamp: new Date().toISOString()
   });
 });
 

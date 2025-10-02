@@ -225,12 +225,41 @@ const search = async (req, res) => {
   }
 };
 
+const getFeaturedContent = async (req, res) => {
+  try {
+    const { limit = 5 } = req.query;
+    
+    const [featuredCourses, featuredBooks, featuredLiveClasses] = await Promise.allSettled([
+      Course.getAll(1, parseInt(limit), { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
+      Book.getAll(1, parseInt(limit), { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
+      LiveClass.getAll(1, parseInt(limit), { is_featured: true, statusIn: ['upcoming', 'live'] }).catch(() => ({ data: [] }))
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        courses: featuredCourses.status === 'fulfilled' ? featuredCourses.value.data : [],
+        books: featuredBooks.status === 'fulfilled' ? featuredBooks.value.data : [],
+        liveClasses: featuredLiveClasses.status === 'fulfilled' ? featuredLiveClasses.value.data : []
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get featured content error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured content',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 const getAppInfo = async (req, res) => {
   try {
     res.json({
       success: true,
       data: {
-        version: '1.0.0',
+        version: '2.0.0',
         name: 'Mathematico',
         description: 'Your ultimate mathematics learning companion',
         features: [
@@ -263,5 +292,6 @@ module.exports = {
   getAllLiveClasses,
   getLiveClassById,
   search,
+  getFeaturedContent,
   getAppInfo
 };

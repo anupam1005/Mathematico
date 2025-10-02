@@ -1,11 +1,10 @@
-const User = require('../models/User');
-const Book = require('../models/Book');
-const Course = require('../models/Course');
-const LiveClass = require('../models/LiveClass');
-const Payment = require('../models/Payment');
-const path = require('path');
+const User = require('../models/User-mongodb');
+const Book = require('../models/Book-mongodb');
+const Course = require('../models/Course-mongodb');
+const LiveClass = require('../models/LiveClass-mongodb');
+const Payment = require('../models/Payment-mongodb');
 
-// Admin Controller - Handles admin panel operations
+// Admin Controller - Handles admin panel operations with MongoDB
 
 /**
  * Get dashboard statistics
@@ -14,11 +13,11 @@ const getDashboard = async (req, res) => {
   try {
     // Get stats from all models
     const [userStats, bookStats, courseStats, liveClassStats, paymentStats] = await Promise.allSettled([
-      User.getAll(1, 1).then(result => ({ total: result.pagination.total })).catch(() => ({ total: 0 })),
-      Book.getAll(1, 1).then(result => ({ total: result.pagination.total })).catch(() => ({ total: 0 })),
-      Course.getStats().catch(() => ({ total: 0, published: 0, draft: 0 })),
-      LiveClass.getStats().catch(() => ({ total: 0, upcoming: 0, completed: 0 })),
-      Payment.getStats().catch(() => ({ total: 0, totalAmount: 0 }))
+      User.getStats().catch(() => ({ total: 0 })),
+      Book.getStats().catch(() => ({ total: 0 })),
+      Course.getStats().catch(() => ({ total: 0 })),
+      LiveClass.getStats().catch(() => ({ total: 0 })),
+      Payment.getStats().catch(() => ({ total: 0, totalRevenue: 0 }))
     ]);
 
     const dashboardData = {
@@ -26,7 +25,7 @@ const getDashboard = async (req, res) => {
       totalBooks: bookStats.status === 'fulfilled' ? bookStats.value.total : 0,
       totalCourses: courseStats.status === 'fulfilled' ? courseStats.value.total : 0,
       totalLiveClasses: liveClassStats.status === 'fulfilled' ? liveClassStats.value.total : 0,
-      totalRevenue: paymentStats.status === 'fulfilled' ? paymentStats.value.totalAmount : 0,
+      totalRevenue: paymentStats.status === 'fulfilled' ? paymentStats.value.totalRevenue : 0,
       courseStats: courseStats.status === 'fulfilled' ? courseStats.value : { total: 0, published: 0, draft: 0 },
       liveClassStats: liveClassStats.status === 'fulfilled' ? liveClassStats.value : { total: 0, upcoming: 0, completed: 0 }
     };
@@ -106,7 +105,7 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    const user = await User.update(id, updateData);
+    const user = await User.updateUser(id, updateData);
     
     if (!user) {
       return res.status(404).json({
@@ -126,7 +125,7 @@ const updateUser = async (req, res) => {
     console.error('Update user error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update user',
+      message: error.message || 'Failed to update user',
       timestamp: new Date().toISOString()
     });
   }
@@ -135,7 +134,7 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.delete(id);
+    const user = await User.deleteUser(id);
     
     if (!user) {
       return res.status(404).json({
@@ -163,10 +162,9 @@ const deleteUser = async (req, res) => {
 const updateUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { is_active } = req.body;
+    const { status } = req.body;
     
-    const status = is_active ? 'active' : 'inactive';
-    const user = await User.updateStatus(id, status);
+    const user = await User.updateUserStatus(id, status);
     
     if (!user) {
       return res.status(404).json({
@@ -298,7 +296,7 @@ const updateBook = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Handle file uploads from FormData (using field names from frontend)
+    // Handle file uploads
     if (req.files) {
       if (req.files.coverImage && req.files.coverImage[0]) {
         updateData.cover_image_url = `/uploads/covers/${req.files.coverImage[0].filename}`;
@@ -308,12 +306,12 @@ const updateBook = async (req, res) => {
       }
     }
     
-    // Convert numeric string fields
+    // Convert numeric fields
     if (updateData.pages) {
       updateData.pages = parseInt(updateData.pages);
     }
     
-    const book = await Book.update(id, updateData);
+    const book = await Book.updateBook(id, updateData);
     
     if (!book) {
       return res.status(404).json({
@@ -334,7 +332,6 @@ const updateBook = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update book',
-      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -343,7 +340,7 @@ const updateBook = async (req, res) => {
 const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
-    const book = await Book.delete(id);
+    const book = await Book.deleteBook(id);
     
     if (!book) {
       return res.status(404).json({
@@ -373,7 +370,7 @@ const updateBookStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    const book = await Book.updateStatus(id, status);
+    const book = await Book.updateBookStatus(id, status);
     
     if (!book) {
       return res.status(404).json({
@@ -458,7 +455,7 @@ const createCourse = async (req, res) => {
   try {
     const courseData = req.body;
     
-    // Handle file uploads from FormData
+    // Handle file uploads
     if (req.files) {
       if (req.files.image && req.files.image[0]) {
         courseData.thumbnail = `/uploads/covers/${req.files.image[0].filename}`;
@@ -468,7 +465,7 @@ const createCourse = async (req, res) => {
       }
     }
     
-    // Convert numeric string fields
+    // Convert numeric fields
     if (courseData.price) {
       courseData.price = parseFloat(courseData.price);
     }
@@ -521,7 +518,7 @@ const updateCourse = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Handle file uploads from FormData
+    // Handle file uploads
     if (req.files) {
       if (req.files.image && req.files.image[0]) {
         updateData.thumbnail = `/uploads/covers/${req.files.image[0].filename}`;
@@ -531,7 +528,7 @@ const updateCourse = async (req, res) => {
       }
     }
     
-    // Convert numeric string fields
+    // Convert numeric fields
     if (updateData.price) {
       updateData.price = parseFloat(updateData.price);
     }
@@ -547,7 +544,7 @@ const updateCourse = async (req, res) => {
       delete updateData.students;
     }
     
-    const course = await Course.update(id, updateData);
+    const course = await Course.updateCourse(id, updateData);
     
     if (!course) {
       return res.status(404).json({
@@ -568,7 +565,6 @@ const updateCourse = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update course',
-      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -577,7 +573,7 @@ const updateCourse = async (req, res) => {
 const deleteCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const course = await Course.delete(id);
+    const course = await Course.deleteCourse(id);
     
     if (!course) {
       return res.status(404).json({
@@ -607,7 +603,7 @@ const updateCourseStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    const course = await Course.updateStatus(id, status);
+    const course = await Course.updateCourseStatus(id, status);
     
     if (!course) {
       return res.status(404).json({
@@ -637,10 +633,10 @@ const updateCourseStatus = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, instructor } = req.query;
+    const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
+    if (category) filters.category = category;
     if (status) filters.status = status;
-    if (instructor) filters.instructor = instructor;
 
     const result = await LiveClass.getAll(parseInt(page), parseInt(limit), filters);
     
@@ -692,32 +688,31 @@ const createLiveClass = async (req, res) => {
   try {
     const liveClassData = req.body;
     
-    // Handle file upload - check for image field from FormData
+    // Handle file uploads
     if (req.file) {
       liveClassData.thumbnail = `/uploads/covers/${req.file.filename}`;
     }
     
-    // Convert field names to match LiveClass model expectations (camelCase)
+    // Convert date field
     if (liveClassData.scheduledAt) {
       liveClassData.date = liveClassData.scheduledAt;
       delete liveClassData.scheduledAt;
     }
-    // Keep maxStudents and meetingLink in camelCase as LiveClass.create expects them
     
-    // Ensure required fields have default values
+    // Set instructor from user if not provided
     if (!liveClassData.instructor) {
       liveClassData.instructor = req.user?.name || 'Admin';
     }
     
+    // Set default price if not provided
     if (!liveClassData.price) {
       liveClassData.price = 0;
     }
     
-    // Convert duration and maxStudents to numbers if they're strings
+    // Convert numeric fields
     if (liveClassData.duration) {
       liveClassData.duration = parseInt(liveClassData.duration);
     }
-    
     if (liveClassData.maxStudents) {
       liveClassData.maxStudents = parseInt(liveClassData.maxStudents);
     }
@@ -749,28 +744,26 @@ const updateLiveClass = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Handle file upload
+    // Handle file uploads
     if (req.file) {
       updateData.thumbnail = `/uploads/covers/${req.file.filename}`;
     }
     
-    // Convert field names to match database schema
+    // Convert date field
     if (updateData.scheduledAt) {
       updateData.date = updateData.scheduledAt;
       delete updateData.scheduledAt;
     }
-    // Keep maxStudents and meetingLink in camelCase
     
-    // Convert duration and maxStudents to numbers if they're strings
+    // Convert numeric fields
     if (updateData.duration) {
       updateData.duration = parseInt(updateData.duration);
     }
-    
     if (updateData.maxStudents) {
       updateData.maxStudents = parseInt(updateData.maxStudents);
     }
     
-    const liveClass = await LiveClass.update(id, updateData);
+    const liveClass = await LiveClass.updateLiveClass(id, updateData);
     
     if (!liveClass) {
       return res.status(404).json({
@@ -791,7 +784,6 @@ const updateLiveClass = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update live class',
-      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -800,7 +792,7 @@ const updateLiveClass = async (req, res) => {
 const deleteLiveClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const liveClass = await LiveClass.delete(id);
+    const liveClass = await LiveClass.deleteLiveClass(id);
     
     if (!liveClass) {
       return res.status(404).json({
@@ -830,7 +822,7 @@ const updateLiveClassStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    const liveClass = await LiveClass.updateStatus(id, status);
+    const liveClass = await LiveClass.updateLiveClassStatus(id, status);
     
     if (!liveClass) {
       return res.status(404).json({
@@ -914,9 +906,9 @@ const getPaymentById = async (req, res) => {
 const updatePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, metadata } = req.body;
+    const { status, ...additionalData } = req.body;
     
-    const payment = await Payment.updateStatus(id, status, metadata);
+    const payment = await Payment.updatePaymentStatus(id, status, additionalData);
     
     if (!payment) {
       return res.status(404).json({
@@ -942,10 +934,65 @@ const updatePaymentStatus = async (req, res) => {
   }
 };
 
+// ============= STATISTICS =============
+
+const getBookStats = async (req, res) => {
+  try {
+    const stats = await Book.getStats();
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get book stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getCourseStats = async (req, res) => {
+  try {
+    const stats = await Course.getStats();
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get course stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getLiveClassStats = async (req, res) => {
+  try {
+    const stats = await LiveClass.getStats();
+    res.json({
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get live class stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live class statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 const getPaymentStats = async (req, res) => {
   try {
     const stats = await Payment.getStats();
-    
     res.json({
       success: true,
       data: stats,
@@ -973,14 +1020,14 @@ const uploadFile = async (req, res) => {
       });
     }
 
-    const fileUrl = `/uploads/${req.file.mimetype.startsWith('image/') ? 'covers' : 'pdfs'}/${req.file.filename}`;
+    const fileUrl = `/uploads/${req.file.filename}`;
     
     res.json({
       success: true,
-      data: { 
-        url: fileUrl,
+      data: {
         filename: req.file.filename,
-        originalName: req.file.originalname,
+        originalname: req.file.originalname,
+        url: fileUrl,
         size: req.file.size,
         mimetype: req.file.mimetype
       },
@@ -997,99 +1044,22 @@ const uploadFile = async (req, res) => {
   }
 };
 
-// ============= STATISTICS =============
-
-const getOverviewStats = async (req, res) => {
-  try {
-    const stats = await getDashboard(req, res);
-    return stats;
-  } catch (error) {
-    console.error('Get overview stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch overview statistics',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const getBookStats = async (req, res) => {
-  try {
-    const stats = await Book.getStats();
-    
-    res.json({
-      success: true,
-      data: stats,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get book stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch book statistics',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const getCourseStats = async (req, res) => {
-  try {
-    const stats = await Course.getStats();
-    
-    res.json({
-      success: true,
-      data: stats,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get course stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch course statistics',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const getLiveClassStats = async (req, res) => {
-  try {
-    const stats = await LiveClass.getStats();
-    
-    res.json({
-      success: true,
-      data: stats,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get live class stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch live class statistics',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// ============= SETTINGS MANAGEMENT =============
+// ============= SETTINGS =============
 
 const getSettings = async (req, res) => {
   try {
     // For now, return default settings
     const settings = {
-      siteName: 'Mathematico',
-      siteDescription: 'Your ultimate mathematics learning companion',
-      contactEmail: 'support@mathematico.com',
-      maxFileSize: 10, // MB
-      allowedFileTypes: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
-      enableRegistration: true,
-      enablePayments: true,
-      currency: 'INR',
-      timezone: 'UTC',
-      maintenanceMode: false,
-      emailNotifications: true,
-      smsNotifications: false
+      site_name: 'Mathematico',
+      site_description: 'Learn mathematics the easy way',
+      contact_email: 'support@mathematico.com',
+      maintenance_mode: false,
+      user_registration: true,
+      email_notifications: true,
+      default_currency: 'INR',
+      timezone: 'UTC'
     };
-    
+
     res.json({
       success: true,
       data: settings,
@@ -1109,9 +1079,7 @@ const updateSettings = async (req, res) => {
   try {
     const settings = req.body;
     
-    // For now, just return the updated settings
-    // In a real implementation, you would save to database
-    
+    // For now, just return success
     res.json({
       success: true,
       data: settings,
@@ -1128,9 +1096,8 @@ const updateSettings = async (req, res) => {
   }
 };
 
-/**
- * Upload course thumbnail
- */
+// ============= ADDITIONAL METHODS =============
+
 const uploadCourseThumbnail = async (req, res) => {
   try {
     if (!req.file) {
@@ -1145,10 +1112,10 @@ const uploadCourseThumbnail = async (req, res) => {
     
     res.json({
       success: true,
-      data: { 
-        url: fileUrl,
+      data: {
         filename: req.file.filename,
-        originalName: req.file.originalname,
+        originalname: req.file.originalname,
+        url: fileUrl,
         size: req.file.size,
         mimetype: req.file.mimetype
       },
@@ -1165,25 +1132,26 @@ const uploadCourseThumbnail = async (req, res) => {
   }
 };
 
-/**
- * Toggle course publish status
- */
 const toggleCoursePublish = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isPublished } = req.body;
+    const course = await Course.findById(id);
     
-    // For now, just return success
-    // In a real implementation, you would update the database
-    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const newStatus = course.status === 'published' ? 'draft' : 'published';
+    const updatedCourse = await Course.updateCourseStatus(id, newStatus);
+
     res.json({
       success: true,
-      data: {
-        id: parseInt(id),
-        isPublished: isPublished,
-        updatedAt: new Date().toISOString()
-      },
-      message: 'Course publish status updated successfully',
+      data: updatedCourse,
+      message: `Course ${newStatus} successfully`,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -1197,41 +1165,59 @@ const toggleCoursePublish = async (req, res) => {
 };
 
 module.exports = {
+  // Dashboard
   getDashboard,
+  
+  // User Management
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
   updateUserStatus,
+  
+  // Book Management
   getAllBooks,
   getBookById,
   createBook,
   updateBook,
   deleteBook,
   updateBookStatus,
+  
+  // Course Management
   getAllCourses,
   getCourseById,
   createCourse,
   updateCourse,
   deleteCourse,
   updateCourseStatus,
+  
+  // Live Class Management
   getAllLiveClasses,
   getLiveClassById,
   createLiveClass,
   updateLiveClass,
   deleteLiveClass,
   updateLiveClassStatus,
+  
+  // Payment Management
   getAllPayments,
   getPaymentById,
   updatePaymentStatus,
-  getPaymentStats,
-  uploadFile,
-  getOverviewStats,
+  
+  // Statistics
   getBookStats,
   getCourseStats,
   getLiveClassStats,
+  getPaymentStats,
+  
+  // File Upload
+  uploadFile,
+  
+  // Settings
   getSettings,
   updateSettings,
+  
+  // Additional Methods
   uploadCourseThumbnail,
   toggleCoursePublish
 };
