@@ -112,12 +112,20 @@ userSchema.statics.findByEmail = function(email) {
 userSchema.statics.createUser = async function(userData) {
   const { name, email, password, role = 'user', is_admin = false } = userData;
   
+  // Validate required fields
+  if (!name || !email || !password) {
+    throw new Error('Name, email, and password are required');
+  }
+  
   // Ensure database connection
   const mongoose = require('mongoose');
   if (mongoose.connection.readyState !== 1) {
     console.log('🔗 Database not connected, attempting to connect...');
     const { connectToDatabase } = require('../utils/database');
-    await connectToDatabase();
+    const connected = await connectToDatabase();
+    if (!connected) {
+      throw new Error('Database connection failed');
+    }
   }
   
   // Hash password

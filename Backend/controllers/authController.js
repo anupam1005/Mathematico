@@ -102,12 +102,22 @@ const login = async (req, res) => {
       // Try to check for student in database, with fallback for serverless
       try {
         // Ensure database connection
-        const isConnected = await ensureDatabaseConnection();
-        if (!isConnected) {
+        try {
+          const isConnected = await ensureDatabaseConnection();
+          if (!isConnected) {
+            return res.status(503).json({
+              success: false,
+              error: 'Service Unavailable',
+              message: 'Database connection failed',
+              timestamp: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          console.error('Database connection error during login:', error.message);
           return res.status(503).json({
             success: false,
             error: 'Service Unavailable',
-            message: 'Database connection failed',
+            message: 'Database connection error',
             timestamp: new Date().toISOString()
           });
         }
@@ -212,12 +222,22 @@ const register = async (req, res) => {
     }
 
     // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
+    try {
+      const isConnected = await ensureDatabaseConnection();
+      if (!isConnected) {
+        return res.status(503).json({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Database connection failed',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Database connection error during registration:', error.message);
       return res.status(503).json({
         success: false,
         error: 'Service Unavailable',
-        message: 'Database connection failed',
+        message: 'Database connection error',
         timestamp: new Date().toISOString()
       });
     }
