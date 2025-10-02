@@ -356,11 +356,11 @@ try {
 }
 
 
-// Mount routes (database middleware removed for now)
-app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/admin`, adminRoutes);
-app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-app.use(`${API_PREFIX}`, studentRoutes);
+// Mount routes with database middleware
+app.use(`${API_PREFIX}/auth`, ensureDatabase, authRoutes);
+app.use(`${API_PREFIX}/admin`, ensureDatabase, adminRoutes);
+app.use(`${API_PREFIX}/mobile`, ensureDatabase, mobileRoutes);
+app.use(`${API_PREFIX}`, ensureDatabase, studentRoutes);
 
 // Swagger documentation
 try {

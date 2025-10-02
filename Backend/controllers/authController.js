@@ -124,7 +124,7 @@ const login = async (req, res) => {
         }
         
         // Compare password
-        const isPasswordValid = await User.comparePassword(password, user.password_hash);
+        const isPasswordValid = await user.comparePassword(password);
         
         if (!isPasswordValid) {
           return res.status(401).json({
@@ -137,7 +137,7 @@ const login = async (req, res) => {
       
       // Generate JWT tokens for student
       const userPayload = {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         role: user.role || 'user',
@@ -257,7 +257,7 @@ const register = async (req, res) => {
     
     // Generate JWT tokens
     const userPayload = {
-      id: newUser.id,
+      id: newUser._id,
       email: newUser.email,
       name: newUser.name,
       role: newUser.role || 'user',

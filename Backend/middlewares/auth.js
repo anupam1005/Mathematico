@@ -51,7 +51,7 @@ const authenticateToken = async (req, res, next) => {
 
     // Set user information in request
     req.user = {
-      id: user.id,
+      id: user._id,
       email: user.email,
       name: user.name,
       role: user.role || 'user',

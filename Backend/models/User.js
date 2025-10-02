@@ -121,8 +121,11 @@ userSchema.statics.createUser = async function(userData) {
   }
   
   // Hash password
+  const bcrypt = require('bcryptjs');
   const saltRounds = 10;
   const password_hash = await bcrypt.hash(password, saltRounds);
+  
+  console.log('Creating user with:', { name, email: email.toLowerCase(), role, is_admin, password_hash: '***' });
   
   const user = new this({
     name,
@@ -159,10 +162,10 @@ userSchema.statics.getAll = async function(page = 1, limit = 10, filters = {}) {
       .lean(),
     this.countDocuments(query)
   ]);
-  
-  return {
+      
+      return {
     data,
-    pagination: {
+        pagination: {
       total,
       page,
       limit,
