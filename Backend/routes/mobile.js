@@ -16,6 +16,16 @@ try {
 
 const getAllBooks = async (req, res) => {
   try {
+    // Check if models are available
+    if (!Book) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, category, search } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -42,6 +52,16 @@ const getAllBooks = async (req, res) => {
 
 const getBookById = async (req, res) => {
   try {
+    // Check if models are available
+    if (!Book) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { id } = req.params;
     const book = await Book.findById(id);
     
@@ -75,6 +95,16 @@ const getBookById = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
+    // Check if models are available
+    if (!Course) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, category, search } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -131,6 +161,16 @@ const getCourseById = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
+    // Check if models are available
+    if (!LiveClass) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, status, search } = req.query;
     const filters = {};
     if (status) {
@@ -160,6 +200,16 @@ const getAllLiveClasses = async (req, res) => {
 
 const getLiveClassById = async (req, res) => {
   try {
+    // Check if models are available
+    if (!LiveClass) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database service temporarily unavailable',
+        serverless: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { id } = req.params;
     const liveClass = await LiveClass.findById(id);
     

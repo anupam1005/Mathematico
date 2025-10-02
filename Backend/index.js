@@ -4,6 +4,7 @@ console.log('✅ Environment variables loaded from config.env');
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
@@ -132,7 +133,15 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ]
 };
 
 app.use(cors(corsOptions));
@@ -157,8 +166,17 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static file serving with error handling
+try {
+  const uploadsDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
+  console.log('✅ Static file serving configured');
+} catch (error) {
+  console.warn('⚠️ Static file serving not available:', error.message);
+}
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -292,7 +310,7 @@ let dbConnected = false;
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // Import route handlers with MongoDB models
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes;
+let authRoutes, adminRoutes, mobileRoutes, studentRoutes, profileRoutes;
 
 try {
   // Auth routes
@@ -350,10 +368,25 @@ try {
   }));
 }
 
+try {
+  // Profile routes
+  profileRoutes = require('./routes/profile');
+  console.log('✅ Profile routes loaded successfully');
+} catch (err) {
+  console.warn('⚠️ Profile routes not available:', err.message);
+  profileRoutes = express.Router();
+  profileRoutes.all('*', (req, res) => res.status(503).json({ 
+    success: false, 
+    message: 'Profile service unavailable - MongoDB connection required',
+    serverless: true 
+  }));
+}
+
 // Mount routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+app.use(`${API_PREFIX}/profile`, profileRoutes);
 app.use(`${API_PREFIX}`, studentRoutes);
 
 // Swagger documentation
@@ -394,15 +427,33 @@ app.use((error, req, res, next) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
+const gracefulShutdown = async (signal) => {
+  console.log(`🛑 ${signal} received, shutting down gracefully`);
+  
+  try {
+    // Close MongoDB connection
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+      console.log('✅ MongoDB connection closed');
+    }
+    
+    // Close server if running locally
+    if (require.main === module && app.server) {
+      app.server.close(() => {
+        console.log('✅ HTTP server closed');
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
+};
 
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Export for Vercel
 module.exports = app;
@@ -410,7 +461,7 @@ module.exports = app;
 // Start server for local development
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+  app.server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
