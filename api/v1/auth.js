@@ -228,10 +228,25 @@ app.post('/refresh-token', (req, res) => {
 });
 
 app.get('/test', (req, res) => {
+  console.log('🧪 Auth test endpoint called');
   res.json({
     success: true,
     message: 'Auth API is working ✅',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Debug endpoint
+app.get('/debug', (req, res) => {
+  console.log('🔍 Auth debug endpoint called');
+  res.json({
+    success: true,
+    message: 'Auth debug endpoint working',
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: process.env.VERCEL,
+      timestamp: new Date().toISOString()
+    }
   });
 });
 
@@ -263,5 +278,6 @@ app.get('/health', (req, res) => {
 
 // Vercel serverless function handler
 module.exports = (req, res) => {
+  console.log('🔐 Auth serverless function called:', req.method, req.url);
   app(req, res);
 };

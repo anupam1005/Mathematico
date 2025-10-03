@@ -388,5 +388,6 @@ app.get('/test', (req, res) => {
 
 // Vercel serverless function handler
 module.exports = (req, res) => {
+  console.log('📱 Mobile serverless function called:', req.method, req.url);
   app(req, res);
 };
