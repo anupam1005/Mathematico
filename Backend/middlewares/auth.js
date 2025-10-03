@@ -13,7 +13,14 @@ const authenticateToken = async (req, res, next) => {
       success: false,
       error: 'Unauthorized',
       message: 'Access token is required',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      instructions: {
+        step1: 'Login at /api/v1/auth/login with admin credentials',
+        step2: 'Use the returned accessToken in Authorization header',
+        step3: 'Format: Authorization: Bearer <your-token>',
+        example: 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+      },
+      publicInfo: 'Visit /api/v1/admin/info for API information without authentication'
     });
   }
 

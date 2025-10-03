@@ -39,13 +39,40 @@ const upload = multer({
 const adminController = require('../controllers/adminController');
 console.log('✅ MongoDB AdminController loaded successfully');
 
-// Apply auth middleware to all admin routes
+// Public admin info endpoint (no auth required) - MUST BE BEFORE MIDDLEWARE
+router.get('/info', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mathematico Admin API',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    authentication: {
+      required: true,
+      method: 'JWT Bearer Token',
+      loginEndpoint: '/api/v1/auth/login',
+      description: 'Use admin credentials to get access token'
+    },
+    endpoints: {
+      dashboard: '/dashboard',
+      users: '/users',
+      books: '/books',
+      courses: '/courses',
+      liveClasses: '/live-classes',
+      payments: '/payments'
+    },
+    instructions: {
+      step1: 'Login at /api/v1/auth/login with admin credentials',
+      step2: 'Use the returned accessToken in Authorization header',
+      step3: 'Access protected endpoints with Bearer token'
+    }
+  });
+});
+
+// Apply auth middleware to all other admin routes
 router.use(authenticateToken);
 router.use(requireAdmin);
 
-// Remove serverless fallback interference - let actual admin operations work
-
-// Root admin endpoint
+// Root admin endpoint (requires authentication)
 router.get('/', (req, res) => {
   res.json({
     success: true,
