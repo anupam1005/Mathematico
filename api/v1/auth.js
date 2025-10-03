@@ -56,27 +56,48 @@ app.post('/login', (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Email and password are required",
+        timestamp: new Date().toISOString()
       });
     }
 
+    // Check for admin user
+    const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Myname*321';
+    
     let userPayload;
-    if (email === "dc2006089@gmail.com" && password === "Myname*321") {
+    if (email === adminEmail && password === adminPassword) {
       userPayload = {
         id: 1,
         email,
         name: "Admin User",
         role: "admin",
         isAdmin: true,
+        is_admin: true,
+        email_verified: true,
+        is_active: true
+      };
+    } else if (email === 'test@example.com' && password === 'password123') {
+      // Test user for development
+      userPayload = {
+        id: 2,
+        email,
+        name: "Test User",
+        role: "user",
+        isAdmin: false,
+        is_admin: false,
+        email_verified: true,
+        is_active: true
       };
     } else {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
+        timestamp: new Date().toISOString()
       });
     }
 
     const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id });
+    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
 
     res.json({
       success: true,
@@ -93,18 +114,70 @@ app.post('/login', (req, res) => {
           expiresIn: 3600,
         },
       },
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ success: false, message: "Login failed" });
+    res.status(500).json({ 
+      success: false, 
+      message: "Login failed",
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
 app.post('/register', (req, res) => {
-  res.status(503).json({ 
-    success: false, 
-    message: 'Registration temporarily unavailable in serverless mode' 
-  });
+  try {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // For serverless mode, create a simple user registration
+    const userPayload = {
+      id: Date.now(), // Simple ID generation
+      email,
+      name,
+      role: 'user',
+      isAdmin: false,
+      is_admin: false,
+      email_verified: false,
+      is_active: true
+    };
+    
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      data: {
+        user: {
+          ...userPayload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: 3600,
+        },
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.post('/logout', (req, res) => {
