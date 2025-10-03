@@ -23,48 +23,51 @@ const ensureDbConnection = async () => {
 
 // ============= BOOKS =============
 
+// Fallback data for books (defined once)
+const FALLBACK_BOOKS = [
+  {
+    _id: '1',
+    title: 'Advanced Mathematics',
+    description: 'Comprehensive guide to advanced mathematical concepts',
+    author: 'Dr. John Smith',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x400',
+    pdfUrl: 'https://example.com/book1.pdf',
+    pages: 250,
+    isbn: '978-1234567890',
+    status: 'published',
+    is_featured: true,
+    download_count: 150,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    _id: '2',
+    title: 'Calculus Fundamentals',
+    description: 'Learn calculus from the ground up',
+    author: 'Prof. Jane Doe',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x400',
+    pdfUrl: 'https://example.com/book2.pdf',
+    pages: 180,
+    isbn: '978-0987654321',
+    status: 'published',
+    is_featured: false,
+    download_count: 89,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
 const getAllBooks = async (req, res) => {
   try {
-    // Always use fallback data in serverless mode
+    // Always use fallback data in serverless mode or when models unavailable
     if (process.env.VERCEL === '1' || !Book) {
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Advanced Mathematics',
-            description: 'Comprehensive guide to advanced mathematical concepts',
-            author: 'Dr. John Smith',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book1.pdf',
-            pages: 250,
-            isbn: '978-1234567890',
-            status: 'published',
-            is_featured: true,
-            download_count: 150,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Calculus Fundamentals',
-            description: 'Learn calculus from the ground up',
-            author: 'Prof. Jane Doe',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book2.pdf',
-            pages: 180,
-            isbn: '978-0987654321',
-            status: 'published',
-            is_featured: false,
-            download_count: 89,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_BOOKS,
         pagination: {
-          total: 2,
+          total: FALLBACK_BOOKS.length,
           page: 1,
           limit: 10,
           totalPages: 1
@@ -74,98 +77,14 @@ const getAllBooks = async (req, res) => {
       });
     }
 
-    // Check if models are available
-    if (!Book) {
-      // Return fallback data for serverless mode
-      return res.json({
-        success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Advanced Mathematics',
-            description: 'Comprehensive guide to advanced mathematical concepts',
-            author: 'Dr. John Smith',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book1.pdf',
-            pages: 250,
-            isbn: '978-1234567890',
-            status: 'published',
-            is_featured: true,
-            download_count: 150,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Calculus Fundamentals',
-            description: 'Learn calculus from the ground up',
-            author: 'Prof. Jane Doe',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book2.pdf',
-            pages: 180,
-            isbn: '978-0987654321',
-            status: 'published',
-            is_featured: false,
-            download_count: 89,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
-        pagination: {
-          total: 2,
-          page: 1,
-          limit: 10,
-          totalPages: 1
-        },
-        timestamp: new Date().toISOString(),
-        fallback: true
-      });
-    }
-
-    // Ensure database connection
+    // Try database connection only if not in serverless mode
     const isConnected = await ensureDbConnection();
     if (!isConnected) {
-      // Return fallback data when database is not connected
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Advanced Mathematics',
-            description: 'Comprehensive guide to advanced mathematical concepts',
-            author: 'Dr. John Smith',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book1.pdf',
-            pages: 250,
-            isbn: '978-1234567890',
-            status: 'published',
-            is_featured: true,
-            download_count: 150,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Calculus Fundamentals',
-            description: 'Learn calculus from the ground up',
-            author: 'Prof. Jane Doe',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x400',
-            pdfUrl: 'https://example.com/book2.pdf',
-            pages: 180,
-            isbn: '978-0987654321',
-            status: 'published',
-            is_featured: false,
-            download_count: 89,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_BOOKS,
         pagination: {
-          total: 2,
+          total: FALLBACK_BOOKS.length,
           page: 1,
           limit: 10,
           totalPages: 1
@@ -175,11 +94,12 @@ const getAllBooks = async (req, res) => {
       });
     }
 
+    // Use database if connected
     const { page = 1, limit = 10, category, search } = req.query;
     const filters = {};
     if (category) filters.category = category;
     if (search) filters.search = search;
-    filters.status = 'published'; // Only show published books to normal users
+    filters.status = 'published';
 
     const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
 

@@ -279,15 +279,17 @@ app.use(async (req, res, next) => {
     return next();
   }
   
-  // Ensure database connection for all API requests
-  try {
-    const { ensureDatabaseConnection } = require('./utils/database');
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      console.warn('⚠️ Database not connected for request:', req.method, req.path);
+  // Only try database connection in non-serverless environments
+  if (process.env.VERCEL !== '1') {
+    try {
+      const { ensureDatabaseConnection } = require('./utils/database');
+      const isConnected = await ensureDatabaseConnection();
+      if (!isConnected) {
+        console.warn('⚠️ Database not connected for request:', req.method, req.path);
+      }
+    } catch (error) {
+      console.error('❌ Database connection error for request:', req.method, req.path, error.message);
     }
-  } catch (error) {
-    console.error('❌ Database connection error for request:', req.method, req.path, error.message);
   }
   
   next();

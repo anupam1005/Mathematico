@@ -5,10 +5,13 @@ let dbConnected = false;
 let connectionPromise = null;
 
 const connectToDatabase = async () => {
-  if (dbConnected && mongoose.connection.readyState === 1) {
+  // Check if already connected
+  if (mongoose.connection.readyState === 1) {
+    dbConnected = true;
     return mongoose.connection;
   }
 
+  // Return existing connection promise if in progress
   if (connectionPromise) {
     return connectionPromise;
   }
