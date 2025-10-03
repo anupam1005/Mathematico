@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
+// Import authentication middleware
+const { authenticateToken } = require('../middlewares/auth');
+
 // Import MongoDB models
 let Book, Course, LiveClass;
 try {
@@ -425,28 +428,7 @@ const getCategories = async (req, res) => {
 
 // ============= ROUTES =============
 
-// Books
-router.get('/books', getAllBooks);
-router.get('/books/:id', getBookById);
-
-// Courses
-router.get('/courses', getAllCourses);
-router.get('/courses/:id', getCourseById);
-
-// Live Classes
-router.get('/live-classes', getAllLiveClasses);
-router.get('/live-classes/:id', getLiveClassById);
-
-// Search
-router.get('/search', searchContent);
-
-// Featured content
-router.get('/featured', getFeaturedContent);
-
-// Categories
-router.get('/categories', getCategories);
-
-// Health check
+// Public routes (no authentication required)
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -455,5 +437,19 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Public content routes (no authentication required for browsing)
+router.get('/books', getAllBooks);
+router.get('/books/:id', getBookById);
+router.get('/courses', getAllCourses);
+router.get('/courses/:id', getCourseById);
+router.get('/live-classes', getAllLiveClasses);
+router.get('/live-classes/:id', getLiveClassById);
+router.get('/search', searchContent);
+router.get('/featured', getFeaturedContent);
+router.get('/categories', getCategories);
+
+// Protected routes (authentication required)
+// Add any user-specific routes here with authenticateToken middleware
 
 module.exports = router;

@@ -376,7 +376,28 @@ app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);
 app.use(`${API_PREFIX}/users`, usersRoutes);
-app.use(`${API_PREFIX}`, studentRoutes);
+app.use(`${API_PREFIX}/student`, studentRoutes);
+
+// Root API endpoint (no authentication required)
+app.get(`${API_PREFIX}`, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mathematico API - MongoDB Version',
+    version: '2.0.0',
+    database: 'MongoDB Atlas',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: `${API_PREFIX}/auth`,
+      admin: `${API_PREFIX}/admin`,
+      mobile: `${API_PREFIX}/mobile`,
+      student: `${API_PREFIX}/student`,
+      users: `${API_PREFIX}/users`,
+      health: '/health',
+      docs: '/api-docs'
+    }
+  });
+});
 
 // Swagger documentation
 try {
