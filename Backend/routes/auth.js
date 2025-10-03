@@ -159,6 +159,23 @@ try {
   console.warn('⚠️ ProfileController not available, profile routes disabled');
 }
 
+// Root auth endpoint
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth API is working ✅',
+    endpoints: {
+      login: '/login',
+      register: '/register',
+      logout: '/logout',
+      refresh: '/refresh-token',
+      test: '/test',
+      health: '/health'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Test endpoint
 router.get('/test', (req, res) => {
   console.log('🔐 Auth test endpoint requested');
