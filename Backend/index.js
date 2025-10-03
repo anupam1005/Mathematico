@@ -373,14 +373,32 @@ try {
 
 // Mount routes (database connection handled in individual controllers)
 console.log('🔗 Mounting API routes...');
-app.use(`${API_PREFIX}/auth`, authRoutes);
-console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+
+// Auth routes - only mount if not handled by serverless function
+if (!process.env.VERCEL || process.env.VERCEL !== '1') {
+  app.use(`${API_PREFIX}/auth`, authRoutes);
+  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+} else {
+  console.log('⚠️ Auth routes handled by serverless function');
+}
+
+// Admin routes
 app.use(`${API_PREFIX}/admin`, adminRoutes);
 console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+
+// Mobile routes - only mount if not handled by serverless function
+if (!process.env.VERCEL || process.env.VERCEL !== '1') {
+  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+} else {
+  console.log('⚠️ Mobile routes handled by serverless function');
+}
+
+// Users routes
 app.use(`${API_PREFIX}/users`, usersRoutes);
 console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+
+// Student routes
 app.use(`${API_PREFIX}/student`, studentRoutes);
 console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 
@@ -393,6 +411,7 @@ app.get(`${API_PREFIX}`, (req, res) => {
     version: '2.0.0',
     database: 'MongoDB Atlas',
     environment: process.env.NODE_ENV || 'development',
+    serverless: process.env.VERCEL === '1',
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: `${API_PREFIX}/auth`,
@@ -405,6 +424,45 @@ app.get(`${API_PREFIX}`, (req, res) => {
     }
   });
 });
+
+// Fallback routes for serverless environment
+if (process.env.VERCEL === '1') {
+  // Auth fallback routes
+  app.get(`${API_PREFIX}/auth`, (req, res) => {
+    res.json({
+      success: true,
+      message: 'Auth API - Use serverless function',
+      endpoints: {
+        login: `${API_PREFIX}/auth/login`,
+        register: `${API_PREFIX}/auth/register`,
+        logout: `${API_PREFIX}/auth/logout`,
+        refresh: `${API_PREFIX}/auth/refresh-token`,
+        test: `${API_PREFIX}/auth/test`,
+        health: `${API_PREFIX}/auth/health`
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Mobile fallback routes
+  app.get(`${API_PREFIX}/mobile`, (req, res) => {
+    res.json({
+      success: true,
+      message: 'Mobile API - Use serverless function',
+      endpoints: {
+        books: `${API_PREFIX}/mobile/books`,
+        courses: `${API_PREFIX}/mobile/courses`,
+        liveClasses: `${API_PREFIX}/mobile/live-classes`,
+        search: `${API_PREFIX}/mobile/search`,
+        featured: `${API_PREFIX}/mobile/featured`,
+        categories: `${API_PREFIX}/mobile/categories`,
+        test: `${API_PREFIX}/mobile/test`,
+        health: `${API_PREFIX}/mobile/health`
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+}
 
 // Test route to verify routing is working
 app.get(`${API_PREFIX}/test`, (req, res) => {

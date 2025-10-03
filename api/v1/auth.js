@@ -162,6 +162,23 @@ app.get('/test', (req, res) => {
   });
 });
 
+// Root auth endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth API is working ✅',
+    endpoints: {
+      login: '/login',
+      register: '/register',
+      logout: '/logout',
+      refresh: '/refresh-token',
+      test: '/test',
+      health: '/health'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({

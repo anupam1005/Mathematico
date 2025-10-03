@@ -38,6 +38,25 @@ app.use(cors({
 
 app.use(express.json());
 
+// Root mobile endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mobile API is working ✅',
+    endpoints: {
+      books: '/books',
+      courses: '/courses',
+      liveClasses: '/live-classes',
+      search: '/search',
+      featured: '/featured',
+      categories: '/categories',
+      test: '/test',
+      health: '/health'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
