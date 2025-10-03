@@ -3,6 +3,7 @@ const Book = require('../models/Book');
 const Course = require('../models/Course');
 const LiveClass = require('../models/LiveClass');
 const Payment = require('../models/Payment');
+const { ensureDatabaseConnection } = require('../utils/database');
 
 // Admin Controller - Handles admin panel operations with MongoDB
 
@@ -11,6 +12,16 @@ const Payment = require('../models/Payment');
  */
 const getDashboard = async (req, res) => {
   try {
+    // Ensure database connection
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Get stats from all models
     const [userStats, bookStats, courseStats, liveClassStats, paymentStats] = await Promise.allSettled([
       User.getStats().catch(() => ({ total: 0 })),
@@ -194,6 +205,16 @@ const updateUserStatus = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
+    // Ensure database connection
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -400,6 +421,16 @@ const updateBookStatus = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
+    // Ensure database connection
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -633,6 +664,16 @@ const updateCourseStatus = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
+    // Ensure database connection
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
