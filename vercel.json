@@ -8,6 +8,7 @@
     }
   },
   "routes": [
+    { "src": "/api/test", "dest": "/api/test.js" },
     { "src": "/api/v1/auth", "dest": "/api/auth.js" },
     { "src": "/api/v1/auth/(.*)", "dest": "/api/auth.js" },
     { "src": "/api/v1/mobile", "dest": "/api/mobile.js" },
