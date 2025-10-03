@@ -1,7 +1,6 @@
 const Book = require('../models/Book');
 const Course = require('../models/Course');
 const LiveClass = require('../models/LiveClass');
-const { ensureDatabaseConnection } = require('../utils/database');
 
 // Mobile Controller - Handles requests from React Native mobile app
 
@@ -10,16 +9,6 @@ const { ensureDatabaseConnection } = require('../utils/database');
  */
 const getAllCourses = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, category, search } = req.query;
     const filters = {};
     
@@ -76,16 +65,6 @@ const getCourseById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, category, search } = req.query;
     const filters = {};
     
@@ -142,16 +121,6 @@ const getBookById = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, status, search } = req.query;
     const filters = {};
     

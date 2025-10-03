@@ -29,11 +29,8 @@ const connectToDatabase = async () => {
       retryWrites: true,
       w: 'majority',
       connectTimeoutMS: 30000, // Increased connection timeout
-      heartbeatFrequencyMS: 10000,
-      // Serverless specific options
-      bufferMaxEntries: 0,
-      useNewUrlParser: true,
-      useUnifiedTopology: true
+      heartbeatFrequencyMS: 10000
+      // Removed deprecated options: bufferMaxEntries, useNewUrlParser, useUnifiedTopology
     };
 
     console.log('🔗 Attempting MongoDB connection with options:', {

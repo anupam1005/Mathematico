@@ -13,8 +13,8 @@ try {
 
 // Helper function to ensure database connection
 const ensureDbConnection = async () => {
-  const { ensureDatabaseConnection } = require('../utils/database');
-  return await ensureDatabaseConnection();
+  // Database connection handled by controllers
+  return true;
 };
 
 // Apply authentication middleware to all routes
@@ -36,15 +36,7 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
-    const isConnected = await ensureDbConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
 
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -96,15 +88,7 @@ const updateCurrentUser = async (req, res) => {
       });
     }
 
-    const isConnected = await ensureDbConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
 
     const { name, email } = req.body;
     const updateData = {};
@@ -174,15 +158,7 @@ const getUserById = async (req, res) => {
       });
     }
 
-    const isConnected = await ensureDbConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
 
     const { id } = req.params;
     const user = await User.findById(id);

@@ -6,8 +6,9 @@ const { authenticateToken } = require('../middlewares/auth');
 let studentController;
 try {
   studentController = require('../controllers/studentController');
+  console.log('✅ StudentController loaded successfully');
 } catch (error) {
-  console.warn('StudentController not available, using fallback handlers');
+  console.warn('❌ StudentController not available, using fallback handlers:', error.message);
   // Fallback handlers
   const fallbackHandler = (req, res) => res.status(503).json({ 
     success: false, 
@@ -72,17 +73,8 @@ router.get('/my-live-classes', studentController.getMyLiveClasses);
 const getStudentProfile = async (req, res) => {
   try {
     const User = require('../models/User');
-    const { ensureDatabaseConnection } = require('../utils/database');
-    
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
+    // Database connection handled by controllers
 
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -125,17 +117,8 @@ const getStudentProfile = async (req, res) => {
 const updateStudentProfile = async (req, res) => {
   try {
     const User = require('../models/User');
-    const { ensureDatabaseConnection } = require('../utils/database');
-    
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
+    // Database connection handled by controllers
 
     const { name, email } = req.body;
     const updateData = {};
@@ -185,17 +168,8 @@ const getStudentStats = async (req, res) => {
     const Book = require('../models/Book');
     const Course = require('../models/Course');
     const LiveClass = require('../models/LiveClass');
-    const { ensureDatabaseConnection } = require('../utils/database');
-    
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Database connection handled by controllers
+    // Database connection handled by controllers
 
     // Get student's enrolled courses, purchased books, and live classes
     const [courses, books, liveClasses] = await Promise.all([

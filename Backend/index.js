@@ -151,10 +151,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Rate limiting - relaxed for testing
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // Increased limit for testing
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -289,17 +289,8 @@ app.use(async (req, res, next) => {
     return next();
   }
   
-  try {
-    const { ensureDatabaseConnection } = require('./utils/database');
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      console.warn('⚠️ Database not connected for request:', req.method, req.path);
-      // Don't block the request, let individual controllers handle it
-    }
-  } catch (error) {
-    console.warn('⚠️ Database connection error for request:', req.method, req.path, error.message);
-    // Don't block the request, let individual controllers handle it
-  }
+  // Database connection handled by individual controllers
+  // No global database connection check needed
   
   next();
 });

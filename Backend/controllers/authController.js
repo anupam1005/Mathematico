@@ -1,6 +1,5 @@
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
-const { ensureDatabaseConnection } = require('../utils/database');
 
 // Auth Controller - Handles authentication requests
 
@@ -101,26 +100,7 @@ const login = async (req, res) => {
     } else {
       // Try to check for student in database, with fallback for serverless
       try {
-        // Ensure database connection
-        try {
-          const isConnected = await ensureDatabaseConnection();
-          if (!isConnected) {
-            return res.status(503).json({
-              success: false,
-              error: 'Service Unavailable',
-              message: 'Database connection failed',
-              timestamp: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error('Database connection error during login:', error.message);
-          return res.status(503).json({
-            success: false,
-            error: 'Service Unavailable',
-            message: 'Database connection error',
-            timestamp: new Date().toISOString()
-          });
-        }
+        // Check user in database
 
         const user = await User.findByEmail(email);
         
@@ -221,26 +201,7 @@ const register = async (req, res) => {
       });
     }
 
-    // Ensure database connection
-    try {
-      const isConnected = await ensureDatabaseConnection();
-      if (!isConnected) {
-        return res.status(503).json({
-          success: false,
-          error: 'Service Unavailable',
-          message: 'Database connection failed',
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Database connection error during registration:', error.message);
-      return res.status(503).json({
-        success: false,
-        error: 'Service Unavailable',
-        message: 'Database connection error',
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Check if user already exists
     
     // Check if email is already taken (admin email)
     const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';

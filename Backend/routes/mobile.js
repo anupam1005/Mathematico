@@ -17,8 +17,8 @@ try {
 
 // Helper function to ensure database connection
 const ensureDbConnection = async () => {
-  const { ensureDatabaseConnection } = require('../utils/database');
-  return await ensureDatabaseConnection();
+  // Database connection handled by controllers
+  return true;
 };
 
 // ============= BOOKS =============

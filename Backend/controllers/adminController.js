@@ -3,7 +3,6 @@ const Book = require('../models/Book');
 const Course = require('../models/Course');
 const LiveClass = require('../models/LiveClass');
 const Payment = require('../models/Payment');
-const { ensureDatabaseConnection } = require('../utils/database');
 
 // Admin Controller - Handles admin panel operations with MongoDB
 
@@ -12,23 +11,28 @@ const { ensureDatabaseConnection } = require('../utils/database');
  */
 const getDashboard = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Get stats from all models
+    // Get stats from all models with error handling
     const [userStats, bookStats, courseStats, liveClassStats, paymentStats] = await Promise.allSettled([
-      User.getStats().catch(() => ({ total: 0 })),
-      Book.getStats().catch(() => ({ total: 0 })),
-      Course.getStats().catch(() => ({ total: 0 })),
-      LiveClass.getStats().catch(() => ({ total: 0 })),
-      Payment.getStats().catch(() => ({ total: 0, totalRevenue: 0 }))
+      User.getStats().catch((err) => {
+        console.error('User stats error:', err.message);
+        return { total: 0 };
+      }),
+      Book.getStats().catch((err) => {
+        console.error('Book stats error:', err.message);
+        return { total: 0 };
+      }),
+      Course.getStats().catch((err) => {
+        console.error('Course stats error:', err.message);
+        return { total: 0 };
+      }),
+      LiveClass.getStats().catch((err) => {
+        console.error('Live class stats error:', err.message);
+        return { total: 0 };
+      }),
+      Payment.getStats().catch((err) => {
+        console.error('Payment stats error:', err.message);
+        return { total: 0, totalRevenue: 0 };
+      })
     ]);
 
     const dashboardData = {
@@ -205,16 +209,6 @@ const updateUserStatus = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -421,16 +415,6 @@ const updateBookStatus = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
@@ -664,16 +648,6 @@ const updateCourseStatus = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Ensure database connection
-    const isConnected = await ensureDatabaseConnection();
-    if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     const { page = 1, limit = 10, category, status } = req.query;
     const filters = {};
     if (category) filters.category = category;
