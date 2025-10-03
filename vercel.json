@@ -2,14 +2,6 @@
   "version": 2,
   "name": "mathematico-backend",
   "functions": {
-    "api/auth.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
-    "api/mobile.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
     "Backend/index.js": {
       "runtime": "@vercel/node",
       "maxDuration": 30
