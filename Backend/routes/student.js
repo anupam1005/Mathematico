@@ -2,36 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 
-// Import student controller with fallback
-let studentController;
-try {
-  studentController = require('../controllers/studentController');
-  console.log('✅ StudentController loaded successfully');
-} catch (error) {
-  console.warn('❌ StudentController not available, using fallback handlers:', error.message);
-  // Fallback handlers
-  const fallbackHandler = (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Student service temporarily unavailable - database connection required',
-    serverless: true
-  });
-  
-  studentController = {
-    getCourses: fallbackHandler,
-    getCourseById: fallbackHandler,
-    enrollInCourse: fallbackHandler,
-    getBooks: fallbackHandler,
-    getBookById: fallbackHandler,
-    purchaseBook: fallbackHandler,
-    getLiveClasses: fallbackHandler,
-    getLiveClassById: fallbackHandler,
-    enrollInLiveClass: fallbackHandler,
-    getCourseProgress: fallbackHandler,
-    updateCourseProgress: fallbackHandler,
-    getNotifications: fallbackHandler,
-    markNotificationAsRead: fallbackHandler
-  };
-}
+// Import student controller
+const studentController = require('../controllers/studentController');
+console.log('✅ StudentController loaded successfully');
 
 // Apply auth middleware to all student routes
 router.use(authenticateToken);

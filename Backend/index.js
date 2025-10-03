@@ -302,74 +302,24 @@ const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
 
 // Auth routes
-try {
-  authRoutes = require('./routes/auth');
-  console.log('✅ Auth routes loaded');
-} catch (err) {
-  console.error('❌ Auth routes failed to load:', err.message);
-  authRoutes = express.Router();
-  authRoutes.all('*', (req, res) => res.status(500).json({ 
-    success: false, 
-    message: 'Auth service error: ' + err.message,
-    timestamp: new Date().toISOString()
-  }));
-}
+authRoutes = require('./routes/auth');
+console.log('✅ Auth routes loaded');
 
 // Admin routes
-try {
-  adminRoutes = require('./routes/admin');
-  console.log('✅ Admin routes loaded');
-} catch (err) {
-  console.error('❌ Admin routes failed to load:', err.message);
-  adminRoutes = express.Router();
-  adminRoutes.all('*', (req, res) => res.status(500).json({ 
-    success: false, 
-    message: 'Admin service error: ' + err.message,
-    timestamp: new Date().toISOString()
-  }));
-}
+adminRoutes = require('./routes/admin');
+console.log('✅ Admin routes loaded');
 
 // Mobile routes
-try {
-  mobileRoutes = require('./routes/mobile');
-  console.log('✅ Mobile routes loaded');
-} catch (err) {
-  console.error('❌ Mobile routes failed to load:', err.message);
-  mobileRoutes = express.Router();
-  mobileRoutes.all('*', (req, res) => res.status(500).json({ 
-    success: false, 
-    message: 'Mobile service error: ' + err.message,
-    timestamp: new Date().toISOString()
-  }));
-}
+mobileRoutes = require('./routes/mobile');
+console.log('✅ Mobile routes loaded');
 
 // Student routes
-try {
-  studentRoutes = require('./routes/student');
-  console.log('✅ Student routes loaded');
-} catch (err) {
-  console.error('❌ Student routes failed to load:', err.message);
-  studentRoutes = express.Router();
-  studentRoutes.all('*', (req, res) => res.status(500).json({ 
-    success: false, 
-    message: 'Student service error: ' + err.message,
-    timestamp: new Date().toISOString()
-  }));
-}
+studentRoutes = require('./routes/student');
+console.log('✅ Student routes loaded');
 
 // Users routes
-try {
-  usersRoutes = require('./routes/users');
-  console.log('✅ Users routes loaded');
-} catch (err) {
-  console.error('❌ Users routes failed to load:', err.message);
-  usersRoutes = express.Router();
-  usersRoutes.all('*', (req, res) => res.status(500).json({ 
-    success: false, 
-    message: 'Users service error: ' + err.message,
-    timestamp: new Date().toISOString()
-  }));
-}
+usersRoutes = require('./routes/users');
+console.log('✅ Users routes loaded');
 
 
 // Removed fallback data - using real database operations

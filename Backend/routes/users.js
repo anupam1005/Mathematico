@@ -3,19 +3,8 @@ const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 
 // Import MongoDB models
-let User;
-try {
-  User = require('../models/User');
-  console.log('✅ MongoDB models loaded for users routes');
-} catch (error) {
-  console.error('❌ MongoDB models failed to load:', error.message);
-}
-
-// Helper function to ensure database connection
-const ensureDbConnection = async () => {
-  // Database connection handled by controllers
-  return true;
-};
+const User = require('../models/User');
+console.log('✅ MongoDB models loaded for users routes');
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
@@ -27,15 +16,6 @@ router.use(authenticateToken);
  */
 const getCurrentUser = async (req, res) => {
   try {
-    if (!User) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database service temporarily unavailable',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     // Database connection handled by controllers
 
     const user = await User.findById(req.user.id);
@@ -79,15 +59,6 @@ const getCurrentUser = async (req, res) => {
  */
 const updateCurrentUser = async (req, res) => {
   try {
-    if (!User) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database service temporarily unavailable',
-        serverless: true,
-        timestamp: new Date().toISOString()
-      });
-    }
-
     // Database connection handled by controllers
 
     const { name, email } = req.body;
@@ -145,15 +116,6 @@ const getUserById = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    if (!User) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database service temporarily unavailable',
-        serverless: true,
         timestamp: new Date().toISOString()
       });
     }
