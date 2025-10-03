@@ -371,55 +371,7 @@ try {
 }
 
 
-// Mount routes (database connection handled in individual controllers)
-console.log('🔗 Mounting API routes...');
-
-// Mount all routes for serverless deployment
-app.use(`${API_PREFIX}/auth`, authRoutes);
-console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-
-// Admin routes
-app.use(`${API_PREFIX}/admin`, adminRoutes);
-console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-
-// Mobile routes
-app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-
-// Users routes
-app.use(`${API_PREFIX}/users`, usersRoutes);
-console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-
-// Student routes
-app.use(`${API_PREFIX}/student`, studentRoutes);
-console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-
-// Root API endpoint (no authentication required)
-app.get(`${API_PREFIX}`, (req, res) => {
-  console.log('🌐 Root API endpoint requested');
-  res.json({
-    success: true,
-    message: 'Mathematico API - MongoDB Version',
-    version: '2.0.0',
-    database: 'MongoDB Atlas',
-    environment: process.env.NODE_ENV || 'development',
-    serverless: process.env.VERCEL === '1',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      auth: `${API_PREFIX}/auth`,
-      admin: `${API_PREFIX}/admin`,
-      mobile: `${API_PREFIX}/mobile`,
-      student: `${API_PREFIX}/student`,
-      users: `${API_PREFIX}/users`,
-      health: '/health',
-      docs: '/api-docs'
-    }
-  });
-});
-
-// All routes are now handled by the main serverless function
-
-// Direct mobile content routes (for frontend compatibility)
+// Direct mobile content routes (for frontend compatibility) - MUST be before route mounting
 app.get(`${API_PREFIX}/books`, async (req, res) => {
   try {
     // Fallback data for books
@@ -596,7 +548,7 @@ app.get(`${API_PREFIX}/live-classes`, async (req, res) => {
   }
 });
 
-// Admin fallback routes
+// Admin fallback routes - MUST be before admin route mounting
 app.get(`${API_PREFIX}/admin/dashboard`, async (req, res) => {
   try {
     res.json({
@@ -722,6 +674,52 @@ app.get(`${API_PREFIX}/admin/payments`, async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+});
+
+// Mount routes (database connection handled in individual controllers)
+console.log('🔗 Mounting API routes...');
+
+// Mount all routes for serverless deployment
+app.use(`${API_PREFIX}/auth`, authRoutes);
+console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+
+// Admin routes
+app.use(`${API_PREFIX}/admin`, adminRoutes);
+console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+
+// Mobile routes
+app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+
+// Users routes
+app.use(`${API_PREFIX}/users`, usersRoutes);
+console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+
+// Student routes
+app.use(`${API_PREFIX}/student`, studentRoutes);
+console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
+
+// Root API endpoint (no authentication required)
+app.get(`${API_PREFIX}`, (req, res) => {
+  console.log('🌐 Root API endpoint requested');
+  res.json({
+    success: true,
+    message: 'Mathematico API - MongoDB Version',
+    version: '2.0.0',
+    database: 'MongoDB Atlas',
+    environment: process.env.NODE_ENV || 'development',
+    serverless: process.env.VERCEL === '1',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: `${API_PREFIX}/auth`,
+      admin: `${API_PREFIX}/admin`,
+      mobile: `${API_PREFIX}/mobile`,
+      student: `${API_PREFIX}/student`,
+      users: `${API_PREFIX}/users`,
+      health: '/health',
+      docs: '/api-docs'
+    }
+  });
 });
 
 // Test route to verify routing is working
