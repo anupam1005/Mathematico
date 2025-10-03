@@ -10,7 +10,7 @@ const User = require('../models/User');
  */
 const getAllCourses = async (req, res) => {
   try {
-    // For serverless environment, use fallback data
+    // Always use fallback data for serverless mode
     const fallbackCourses = [
       {
         _id: '1',
@@ -42,6 +42,7 @@ const getAllCourses = async (req, res) => {
       }
     ];
     
+    console.log('📱 Mobile courses endpoint - using fallback data');
     res.json({
       success: true,
       data: fallbackCourses,
@@ -94,7 +95,7 @@ const getCourseById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    // For serverless environment, use fallback data
+    // Always use fallback data for serverless mode
     const fallbackBooks = [
       {
         _id: '1',
@@ -128,6 +129,7 @@ const getAllBooks = async (req, res) => {
       }
     ];
     
+    console.log('📱 Mobile books endpoint - using fallback data');
     res.json({
       success: true,
       data: fallbackBooks,
@@ -180,7 +182,7 @@ const getBookById = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    // For serverless environment, use fallback data
+    // Always use fallback data for serverless mode
     const fallbackLiveClasses = [
       {
         _id: '1',
@@ -218,6 +220,7 @@ const getAllLiveClasses = async (req, res) => {
       }
     ];
     
+    console.log('📱 Mobile live classes endpoint - using fallback data');
     res.json({
       success: true,
       data: fallbackLiveClasses,
@@ -315,27 +318,7 @@ const search = async (req, res) => {
 
 const getFeaturedContent = async (req, res) => {
   try {
-    const { limit = 5 } = req.query;
-    
-    const [featuredCourses, featuredBooks, featuredLiveClasses] = await Promise.allSettled([
-      Course.getAll(1, parseInt(limit), { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
-      Book.getAll(1, parseInt(limit), { is_featured: true, status: 'published' }).catch(() => ({ data: [] })),
-      LiveClass.getAll(1, parseInt(limit), { is_featured: true, statusIn: ['upcoming', 'live'] }).catch(() => ({ data: [] }))
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        courses: featuredCourses.status === 'fulfilled' ? featuredCourses.value.data : [],
-        books: featuredBooks.status === 'fulfilled' ? featuredBooks.value.data : [],
-        liveClasses: featuredLiveClasses.status === 'fulfilled' ? featuredLiveClasses.value.data : []
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get featured content error:', error);
-    
-    // Fallback data for serverless mode
+    // Always use fallback data for serverless mode
     const fallbackFeatured = {
       books: [
         {
@@ -376,11 +359,19 @@ const getFeaturedContent = async (req, res) => {
       ]
     };
     
+    console.log('📱 Mobile featured content endpoint - using fallback data');
     res.json({
       success: true,
       data: fallbackFeatured,
       timestamp: new Date().toISOString(),
       fallback: true
+    });
+  } catch (error) {
+    console.error('Get featured content error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured content',
+      timestamp: new Date().toISOString()
     });
   }
 };
