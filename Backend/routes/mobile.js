@@ -430,6 +430,7 @@ const getCategories = async (req, res) => {
 
 // Public routes (no authentication required)
 router.get('/health', (req, res) => {
+  console.log('📱 Mobile health check requested');
   res.json({
     success: true,
     message: 'Mobile API is healthy',

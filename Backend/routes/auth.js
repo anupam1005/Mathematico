@@ -161,6 +161,7 @@ try {
 
 // Test endpoint
 router.get('/test', (req, res) => {
+  console.log('🔐 Auth test endpoint requested');
   res.json({
     success: true,
     message: 'Auth routes are working ✅',

@@ -372,14 +372,21 @@ try {
 
 
 // Mount routes (database connection handled in individual controllers)
+console.log('🔗 Mounting API routes...');
 app.use(`${API_PREFIX}/auth`, authRoutes);
+console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
 app.use(`${API_PREFIX}/admin`, adminRoutes);
+console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
 app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
 app.use(`${API_PREFIX}/users`, usersRoutes);
+console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
 app.use(`${API_PREFIX}/student`, studentRoutes);
+console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 
 // Root API endpoint (no authentication required)
 app.get(`${API_PREFIX}`, (req, res) => {
+  console.log('🌐 Root API endpoint requested');
   res.json({
     success: true,
     message: 'Mathematico API - MongoDB Version',
@@ -399,6 +406,16 @@ app.get(`${API_PREFIX}`, (req, res) => {
   });
 });
 
+// Test route to verify routing is working
+app.get(`${API_PREFIX}/test`, (req, res) => {
+  console.log('🧪 Test endpoint requested');
+  res.json({
+    success: true,
+    message: 'API routing is working ✅',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Swagger documentation
 try {
   const swaggerUi = require('swagger-ui-express');
@@ -412,6 +429,7 @@ try {
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('❌ 404 - Endpoint not found:', req.method, req.originalUrl);
   res.status(404).json({
     success: false,
     message: 'Endpoint not found',
