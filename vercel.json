@@ -10,19 +10,7 @@
       "runtime": "@vercel/node",
       "maxDuration": 30
     },
-    "api/v1/admin.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
-    "api/v1/student.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
-    "api/v1/users.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
-    "api/index.js": {
+    "Backend/index.js": {
       "runtime": "@vercel/node",
       "maxDuration": 30
     }
@@ -32,15 +20,7 @@
     { "src": "/api/v1/auth/(.*)", "dest": "/api/v1/auth.js" },
     { "src": "/api/v1/mobile", "dest": "/api/v1/mobile.js" },
     { "src": "/api/v1/mobile/(.*)", "dest": "/api/v1/mobile.js" },
-    { "src": "/api/v1/admin", "dest": "/api/v1/admin.js" },
-    { "src": "/api/v1/admin/(.*)", "dest": "/api/v1/admin.js" },
-    { "src": "/api/v1/student", "dest": "/api/v1/student.js" },
-    { "src": "/api/v1/student/(.*)", "dest": "/api/v1/student.js" },
-    { "src": "/api/v1/users", "dest": "/api/v1/users.js" },
-    { "src": "/api/v1/users/(.*)", "dest": "/api/v1/users.js" },
-    { "src": "/api/v1", "dest": "/api/index.js" },
-    { "src": "/health", "dest": "/api/index.js" },
-    { "src": "/(.*)", "dest": "/api/index.js" }
+    { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
   "env": {
     "NODE_ENV": "production",
