@@ -157,8 +157,6 @@ if (authController) {
       });
     }
   });
-}
-
   // Fallback register implementation
   app.post('/register', (req, res) => {
     try {
@@ -213,55 +211,57 @@ if (authController) {
       });
     }
   });
-}
 
-app.post('/logout', (req, res) => {
-  res.json({ success: true, message: 'Logout successful' });
-});
+  // Additional fallback routes
+  app.post('/logout', (req, res) => {
+    res.json({ success: true, message: 'Logout successful' });
+  });
 
-app.post('/refresh-token', (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    
-    if (!refreshToken) {
-      return res.status(400).json({
+  app.post('/refresh-token', (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+      
+      if (!refreshToken) {
+        return res.status(400).json({
+          success: false,
+          message: "Refresh token is required"
+        });
+      }
+
+      // For demo purposes, generate new tokens
+      const userPayload = {
+        id: 1,
+        email: "dc2006089@gmail.com",
+        name: "Admin User",
+        role: "admin",
+        isAdmin: true,
+      };
+
+      const newAccessToken = generateAccessToken(userPayload);
+      const newRefreshToken = generateRefreshToken({ id: userPayload.id });
+
+      res.json({
+        success: true,
+        message: "Token refreshed successfully",
+        data: {
+          tokens: {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            expiresIn: 3600
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Refresh token error:", error);
+      res.status(500).json({
         success: false,
-        message: "Refresh token is required"
+        message: "Failed to refresh token"
       });
     }
+  });
+}
 
-    // For demo purposes, generate new tokens
-    const userPayload = {
-      id: 1,
-      email: "dc2006089@gmail.com",
-      name: "Admin User",
-      role: "admin",
-      isAdmin: true,
-    };
-
-    const newAccessToken = generateAccessToken(userPayload);
-    const newRefreshToken = generateRefreshToken({ id: userPayload.id });
-
-    res.json({
-      success: true,
-      message: "Token refreshed successfully",
-      data: {
-        tokens: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          expiresIn: 3600
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Refresh token error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to refresh token"
-    });
-  }
-});
-
+// Common routes for both controller and fallback
 app.get('/test', (req, res) => {
   console.log('🧪 Auth test endpoint called');
   res.json({
