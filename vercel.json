@@ -16,7 +16,9 @@
     }
   },
   "routes": [
+    { "src": "/api/v1/auth", "dest": "/api/v1/auth.js" },
     { "src": "/api/v1/auth/(.*)", "dest": "/api/v1/auth.js" },
+    { "src": "/api/v1/mobile", "dest": "/api/v1/mobile.js" },
     { "src": "/api/v1/mobile/(.*)", "dest": "/api/v1/mobile.js" },
     { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
