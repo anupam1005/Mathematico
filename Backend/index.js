@@ -390,8 +390,143 @@ const FALLBACK_LIVE_CLASSES = [
   }
 ];
 
-// Fallback routes are now handled in the mobile controller
-// The mobile controller will use fallback data when database is unavailable
+// Direct fallback routes for serverless mode to ensure mobile API works
+app.get(`${API_PREFIX}/mobile/books`, (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    res.json({
+      success: true,
+      data: FALLBACK_BOOKS,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: FALLBACK_BOOKS.length,
+        totalPages: 1
+      },
+      timestamp: new Date().toISOString(),
+      fallback: true
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch books',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get(`${API_PREFIX}/mobile/courses`, (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    res.json({
+      success: true,
+      data: FALLBACK_COURSES,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: FALLBACK_COURSES.length,
+        totalPages: 1
+      },
+      timestamp: new Date().toISOString(),
+      fallback: true
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch courses',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get(`${API_PREFIX}/mobile/live-classes`, (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    res.json({
+      success: true,
+      data: FALLBACK_LIVE_CLASSES,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: FALLBACK_LIVE_CLASSES.length,
+        totalPages: 1
+      },
+      timestamp: new Date().toISOString(),
+      fallback: true
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live classes',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get(`${API_PREFIX}/mobile/featured`, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        books: FALLBACK_BOOKS.filter(book => book.is_featured),
+        courses: FALLBACK_COURSES.filter(course => course.is_featured),
+        liveClasses: FALLBACK_LIVE_CLASSES.filter(liveClass => liveClass.is_featured)
+      },
+      timestamp: new Date().toISOString(),
+      fallback: true
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured content',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Mobile API root endpoint
+app.get(`${API_PREFIX}/mobile`, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mobile API is working',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      books: `${API_PREFIX}/mobile/books`,
+      courses: `${API_PREFIX}/mobile/courses`,
+      liveClasses: `${API_PREFIX}/mobile/live-classes`,
+      featured: `${API_PREFIX}/mobile/featured`
+    }
+  });
+});
+
+// Admin API info endpoint (no auth required)
+app.get(`${API_PREFIX}/admin/info`, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mathematico Admin API',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    authentication: {
+      required: true,
+      method: 'JWT Bearer Token',
+      loginEndpoint: `${API_PREFIX}/auth/login`,
+      description: 'Use admin credentials to get access token'
+    },
+    endpoints: {
+      dashboard: `${API_PREFIX}/admin/dashboard`,
+      users: `${API_PREFIX}/admin/users`,
+      books: `${API_PREFIX}/admin/books`,
+      courses: `${API_PREFIX}/admin/courses`,
+      liveClasses: `${API_PREFIX}/admin/live-classes`,
+      payments: `${API_PREFIX}/admin/payments`
+    },
+    instructions: {
+      step1: `Login at ${API_PREFIX}/auth/login with admin credentials`,
+      step2: 'Use the returned accessToken in Authorization header',
+      step3: 'Access protected endpoints with Bearer token'
+    }
+  });
+});
 
 // Mount routes (database connection handled in individual controllers)
 console.log('🔗 Mounting API routes...');
