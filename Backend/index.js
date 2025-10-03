@@ -259,40 +259,35 @@ app.get('/', (req, res) => {
   });
 });
 
-// Initialize connection for serverless
-if (process.env.VERCEL === '1') {
-  // In serverless, initialize connection but don't block
-  console.log('🔗 Initializing MongoDB connection for serverless...');
-  connectToDatabase().then(() => {
-    console.log('✅ MongoDB connection ready for serverless');
-  }).catch(err => {
-    console.warn('⚠️ Initial MongoDB connection failed in serverless mode:', err.message);
-  });
-} else {
-  // In local development, await the connection
-  (async () => {
+// Initialize MongoDB connection for both serverless and local
+(async () => {
+  try {
+    console.log('🔗 Initializing MongoDB connection...');
     await connectToDatabase();
-  })();
-}
+    console.log('✅ MongoDB connection ready');
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err.message);
+    // Don't exit, let the server start and handle connections per request
+  }
+})();
 
-// Global database connection handler for serverless functions
+// Global database connection handler for all requests
 app.use(async (req, res, next) => {
   // Skip for health and root endpoints
   if (req.path === '/health' || req.path === '/') {
     return next();
   }
   
-  // Only try database connection in non-serverless environments
-  if (process.env.VERCEL !== '1') {
-    try {
-      const { ensureDatabaseConnection } = require('./utils/database');
-      const isConnected = await ensureDatabaseConnection();
-      if (!isConnected) {
-        console.warn('⚠️ Database not connected for request:', req.method, req.path);
-      }
-    } catch (error) {
-      console.error('❌ Database connection error for request:', req.method, req.path, error.message);
+  try {
+    const { ensureDatabaseConnection } = require('./utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    if (!isConnected) {
+      console.warn('⚠️ Database not connected for request:', req.method, req.path);
+      // Don't block the request, let individual controllers handle it
     }
+  } catch (error) {
+    console.warn('⚠️ Database connection error for request:', req.method, req.path, error.message);
+    // Don't block the request, let individual controllers handle it
   }
   
   next();
@@ -318,62 +313,22 @@ try {
   }));
 }
 
-try {
-  // Admin routes with MongoDB
-  adminRoutes = require('./routes/admin');
-  console.log('✅ Admin routes loaded');
-} catch (err) {
-  console.warn('⚠️ Admin routes not available:', err.message);
-  adminRoutes = express.Router();
-  adminRoutes.all('*', (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Admin service unavailable - MongoDB connection required',
-    serverless: true 
-  }));
-}
+// Admin routes with MongoDB - NO FALLBACKS
+adminRoutes = require('./routes/admin');
+console.log('✅ Admin routes loaded');
 
-try {
-  // Mobile routes
-  mobileRoutes = require('./routes/mobile');
-  console.log('✅ Mobile routes loaded');
-} catch (err) {
-  console.warn('⚠️ Mobile routes not available:', err.message);
-  mobileRoutes = express.Router();
-  mobileRoutes.all('*', (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Mobile service unavailable - MongoDB connection required',
-    serverless: true 
-  }));
-}
+// Mobile routes - NO FALLBACKS
+mobileRoutes = require('./routes/mobile');
+console.log('✅ Mobile routes loaded');
 
-try {
-  // Student routes
-  studentRoutes = require('./routes/student');
-  console.log('✅ Student routes loaded');
-} catch (err) {
-  console.warn('⚠️ Student routes not available:', err.message);
-  studentRoutes = express.Router();
-  studentRoutes.all('*', (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Student service unavailable - MongoDB connection required',
-    serverless: true 
-  }));
-}
+// Student routes - NO FALLBACKS
+studentRoutes = require('./routes/student');
+console.log('✅ Student routes loaded');
 
 
-try {
-  // Users routes
-  usersRoutes = require('./routes/users');
-  console.log('✅ Users routes loaded');
-} catch (err) {
-  console.warn('⚠️ Users routes not available:', err.message);
-  usersRoutes = express.Router();
-  usersRoutes.all('*', (req, res) => res.status(503).json({ 
-    success: false, 
-    message: 'Users service unavailable - MongoDB connection required',
-    serverless: true 
-  }));
-}
+// Users routes - NO FALLBACKS
+usersRoutes = require('./routes/users');
+console.log('✅ Users routes loaded');
 
 
 // Centralized fallback data constants

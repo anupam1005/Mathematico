@@ -58,64 +58,9 @@ const upload = multer({
   }
 });
 
-// Import admin controller with MongoDB
-let adminController;
-try {
-  adminController = require('../controllers/adminController');
-  console.log('✅ MongoDB AdminController loaded successfully');
-} catch (error) {
-  console.error('❌ MongoDB AdminController failed to load:', error.message);
-  
-  // Fallback handlers
-  const fallbackHandler = (req, res) => {
-    console.error('Fallback handler called for:', req.method, req.path);
-    res.status(503).json({ 
-      success: false, 
-      message: 'Admin service temporarily unavailable - MongoDB connection required',
-      serverless: true,
-      timestamp: new Date().toISOString()
-    });
-  };
-  
-  adminController = {
-    getDashboard: fallbackHandler,
-    getAllUsers: fallbackHandler,
-    getUserById: fallbackHandler,
-    updateUser: fallbackHandler,
-    deleteUser: fallbackHandler,
-    updateUserStatus: fallbackHandler,
-    getAllBooks: fallbackHandler,
-    getBookById: fallbackHandler,
-    createBook: fallbackHandler,
-    updateBook: fallbackHandler,
-    deleteBook: fallbackHandler,
-    updateBookStatus: fallbackHandler,
-    getAllCourses: fallbackHandler,
-    getCourseById: fallbackHandler,
-    createCourse: fallbackHandler,
-    updateCourse: fallbackHandler,
-    deleteCourse: fallbackHandler,
-    updateCourseStatus: fallbackHandler,
-    getAllLiveClasses: fallbackHandler,
-    getLiveClassById: fallbackHandler,
-    createLiveClass: fallbackHandler,
-    updateLiveClass: fallbackHandler,
-    deleteLiveClass: fallbackHandler,
-    updateLiveClassStatus: fallbackHandler,
-    getAllPayments: fallbackHandler,
-    getPaymentById: fallbackHandler,
-    updatePaymentStatus: fallbackHandler,
-    uploadFile: fallbackHandler,
-    getBookStats: fallbackHandler,
-    getCourseStats: fallbackHandler,
-    getLiveClassStats: fallbackHandler,
-    getSettings: fallbackHandler,
-    updateSettings: fallbackHandler,
-    uploadCourseThumbnail: fallbackHandler,
-    toggleCoursePublish: fallbackHandler,
-    getPaymentStats: fallbackHandler
-  };
-}
+// Import admin controller with MongoDB - NO FALLBACKS
+const adminController = require('../controllers/adminController');
+console.log('✅ MongoDB AdminController loaded successfully');
 
 // Apply auth middleware to all admin routes (with fallback)
 try {

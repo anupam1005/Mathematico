@@ -17,30 +17,42 @@ const connectToDatabase = async () => {
   }
 
   try {
-    console.log('🔗 Connecting to MongoDB...');
+    console.log('🔗 Connecting to MongoDB Atlas...');
     const mongoUri = process.env.MONGODB_URI;
     if (!mongoUri) {
-      console.warn('⚠️ MONGODB_URI not found, running in fallback mode');
-      return null;
+      throw new Error('MONGODB_URI environment variable is required');
     }
     
-    // Serverless-optimized connection options
+    // Serverless-optimized connection options for Vercel
     const options = {
       maxPoolSize: 1, // Reduced for serverless
-      serverSelectionTimeoutMS: 10000, // Increased timeout for better reliability
-      socketTimeoutMS: 45000, // Increased socket timeout
+      serverSelectionTimeoutMS: 30000, // Increased timeout
+      socketTimeoutMS: 60000, // Increased socket timeout
       bufferCommands: false,
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 10000, // Increased connection timeout
-      heartbeatFrequencyMS: 10000
+      connectTimeoutMS: 30000, // Increased connection timeout
+      heartbeatFrequencyMS: 10000,
+      // Serverless specific options
+      bufferMaxEntries: 0,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
     };
+
+    console.log('🔗 Attempting MongoDB connection with options:', {
+      maxPoolSize: options.maxPoolSize,
+      serverSelectionTimeoutMS: options.serverSelectionTimeoutMS,
+      connectTimeoutMS: options.connectTimeoutMS
+    });
 
     connectionPromise = mongoose.connect(mongoUri, options);
     
     const connection = await connectionPromise;
     dbConnected = true;
-    console.log('✅ MongoDB connection established');
+    console.log('✅ MongoDB Atlas connection established successfully');
+    console.log('📊 Connection state:', mongoose.connection.readyState);
+    console.log('🏠 Host:', mongoose.connection.host);
+    console.log('📝 Database:', mongoose.connection.name);
     
     // Set up connection event handlers
     mongoose.connection.on('error', (err) => {
@@ -63,10 +75,11 @@ const connectToDatabase = async () => {
     return connection;
     
   } catch (error) {
-    console.warn('⚠️ MongoDB connection failed, running in fallback mode:', error.message);
+    console.error('❌ MongoDB connection failed:', error.message);
+    console.error('❌ Full error:', error);
     dbConnected = false;
     connectionPromise = null;
-    return null;
+    throw error; // Don't return null, throw error to be handled by caller
   }
 };
 
