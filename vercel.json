@@ -2,33 +2,13 @@
   "version": 2,
   "name": "mathematico-backend",
   "functions": {
-    "api/auth.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
-    "api/mobile.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    },
     "Backend/index.js": {
       "runtime": "@vercel/node",
       "maxDuration": 30
     }
   },
   "routes": [
-    { "src": "/api/v1/auth", "dest": "/api/auth.js" },
-    { "src": "/api/v1/auth/(.*)", "dest": "/api/auth.js" },
-    { "src": "/api/v1/mobile", "dest": "/api/mobile.js" },
-    { "src": "/api/v1/mobile/(.*)", "dest": "/api/mobile.js" },
-    { "src": "/api/v1/admin", "dest": "/Backend/index.js" },
-    { "src": "/api/v1/admin/(.*)", "dest": "/Backend/index.js" },
-    { "src": "/api/v1/student", "dest": "/Backend/index.js" },
-    { "src": "/api/v1/student/(.*)", "dest": "/Backend/index.js" },
-    { "src": "/api/v1/users", "dest": "/Backend/index.js" },
-    { "src": "/api/v1/users/(.*)", "dest": "/Backend/index.js" },
-    { "src": "/api/v1", "dest": "/Backend/index.js" },
-    { "src": "/health", "dest": "/Backend/index.js" },
-    { "src": "/", "dest": "/Backend/index.js" }
+    { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
   "env": {
     "NODE_ENV": "production",
