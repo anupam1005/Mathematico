@@ -220,7 +220,6 @@ liveClassSchema.statics.getAll = async function(page = 1, limit = 10, filters = 
   
   const [data, total] = await Promise.all([
     this.find(query)
-      .populate('created_by', 'name email')
       .sort({ date: -1 })
       .skip(skip)
       .limit(limit)
