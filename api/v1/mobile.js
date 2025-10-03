@@ -1,15 +1,27 @@
 // Vercel serverless function for mobile endpoints
 const express = require('express');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const app = express();
 
-// JWT secrets
+// Import backend controllers and utilities
+let mobileController, authenticateToken, connectToDatabase;
+try {
+  mobileController = require('../../Backend/controllers/mobileController');
+  authenticateToken = require('../../Backend/middlewares/auth').authenticateToken;
+  connectToDatabase = require('../../Backend/utils/database').connectToDatabase;
+  console.log('✅ Backend modules loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load backend modules:', error.message);
+  // Fallback to inline implementation
+}
+
+// JWT secrets for fallback
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
-// Simple authentication middleware for serverless
-const authenticateToken = (req, res, next) => {
+// Fallback authentication middleware
+const fallbackAuthenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -22,7 +34,7 @@ const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = require('jsonwebtoken').verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
@@ -68,6 +80,18 @@ app.use(cors({
 
 app.use(express.json());
 
+// Database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    if (connectToDatabase) {
+      await connectToDatabase();
+    }
+  } catch (error) {
+    console.warn('Database connection warning:', error.message);
+  }
+  next();
+});
+
 // Root mobile endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -97,53 +121,67 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Books endpoints
-app.get('/books', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        author: 'Dr. John Smith',
-        category: 'Mathematics',
-        coverImageUrl: 'https://via.placeholder.com/300x400',
-        pdfUrl: 'https://example.com/book1.pdf',
-        pages: 250,
-        isbn: '978-1234567890',
-        status: 'published',
-        is_featured: true,
-        download_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+// Mobile routes - use actual controllers when available
+if (mobileController) {
+  // Use actual backend controllers
+  app.get('/books', mobileController.getAllBooks);
+  app.get('/books/:id', mobileController.getBookById);
+  app.get('/courses', mobileController.getAllCourses);
+  app.get('/courses/:id', mobileController.getCourseById);
+  app.get('/live-classes', mobileController.getAllLiveClasses);
+  app.get('/live-classes/:id', mobileController.getLiveClassById);
+  app.get('/search', mobileController.searchContent);
+  app.get('/featured', mobileController.getFeaturedContent);
+  app.get('/categories', mobileController.getCategories);
+} else {
+  // Fallback implementation with sample data
+  app.get('/books', (req, res) => {
+    res.json({
+      success: true,
+      data: [
+        {
+          _id: '1',
+          title: 'Advanced Mathematics',
+          description: 'Comprehensive guide to advanced mathematical concepts',
+          author: 'Dr. John Smith',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book1.pdf',
+          pages: 250,
+          isbn: '978-1234567890',
+          status: 'published',
+          is_featured: true,
+          download_count: 150,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Calculus Fundamentals',
+          description: 'Learn calculus from the ground up',
+          author: 'Prof. Jane Doe',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book2.pdf',
+          pages: 180,
+          isbn: '978-0987654321',
+          status: 'published',
+          is_featured: false,
+          download_count: 89,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ],
+      pagination: {
+        total: 2,
+        page: 1,
+        limit: 10,
+        totalPages: 1
       },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        author: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        coverImageUrl: 'https://via.placeholder.com/300x400',
-        pdfUrl: 'https://example.com/book2.pdf',
-        pages: 180,
-        isbn: '978-0987654321',
-        status: 'published',
-        is_featured: false,
-        download_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ],
-    pagination: {
-      total: 2,
-      page: 1,
-      limit: 10,
-      totalPages: 1
-    },
-    timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString()
+    });
   });
-});
+}
 
 app.get('/books/:id', (req, res) => {
   res.json({

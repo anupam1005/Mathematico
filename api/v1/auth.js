@@ -1,9 +1,21 @@
 // Vercel serverless function for auth endpoints
 const express = require('express');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const app = express();
+
+// Import backend controllers and utilities
+let authController, authenticateToken, connectToDatabase;
+try {
+  authController = require('../../Backend/controllers/authController');
+  authenticateToken = require('../../Backend/middlewares/auth').authenticateToken;
+  connectToDatabase = require('../../Backend/utils/database').connectToDatabase;
+  console.log('✅ Backend modules loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load backend modules:', error.message);
+  // Fallback to inline implementation
+}
 
 // CORS configuration
 app.use(cors({
@@ -39,146 +51,169 @@ app.use(cors({
 
 app.use(express.json());
 
-// JWT secrets
+// Database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    if (connectToDatabase) {
+      await connectToDatabase();
+    }
+  } catch (error) {
+    console.warn('Database connection warning:', error.message);
+  }
+  next();
+});
+
+// JWT secrets for fallback
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-refresh-secret-change-in-production';
 
-// Generate tokens
-const generateAccessToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
-const generateRefreshToken = (payload) => jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+// Fallback token generation
+const generateAccessToken = (payload) => require('jsonwebtoken').sign(payload, JWT_SECRET, { expiresIn: '1h' });
+const generateRefreshToken = (payload) => require('jsonwebtoken').sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-// Auth routes
-app.post('/login', (req, res) => {
-  try {
-    const { email, password } = req.body;
+// Auth routes - use actual controllers when available
+if (authController) {
+  // Use actual backend controllers
+  app.post('/login', authController.login);
+  app.post('/register', authController.register);
+  app.post('/logout', authController.logout);
+  app.post('/refresh-token', authController.refreshToken);
+} else {
+  // Fallback implementation
+  app.post('/login', (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required",
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Check for admin user
+      const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'Myname*321';
+      
+      let userPayload;
+      if (email === adminEmail && password === adminPassword) {
+        userPayload = {
+          id: 1,
+          email,
+          name: "Admin User",
+          role: "admin",
+          isAdmin: true,
+          is_admin: true,
+          email_verified: true,
+          is_active: true
+        };
+      } else if (email === 'test@example.com' && password === 'password123') {
+        // Test user for development
+        userPayload = {
+          id: 2,
+          email,
+          name: "Test User",
+          role: "user",
+          isAdmin: false,
+          is_admin: false,
+          email_verified: true,
+          is_active: true
+        };
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid email or password",
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const accessToken = generateAccessToken(userPayload);
+      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+
+      res.json({
+        success: true,
+        message: "Login successful",
+        data: {
+          user: {
+            ...userPayload,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          tokens: {
+            accessToken,
+            refreshToken,
+            expiresIn: 3600,
+          },
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Login error:", err);
+      res.status(500).json({ 
+        success: false, 
+        message: "Login failed",
         timestamp: new Date().toISOString()
       });
     }
+  });
+}
 
-    // Check for admin user
-    const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Myname*321';
-    
-    let userPayload;
-    if (email === adminEmail && password === adminPassword) {
-      userPayload = {
-        id: 1,
+  // Fallback register implementation
+  app.post('/register', (req, res) => {
+    try {
+      const { name, email, password } = req.body;
+      
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name, email, and password are required',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // For serverless mode, create a simple user registration
+      const userPayload = {
+        id: Date.now(), // Simple ID generation
         email,
-        name: "Admin User",
-        role: "admin",
-        isAdmin: true,
-        is_admin: true,
-        email_verified: true,
-        is_active: true
-      };
-    } else if (email === 'test@example.com' && password === 'password123') {
-      // Test user for development
-      userPayload = {
-        id: 2,
-        email,
-        name: "Test User",
-        role: "user",
+        name,
+        role: 'user',
         isAdmin: false,
         is_admin: false,
-        email_verified: true,
+        email_verified: false,
         is_active: true
       };
-    } else {
-      return res.status(401).json({
+      
+      const accessToken = generateAccessToken(userPayload);
+      const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
+      
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful',
+        data: {
+          user: {
+            ...userPayload,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          tokens: {
+            accessToken,
+            refreshToken,
+            expiresIn: 3600,
+          },
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({
         success: false,
-        message: "Invalid email or password",
+        message: 'Registration failed',
         timestamp: new Date().toISOString()
       });
     }
-
-    const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-
-    res.json({
-      success: true,
-      message: "Login successful",
-      data: {
-        user: {
-          ...userPayload,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 3600,
-        },
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Login failed",
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-app.post('/register', (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, email, and password are required',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // For serverless mode, create a simple user registration
-    const userPayload = {
-      id: Date.now(), // Simple ID generation
-      email,
-      name,
-      role: 'user',
-      isAdmin: false,
-      is_admin: false,
-      email_verified: false,
-      is_active: true
-    };
-    
-    const accessToken = generateAccessToken(userPayload);
-    const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      data: {
-        user: {
-          ...userPayload,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresIn: 3600,
-        },
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Registration failed',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+  });
+}
 
 app.post('/logout', (req, res) => {
   res.json({ success: true, message: 'Logout successful' });
