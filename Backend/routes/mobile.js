@@ -25,6 +25,55 @@ const ensureDbConnection = async () => {
 
 const getAllBooks = async (req, res) => {
   try {
+    // Always use fallback data in serverless mode
+    if (process.env.VERCEL === '1' || !Book) {
+      return res.json({
+        success: true,
+        data: [
+          {
+            _id: '1',
+            title: 'Advanced Mathematics',
+            description: 'Comprehensive guide to advanced mathematical concepts',
+            author: 'Dr. John Smith',
+            category: 'Mathematics',
+            coverImageUrl: 'https://via.placeholder.com/300x400',
+            pdfUrl: 'https://example.com/book1.pdf',
+            pages: 250,
+            isbn: '978-1234567890',
+            status: 'published',
+            is_featured: true,
+            download_count: 150,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            _id: '2',
+            title: 'Calculus Fundamentals',
+            description: 'Learn calculus from the ground up',
+            author: 'Prof. Jane Doe',
+            category: 'Mathematics',
+            coverImageUrl: 'https://via.placeholder.com/300x400',
+            pdfUrl: 'https://example.com/book2.pdf',
+            pages: 180,
+            isbn: '978-0987654321',
+            status: 'published',
+            is_featured: false,
+            download_count: 89,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ],
+        pagination: {
+          total: 2,
+          page: 1,
+          limit: 10,
+          totalPages: 1
+        },
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+
     // Check if models are available
     if (!Book) {
       // Return fallback data for serverless mode
@@ -131,9 +180,9 @@ const getAllBooks = async (req, res) => {
     if (category) filters.category = category;
     if (search) filters.search = search;
     filters.status = 'published'; // Only show published books to normal users
-    
+
     const result = await Book.getAll(parseInt(page), parseInt(limit), filters);
-    
+
     res.json({
       success: true,
       data: result.data,
@@ -297,9 +346,8 @@ const getBookById = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
-    // Check if models are available
-    if (!Course) {
-      // Return fallback data for serverless mode
+    // Always use fallback data in serverless mode
+    if (process.env.VERCEL === '1' || !Course) {
       return res.json({
         success: true,
         data: [
@@ -566,9 +614,8 @@ const getCourseById = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Check if models are available
-    if (!LiveClass) {
-      // Return fallback data for serverless mode
+    // Always use fallback data in serverless mode
+    if (process.env.VERCEL === '1' || !LiveClass) {
       return res.json({
         success: true,
         data: [
