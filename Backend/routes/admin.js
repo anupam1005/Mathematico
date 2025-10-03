@@ -39,27 +39,29 @@ const upload = multer({
 const adminController = require('../controllers/adminController');
 console.log('✅ MongoDB AdminController loaded successfully');
 
-// Apply auth middleware to all admin routes (with fallback)
-try {
-  router.use(authenticateToken);
-  router.use(requireAdmin);
-} catch (error) {
-  console.warn('⚠️ Auth middleware not available for admin routes:', error.message);
-  // Add fallback middleware
-  router.use((req, res, next) => {
-    // For now, allow all requests in serverless mode
-    if (process.env.VERCEL === '1') {
-      return next();
-    }
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required',
-      timestamp: new Date().toISOString()
-    });
-  });
-}
+// Apply auth middleware to all admin routes
+router.use(authenticateToken);
+router.use(requireAdmin);
 
 // Remove serverless fallback interference - let actual admin operations work
+
+// Root admin endpoint
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin API - Access granted',
+    user: req.user,
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      dashboard: '/dashboard',
+      users: '/users',
+      books: '/books',
+      courses: '/courses',
+      liveClasses: '/live-classes',
+      payments: '/payments'
+    }
+  });
+});
 
 // Dashboard routes
 router.get('/dashboard', adminController.getDashboard);

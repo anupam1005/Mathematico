@@ -70,33 +70,15 @@ const mongoose = require('mongoose');
   }
 })();
 
-// Safe imports with fallbacks (do NOT crash serverless)
-let generateAccessToken, generateRefreshToken, authenticateToken, requireAdmin;
-// Unified JWT secrets to avoid sign/verify mismatches
-const JWT_SECRET_SAFE = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const JWT_REFRESH_SECRET_SAFE = process.env.JWT_REFRESH_SECRET || 'your-super-refresh-secret-change-in-production';
+// JWT and Auth middleware imports (required for serverless)
 try {
   const jwtUtils = require("./utils/jwt");
-  generateAccessToken = jwtUtils.generateAccessToken;
-  generateRefreshToken = jwtUtils.generateRefreshToken;
-} catch (err) {
-  console.warn('JWT utils not available, using inline jwt fallback:', err.message);
-  generateAccessToken = (payload) => jwt.sign(payload, JWT_SECRET_SAFE, { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h' });
-  generateRefreshToken = (payload) => jwt.sign(payload, JWT_REFRESH_SECRET_SAFE, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
-}
-
-try {
   const authMiddleware = require("./middlewares/auth");
-  authenticateToken = authMiddleware.authenticateToken;
-  requireAdmin = authMiddleware.requireAdmin;
+  console.log('✅ JWT and Auth middleware loaded successfully');
 } catch (err) {
-  console.warn('Auth middleware not available, securing routes with deny-by-default stubs:', err.message);
-  authenticateToken = (req, res, next) => {
-    return res.status(401).json({ success: false, message: 'Auth middleware unavailable', timestamp: new Date().toISOString() });
-  };
-  requireAdmin = (req, res, next) => {
-    return res.status(403).json({ success: false, message: 'Admin access denied', timestamp: new Date().toISOString() });
-  };
+  console.error('❌ Critical middleware failed to load:', err.message);
+  // These are required for the API to function
+  process.exit(1);
 }
 
 // Initialize Express app
@@ -151,10 +133,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting - relaxed for testing
+// Rate limiting - optimized for production
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // Increased limit for testing
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Reasonable limit for production
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -274,52 +256,36 @@ const initializeDatabase = async () => {
     console.log('✅ MongoDB connection ready for serverless');
   } catch (err) {
     console.error('❌ MongoDB connection failed:', err.message);
-    console.error('❌ Full error:', err);
+    console.warn('⚠️ Server will start in fallback mode - database operations may fail');
     // Don't exit, let the server start and handle connections per request
   }
 };
 
-// Initialize database connection
-initializeDatabase();
-
-// Global database connection handler for all requests
-app.use(async (req, res, next) => {
-  // Skip for health and root endpoints
-  if (req.path === '/health' || req.path === '/') {
-    return next();
-  }
-  
-  // Database connection handled by individual controllers
-  // No global database connection check needed
-  
-  next();
+// Initialize database connection (non-blocking)
+initializeDatabase().catch(err => {
+  console.error('❌ Database initialization error:', err.message);
 });
+
+// Database connection is handled by individual controllers
+// No global middleware needed for serverless mode
 
 // API Routes
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
-// Import route handlers with proper error handling for serverless
+// Import route handlers (required for serverless)
 let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
 
-// Auth routes
-authRoutes = require('./routes/auth');
-console.log('✅ Auth routes loaded');
-
-// Admin routes
-adminRoutes = require('./routes/admin');
-console.log('✅ Admin routes loaded');
-
-// Mobile routes
-mobileRoutes = require('./routes/mobile');
-console.log('✅ Mobile routes loaded');
-
-// Student routes
-studentRoutes = require('./routes/student');
-console.log('✅ Student routes loaded');
-
-// Users routes
-usersRoutes = require('./routes/users');
-console.log('✅ Users routes loaded');
+try {
+  authRoutes = require('./routes/auth');
+  adminRoutes = require('./routes/admin');
+  mobileRoutes = require('./routes/mobile');
+  studentRoutes = require('./routes/student');
+  usersRoutes = require('./routes/users');
+  console.log('✅ All route handlers loaded successfully');
+} catch (err) {
+  console.error('❌ Critical route handlers failed to load:', err.message);
+  process.exit(1);
+}
 
 
 // Removed fallback data - using real database operations
@@ -454,10 +420,15 @@ module.exports = app;
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   app.server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
+    console.log(`🌐 Server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
+    console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
     const connectionStatus = getConnectionStatus();
-    console.log(`🔗 Database: ${connectionStatus.isConnected ? 'Connected' : 'Disconnected'}`);
+    console.log(`🗄️  Database: ${connectionStatus.isConnected ? 'Connected' : 'Disconnected'}`);
+    console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
+    console.log('==========================================\n');
   });
 }
