@@ -171,17 +171,9 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving with error handling
-try {
-  const uploadsDir = path.join(__dirname, 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  app.use('/uploads', express.static(uploadsDir));
-  console.log('✅ Static file serving configured');
-} catch (error) {
-  console.warn('⚠️ Static file serving not available:', error.message);
-}
+// Static file serving - disabled for serverless mode
+// In serverless mode, files should be served from Cloudinary or CDN
+console.log('⚠️ Static file serving disabled for serverless mode - use Cloudinary for file storage');
 
 // Health check endpoint
 app.get('/health', async (req, res) => {

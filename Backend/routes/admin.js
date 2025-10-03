@@ -5,31 +5,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure upload directories exist
-const coversDir = path.join(__dirname, '..', 'uploads', 'covers');
-const pdfsDir = path.join(__dirname, '..', 'uploads', 'pdfs');
-if (!fs.existsSync(coversDir)) {
-  fs.mkdirSync(coversDir, { recursive: true });
-}
-if (!fs.existsSync(pdfsDir)) {
-  fs.mkdirSync(pdfsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Route files to appropriate directories
-    if (file.fieldname === 'pdfFile') {
-      cb(null, pdfsDir);
-    } else {
-      cb(null, coversDir);
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Use memory storage for serverless mode
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
