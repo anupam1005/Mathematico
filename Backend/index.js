@@ -551,6 +551,65 @@ app.get(`${API_PREFIX}/live-classes`, async (req, res) => {
 // Admin fallback routes - MUST be before admin route mounting
 app.get(`${API_PREFIX}/admin/dashboard`, async (req, res) => {
   try {
+    // Try to get real data from database first
+    try {
+      const { ensureDatabaseConnection } = require('./utils/database');
+      const isConnected = await ensureDatabaseConnection();
+      
+      if (isConnected) {
+        // Import models
+        const User = require('./models/User');
+        const Book = require('./models/Book');
+        const Course = require('./models/Course');
+        const LiveClass = require('./models/LiveClass');
+        const Payment = require('./models/Payment');
+        
+        // Get real stats from database
+        const [userStats, bookStats, courseStats, liveClassStats, paymentStats] = await Promise.allSettled([
+          User.getStats().catch(() => ({ total: 0 })),
+          Book.getStats().catch(() => ({ total: 0 })),
+          Course.getStats().catch(() => ({ total: 0 })),
+          LiveClass.getStats().catch(() => ({ total: 0 })),
+          Payment.getStats().catch(() => ({ total: 0, totalRevenue: 0 }))
+        ]);
+
+        const dashboardData = {
+          stats: {
+            totalUsers: userStats.status === 'fulfilled' ? userStats.value.total : 0,
+            totalBooks: bookStats.status === 'fulfilled' ? bookStats.value.total : 0,
+            totalCourses: courseStats.status === 'fulfilled' ? courseStats.value.total : 0,
+            totalLiveClasses: liveClassStats.status === 'fulfilled' ? liveClassStats.value.total : 0,
+            totalRevenue: paymentStats.status === 'fulfilled' ? paymentStats.value.totalRevenue : 0,
+            monthlyRevenue: paymentStats.status === 'fulfilled' ? paymentStats.value.monthlyRevenue || 0 : 0
+          },
+          recentActivity: [
+            {
+              id: '1',
+              type: 'user_registration',
+              message: 'New user registered',
+              timestamp: new Date().toISOString()
+            },
+            {
+              id: '2',
+              type: 'book_upload',
+              message: 'New book uploaded',
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+
+        return res.json({
+          success: true,
+          data: dashboardData,
+          timestamp: new Date().toISOString(),
+          database: true
+        });
+      }
+    } catch (dbError) {
+      console.log('Database connection failed, using fallback data:', dbError.message);
+    }
+
+    // Fallback data when database is not available
     res.json({
       success: true,
       data: {

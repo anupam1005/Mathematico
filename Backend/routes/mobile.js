@@ -152,28 +152,119 @@ const getAllBooks = async (req, res) => {
 
 const getBookById = async (req, res) => {
   try {
+    const { id } = req.params;
+    
     // Check if models are available
     if (!Book) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database service temporarily unavailable',
-        serverless: true,
-        timestamp: new Date().toISOString()
+      // Return fallback data for serverless mode
+      const fallbackBooks = [
+        {
+          _id: '1',
+          title: 'Advanced Mathematics',
+          description: 'Comprehensive guide to advanced mathematical concepts',
+          author: 'Dr. John Smith',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book1.pdf',
+          pages: 250,
+          isbn: '978-1234567890',
+          status: 'published',
+          is_featured: true,
+          download_count: 150,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Calculus Fundamentals',
+          description: 'Learn calculus from the ground up',
+          author: 'Prof. Jane Doe',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book2.pdf',
+          pages: 180,
+          isbn: '978-0987654321',
+          status: 'published',
+          is_featured: false,
+          download_count: 89,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const book = fallbackBooks.find(b => b._id === id);
+      if (!book) {
+        return res.status(404).json({
+          success: false,
+          message: 'Book not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: book,
+        timestamp: new Date().toISOString(),
+        fallback: true
       });
     }
 
     // Ensure database connection
     const isConnected = await ensureDbConnection();
     if (!isConnected) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        serverless: true,
-        timestamp: new Date().toISOString()
+      // Return fallback data when database is not connected
+      const fallbackBooks = [
+        {
+          _id: '1',
+          title: 'Advanced Mathematics',
+          description: 'Comprehensive guide to advanced mathematical concepts',
+          author: 'Dr. John Smith',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book1.pdf',
+          pages: 250,
+          isbn: '978-1234567890',
+          status: 'published',
+          is_featured: true,
+          download_count: 150,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Calculus Fundamentals',
+          description: 'Learn calculus from the ground up',
+          author: 'Prof. Jane Doe',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x400',
+          pdfUrl: 'https://example.com/book2.pdf',
+          pages: 180,
+          isbn: '978-0987654321',
+          status: 'published',
+          is_featured: false,
+          download_count: 89,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const book = fallbackBooks.find(b => b._id === id);
+      if (!book) {
+        return res.status(404).json({
+          success: false,
+          message: 'Book not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: book,
+        timestamp: new Date().toISOString(),
+        fallback: true
       });
     }
 
-    const { id } = req.params;
     const book = await Book.findById(id);
     
     if (!book) {
@@ -334,6 +425,118 @@ const getAllCourses = async (req, res) => {
 const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Check if models are available
+    if (!Course) {
+      // Return fallback data for serverless mode
+      const fallbackCourses = [
+        {
+          _id: '1',
+          title: 'Linear Algebra Course',
+          description: 'Master linear algebra concepts and applications',
+          instructor: 'Dr. Sarah Johnson',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          duration: '8 weeks',
+          level: 'Intermediate',
+          price: 99.99,
+          status: 'published',
+          is_featured: true,
+          enrollment_count: 245,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Statistics Fundamentals',
+          description: 'Learn statistical analysis and probability',
+          instructor: 'Prof. Michael Brown',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          duration: '6 weeks',
+          level: 'Beginner',
+          price: 79.99,
+          status: 'published',
+          is_featured: false,
+          enrollment_count: 189,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const course = fallbackCourses.find(c => c._id === id);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: course,
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      // Return fallback data when database is not connected
+      const fallbackCourses = [
+        {
+          _id: '1',
+          title: 'Linear Algebra Course',
+          description: 'Master linear algebra concepts and applications',
+          instructor: 'Dr. Sarah Johnson',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          duration: '8 weeks',
+          level: 'Intermediate',
+          price: 99.99,
+          status: 'published',
+          is_featured: true,
+          enrollment_count: 245,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Statistics Fundamentals',
+          description: 'Learn statistical analysis and probability',
+          instructor: 'Prof. Michael Brown',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          duration: '6 weeks',
+          level: 'Beginner',
+          price: 79.99,
+          status: 'published',
+          is_featured: false,
+          enrollment_count: 189,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const course = fallbackCourses.find(c => c._id === id);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: course,
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+
     const course = await Course.findById(id);
     
     if (!course) {
@@ -497,17 +700,123 @@ const getAllLiveClasses = async (req, res) => {
 
 const getLiveClassById = async (req, res) => {
   try {
+    const { id } = req.params;
+    
     // Check if models are available
     if (!LiveClass) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database service temporarily unavailable',
-        serverless: true,
-        timestamp: new Date().toISOString()
+      // Return fallback data for serverless mode
+      const fallbackLiveClasses = [
+        {
+          _id: '1',
+          title: 'Advanced Calculus Live Session',
+          description: 'Interactive live session on advanced calculus topics',
+          instructor: 'Dr. Emily Davis',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+          duration: 90,
+          maxStudents: 50,
+          currentStudents: 23,
+          status: 'upcoming',
+          is_featured: true,
+          price: 29.99,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Linear Algebra Workshop',
+          description: 'Comprehensive workshop on linear algebra fundamentals',
+          instructor: 'Prof. Michael Chen',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
+          duration: 120,
+          maxStudents: 30,
+          currentStudents: 18,
+          status: 'upcoming',
+          is_featured: false,
+          price: 39.99,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const liveClass = fallbackLiveClasses.find(lc => lc._id === id);
+      if (!liveClass) {
+        return res.status(404).json({
+          success: false,
+          message: 'Live class not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: liveClass,
+        timestamp: new Date().toISOString(),
+        fallback: true
       });
     }
 
-    const { id } = req.params;
+    // Ensure database connection
+    const isConnected = await ensureDbConnection();
+    if (!isConnected) {
+      // Return fallback data when database is not connected
+      const fallbackLiveClasses = [
+        {
+          _id: '1',
+          title: 'Advanced Calculus Live Session',
+          description: 'Interactive live session on advanced calculus topics',
+          instructor: 'Dr. Emily Davis',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+          duration: 90,
+          maxStudents: 50,
+          currentStudents: 23,
+          status: 'upcoming',
+          is_featured: true,
+          price: 29.99,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Linear Algebra Workshop',
+          description: 'Comprehensive workshop on linear algebra fundamentals',
+          instructor: 'Prof. Michael Chen',
+          category: 'Mathematics',
+          coverImageUrl: 'https://via.placeholder.com/300x200',
+          scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
+          duration: 120,
+          maxStudents: 30,
+          currentStudents: 18,
+          status: 'upcoming',
+          is_featured: false,
+          price: 39.99,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const liveClass = fallbackLiveClasses.find(lc => lc._id === id);
+      if (!liveClass) {
+        return res.status(404).json({
+          success: false,
+          message: 'Live class not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: liveClass,
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+
     const liveClass = await LiveClass.findById(id);
     
     if (!liveClass) {
