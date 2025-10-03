@@ -23,7 +23,7 @@ const ensureDbConnection = async () => {
 
 // ============= BOOKS =============
 
-// Fallback data for books (defined once)
+// Centralized fallback data constants
 const FALLBACK_BOOKS = [
   {
     _id: '1',
@@ -54,6 +54,78 @@ const FALLBACK_BOOKS = [
     status: 'published',
     is_featured: false,
     download_count: 89,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const FALLBACK_COURSES = [
+  {
+    _id: '1',
+    title: 'Linear Algebra Course',
+    description: 'Master linear algebra concepts and applications',
+    instructor: 'Dr. Sarah Johnson',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x200',
+    duration: '8 weeks',
+    level: 'Intermediate',
+    price: 99.99,
+    status: 'published',
+    is_featured: true,
+    enrollment_count: 245,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    _id: '2',
+    title: 'Statistics Fundamentals',
+    description: 'Learn statistical analysis and probability',
+    instructor: 'Prof. Michael Brown',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x200',
+    duration: '6 weeks',
+    level: 'Beginner',
+    price: 79.99,
+    status: 'published',
+    is_featured: false,
+    enrollment_count: 189,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const FALLBACK_LIVE_CLASSES = [
+  {
+    _id: '1',
+    title: 'Advanced Calculus Live Session',
+    description: 'Interactive live session on advanced calculus topics',
+    instructor: 'Dr. Emily Davis',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x200',
+    scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+    duration: 90,
+    maxStudents: 50,
+    currentStudents: 23,
+    status: 'upcoming',
+    is_featured: true,
+    price: 29.99,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    _id: '2',
+    title: 'Geometry Problem Solving',
+    description: 'Live problem-solving session for geometry',
+    instructor: 'Prof. Robert Wilson',
+    category: 'Mathematics',
+    coverImageUrl: 'https://via.placeholder.com/300x200',
+    scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
+    duration: 60,
+    maxStudents: 30,
+    currentStudents: 15,
+    status: 'upcoming',
+    is_featured: false,
+    price: 19.99,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -125,43 +197,7 @@ const getBookById = async (req, res) => {
     
     // Check if models are available
     if (!Book) {
-      // Return fallback data for serverless mode
-      const fallbackBooks = [
-        {
-          _id: '1',
-          title: 'Advanced Mathematics',
-          description: 'Comprehensive guide to advanced mathematical concepts',
-          author: 'Dr. John Smith',
-          category: 'Mathematics',
-          coverImageUrl: 'https://via.placeholder.com/300x400',
-          pdfUrl: 'https://example.com/book1.pdf',
-          pages: 250,
-          isbn: '978-1234567890',
-          status: 'published',
-          is_featured: true,
-          download_count: 150,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          _id: '2',
-          title: 'Calculus Fundamentals',
-          description: 'Learn calculus from the ground up',
-          author: 'Prof. Jane Doe',
-          category: 'Mathematics',
-          coverImageUrl: 'https://via.placeholder.com/300x400',
-          pdfUrl: 'https://example.com/book2.pdf',
-          pages: 180,
-          isbn: '978-0987654321',
-          status: 'published',
-          is_featured: false,
-          download_count: 89,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-      
-      const book = fallbackBooks.find(b => b._id === id);
+      const book = FALLBACK_BOOKS.find(b => b._id === id);
       if (!book) {
         return res.status(404).json({
           success: false,
@@ -178,46 +214,10 @@ const getBookById = async (req, res) => {
       });
     }
 
-    // Ensure database connection
+    // Try database connection only if not in serverless mode
     const isConnected = await ensureDbConnection();
     if (!isConnected) {
-      // Return fallback data when database is not connected
-      const fallbackBooks = [
-        {
-          _id: '1',
-          title: 'Advanced Mathematics',
-          description: 'Comprehensive guide to advanced mathematical concepts',
-          author: 'Dr. John Smith',
-          category: 'Mathematics',
-          coverImageUrl: 'https://via.placeholder.com/300x400',
-          pdfUrl: 'https://example.com/book1.pdf',
-          pages: 250,
-          isbn: '978-1234567890',
-          status: 'published',
-          is_featured: true,
-          download_count: 150,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          _id: '2',
-          title: 'Calculus Fundamentals',
-          description: 'Learn calculus from the ground up',
-          author: 'Prof. Jane Doe',
-          category: 'Mathematics',
-          coverImageUrl: 'https://via.placeholder.com/300x400',
-          pdfUrl: 'https://example.com/book2.pdf',
-          pages: 180,
-          isbn: '978-0987654321',
-          status: 'published',
-          is_featured: false,
-          download_count: 89,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-      
-      const book = fallbackBooks.find(b => b._id === id);
+      const book = FALLBACK_BOOKS.find(b => b._id === id);
       if (!book) {
         return res.status(404).json({
           success: false,
@@ -266,46 +266,13 @@ const getBookById = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
-    // Always use fallback data in serverless mode
+    // Always use fallback data in serverless mode or when models unavailable
     if (process.env.VERCEL === '1' || !Course) {
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Linear Algebra Course',
-            description: 'Master linear algebra concepts and applications',
-            instructor: 'Dr. Sarah Johnson',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            duration: '8 weeks',
-            level: 'Intermediate',
-            price: 99.99,
-            status: 'published',
-            is_featured: true,
-            enrollment_count: 245,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Statistics Fundamentals',
-            description: 'Learn statistical analysis and probability',
-            instructor: 'Prof. Michael Brown',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            duration: '6 weeks',
-            level: 'Beginner',
-            price: 79.99,
-            status: 'published',
-            is_featured: false,
-            enrollment_count: 189,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_COURSES,
         pagination: {
-          total: 2,
+          total: FALLBACK_COURSES.length,
           page: 1,
           limit: 10,
           totalPages: 1
@@ -315,48 +282,14 @@ const getAllCourses = async (req, res) => {
       });
     }
 
-    // Ensure database connection
+    // Try database connection only if not in serverless mode
     const isConnected = await ensureDbConnection();
     if (!isConnected) {
-      // Return fallback data when database is not connected
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Linear Algebra Course',
-            description: 'Master linear algebra concepts and applications',
-            instructor: 'Dr. Sarah Johnson',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            duration: '8 weeks',
-            level: 'Intermediate',
-            price: 99.99,
-            status: 'published',
-            is_featured: true,
-            enrollment_count: 245,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Statistics Fundamentals',
-            description: 'Learn statistical analysis and probability',
-            instructor: 'Prof. Michael Brown',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            duration: '6 weeks',
-            level: 'Beginner',
-            price: 79.99,
-            status: 'published',
-            is_featured: false,
-            enrollment_count: 189,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_COURSES,
         pagination: {
-          total: 2,
+          total: FALLBACK_COURSES.length,
           page: 1,
           limit: 10,
           totalPages: 1
@@ -534,48 +467,13 @@ const getCourseById = async (req, res) => {
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Always use fallback data in serverless mode
+    // Always use fallback data in serverless mode or when models unavailable
     if (process.env.VERCEL === '1' || !LiveClass) {
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Advanced Calculus Live Session',
-            description: 'Interactive live session on advanced calculus topics',
-            instructor: 'Dr. Emily Davis',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-            duration: 90,
-            maxStudents: 50,
-            currentStudents: 23,
-            status: 'upcoming',
-            is_featured: true,
-            price: 29.99,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Geometry Problem Solving',
-            description: 'Live problem-solving session for geometry',
-            instructor: 'Prof. Robert Wilson',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
-            duration: 60,
-            maxStudents: 30,
-            currentStudents: 15,
-            status: 'upcoming',
-            is_featured: false,
-            price: 19.99,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_LIVE_CLASSES,
         pagination: {
-          total: 2,
+          total: FALLBACK_LIVE_CLASSES.length,
           page: 1,
           limit: 10,
           totalPages: 1
@@ -585,50 +483,14 @@ const getAllLiveClasses = async (req, res) => {
       });
     }
 
-    // Ensure database connection
+    // Try database connection only if not in serverless mode
     const isConnected = await ensureDbConnection();
     if (!isConnected) {
-      // Return fallback data when database is not connected
       return res.json({
         success: true,
-        data: [
-          {
-            _id: '1',
-            title: 'Advanced Calculus Live Session',
-            description: 'Interactive live session on advanced calculus topics',
-            instructor: 'Dr. Emily Davis',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-            duration: 90,
-            maxStudents: 50,
-            currentStudents: 23,
-            status: 'upcoming',
-            is_featured: true,
-            price: 29.99,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            _id: '2',
-            title: 'Geometry Problem Solving',
-            description: 'Live problem-solving session for geometry',
-            instructor: 'Prof. Robert Wilson',
-            category: 'Mathematics',
-            coverImageUrl: 'https://via.placeholder.com/300x200',
-            scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
-            duration: 60,
-            maxStudents: 30,
-            currentStudents: 15,
-            status: 'upcoming',
-            is_featured: false,
-            price: 19.99,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ],
+        data: FALLBACK_LIVE_CLASSES,
         pagination: {
-          total: 2,
+          total: FALLBACK_LIVE_CLASSES.length,
           page: 1,
           limit: 10,
           totalPages: 1
