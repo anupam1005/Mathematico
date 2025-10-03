@@ -122,7 +122,10 @@ const corsOptions = {
       'http://localhost:19006',
       'http://localhost:8081',
       'https://mathematico-frontend.vercel.app',
-      'https://mathematico-backend-new.vercel.app'
+      'https://mathematico-backend-new.vercel.app',
+      'https://mathematico-app.vercel.app',
+      'exp://192.168.1.100:8081', // Expo development
+      'exp://localhost:8081' // Expo development
     ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)

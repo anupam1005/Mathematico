@@ -27,12 +27,12 @@ const connectToDatabase = async () => {
     // Serverless-optimized connection options
     const options = {
       maxPoolSize: 1, // Reduced for serverless
-      serverSelectionTimeoutMS: 5000, // Faster timeout for serverless
-      socketTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 10000, // Increased timeout for better reliability
+      socketTimeoutMS: 45000, // Increased socket timeout
       bufferCommands: false,
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 5000,
+      connectTimeoutMS: 10000, // Increased connection timeout
       heartbeatFrequencyMS: 10000
     };
 

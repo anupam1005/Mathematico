@@ -46,7 +46,7 @@ const upload = multer({
       return cb(new Error('Only image files (jpeg, jpg, png, webp) are allowed for cover images!'));
     }
     // Allow PDFs for book files
-    if (file.fieldname === 'pdfFile') {
+    if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
       const isPdf = path.extname(file.originalname).toLowerCase() === '.pdf';
       const isPdfMime = file.mimetype === 'application/pdf';
       if (isPdf && isPdfMime) {
@@ -137,57 +137,7 @@ try {
   });
 }
 
-// Add fallback responses for admin operations in serverless mode
-router.use((req, res, next) => {
-  if (process.env.VERCEL === '1') {
-    // Provide fallback responses for admin operations
-    if (req.method === 'GET') {
-      // For GET requests, provide fallback data
-      if (req.path.includes('/books')) {
-        return res.json({
-          success: true,
-          data: [],
-          message: 'Serverless mode - no books available',
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      } else if (req.path.includes('/courses')) {
-        return res.json({
-          success: true,
-          data: [],
-          message: 'Serverless mode - no courses available',
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      } else if (req.path.includes('/live-classes')) {
-        return res.json({
-          success: true,
-          data: [],
-          message: 'Serverless mode - no live classes available',
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      } else if (req.path.includes('/users')) {
-        return res.json({
-          success: true,
-          data: [],
-          message: 'Serverless mode - no users available',
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      }
-    } else if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
-      // For modification requests, return success but indicate serverless mode
-      return res.json({
-        success: true,
-        message: 'Operation completed in serverless mode (no database persistence)',
-        timestamp: new Date().toISOString(),
-        fallback: true
-      });
-    }
-  }
-  next();
-});
+// Remove serverless fallback interference - let actual admin operations work
 
 // Dashboard routes
 router.get('/dashboard', adminController.getDashboard);
