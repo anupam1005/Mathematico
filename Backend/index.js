@@ -422,18 +422,7 @@ app.get(`${API_PREFIX}`, (req, res) => {
 // Direct mobile content routes (for frontend compatibility)
 app.get(`${API_PREFIX}/books`, async (req, res) => {
   try {
-    // Try to use mobile routes handler
-    if (mobileRoutes) {
-      // Create a mock request/response to pass to the mobile handler
-      const mockReq = { ...req, path: '/books' };
-      const mockRes = {
-        json: (data) => res.json(data),
-        status: (code) => ({ json: (data) => res.status(code).json(data) })
-      };
-      return mobileRoutes.handle(mockReq, mockRes);
-    }
-    
-    // Fallback data if mobile routes not available
+    // Fallback data for books
     res.json({
       success: true,
       data: [
