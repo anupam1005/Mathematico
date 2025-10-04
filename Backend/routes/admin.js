@@ -1,7 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
-const { upload, handleUploadError } = require('../middlewares/upload');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Use memory storage for serverless mode
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for PDFs
+  fileFilter: (req, file, cb) => {
+    // Allow images for cover images
+    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+      const allowedImageTypes = /jpeg|jpg|png|webp/;
+      const extname = allowedImageTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = allowedImageTypes.test(file.mimetype);
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      return cb(new Error('Only image files (jpeg, jpg, png, webp) are allowed for cover images!'));
+    }
+    // Allow PDFs for book files
+    if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
+      const isPdf = path.extname(file.originalname).toLowerCase() === '.pdf';
+      const isPdfMime = file.mimetype === 'application/pdf';
+      if (isPdf && isPdfMime) {
+        return cb(null, true);
+      }
+      return cb(new Error('Only PDF files are allowed for book content!'));
+    }
+    cb(null, true);
+  }
+});
 
 // Import admin controller with MongoDB - NO FALLBACKS
 const adminController = require('../controllers/adminController');
@@ -120,8 +152,5 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Error handling middleware for file uploads
-router.use(handleUploadError);
 
 module.exports = router;

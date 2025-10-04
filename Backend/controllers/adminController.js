@@ -347,10 +347,6 @@ const getBookById = async (req, res) => {
 
 const createBook = async (req, res) => {
   try {
-    console.log('📚 Admin create book - starting request processing');
-    console.log('📚 Request body:', req.body);
-    console.log('📚 Request files:', req.files);
-    
     const bookData = req.body;
     
     // Use fallback data for serverless mode
@@ -404,27 +400,6 @@ const createBook = async (req, res) => {
     });
   } catch (error) {
     console.error('Create book error:', error);
-    console.error('Error stack:', error.stack);
-    
-    // Handle specific error types
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        message: 'File too large. Maximum size is 1GB.',
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    if (error.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({
-        success: false,
-        message: 'Too many files. Maximum 2 files allowed.',
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-    
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to create book',
