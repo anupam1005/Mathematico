@@ -221,53 +221,85 @@ const updateUserStatus = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    // Use fallback data for serverless mode
-    console.log('📚 Admin books - using fallback data for serverless mode');
+    console.log('📚 Admin books - connecting to MongoDB database...');
     
-    const fallbackBooks = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        author: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        pages: 250,
-        isbn: '978-1234567890',
-        status: 'published',
-        is_featured: true,
-        download_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        author: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        pages: 180,
-        isbn: '978-0987654321',
-        status: 'published',
-        is_featured: false,
-        download_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
     
-    res.json({
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback data');
+      // Fallback data for when database is not available
+      const fallbackBooks = [
+        {
+          _id: '1',
+          title: 'Advanced Mathematics',
+          description: 'Comprehensive guide to advanced mathematical concepts',
+          author: 'Dr. John Smith',
+          category: 'Mathematics',
+          level: 'Advanced',
+          pages: 250,
+          isbn: '978-1234567890',
+          status: 'published',
+          is_featured: true,
+          download_count: 150,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Calculus Fundamentals',
+          description: 'Learn calculus from the ground up',
+          author: 'Prof. Jane Doe',
+          category: 'Mathematics',
+          level: 'Foundation',
+          pages: 180,
+          isbn: '978-0987654321',
+          status: 'published',
+          is_featured: false,
+          download_count: 89,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      return res.status(200).json({
+        success: true,
+        data: fallbackBooks,
+        pagination: {
+          page: parseInt(req.query.page) || 1,
+          limit: parseInt(req.query.limit) || 10,
+          total: fallbackBooks.length,
+          totalPages: 1
+        },
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const filters = {};
+    
+    if (req.query.status) filters.status = req.query.status;
+    if (req.query.category) filters.category = req.query.category;
+    if (req.query.level) filters.level = req.query.level;
+    if (req.query.search) filters.search = req.query.search;
+    
+    console.log('📚 Fetching books from MongoDB with filters:', filters);
+    
+    const result = await Book.getAll(page, limit, filters);
+    
+    console.log('📚 Books fetched from database:', result.data.length, 'books');
+    
+    res.status(200).json({
       success: true,
-      data: fallbackBooks,
-      pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: fallbackBooks.length,
-        totalPages: 1
-      },
+      data: result.data,
+      pagination: result.pagination,
       timestamp: new Date().toISOString(),
-      fallback: true
+      database: true
     });
   } catch (error) {
     console.error('Get books error:', error);
@@ -283,43 +315,71 @@ const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Use fallback data for serverless mode
-    console.log('📚 Admin get book by ID - using fallback data for serverless mode');
+    console.log('📚 Admin get book by ID - connecting to database...');
     
-    const fallbackBooks = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        author: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        pages: 250,
-        isbn: '978-1234567890',
-        status: 'published',
-        is_featured: true,
-        download_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        author: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        pages: 180,
-        isbn: '978-0987654321',
-        status: 'published',
-        is_featured: false,
-        download_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback data');
+      // Use fallback data for serverless mode
+      const fallbackBooks = [
+        {
+          _id: '1',
+          title: 'Advanced Mathematics',
+          description: 'Comprehensive guide to advanced mathematical concepts',
+          author: 'Dr. John Smith',
+          category: 'Mathematics',
+          level: 'Advanced',
+          pages: 250,
+          isbn: '978-1234567890',
+          status: 'published',
+          is_featured: true,
+          download_count: 150,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          title: 'Calculus Fundamentals',
+          description: 'Learn calculus from the ground up',
+          author: 'Prof. Jane Doe',
+          category: 'Mathematics',
+          level: 'Foundation',
+          pages: 180,
+          isbn: '978-0987654321',
+          status: 'published',
+          is_featured: false,
+          download_count: 89,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      
+      const book = fallbackBooks.find(b => b._id === id);
+      
+      if (!book) {
+        return res.status(404).json({
+          success: false,
+          message: 'Book not found',
+          timestamp: new Date().toISOString()
+        });
       }
-    ];
+
+      return res.json({
+        success: true,
+        data: book,
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
     
-    const book = fallbackBooks.find(b => b._id === id);
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    
+    console.log('📚 Fetching book from MongoDB database...');
+    const book = await Book.findById(id);
     
     if (!book) {
       return res.status(404).json({
@@ -333,7 +393,7 @@ const getBookById = async (req, res) => {
       success: true,
       data: book,
       timestamp: new Date().toISOString(),
-      fallback: true
+      database: true
     });
   } catch (error) {
     console.error('Get book error:', error);
@@ -425,14 +485,51 @@ const createBook = async (req, res) => {
       updated_at: new Date().toISOString()
     };
     
-    console.log('✅ Book created successfully:', newBook.title);
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      return res.status(201).json({
+        success: true,
+        data: newBook,
+        message: 'Book created successfully (fallback mode)',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    
+    // Create book in database
+    const databaseBookData = {
+      title: newBook.title,
+      author: newBook.author,
+      description: newBook.description,
+      category: newBook.category,
+      level: newBook.level,
+      pages: newBook.pages,
+      isbn: newBook.isbn,
+      cover_image_url: newBook.cover_image_url,
+      pdf_url: newBook.pdf_url,
+      status: newBook.status,
+      created_by: '1' // Default admin user ID
+    };
+    
+    console.log('📚 Creating book in MongoDB database...');
+    const savedBook = await Book.create(databaseBookData);
+    
+    console.log('✅ Book created successfully in database:', savedBook.title);
+    console.log('📚 Book ID:', savedBook._id);
     
     res.status(201).json({
       success: true,
-      data: newBook,
+      data: savedBook,
       message: 'Book created successfully',
       timestamp: new Date().toISOString(),
-      serverless: true
+      database: true
     });
   } catch (error) {
     console.error('Create book error:', error);
@@ -500,33 +597,64 @@ const updateBook = async (req, res) => {
       updateData.pages = parseInt(updateData.pages);
     }
     
-    // Create updated book data with Cloudinary URLs
-    const updatedBook = {
-      _id: id,
-      title: updateData.title || 'Updated Book',
-      description: updateData.description || 'Updated book description',
-      author: updateData.author || 'Updated Author',
-      category: updateData.category || 'General',
-      level: updateData.level || 'Foundation',
-      pages: updateData.pages || 0,
-      isbn: updateData.isbn || '',
-      status: updateData.status || 'draft',
-      is_featured: updateData.is_featured === 'true' || updateData.is_featured === true,
-      download_count: 0,
-      cover_image_url: updateData.cover_image_url || null,
-      pdf_url: updateData.pdf_url || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      // Create updated book data with Cloudinary URLs
+      const updatedBook = {
+        _id: id,
+        title: updateData.title || 'Updated Book',
+        description: updateData.description || 'Updated book description',
+        author: updateData.author || 'Updated Author',
+        category: updateData.category || 'General',
+        level: updateData.level || 'Foundation',
+        pages: updateData.pages || 0,
+        isbn: updateData.isbn || '',
+        status: updateData.status || 'draft',
+        is_featured: updateData.is_featured === 'true' || updateData.is_featured === true,
+        download_count: 0,
+        cover_image_url: updateData.cover_image_url || null,
+        pdf_url: updateData.pdf_url || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-    console.log('✅ Book updated successfully:', updatedBook.title);
+      console.log('✅ Book updated successfully (fallback):', updatedBook.title);
+
+      return res.json({
+        success: true,
+        data: updatedBook,
+        message: 'Book updated successfully',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    
+    console.log('📚 Updating book in MongoDB database...');
+    const updatedBook = await Book.updateBook(id, updateData);
+    
+    if (!updatedBook) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log('✅ Book updated successfully in database:', updatedBook.title);
 
     res.json({
       success: true,
       data: updatedBook,
       message: 'Book updated successfully',
       timestamp: new Date().toISOString(),
-      serverless: true
+      database: true
     });
   } catch (error) {
     console.error('Update book error:', error);
@@ -542,15 +670,38 @@ const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Use fallback data for serverless mode
-    console.log('📚 Admin delete book - using fallback data for serverless mode');
+    console.log('📚 Admin delete book - removing from database, ID:', id);
     
-    // For fallback mode, just return success
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      return res.json({
+        success: true,
+        message: 'Book deleted successfully (fallback mode)',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    
+    const deletedBook = await Book.deleteBook(id);
+    
+    if (deletedBook) {
+      console.log('✅ Book deleted successfully from database:', deletedBook.title);
+    } else {
+      console.log('⚠️ Book not found in database');
+    }
+    
     res.json({
       success: true,
       message: 'Book deleted successfully',
       timestamp: new Date().toISOString(),
-      fallback: true
+      database: true
     });
   } catch (error) {
     console.error('Delete book error:', error);
@@ -567,33 +718,47 @@ const updateBookStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    // Use fallback data for serverless mode
-    console.log('📚 Admin update book status - using fallback data for serverless mode');
+    console.log('📚 Admin update book status - updating in database, ID:', id, 'Status:', status);
     
-    // Create fallback updated book data
-    const updatedBook = {
-      _id: id,
-      title: 'Updated Book',
-      description: 'Book description',
-      author: 'Author Name',
-      category: 'Mathematics',
-      level: 'Advanced',
-      pages: 250,
-      isbn: '978-1234567890',
-      status: status || 'published',
-      is_featured: true,
-      download_count: 150,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    res.json({
-      success: true,
-      data: updatedBook,
-      message: 'Book status updated successfully',
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      return res.json({
+        success: true,
+        data: { _id: id, status: status || 'published' },
+        message: 'Book status updated successfully (fallback mode)',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Book = require('../models/Book');
+    
+    const updatedBook = await Book.updateBookStatus(id, status || 'published');
+    
+    if (updatedBook) {
+      console.log('✅ Book status updated successfully in database');
+      console.log('📚 Updated book:', updatedBook.title, 'Status:', updatedBook.status);
+      
+      res.json({
+        success: true,
+        data: updatedBook,
+        message: 'Book status updated successfully',
+        timestamp: new Date().toISOString(),
+        database: true
+      });
+    } else {
+      console.log('⚠️ Book not found in database');
+      res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
   } catch (error) {
     console.error('Update book status error:', error);
     res.status(500).json({
