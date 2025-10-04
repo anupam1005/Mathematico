@@ -898,7 +898,7 @@ const createCourse = async (req, res) => {
     }
     
     // Add created_by from authenticated user
-    courseData.created_by = req.user?.id || '1';
+    courseData.created_by = req.user?.id || new require('mongoose').Types.ObjectId();
     
     const course = await Course.create(courseData);
     
@@ -1163,7 +1163,7 @@ const createLiveClass = async (req, res) => {
     }
     
     // Add created_by from authenticated user
-    liveClassData.created_by = req.user?.id || '1';
+    liveClassData.created_by = req.user?.id || new require('mongoose').Types.ObjectId();
     
     const liveClass = await LiveClass.create(liveClassData);
     
