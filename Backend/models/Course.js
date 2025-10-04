@@ -145,7 +145,7 @@ courseSchema.statics.create = async function(courseData) {
     pdf_url: pdf_url || null,
     enrolled_count: enrolled_count || 0,
     status,
-    created_by: created_by || '1'
+    created_by: created_by || new mongoose.Types.ObjectId()
   });
 
   return course.save();

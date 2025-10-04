@@ -153,7 +153,7 @@ bookSchema.statics.create = async function(bookData) {
     cover_image_url: cover_image_url || null,
     pdf_url: pdf_url || null,
     status,
-    created_by: created_by || '1'
+    created_by: created_by || new mongoose.Types.ObjectId()
   });
 
   return book.save();

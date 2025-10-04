@@ -196,7 +196,7 @@ liveClassSchema.statics.create = async function(liveClassData) {
     subject: subject || null,
     class: classField || null,
     level: level || 'Foundation',
-    created_by: created_by || '1'
+    created_by: created_by || new mongoose.Types.ObjectId()
   });
 
   return liveClass.save();
