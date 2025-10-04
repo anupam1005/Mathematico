@@ -515,7 +515,7 @@ const createBook = async (req, res) => {
       cover_image_url: newBook.cover_image_url,
       pdf_url: newBook.pdf_url,
       status: newBook.status,
-      created_by: '1' // Default admin user ID
+      created_by: new require('mongoose').Types.ObjectId() // Generate new ObjectId for admin
     };
     
     console.log('📚 Creating book in MongoDB database...');
