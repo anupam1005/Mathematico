@@ -5,6 +5,12 @@ const LiveClass = require('../models/LiveClass');
 const Payment = require('../models/Payment');
 
 // Admin Controller - Handles admin panel operations with MongoDB
+console.log('📚 AdminController: Loading admin controller...');
+console.log('📚 AdminController: User model loaded:', !!User);
+console.log('📚 AdminController: Book model loaded:', !!Book);
+console.log('📚 AdminController: Course model loaded:', !!Course);
+console.log('📚 AdminController: LiveClass model loaded:', !!LiveClass);
+console.log('📚 AdminController: Payment model loaded:', !!Payment);
 
 /**
  * Get dashboard statistics
@@ -221,6 +227,9 @@ const updateUserStatus = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
+    console.log('📚 Admin get all books - method called');
+    console.log('📚 Request params:', req.params);
+    console.log('📚 Request query:', req.query);
     // Use fallback data for serverless mode
     console.log('📚 Admin books - using fallback data for serverless mode');
     

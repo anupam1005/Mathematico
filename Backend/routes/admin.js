@@ -4,8 +4,16 @@ const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 const { upload, handleUploadError } = require('../middlewares/upload');
 
 // Import admin controller with MongoDB - NO FALLBACKS
-const adminController = require('../controllers/adminController');
-console.log('✅ MongoDB AdminController loaded successfully');
+let adminController;
+try {
+  adminController = require('../controllers/adminController');
+  console.log('✅ MongoDB AdminController loaded successfully');
+  console.log('AdminController methods:', Object.keys(adminController));
+} catch (error) {
+  console.error('❌ AdminController failed to load:', error.message);
+  console.error('AdminController error details:', error);
+  process.exit(1);
+}
 
 // Public admin info endpoint (no auth required) - MUST BE BEFORE MIDDLEWARE
 router.get('/info', (req, res) => {
@@ -117,6 +125,15 @@ router.get('/test', (req, res) => {
     success: true,
     message: 'MongoDB Admin routes are working ✅',
     user: req.user,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Simple test endpoint without auth
+router.get('/ping', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin API is working',
     timestamp: new Date().toISOString()
   });
 });

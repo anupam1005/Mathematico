@@ -307,8 +307,11 @@ try {
 try {
   adminRoutes = require('./routes/admin');
   console.log('✅ Admin routes loaded');
+  console.log('Admin routes type:', typeof adminRoutes);
+  console.log('Admin routes methods:', adminRoutes ? Object.keys(adminRoutes) : 'null');
 } catch (err) {
   console.error('❌ Admin routes failed to load:', err.message);
+  console.error('Admin routes error details:', err);
   adminRoutes = null;
 }
 
@@ -594,6 +597,7 @@ if (authRoutes) {
 if (adminRoutes) {
   app.use(`${API_PREFIX}/admin`, adminRoutes);
   console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+  console.log('Admin routes stack:', adminRoutes.stack ? adminRoutes.stack.length : 'no stack');
 } else {
   console.warn('⚠️ Admin routes not available');
 }
