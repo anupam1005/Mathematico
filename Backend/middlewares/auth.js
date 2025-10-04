@@ -27,8 +27,9 @@ const authenticateToken = async (req, res, next) => {
   try {
     // Verify JWT token using the proper utility function
     console.log('🔍 Attempting to verify token...');
+    console.log('🔍 Token (first 50 chars):', token.substring(0, 50) + '...');
     const decoded = verifyAccessToken(token);
-    console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, idType: typeof decoded.id });
+    console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, role: decoded.role, idType: typeof decoded.id });
     
     // Check if it's the hardcoded admin
     if (decoded.email === 'dc2006089@gmail.com' && decoded.role === 'admin') {
@@ -42,6 +43,7 @@ const authenticateToken = async (req, res, next) => {
         email_verified: true,
         is_active: true
       };
+      console.log('✅ Admin user set in request:', req.user);
       next();
       return;
     }

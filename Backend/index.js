@@ -105,7 +105,9 @@ const corsOptions = {
       'https://mathematico-backend-new.vercel.app',
       'https://mathematico-app.vercel.app',
       'exp://192.168.1.100:8081', // Expo development
-      'exp://localhost:8081' // Expo development
+      'exp://localhost:8081', // Expo development
+      'exp://10.0.2.2:8081', // Android emulator
+      'exp://127.0.0.1:8081' // Local development
     ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -302,6 +304,8 @@ const FALLBACK_BOOKS = [
     status: 'published',
     is_featured: true,
     download_count: 150,
+    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/advanced-math-cover.jpg',
+    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/advanced-math.pdf',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -317,6 +321,42 @@ const FALLBACK_BOOKS = [
     status: 'published',
     is_featured: false,
     download_count: 89,
+    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/calculus-fundamentals.jpg',
+    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/calculus-fundamentals.pdf',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    _id: '3',
+    title: 'Linear Algebra Made Easy',
+    description: 'A beginner-friendly approach to linear algebra concepts',
+    author: 'Dr. Sarah Wilson',
+    category: 'Mathematics',
+    level: 'Intermediate',
+    pages: 220,
+    isbn: '978-1122334455',
+    status: 'published',
+    is_featured: true,
+    download_count: 75,
+    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/linear-algebra.jpg',
+    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/linear-algebra.pdf',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    _id: '4',
+    title: 'Statistics and Probability',
+    description: 'Understanding data analysis and probability theory',
+    author: 'Prof. Michael Chen',
+    category: 'Statistics',
+    level: 'Intermediate',
+    pages: 300,
+    isbn: '978-5566778899',
+    status: 'published',
+    is_featured: false,
+    download_count: 120,
+    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/statistics-probability.jpg',
+    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/statistics-probability.pdf',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -393,15 +433,21 @@ const FALLBACK_LIVE_CLASSES = [
 // Direct fallback routes for serverless mode to ensure mobile API works
 app.get(`${API_PREFIX}/mobile/books`, (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, status = 'published' } = req.query;
+    
+    // Filter books by status for students
+    const filteredBooks = FALLBACK_BOOKS.filter(book => 
+      status === 'all' || book.status === status
+    );
+    
     res.json({
       success: true,
-      data: FALLBACK_BOOKS,
+      data: filteredBooks,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: FALLBACK_BOOKS.length,
-        totalPages: 1
+        total: filteredBooks.length,
+        totalPages: Math.ceil(filteredBooks.length / parseInt(limit))
       },
       timestamp: new Date().toISOString(),
       fallback: true
@@ -458,6 +504,34 @@ app.get(`${API_PREFIX}/mobile/live-classes`, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get(`${API_PREFIX}/mobile/books/:id`, (req, res) => {
+  try {
+    const { id } = req.params;
+    const book = FALLBACK_BOOKS.find(b => b._id === id);
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: book,
+      timestamp: new Date().toISOString(),
+      fallback: true
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book',
       timestamp: new Date().toISOString()
     });
   }

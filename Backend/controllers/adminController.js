@@ -349,16 +349,50 @@ const createBook = async (req, res) => {
   try {
     const bookData = req.body;
     
-    // Use fallback data for serverless mode
-    console.log('📚 Admin create book - using fallback data for serverless mode');
+    console.log('📚 Admin create book - processing file uploads for serverless mode');
     
-    // Handle file uploads from FormData (using field names from frontend)
+    // Handle file uploads to Cloudinary in serverless mode
     if (req.files) {
-      if (req.files.coverImage && req.files.coverImage[0]) {
-        bookData.cover_image_url = `/uploads/covers/${req.files.coverImage[0].filename}`;
-      }
-      if (req.files.pdfFile && req.files.pdfFile[0]) {
-        bookData.pdf_url = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
+      try {
+        // Upload cover image to Cloudinary
+        if (req.files.coverImage && req.files.coverImage[0]) {
+          const coverFile = req.files.coverImage[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const coverResult = await cloudinary.uploader.upload(
+            `data:${coverFile.mimetype};base64,${coverFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/books/covers',
+              resource_type: 'image',
+              transformation: [
+                { width: 400, height: 600, crop: 'fit', quality: 'auto' }
+              ]
+            }
+          );
+          bookData.cover_image_url = coverResult.secure_url;
+          console.log('✅ Cover image uploaded to Cloudinary:', coverResult.secure_url);
+        }
+        
+        // Upload PDF to Cloudinary
+        if (req.files.pdfFile && req.files.pdfFile[0]) {
+          const pdfFile = req.files.pdfFile[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const pdfResult = await cloudinary.uploader.upload(
+            `data:${pdfFile.mimetype};base64,${pdfFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/books/pdfs',
+              resource_type: 'raw'
+            }
+          );
+          bookData.pdf_url = pdfResult.secure_url;
+          console.log('✅ PDF uploaded to Cloudinary:', pdfResult.secure_url);
+        }
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue without files if upload fails
+        bookData.cover_image_url = null;
+        bookData.pdf_url = null;
       }
     }
     
@@ -372,7 +406,7 @@ const createBook = async (req, res) => {
       bookData.status = 'draft';
     }
     
-    // Create fallback book data
+    // Create book data with Cloudinary URLs
     const newBook = {
       _id: Date.now().toString(),
       title: bookData.title || 'New Book',
@@ -383,7 +417,7 @@ const createBook = async (req, res) => {
       pages: bookData.pages || 0,
       isbn: bookData.isbn || '',
       status: bookData.status || 'draft',
-      is_featured: bookData.is_featured || false,
+      is_featured: bookData.is_featured === 'true' || bookData.is_featured === true,
       download_count: 0,
       cover_image_url: bookData.cover_image_url || null,
       pdf_url: bookData.pdf_url || null,
@@ -391,12 +425,14 @@ const createBook = async (req, res) => {
       updated_at: new Date().toISOString()
     };
     
+    console.log('✅ Book created successfully:', newBook.title);
+    
     res.status(201).json({
       success: true,
       data: newBook,
       message: 'Book created successfully',
       timestamp: new Date().toISOString(),
-      fallback: true
+      serverless: true
     });
   } catch (error) {
     console.error('Create book error:', error);
@@ -414,16 +450,48 @@ const updateBook = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // Use fallback data for serverless mode
-    console.log('📚 Admin update book - using fallback data for serverless mode');
+    console.log('📚 Admin update book - processing file uploads for serverless mode');
     
-    // Handle file uploads
+    // Handle file uploads to Cloudinary in serverless mode
     if (req.files) {
-      if (req.files.coverImage && req.files.coverImage[0]) {
-        updateData.cover_image_url = `/uploads/covers/${req.files.coverImage[0].filename}`;
-      }
-      if (req.files.pdfFile && req.files.pdfFile[0]) {
-        updateData.pdf_url = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
+      try {
+        // Upload cover image to Cloudinary
+        if (req.files.coverImage && req.files.coverImage[0]) {
+          const coverFile = req.files.coverImage[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const coverResult = await cloudinary.uploader.upload(
+            `data:${coverFile.mimetype};base64,${coverFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/books/covers',
+              resource_type: 'image',
+              transformation: [
+                { width: 400, height: 600, crop: 'fit', quality: 'auto' }
+              ]
+            }
+          );
+          updateData.cover_image_url = coverResult.secure_url;
+          console.log('✅ Cover image updated in Cloudinary:', coverResult.secure_url);
+        }
+        
+        // Upload PDF to Cloudinary
+        if (req.files.pdfFile && req.files.pdfFile[0]) {
+          const pdfFile = req.files.pdfFile[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const pdfResult = await cloudinary.uploader.upload(
+            `data:${pdfFile.mimetype};base64,${pdfFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/books/pdfs',
+              resource_type: 'raw'
+            }
+          );
+          updateData.pdf_url = pdfResult.secure_url;
+          console.log('✅ PDF updated in Cloudinary:', pdfResult.secure_url);
+        }
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue without updating files if upload fails
       }
     }
     
@@ -432,7 +500,7 @@ const updateBook = async (req, res) => {
       updateData.pages = parseInt(updateData.pages);
     }
     
-    // Create fallback updated book data
+    // Create updated book data with Cloudinary URLs
     const updatedBook = {
       _id: id,
       title: updateData.title || 'Updated Book',
@@ -443,7 +511,7 @@ const updateBook = async (req, res) => {
       pages: updateData.pages || 0,
       isbn: updateData.isbn || '',
       status: updateData.status || 'draft',
-      is_featured: updateData.is_featured || false,
+      is_featured: updateData.is_featured === 'true' || updateData.is_featured === true,
       download_count: 0,
       cover_image_url: updateData.cover_image_url || null,
       pdf_url: updateData.pdf_url || null,
@@ -451,12 +519,14 @@ const updateBook = async (req, res) => {
       updated_at: new Date().toISOString()
     };
 
+    console.log('✅ Book updated successfully:', updatedBook.title);
+
     res.json({
       success: true,
       data: updatedBook,
       message: 'Book updated successfully',
       timestamp: new Date().toISOString(),
-      fallback: true
+      serverless: true
     });
   } catch (error) {
     console.error('Update book error:', error);

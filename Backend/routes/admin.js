@@ -5,12 +5,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Use memory storage for serverless mode
+// Use memory storage for serverless mode (Vercel)
 const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for PDFs
+  limits: { 
+    fileSize: 50 * 1024 * 1024, // 50MB for PDFs
+    files: 2 // Maximum 2 files (cover + PDF)
+  },
   fileFilter: (req, file, cb) => {
     // Allow images for cover images
     if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
