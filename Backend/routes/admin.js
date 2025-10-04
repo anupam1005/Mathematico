@@ -2,24 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 const { upload, handleUploadError } = require('../middlewares/upload');
-const { connectToDatabase } = require('../utils/database');
 
 // Import admin controller with MongoDB - NO FALLBACKS
 const adminController = require('../controllers/adminController');
 console.log('✅ MongoDB AdminController loaded successfully');
-
-// Middleware to ensure database connection
-const ensureDatabaseConnection = async (req, res, next) => {
-  try {
-    // Try to connect to database if not connected
-    await connectToDatabase();
-    next();
-  } catch (error) {
-    console.error('Database connection error:', error);
-    // Continue with fallback mode
-    next();
-  }
-};
 
 // Public admin info endpoint (no auth required) - MUST BE BEFORE MIDDLEWARE
 router.get('/info', (req, res) => {
@@ -83,12 +69,12 @@ router.delete('/users/:id', adminController.deleteUser);
 router.put('/users/:id/status', adminController.updateUserStatus);
 
 // Book management routes
-router.get('/books', ensureDatabaseConnection, adminController.getAllBooks);
-router.get('/books/:id', ensureDatabaseConnection, adminController.getBookById);
-router.post('/books', ensureDatabaseConnection, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.createBook);
-router.put('/books/:id', ensureDatabaseConnection, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.updateBook);
-router.delete('/books/:id', ensureDatabaseConnection, adminController.deleteBook);
-router.put('/books/:id/status', ensureDatabaseConnection, adminController.updateBookStatus);
+router.get('/books', adminController.getAllBooks);
+router.get('/books/:id', adminController.getBookById);
+router.post('/books', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.createBook);
+router.put('/books/:id', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.updateBook);
+router.delete('/books/:id', adminController.deleteBook);
+router.put('/books/:id/status', adminController.updateBookStatus);
 
 // Course management routes
 router.get('/courses', adminController.getAllCourses);

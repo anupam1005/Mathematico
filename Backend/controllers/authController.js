@@ -8,7 +8,9 @@ const User = require('../models/User');
  */
 const login = async (req, res) => {
   try {
-    console.log('Login attempt:', req.body);
+    console.log('🔐 Login attempt:', req.body);
+    console.log('🔐 Environment check - ADMIN_EMAIL:', process.env.ADMIN_EMAIL ? 'SET' : 'NOT_SET');
+    console.log('🔐 Environment check - ADMIN_PASSWORD:', process.env.ADMIN_PASSWORD ? 'SET' : 'NOT_SET');
     
     const { email, password } = req.body;
     
@@ -100,8 +102,8 @@ const login = async (req, res) => {
     } else {
       // Try to check for student in database, with fallback for serverless
       try {
+        console.log('🔐 Attempting database lookup for student user');
         // Check user in database
-
         const user = await User.findByEmail(email);
         
         if (!user) {
@@ -172,7 +174,14 @@ const login = async (req, res) => {
       }
     }
   } catch (error) {
-    console.error('Login endpoint error:', error);
+    console.error('🔐 Login endpoint error:', error);
+    console.error('🔐 Error stack:', error.stack);
+    console.error('🔐 Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    });
+    
     res.status(500).json({
       success: false,
       error: 'Internal Server Error',
