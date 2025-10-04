@@ -1,43 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Use memory storage for serverless mode
-const storage = multer.memoryStorage();
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for PDFs
-  fileFilter: (req, file, cb) => {
-    // Allow images for cover images
-    if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
-      const allowedImageTypes = /jpeg|jpg|png|webp/;
-      const extname = allowedImageTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = allowedImageTypes.test(file.mimetype);
-      if (mimetype && extname) {
-        return cb(null, true);
-      }
-      return cb(new Error('Only image files (jpeg, jpg, png, webp) are allowed for cover images!'));
-    }
-    // Allow PDFs for book files
-    if (file.fieldname === 'pdfFile' || file.fieldname === 'pdf') {
-      const isPdf = path.extname(file.originalname).toLowerCase() === '.pdf';
-      const isPdfMime = file.mimetype === 'application/pdf';
-      if (isPdf && isPdfMime) {
-        return cb(null, true);
-      }
-      return cb(new Error('Only PDF files are allowed for book content!'));
-    }
-    cb(null, true);
-  }
-});
+const { upload, handleUploadError } = require('../middlewares/upload');
+const { connectToDatabase } = require('../utils/database');
 
 // Import admin controller with MongoDB - NO FALLBACKS
 const adminController = require('../controllers/adminController');
 console.log('✅ MongoDB AdminController loaded successfully');
+
+// Middleware to ensure database connection
+const ensureDatabaseConnection = async (req, res, next) => {
+  try {
+    // Try to connect to database if not connected
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    // Continue with fallback mode
+    next();
+  }
+};
 
 // Public admin info endpoint (no auth required) - MUST BE BEFORE MIDDLEWARE
 router.get('/info', (req, res) => {
@@ -101,12 +83,12 @@ router.delete('/users/:id', adminController.deleteUser);
 router.put('/users/:id/status', adminController.updateUserStatus);
 
 // Book management routes
-router.get('/books', adminController.getAllBooks);
-router.get('/books/:id', adminController.getBookById);
-router.post('/books', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.createBook);
-router.put('/books/:id', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.updateBook);
-router.delete('/books/:id', adminController.deleteBook);
-router.put('/books/:id/status', adminController.updateBookStatus);
+router.get('/books', ensureDatabaseConnection, adminController.getAllBooks);
+router.get('/books/:id', ensureDatabaseConnection, adminController.getBookById);
+router.post('/books', ensureDatabaseConnection, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.createBook);
+router.put('/books/:id', ensureDatabaseConnection, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.updateBook);
+router.delete('/books/:id', ensureDatabaseConnection, adminController.deleteBook);
+router.put('/books/:id/status', ensureDatabaseConnection, adminController.updateBookStatus);
 
 // Course management routes
 router.get('/courses', adminController.getAllCourses);
@@ -152,5 +134,8 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Error handling middleware for file uploads
+router.use(handleUploadError);
 
 module.exports = router;

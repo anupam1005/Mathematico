@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath = uploadDirs.temp;
     
-    if (file.fieldname === 'pdf') {
+    if (file.fieldname === 'pdf' || file.fieldname === 'pdfFile') {
       uploadPath = uploadDirs.pdfs;
     } else if (file.fieldname === 'coverImage') {
       uploadPath = uploadDirs.covers;
@@ -50,7 +50,7 @@ const fileFilter = (req, file, cb) => {
   const allowedImageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
   const allowedPdfExtensions = ['.pdf'];
   
-  if (file.fieldname === 'pdf') {
+  if (file.fieldname === 'pdf' || file.fieldname === 'pdfFile') {
     // Only allow PDF files with proper validation
     if (allowedPdfTypes.includes(file.mimetype) && allowedPdfExtensions.includes(fileExtension)) {
       cb(null, true);
@@ -74,7 +74,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB default, configurable
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 1024 * 1024 * 1024, // 1GB default, configurable
     files: 2, // Maximum 2 files (PDF + cover image)
     fieldSize: 1024 * 1024, // 1MB for field data
     fieldNameSize: 100 // Max field name length
@@ -115,7 +115,7 @@ const processCoverImage = async (req, res, next) => {
 // Middleware for PDF validation and processing
 const processPDF = async (req, res, next) => {
   try {
-    if (req.file && req.file.fieldname === 'pdf') {
+    if (req.file && (req.file.fieldname === 'pdf' || req.file.fieldname === 'pdfFile')) {
       // Additional PDF validation can be added here
       // For now, just ensure the file exists and is readable
       const stats = fs.statSync(req.file.path);
@@ -140,7 +140,7 @@ const handleUploadError = (error, req, res, next) => {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'File too large. Maximum size is 50MB.',
+        message: 'File too large. Maximum size is 1GB.',
         error: error.message
       });
     }
