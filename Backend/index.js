@@ -214,15 +214,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Simple health check that doesn't depend on database
-app.get('/ping', (req, res) => {
-  res.json({
-    success: true,
-    message: 'pong',
-    timestamp: new Date().toISOString()
-  });
-});
-
 // Root endpoint
 app.get('/', (req, res) => {
   try {
@@ -248,7 +239,6 @@ app.get('/', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Root endpoint error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -256,11 +246,6 @@ app.get('/', (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-});
-
-// Favicon handler to prevent 500 errors
-app.get('/favicon.ico', (req, res) => {
-  res.status(204).end(); // No content
 });
 
 // Initialize MongoDB connection for serverless mode
@@ -276,16 +261,10 @@ const initializeDatabase = async () => {
   }
 };
 
-// Initialize database connection (non-blocking) - wrapped in try-catch
-try {
-  initializeDatabase().catch(err => {
-    console.error('❌ Database initialization error:', err.message);
-    console.warn('⚠️ Continuing with fallback mode');
-  });
-} catch (error) {
-  console.error('❌ Database initialization setup error:', error.message);
-  console.warn('⚠️ Continuing with fallback mode');
-}
+// Initialize database connection (non-blocking)
+initializeDatabase().catch(err => {
+  console.error('❌ Database initialization error:', err.message);
+});
 
 // Database connection is handled by individual controllers
 // No global middleware needed for serverless mode
@@ -298,48 +277,15 @@ let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
 
 try {
   authRoutes = require('./routes/auth');
-  console.log('✅ Auth routes loaded');
-} catch (err) {
-  console.error('❌ Auth routes failed to load:', err.message);
-  authRoutes = null;
-}
-
-try {
   adminRoutes = require('./routes/admin');
-  console.log('✅ Admin routes loaded');
-  console.log('Admin routes type:', typeof adminRoutes);
-  console.log('Admin routes methods:', adminRoutes ? Object.keys(adminRoutes) : 'null');
-} catch (err) {
-  console.error('❌ Admin routes failed to load:', err.message);
-  console.error('Admin routes error details:', err);
-  adminRoutes = null;
-}
-
-try {
   mobileRoutes = require('./routes/mobile');
-  console.log('✅ Mobile routes loaded');
-} catch (err) {
-  console.error('❌ Mobile routes failed to load:', err.message);
-  mobileRoutes = null;
-}
-
-try {
   studentRoutes = require('./routes/student');
-  console.log('✅ Student routes loaded');
-} catch (err) {
-  console.error('❌ Student routes failed to load:', err.message);
-  studentRoutes = null;
-}
-
-try {
   usersRoutes = require('./routes/users');
-  console.log('✅ Users routes loaded');
+  console.log('✅ All route handlers loaded successfully');
 } catch (err) {
-  console.error('❌ Users routes failed to load:', err.message);
-  usersRoutes = null;
+  console.error('❌ Critical route handlers failed to load:', err.message);
+  process.exit(1);
 }
-
-console.log('✅ Route loading completed');
 
 
 // Fallback data for serverless mode when database is unavailable
@@ -586,45 +532,24 @@ app.get(`${API_PREFIX}/admin/info`, (req, res) => {
 console.log('🔗 Mounting API routes...');
 
 // Mount all routes for serverless deployment
-if (authRoutes) {
-  app.use(`${API_PREFIX}/auth`, authRoutes);
-  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-} else {
-  console.warn('⚠️ Auth routes not available');
-}
+app.use(`${API_PREFIX}/auth`, authRoutes);
+console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
 
 // Admin routes
-if (adminRoutes) {
-  app.use(`${API_PREFIX}/admin`, adminRoutes);
-  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-  console.log('Admin routes stack:', adminRoutes.stack ? adminRoutes.stack.length : 'no stack');
-} else {
-  console.warn('⚠️ Admin routes not available');
-}
+app.use(`${API_PREFIX}/admin`, adminRoutes);
+console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
 
 // Mobile routes
-if (mobileRoutes) {
-  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-} else {
-  console.warn('⚠️ Mobile routes not available');
-}
+app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
 
 // Users routes
-if (usersRoutes) {
-  app.use(`${API_PREFIX}/users`, usersRoutes);
-  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-} else {
-  console.warn('⚠️ Users routes not available');
-}
+app.use(`${API_PREFIX}/users`, usersRoutes);
+console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
 
 // Student routes
-if (studentRoutes) {
-  app.use(`${API_PREFIX}/student`, studentRoutes);
-  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-} else {
-  console.warn('⚠️ Student routes not available');
-}
+app.use(`${API_PREFIX}/student`, studentRoutes);
+console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
