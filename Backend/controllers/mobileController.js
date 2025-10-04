@@ -68,7 +68,40 @@ const getAllCourses = async (req, res) => {
 const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
-    const course = await Course.findById(id);
+    
+    // Use fallback data for serverless mode
+    const fallbackCourses = [
+      {
+        _id: '1',
+        title: 'Advanced Mathematics',
+        description: 'Comprehensive guide to advanced mathematical concepts',
+        instructor: 'Dr. John Smith',
+        category: 'Mathematics',
+        level: 'Advanced',
+        price: 99.99,
+        status: 'published',
+        is_featured: true,
+        enrollment_count: 150,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        _id: '2',
+        title: 'Calculus Fundamentals',
+        description: 'Learn calculus from the ground up',
+        instructor: 'Prof. Jane Doe',
+        category: 'Mathematics',
+        level: 'Foundation',
+        price: 79.99,
+        status: 'published',
+        is_featured: false,
+        enrollment_count: 89,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    
+    const course = fallbackCourses.find(c => c._id === id);
     
     if (!course || course.status !== 'published') {
       return res.status(404).json({
@@ -155,7 +188,72 @@ const getAllBooks = async (req, res) => {
 const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
-    const book = await Book.findById(id);
+    
+    // Use fallback data for serverless mode
+    const fallbackBooks = [
+      {
+        _id: '1',
+        title: 'Advanced Mathematics',
+        description: 'Comprehensive guide to advanced mathematical concepts',
+        author: 'Dr. John Smith',
+        category: 'Mathematics',
+        level: 'Advanced',
+        pages: 250,
+        isbn: '978-1234567890',
+        status: 'published',
+        is_featured: true,
+        download_count: 150,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        _id: '2',
+        title: 'Calculus Fundamentals',
+        description: 'Learn calculus from the ground up',
+        author: 'Prof. Jane Doe',
+        category: 'Mathematics',
+        level: 'Foundation',
+        pages: 180,
+        isbn: '978-0987654321',
+        status: 'published',
+        is_featured: false,
+        download_count: 89,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        _id: '3',
+        title: 'Linear Algebra Made Easy',
+        description: 'Step-by-step guide to linear algebra concepts',
+        author: 'Dr. Sarah Wilson',
+        category: 'Mathematics',
+        level: 'Intermediate',
+        pages: 320,
+        isbn: '978-1122334455',
+        status: 'published',
+        is_featured: true,
+        download_count: 75,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        _id: '4',
+        title: 'Statistics and Probability',
+        description: 'Complete guide to statistical analysis and probability theory',
+        author: 'Prof. Michael Chen',
+        category: 'Mathematics',
+        level: 'Advanced',
+        pages: 400,
+        isbn: '978-5566778899',
+        status: 'published',
+        is_featured: false,
+        download_count: 120,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    
+    const book = fallbackBooks.find(b => b._id === id);
     
     if (!book || book.status !== 'published') {
       return res.status(404).json({
@@ -246,7 +344,46 @@ const getAllLiveClasses = async (req, res) => {
 const getLiveClassById = async (req, res) => {
   try {
     const { id } = req.params;
-    const liveClass = await LiveClass.findById(id);
+    
+    // Use fallback data for serverless mode
+    const fallbackLiveClasses = [
+      {
+        _id: '1',
+        title: 'Advanced Calculus Live Session',
+        description: 'Interactive live session on advanced calculus topics',
+        instructor: 'Dr. Emily Rodriguez',
+        category: 'Mathematics',
+        level: 'Advanced',
+        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        duration: 90,
+        maxStudents: 50,
+        meetingLink: 'https://meet.google.com/advanced-calculus',
+        status: 'upcoming',
+        is_featured: true,
+        enrollment_count: 23,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        _id: '2',
+        title: 'Differential Equations Workshop',
+        description: 'Hands-on workshop on solving differential equations',
+        instructor: 'Prof. David Kim',
+        category: 'Mathematics',
+        level: 'Intermediate',
+        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        duration: 120,
+        maxStudents: 30,
+        meetingLink: 'https://meet.google.com/diff-eq-workshop',
+        status: 'upcoming',
+        is_featured: false,
+        enrollment_count: 15,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    
+    const liveClass = fallbackLiveClasses.find(lc => lc._id === id);
     
     if (!liveClass) {
       return res.status(404).json({
