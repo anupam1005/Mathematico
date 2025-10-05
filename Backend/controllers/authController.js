@@ -99,17 +99,34 @@ const login = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
-      // Ensure database connection for regular users
+      // Ensure database connection for regular users with timeout
       console.log('🔗 Ensuring database connection for login...');
       const { ensureDatabaseConnection } = require('../utils/database');
-      const isConnected = await ensureDatabaseConnection();
       
-      if (!isConnected) {
-        console.error('❌ Database connection failed, cannot authenticate user');
+      try {
+        // Add timeout to database connection
+        const connectionPromise = ensureDatabaseConnection();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+        );
+        
+        const isConnected = await Promise.race([connectionPromise, timeoutPromise]);
+        
+        if (!isConnected) {
+          console.error('❌ Database connection failed, cannot authenticate user');
+          return res.status(503).json({
+            success: false,
+            error: 'Service Unavailable',
+            message: 'Database connection failed. Please try again later.',
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (error) {
+        console.error('❌ Database connection timeout or error:', error.message);
         return res.status(503).json({
           success: false,
           error: 'Service Unavailable',
-          message: 'Database connection failed. Please try again later.',
+          message: 'Database connection timeout. Please try again later.',
           timestamp: new Date().toISOString()
         });
       }
@@ -218,17 +235,34 @@ const register = async (req, res) => {
       });
     }
     
-    // Ensure database connection
+    // Ensure database connection with timeout
     console.log('🔗 Ensuring database connection for registration...');
     const { ensureDatabaseConnection } = require('../utils/database');
-    const isConnected = await ensureDatabaseConnection();
     
-    if (!isConnected) {
-      console.error('❌ Database connection failed, cannot register user');
+    try {
+      // Add timeout to database connection
+      const connectionPromise = ensureDatabaseConnection();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+      );
+      
+      const isConnected = await Promise.race([connectionPromise, timeoutPromise]);
+      
+      if (!isConnected) {
+        console.error('❌ Database connection failed, cannot register user');
+        return res.status(503).json({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Database connection failed. Please try again later.',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('❌ Database connection timeout or error:', error.message);
       return res.status(503).json({
         success: false,
         error: 'Service Unavailable',
-        message: 'Database connection failed. Please try again later.',
+        message: 'Database connection timeout. Please try again later.',
         timestamp: new Date().toISOString()
       });
     }
