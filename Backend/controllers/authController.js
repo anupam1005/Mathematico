@@ -1,5 +1,6 @@
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
+const { ensureDatabaseConnection } = require('../utils/database');
 
 // Auth Controller - Handles authentication requests
 
@@ -100,8 +101,19 @@ const login = async (req, res) => {
     } else {
       // Try to check for student in database, with fallback for serverless
       try {
-        // Check user in database
+        // Ensure database connection
+        const dbConnected = await ensureDatabaseConnection();
+        if (!dbConnected) {
+          console.error('Database connection failed during login');
+          return res.status(503).json({
+            success: false,
+            error: 'Service Unavailable',
+            message: 'Database temporarily unavailable. Please try again later.',
+            timestamp: new Date().toISOString()
+          });
+        }
 
+        // Check user in database
         const user = await User.findByEmail(email);
         
         if (!user) {
@@ -131,10 +143,10 @@ const login = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role || 'user',
-        isAdmin: false,
-        is_admin: false,
+        isAdmin: user.is_admin || false,
+        is_admin: user.is_admin || false,
         email_verified: user.email_verified || true,
-        is_active: user.is_active !== false
+        is_active: user.status === 'active'
       };
       
       const accessToken = generateAccessToken(userPayload);
@@ -162,6 +174,7 @@ const login = async (req, res) => {
       
       } catch (dbError) {
         console.error('Database error during login:', dbError.message);
+        console.error('Full database error:', dbError);
         // Fallback: Return error for non-admin users when database is unavailable
         return res.status(503).json({
           success: false,
@@ -216,6 +229,18 @@ const register = async (req, res) => {
     
     // Try to check if student already exists and create new user
     try {
+      // Ensure database connection
+      const dbConnected = await ensureDatabaseConnection();
+      if (!dbConnected) {
+        console.error('Database connection failed during registration');
+        return res.status(503).json({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Database temporarily unavailable. Please try again later.',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       const existingUser = await User.findByEmail(email);
       if (existingUser) {
         return res.status(409).json({
@@ -242,10 +267,10 @@ const register = async (req, res) => {
       email: newUser.email,
       name: newUser.name,
       role: newUser.role || 'user',
-      isAdmin: false,
-      is_admin: false,
-      email_verified: false,
-      is_active: true
+      isAdmin: newUser.is_admin || false,
+      is_admin: newUser.is_admin || false,
+      email_verified: newUser.email_verified || false,
+      is_active: newUser.status === 'active'
     };
     
     const accessToken = generateAccessToken(userPayload);
@@ -271,6 +296,7 @@ const register = async (req, res) => {
     
     } catch (dbError) {
       console.error('Database error during registration:', dbError.message);
+      console.error('Full database error:', dbError);
       // Fallback: Return error when database is unavailable
       return res.status(503).json({
         success: false,
@@ -462,7 +488,19 @@ const refreshToken = async (req, res) => {
         });
       } else {
         // For regular users, get from database
-        const user = await User.findById(decoded.id);
+        // Ensure database connection
+        const dbConnected = await ensureDatabaseConnection();
+        if (!dbConnected) {
+          console.error('Database connection failed during token refresh');
+          return res.status(503).json({
+            success: false,
+            error: 'Service Unavailable',
+            message: 'Database temporarily unavailable. Please try again later.',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        const user = await User.findByIdForAuth(decoded.id);
         
         if (!user) {
           return res.status(404).json({
@@ -483,14 +521,14 @@ const refreshToken = async (req, res) => {
         }
         
         const userPayload = {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
           role: user.role || 'user',
-          isAdmin: false,
-          is_admin: false,
+          isAdmin: user.is_admin || false,
+          is_admin: user.is_admin || false,
           email_verified: user.email_verified || true,
-          is_active: user.is_active !== false
+          is_active: user.status === 'active'
         };
         
         const newAccessToken = generateAccessToken(userPayload);
@@ -561,6 +599,39 @@ const getProfile = async (req, res) => {
   }
 };
 
+/**
+ * Health check endpoint
+ */
+const healthCheck = async (req, res) => {
+  try {
+    const { ensureDatabaseConnection, getConnectionStatus } = require('../utils/database');
+    
+    // Test database connection
+    const dbConnected = await ensureDatabaseConnection();
+    const connectionStatus = getConnectionStatus();
+    
+    res.json({
+      success: true,
+      message: 'Health check successful',
+      data: {
+        database: {
+          connected: dbConnected,
+          status: connectionStatus
+        },
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Health check failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -569,5 +640,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyEmail,
-  getProfile
+  getProfile,
+  healthCheck
 };

@@ -186,6 +186,10 @@ userSchema.statics.findById = function(id) {
   return this.findOne({ _id: id }).select('-password_hash -email_verification_token');
 };
 
+userSchema.statics.findByIdForAuth = function(id) {
+  return this.findOne({ _id: id });
+};
+
 userSchema.statics.updateUser = async function(id, updateData) {
   // Remove sensitive fields
   delete updateData.password_hash;

@@ -138,6 +138,9 @@ router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/verify-email', authController.verifyEmail);
 
+// Health check route
+router.get('/health', authController.healthCheck);
+
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);
 
