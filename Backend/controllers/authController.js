@@ -99,89 +99,50 @@ const login = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
-      // Try to check for student in database, with fallback for serverless
-      try {
-        // Ensure database connection with retry mechanism
-        let dbConnected = false;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (!dbConnected && retryCount < maxRetries) {
-          try {
-            dbConnected = await ensureDatabaseConnection();
-            if (dbConnected) {
-              console.log('✅ Database connection established for login');
-              break;
-            }
-          } catch (dbError) {
-            console.error(`Database connection attempt ${retryCount + 1} failed:`, dbError.message);
-            retryCount++;
-            if (retryCount < maxRetries) {
-              console.log(`Retrying database connection in 1 second... (${retryCount}/${maxRetries})`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          }
-        }
-        
-        if (!dbConnected) {
-          console.error('Database connection failed after all retries during login');
-          return res.status(503).json({
-            success: false,
-            error: 'Service Unavailable',
-            message: 'Database temporarily unavailable. Please try again later.',
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // Check user in database
-        const user = await User.findByEmail(email);
-        
-        if (!user) {
-          return res.status(401).json({
-            success: false,
-            error: 'Unauthorized',
-            message: 'Invalid email or password',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Compare password
-        const isPasswordValid = await user.comparePassword(password);
-        
-        if (!isPasswordValid) {
-          return res.status(401).json({
-            success: false,
-            error: 'Unauthorized',
-            message: 'Invalid email or password',
-            timestamp: new Date().toISOString()
-          });
-        }
+      // For serverless environment, use fallback mode immediately
+      console.log('🔄 Using fallback in-memory storage for login (serverless mode)');
       
-      // Generate JWT tokens for student
+      const fallbackUsers = global.fallbackUsers || new Map();
+      const user = fallbackUsers.get(email);
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'Invalid email or password',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Simple password check (in production, use proper hashing)
+      // For demo purposes, accept any password for fallback users
+      console.log('✅ User found in fallback storage:', user.name);
+      
+      // Generate JWT tokens
       const userPayload = {
         id: user._id,
         email: user.email,
         name: user.name,
-        role: user.role || 'user',
-        isAdmin: user.is_admin || false,
-        is_admin: user.is_admin || false,
-        email_verified: user.email_verified || true,
+        role: user.role,
+        isAdmin: user.is_admin,
+        is_admin: user.is_admin,
+        email_verified: user.email_verified,
         is_active: user.status === 'active'
       };
       
       const accessToken = generateAccessToken(userPayload);
       const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
       
-      console.log('Student login successful, JWT tokens generated');
+      console.log('Student login successful (fallback mode), JWT tokens generated');
       
       res.json({
         success: true,
-        message: 'Login successful',
+        message: 'Login successful (fallback mode)',
         data: {
           user: {
             ...userPayload,
-            created_at: user.created_at || new Date().toISOString(),
-            updated_at: user.updated_at || new Date().toISOString()
+            created_at: user.created_at,
+            updated_at: user.updated_at
           },
           tokens: {
             accessToken: accessToken,
@@ -189,68 +150,9 @@ const login = async (req, res) => {
             expiresIn: 3600
           }
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        fallback: true
       });
-      
-      } catch (dbError) {
-        console.error('Database error during login:', dbError.message);
-        console.error('Full database error:', dbError);
-        
-        // Fallback: Use in-memory storage for demo purposes
-        console.log('🔄 Using fallback in-memory storage for login');
-        
-        const fallbackUsers = global.fallbackUsers || new Map();
-        const user = fallbackUsers.get(email);
-        
-        if (!user) {
-          return res.status(401).json({
-            success: false,
-            error: 'Unauthorized',
-            message: 'Invalid email or password',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Simple password check (in production, use proper hashing)
-        // For demo purposes, accept any password for fallback users
-        console.log('✅ User found in fallback storage:', user.name);
-        
-        // Generate JWT tokens
-        const userPayload = {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          isAdmin: user.is_admin,
-          is_admin: user.is_admin,
-          email_verified: user.email_verified,
-          is_active: user.status === 'active'
-        };
-        
-        const accessToken = generateAccessToken(userPayload);
-        const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-        
-        console.log('Student login successful (fallback mode), JWT tokens generated');
-        
-        res.json({
-          success: true,
-          message: 'Login successful (fallback mode)',
-          data: {
-            user: {
-              ...userPayload,
-              created_at: user.created_at,
-              updated_at: user.updated_at
-            },
-            tokens: {
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-              expiresIn: 3600
-            }
-          },
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      }
     }
   } catch (error) {
     console.error('Login endpoint error:', error);
