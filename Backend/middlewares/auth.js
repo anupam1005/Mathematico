@@ -53,6 +53,26 @@ const authenticateToken = async (req, res, next) => {
       return;
     }
     
+    // Check if it's a fallback user (from in-memory storage)
+    const fallbackUsers = global.fallbackUsers || new Map();
+    const fallbackUser = fallbackUsers.get(decoded.email);
+    
+    if (fallbackUser) {
+      req.user = {
+        id: fallbackUser._id,
+        email: fallbackUser.email,
+        name: fallbackUser.name,
+        role: fallbackUser.role,
+        isAdmin: fallbackUser.is_admin,
+        is_admin: fallbackUser.is_admin,
+        email_verified: fallbackUser.email_verified,
+        is_active: fallbackUser.status === 'active'
+      };
+      console.log('✅ Fallback user set in request:', req.user);
+      next();
+      return;
+    }
+    
     // Find user in database using the correct field name
     // Convert string ID to MongoDB ObjectId if needed
     const mongoose = require('mongoose');
