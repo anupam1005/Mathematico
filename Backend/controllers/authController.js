@@ -99,11 +99,25 @@ const login = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
-      // For serverless environment, use fallback mode immediately
-      console.log('🔄 Using fallback in-memory storage for login (serverless mode)');
+      // Ensure database connection for regular users
+      console.log('🔗 Ensuring database connection for login...');
+      const { ensureDatabaseConnection } = require('../utils/database');
+      const isConnected = await ensureDatabaseConnection();
       
-      const fallbackUsers = global.fallbackUsers || new Map();
-      const user = fallbackUsers.get(email);
+      if (!isConnected) {
+        console.error('❌ Database connection failed, cannot authenticate user');
+        return res.status(503).json({
+          success: false,
+          error: 'Service Unavailable',
+          message: 'Database connection failed. Please try again later.',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      console.log('✅ Database connected, proceeding with user authentication');
+      
+      // Find user in database
+      const user = await User.findByEmail(email);
       
       if (!user) {
         return res.status(401).json({
@@ -114,9 +128,19 @@ const login = async (req, res) => {
         });
       }
       
-      // Simple password check (in production, use proper hashing)
-      // For demo purposes, accept any password for fallback users
-      console.log('✅ User found in fallback storage:', user.name);
+      // Verify password
+      const isPasswordValid = await User.verifyPassword(password, user.password_hash);
+      
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'Invalid email or password',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      console.log('✅ User authenticated successfully:', user.name);
       
       // Generate JWT tokens
       const userPayload = {
@@ -133,16 +157,16 @@ const login = async (req, res) => {
       const accessToken = generateAccessToken(userPayload);
       const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
       
-      console.log('Student login successful (fallback mode), JWT tokens generated');
+      console.log('Student login successful, JWT tokens generated');
       
       res.json({
         success: true,
-        message: 'Login successful (fallback mode)',
+        message: 'Login successful',
         data: {
           user: {
             ...userPayload,
-            created_at: user.created_at,
-            updated_at: user.updated_at
+            created_at: user.createdAt,
+            updated_at: user.updatedAt
           },
           tokens: {
             accessToken: accessToken,
@@ -150,8 +174,7 @@ const login = async (req, res) => {
             expiresIn: 3600
           }
         },
-        timestamp: new Date().toISOString(),
-        fallback: true
+        timestamp: new Date().toISOString()
       });
     }
   } catch (error) {
@@ -184,8 +207,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    
     // Check if email is already taken (admin email)
     const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
     if (email === adminEmail) {
@@ -197,14 +218,26 @@ const register = async (req, res) => {
       });
     }
     
-    // For serverless environment, use fallback mode immediately
-    console.log('🔄 Using fallback in-memory storage for registration (serverless mode)');
+    // Ensure database connection
+    console.log('🔗 Ensuring database connection for registration...');
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
     
-    // Fallback: Use in-memory storage for demo purposes
-    const fallbackUsers = global.fallbackUsers || new Map();
-    global.fallbackUsers = fallbackUsers;
+    if (!isConnected) {
+      console.error('❌ Database connection failed, cannot register user');
+      return res.status(503).json({
+        success: false,
+        error: 'Service Unavailable',
+        message: 'Database connection failed. Please try again later.',
+        timestamp: new Date().toISOString()
+      });
+    }
     
-    if (fallbackUsers.has(email)) {
+    console.log('✅ Database connected, proceeding with registration');
+    
+    // Check if user already exists in database
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
       return res.status(409).json({
         success: false,
         error: 'Conflict',
@@ -213,33 +246,32 @@ const register = async (req, res) => {
       });
     }
     
-    // Create user in memory
-    const userId = Date.now().toString();
-    const userData = {
-      _id: userId,
+    // Create user in database
+    console.log('📝 Creating user in database...');
+    const newUser = await User.createUser({
       name,
       email,
-      role: 'user',
-      is_admin: false,
-      email_verified: false,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+      password,
+      role: 'user'
+    });
     
-    fallbackUsers.set(email, userData);
-    console.log('✅ User created in fallback storage:', userData.name);
+    if (!newUser) {
+      throw new Error('Failed to create user in database');
+    }
+    
+    console.log('✅ User created successfully in database:', newUser.name);
+    console.log('📊 User ID:', newUser._id);
     
     // Generate JWT tokens
     const userPayload = {
-      id: userData._id,
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      isAdmin: userData.is_admin,
-      is_admin: userData.is_admin,
-      email_verified: userData.email_verified,
-      is_active: userData.status === 'active'
+      id: newUser._id,
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role,
+      isAdmin: newUser.is_admin,
+      is_admin: newUser.is_admin,
+      email_verified: newUser.email_verified,
+      is_active: newUser.status === 'active'
     };
     
     const accessToken = generateAccessToken(userPayload);
@@ -247,17 +279,26 @@ const register = async (req, res) => {
     
     return res.status(201).json({
       success: true,
-      message: 'Student registration successful (fallback mode)',
+      message: 'Student registration successful',
       data: {
-        user: userData,
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          is_admin: newUser.is_admin,
+          email_verified: newUser.email_verified,
+          status: newUser.status,
+          created_at: newUser.createdAt,
+          updated_at: newUser.updatedAt
+        },
         tokens: {
           accessToken: accessToken,
           refreshToken: refreshToken,
           expiresIn: 3600
         }
       },
-      timestamp: new Date().toISOString(),
-      fallback: true
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
@@ -442,25 +483,51 @@ const refreshToken = async (req, res) => {
           timestamp: new Date().toISOString()
         });
       } else {
-        // For regular users, use fallback mode
-        console.log('🔄 Using fallback mode for user token refresh');
+        // For regular users, verify with database
+        console.log('🔗 Verifying user in database for token refresh');
+        
+        // Ensure database connection
+        const { ensureDatabaseConnection } = require('../utils/database');
+        const isConnected = await ensureDatabaseConnection();
+        
+        if (!isConnected) {
+          console.error('❌ Database connection failed for token refresh');
+          return res.status(503).json({
+            success: false,
+            error: 'Service Unavailable',
+            message: 'Database connection failed. Please try again later.',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Find user in database
+        const user = await User.findById(decoded.id);
+        
+        if (!user) {
+          return res.status(403).json({
+            success: false,
+            error: 'Forbidden',
+            message: 'User not found',
+            timestamp: new Date().toISOString()
+          });
+        }
         
         // Generate new tokens for the user
         const userPayload = {
-          id: decoded.id,
-          email: decoded.email || 'user@example.com',
-          name: 'User',
-          role: 'user',
-          isAdmin: false,
-          is_admin: false,
-          email_verified: false,
-          is_active: true
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isAdmin: user.is_admin,
+          is_admin: user.is_admin,
+          email_verified: user.email_verified,
+          is_active: user.status === 'active'
         };
         
         const newAccessToken = generateAccessToken(userPayload);
         const newRefreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
         
-        console.log('User refresh token successful (fallback mode), new tokens generated');
+        console.log('User refresh token successful, new tokens generated');
         
         res.json({
           success: true,
@@ -471,9 +538,8 @@ const refreshToken = async (req, res) => {
               expiresIn: 3600
             }
           },
-          message: 'Token refreshed successfully (fallback mode)',
-          timestamp: new Date().toISOString(),
-          fallback: true
+          message: 'Token refreshed successfully',
+          timestamp: new Date().toISOString()
         });
       }
     } catch (error) {
