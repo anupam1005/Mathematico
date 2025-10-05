@@ -97,6 +97,8 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('🌐 CORS request from origin:', origin);
+    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:19006',
@@ -107,16 +109,28 @@ const corsOptions = {
       'exp://192.168.1.100:8081', // Expo development
       'exp://localhost:8081', // Expo development
       'exp://10.0.2.2:8081', // Android emulator
-      'exp://127.0.0.1:8081' // Local development
+      'exp://127.0.0.1:8081', // Local development
+      'capacitor://localhost', // Capacitor apps
+      'ionic://localhost', // Ionic apps
+      'http://localhost', // Local development
+      'https://localhost', // Local HTTPS
+      'file://', // File protocol for mobile apps
+      'app://', // App protocol for mobile apps
+      'mathematico://', // Custom app scheme
+      'com.anonymous.mathematico://' // Android app scheme
     ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin (mobile app)');
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS: Allowing origin:', origin);
       callback(null, true);
     } else {
-      console.warn('CORS blocked origin:', origin);
+      console.warn('❌ CORS: Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },

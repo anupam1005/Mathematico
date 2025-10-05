@@ -130,8 +130,15 @@ try {
 }
 
 // Public auth routes
-router.post('/login', authController.login);
-router.post('/register', authController.register);
+router.post('/login', (req, res, next) => {
+  console.log('🔐 Login request received:', req.body);
+  next();
+}, authController.login);
+
+router.post('/register', (req, res, next) => {
+  console.log('📝 Registration request received:', req.body);
+  next();
+}, authController.register);
 router.post('/logout', authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
