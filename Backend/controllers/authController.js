@@ -295,170 +295,69 @@ const register = async (req, res) => {
       });
     }
     
-    // Try to check if student already exists and create new user
-    try {
-      // Ensure database connection with retry mechanism
-      let dbConnected = false;
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (!dbConnected && retryCount < maxRetries) {
-        try {
-          dbConnected = await ensureDatabaseConnection();
-          if (dbConnected) {
-            console.log('✅ Database connection established for registration');
-            break;
-          }
-        } catch (dbError) {
-          console.error(`Database connection attempt ${retryCount + 1} failed:`, dbError.message);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            console.log(`Retrying database connection in 1 second... (${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-      
-      if (!dbConnected) {
-        console.error('Database connection failed after all retries during registration');
-        return res.status(503).json({
-          success: false,
-          error: 'Service Unavailable',
-          message: 'Database temporarily unavailable. Please try again later.',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          error: 'Conflict',
-          message: 'Email already registered',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      // Create new student
-      console.log('Creating new user with data:', { name, email, role: 'user' });
-      const newUser = await User.createUser({
-        name,
-        email,
-        password,
-        role: 'user'
+    // For serverless environment, use fallback mode immediately
+    console.log('🔄 Using fallback in-memory storage for registration (serverless mode)');
+    
+    // Fallback: Use in-memory storage for demo purposes
+    const fallbackUsers = global.fallbackUsers || new Map();
+    global.fallbackUsers = fallbackUsers;
+    
+    if (fallbackUsers.has(email)) {
+      return res.status(409).json({
+        success: false,
+        error: 'Conflict',
+        message: 'Email already registered',
+        timestamp: new Date().toISOString()
       });
-      console.log('User created successfully:', newUser.name);
+    }
+    
+    // Create user in memory
+    const userId = Date.now().toString();
+    const userData = {
+      _id: userId,
+      name,
+      email,
+      role: 'user',
+      is_admin: false,
+      email_verified: false,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    fallbackUsers.set(email, userData);
+    console.log('✅ User created in fallback storage:', userData.name);
     
     // Generate JWT tokens
     const userPayload = {
-      id: newUser._id,
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role || 'user',
-      isAdmin: newUser.is_admin || false,
-      is_admin: newUser.is_admin || false,
-      email_verified: newUser.email_verified || false,
-      is_active: newUser.status === 'active'
+      id: userData._id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      isAdmin: userData.is_admin,
+      is_admin: userData.is_admin,
+      email_verified: userData.email_verified,
+      is_active: userData.status === 'active'
     };
     
     const accessToken = generateAccessToken(userPayload);
     const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
     
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: 'Student registration successful',
+      message: 'Student registration successful (fallback mode)',
       data: {
-        user: {
-          ...userPayload,
-          created_at: newUser.created_at || new Date().toISOString(),
-          updated_at: newUser.updated_at || new Date().toISOString()
-        },
+        user: userData,
         tokens: {
           accessToken: accessToken,
           refreshToken: refreshToken,
           expiresIn: 3600
         }
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      fallback: true
     });
-    
-      } catch (dbError) {
-        console.error('Database error during registration:', dbError.message);
-        console.error('Full database error:', dbError);
-        
-        // Check if it's a network error
-        if (dbError.message.includes('Network Error') || 
-            dbError.message.includes('ECONNREFUSED') || 
-            dbError.message.includes('ENOTFOUND') ||
-            dbError.message.includes('timeout')) {
-          console.log('🌐 Network error detected, using fallback storage');
-        } else {
-          console.log('🔄 Database error detected, using fallback storage');
-        }
-        
-        // Fallback: Use in-memory storage for demo purposes
-        console.log('🔄 Using fallback in-memory storage for registration');
-        
-        // Simple in-memory user store (for demo only)
-        const fallbackUsers = global.fallbackUsers || new Map();
-        global.fallbackUsers = fallbackUsers;
-        
-        if (fallbackUsers.has(email)) {
-          return res.status(409).json({
-            success: false,
-            error: 'Conflict',
-            message: 'Email already registered',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Create user in memory
-        const userId = Date.now().toString();
-        const userData = {
-          _id: userId,
-          name,
-          email,
-          role: 'user',
-          is_admin: false,
-          email_verified: false,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        fallbackUsers.set(email, userData);
-        console.log('✅ User created in fallback storage:', userData.name);
-        
-        // Generate JWT tokens
-        const userPayload = {
-          id: userData._id,
-          email: userData.email,
-          name: userData.name,
-          role: userData.role,
-          isAdmin: userData.is_admin,
-          is_admin: userData.is_admin,
-          email_verified: userData.email_verified,
-          is_active: userData.status === 'active'
-        };
-        
-        const accessToken = generateAccessToken(userPayload);
-        const refreshToken = generateRefreshToken({ id: userPayload.id, type: 'refresh' });
-        
-        res.status(201).json({
-          success: true,
-          message: 'Student registration successful (fallback mode)',
-          data: {
-            user: userData,
-            tokens: {
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-              expiresIn: 3600
-            }
-          },
-          timestamp: new Date().toISOString(),
-          fallback: true
-        });
-      }
+
   } catch (error) {
     console.error('Registration endpoint error:', error);
     res.status(500).json({

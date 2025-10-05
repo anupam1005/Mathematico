@@ -276,22 +276,8 @@ app.get('/', (req, res) => {
 });
 
 // Initialize MongoDB connection for serverless mode
-const initializeDatabase = async () => {
-  try {
-    console.log('🔗 Initializing MongoDB connection for serverless...');
-    await connectToDatabase();
-    console.log('✅ MongoDB connection ready for serverless');
-  } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-    console.warn('⚠️ Server will start in fallback mode - database operations may fail');
-    // Don't exit, let the server start and handle connections per request
-  }
-};
-
-// Initialize database connection (non-blocking)
-initializeDatabase().catch(err => {
-  console.error('❌ Database initialization error:', err.message);
-});
+// Database connection is handled by individual controllers
+// No global initialization needed for serverless mode
 
 // Database connection is handled by individual controllers
 // No global middleware needed for serverless mode
