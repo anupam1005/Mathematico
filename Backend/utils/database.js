@@ -34,14 +34,8 @@ const connectToDatabase = async () => {
       heartbeatFrequencyMS: 10000,
       maxIdleTimeMS: 30000,
       minPoolSize: 0,
-      // Additional serverless optimizations
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       // Connection pooling for serverless
-      maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 15000,
-      connectTimeoutMS: 5000
+      maxIdleTimeMS: 30000
     };
 
     console.log('🔗 Attempting MongoDB connection with optimized options');
