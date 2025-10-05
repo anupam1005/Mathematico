@@ -144,6 +144,9 @@ router.get('/health', authController.healthCheck);
 // Database test route
 router.get('/test-database', authController.testDatabase);
 
+// Users collection verification route
+router.get('/verify-users', authController.verifyUsersCollection);
+
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);
 

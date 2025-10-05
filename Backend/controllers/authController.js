@@ -855,6 +855,79 @@ const testDatabase = async (req, res) => {
   }
 };
 
+/**
+ * Users collection verification endpoint
+ */
+const verifyUsersCollection = async (req, res) => {
+  try {
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const User = require('../models/User');
+    
+    // Test database connection
+    const dbConnected = await ensureDatabaseConnection();
+    
+    if (!dbConnected) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database Unavailable',
+        message: 'Database connection failed',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    try {
+      // Get users collection info
+      const userCount = await User.countDocuments();
+      const recentUsers = await User.find({})
+        .select('name email role createdAt')
+        .sort({ createdAt: -1 })
+        .limit(10);
+      
+      // Get collection stats
+      const collectionStats = await User.collection.stats();
+      
+      res.json({
+        success: true,
+        message: 'Users collection verification successful',
+        data: {
+          collection: {
+            name: 'users',
+            database: 'test',
+            totalUsers: userCount,
+            collectionSize: collectionStats.size,
+            documentCount: collectionStats.count,
+            averageObjectSize: collectionStats.avgObjSize
+          },
+          recentUsers: recentUsers.map(user => ({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt
+          })),
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (dbError) {
+      console.error('Users collection verification failed:', dbError);
+      res.status(500).json({
+        success: false,
+        error: 'Collection Verification Failed',
+        message: dbError.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Users collection verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Collection verification failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -865,5 +938,6 @@ module.exports = {
   verifyEmail,
   getProfile,
   healthCheck,
-  testDatabase
+  testDatabase,
+  verifyUsersCollection
 };
