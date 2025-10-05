@@ -8,11 +8,13 @@ const connectToDatabase = async () => {
   // Check if already connected
   if (mongoose.connection.readyState === 1) {
     dbConnected = true;
+    console.log('✅ Database already connected');
     return mongoose.connection;
   }
 
   // Return existing connection promise if in progress
   if (connectionPromise) {
+    console.log('⏳ Waiting for existing connection...');
     return connectionPromise;
   }
 
@@ -20,17 +22,19 @@ const connectToDatabase = async () => {
     console.log('🔗 Connecting to MongoDB Atlas...');
     const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://anupamdas0515_db_user:8bO4aEEQ2TYAfCSu@mathematico-app.vszbcc9.mongodb.net/test?retryWrites=true&w=majority&appName=Mathematico-app';
     
-    // Serverless-optimized connection options for Vercel
+    // Enhanced connection options for better reliability
     const options = {
-      maxPoolSize: 1, // Reduced for serverless
-      serverSelectionTimeoutMS: 30000, // Increased timeout
-      socketTimeoutMS: 60000, // Increased socket timeout
+      maxPoolSize: 5, // Increased for better performance
+      serverSelectionTimeoutMS: 10000, // Reduced for faster failure detection
+      socketTimeoutMS: 30000, // Reduced for faster failure detection
       bufferCommands: false,
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 30000, // Increased connection timeout
-      heartbeatFrequencyMS: 10000
-      // Removed deprecated options: bufferMaxEntries, useNewUrlParser, useUnifiedTopology
+      connectTimeoutMS: 10000, // Reduced for faster failure detection
+      heartbeatFrequencyMS: 10000,
+      // Additional options for better connection handling
+      maxIdleTimeMS: 30000,
+      minPoolSize: 1
     };
 
     console.log('🔗 Attempting MongoDB connection with options:', {
@@ -47,6 +51,14 @@ const connectToDatabase = async () => {
     console.log('📊 Connection state:', mongoose.connection.readyState);
     console.log('🏠 Host:', mongoose.connection.host);
     console.log('📝 Database:', mongoose.connection.name);
+    
+    // Test the connection with a simple operation
+    try {
+      await mongoose.connection.db.admin().ping();
+      console.log('✅ Database ping successful');
+    } catch (pingError) {
+      console.warn('⚠️ Database ping failed:', pingError.message);
+    }
     
     // Set up connection event handlers
     mongoose.connection.on('error', (err) => {
@@ -77,42 +89,58 @@ const connectToDatabase = async () => {
   }
 };
 
-const ensureDatabaseConnection = async () => {
+const ensureDatabaseConnection = async (maxRetries = 3) => {
   // If already connected, return true
   if (mongoose.connection.readyState === 1) {
     console.log('✅ Database already connected');
     return true;
   }
   
-  try {
-    console.log('🔗 Ensuring database connection...');
-    
-    // Force a new connection if not connected
-    if (mongoose.connection.readyState === 0) {
-      console.log('🔄 Starting new MongoDB connection...');
-      const connection = await connectToDatabase();
+  let retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      console.log(`🔗 Ensuring database connection... (attempt ${retryCount + 1}/${maxRetries})`);
       
-      if (connection && mongoose.connection.readyState === 1) {
-        console.log('✅ Database connection ensured');
+      // Force a new connection if not connected
+      if (mongoose.connection.readyState === 0) {
+        console.log('🔄 Starting new MongoDB connection...');
+        const connection = await connectToDatabase();
+        
+        if (connection && mongoose.connection.readyState === 1) {
+          console.log('✅ Database connection ensured');
+          return true;
+        }
+      }
+      
+      // Wait a bit for connection to establish
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      
+      if (mongoose.connection.readyState === 1) {
+        console.log('✅ Database connection ensured after wait');
         return true;
+      } else {
+        console.warn(`⚠️ Database connection not established, readyState: ${mongoose.connection.readyState}`);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          console.log(`🔄 Retrying database connection in ${retryCount} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Database connection attempt ${retryCount + 1} failed:`, error.message);
+      retryCount++;
+      
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying database connection in ${retryCount} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
     }
-    
-    // Wait a bit for connection to establish
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    if (mongoose.connection.readyState === 1) {
-      console.log('✅ Database connection ensured after wait');
-      return true;
-    } else {
-      console.warn('⚠️ Database connection not established, readyState:', mongoose.connection.readyState);
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Failed to ensure database connection:', error.message);
-    console.error('❌ Full error:', error);
-    return false;
   }
+  
+  console.error('❌ Failed to ensure database connection after all retries');
+  return false;
 };
 
 const getConnectionStatus = () => {

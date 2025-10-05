@@ -141,6 +141,9 @@ router.post('/verify-email', authController.verifyEmail);
 // Health check route
 router.get('/health', authController.healthCheck);
 
+// Database test route
+router.get('/test-database', authController.testDatabase);
+
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);
 

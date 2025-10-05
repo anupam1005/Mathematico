@@ -386,6 +386,16 @@ const register = async (req, res) => {
         console.error('Database error during registration:', dbError.message);
         console.error('Full database error:', dbError);
         
+        // Check if it's a network error
+        if (dbError.message.includes('Network Error') || 
+            dbError.message.includes('ECONNREFUSED') || 
+            dbError.message.includes('ENOTFOUND') ||
+            dbError.message.includes('timeout')) {
+          console.log('🌐 Network error detected, using fallback storage');
+        } else {
+          console.log('🔄 Database error detected, using fallback storage');
+        }
+        
         // Fallback: Use in-memory storage for demo purposes
         console.log('🔄 Using fallback in-memory storage for registration');
         
@@ -776,6 +786,75 @@ const healthCheck = async (req, res) => {
   }
 };
 
+/**
+ * Database test endpoint
+ */
+const testDatabase = async (req, res) => {
+  try {
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const User = require('../models/User');
+    
+    // Test database connection
+    const dbConnected = await ensureDatabaseConnection();
+    
+    if (!dbConnected) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database Unavailable',
+        message: 'Database connection failed',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Test database operations
+    try {
+      // Test user count
+      const userCount = await User.countDocuments();
+      
+      // Test user creation (if not exists)
+      let testUser = await User.findByEmail('test@example.com');
+      if (!testUser) {
+        testUser = await User.createUser({
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+          role: 'user'
+        });
+        console.log('✅ Test user created for database test');
+      }
+      
+      res.json({
+        success: true,
+        message: 'Database test successful',
+        data: {
+          database: {
+            connected: true,
+            userCount: userCount,
+            testUser: testUser ? testUser.name : null
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (dbError) {
+      console.error('Database operation test failed:', dbError);
+      res.status(500).json({
+        success: false,
+        error: 'Database Operation Failed',
+        message: dbError.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Database test error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database test failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -785,5 +864,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   getProfile,
-  healthCheck
+  healthCheck,
+  testDatabase
 };
