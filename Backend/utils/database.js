@@ -22,26 +22,29 @@ const connectToDatabase = async () => {
     console.log('🔗 Connecting to MongoDB Atlas...');
     const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://anupamdas0515_db_user:8bO4aEEQ2TYAfCSu@mathematico-app.vszbcc9.mongodb.net/test?retryWrites=true&w=majority&appName=Mathematico-app';
     
-    // Enhanced connection options for serverless environment
-  const options = {
-    maxPoolSize: 1, // Minimal for serverless
-    serverSelectionTimeoutMS: 3000, // Faster failure detection
-    socketTimeoutMS: 10000, // Faster failure detection
-    bufferCommands: false,
-    retryWrites: true,
-    w: 'majority',
-    connectTimeoutMS: 3000, // Faster failure detection
-    heartbeatFrequencyMS: 5000,
-    // Additional options for better connection handling
-    maxIdleTimeMS: 10000,
-    minPoolSize: 0 // Reduced for serverless
-  };
+    // Optimized connection options for serverless environment
+    const options = {
+      maxPoolSize: 1, // Minimal for serverless
+      serverSelectionTimeoutMS: 5000, // Increased for better reliability
+      socketTimeoutMS: 15000, // Increased for better reliability
+      bufferCommands: false,
+      retryWrites: true,
+      w: 'majority',
+      connectTimeoutMS: 5000, // Increased for better reliability
+      heartbeatFrequencyMS: 10000,
+      maxIdleTimeMS: 30000,
+      minPoolSize: 0,
+      // Additional serverless optimizations
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      // Connection pooling for serverless
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 15000,
+      connectTimeoutMS: 5000
+    };
 
-    console.log('🔗 Attempting MongoDB connection with options:', {
-      maxPoolSize: options.maxPoolSize,
-      serverSelectionTimeoutMS: options.serverSelectionTimeoutMS,
-      connectTimeoutMS: options.connectTimeoutMS
-    });
+    console.log('🔗 Attempting MongoDB connection with optimized options');
 
     connectionPromise = mongoose.connect(mongoUri, options);
     
@@ -82,14 +85,18 @@ const connectToDatabase = async () => {
     
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
-    console.error('❌ Full error:', error);
+    console.error('❌ Connection error details:', {
+      name: error.name,
+      code: error.code,
+      message: error.message
+    });
     dbConnected = false;
     connectionPromise = null;
     throw error; // Don't return null, throw error to be handled by caller
   }
 };
 
-const ensureDatabaseConnection = async (maxRetries = 3) => {
+const ensureDatabaseConnection = async (maxRetries = 5) => {
   // If already connected, return true
   if (mongoose.connection.readyState === 1) {
     console.log('✅ Database already connected');
@@ -114,7 +121,7 @@ const ensureDatabaseConnection = async (maxRetries = 3) => {
       }
       
       // Wait a bit for connection to establish
-      await new Promise(resolve => setTimeout(resolve, 200 * (retryCount + 1)));
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
       
       if (mongoose.connection.readyState === 1) {
         console.log('✅ Database connection ensured after wait');
@@ -124,17 +131,22 @@ const ensureDatabaseConnection = async (maxRetries = 3) => {
         retryCount++;
         
         if (retryCount < maxRetries) {
-          console.log(`🔄 Retrying database connection in ${retryCount * 0.2} seconds...`);
-          await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+          console.log(`🔄 Retrying database connection in ${retryCount} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
       }
     } catch (error) {
       console.error(`❌ Database connection attempt ${retryCount + 1} failed:`, error.message);
+      console.error(`❌ Error details:`, {
+        name: error.name,
+        code: error.code,
+        message: error.message
+      });
       retryCount++;
       
       if (retryCount < maxRetries) {
-        console.log(`🔄 Retrying database connection in ${retryCount * 0.5} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        console.log(`🔄 Retrying database connection in ${retryCount} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
     }
   }
