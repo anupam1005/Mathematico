@@ -80,6 +80,7 @@ const connectToDatabase = async () => {
 const ensureDatabaseConnection = async () => {
   // If already connected, return true
   if (mongoose.connection.readyState === 1) {
+    console.log('✅ Database already connected');
     return true;
   }
   
@@ -98,10 +99,10 @@ const ensureDatabaseConnection = async () => {
     }
     
     // Wait a bit for connection to establish
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     if (mongoose.connection.readyState === 1) {
-      console.log('✅ Database connection ensured');
+      console.log('✅ Database connection ensured after wait');
       return true;
     } else {
       console.warn('⚠️ Database connection not established, readyState:', mongoose.connection.readyState);
@@ -109,6 +110,7 @@ const ensureDatabaseConnection = async () => {
     }
   } catch (error) {
     console.error('❌ Failed to ensure database connection:', error.message);
+    console.error('❌ Full error:', error);
     return false;
   }
 };

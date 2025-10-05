@@ -238,6 +238,17 @@ app.get('/', (req, res) => {
         student: '/api/v1/student',
         users: '/api/v1/users',
         health: '/health'
+      },
+      documentation: {
+        info: 'Visit /api/v1/admin/info for admin API documentation',
+        auth: 'Visit /api/v1/auth for authentication endpoints',
+        health: 'Visit /health for system health check'
+      },
+      quickStart: {
+        step1: 'Test health: GET /health',
+        step2: 'Get auth info: GET /api/v1/auth',
+        step3: 'Login: POST /api/v1/auth/login',
+        step4: 'Access admin: GET /api/v1/admin (with Bearer token)'
       }
     });
   } catch (error) {

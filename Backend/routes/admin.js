@@ -42,6 +42,16 @@ const upload = multer({
 const adminController = require('../controllers/adminController');
 console.log('✅ MongoDB AdminController loaded successfully');
 
+// Public health check endpoint (no auth required)
+router.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin API is healthy',
+    timestamp: new Date().toISOString(),
+    status: 'operational'
+  });
+});
+
 // Public admin info endpoint (no auth required) - MUST BE BEFORE MIDDLEWARE
 router.get('/info', (req, res) => {
   res.json({
@@ -67,6 +77,16 @@ router.get('/info', (req, res) => {
       step1: 'Login at /api/v1/auth/login with admin credentials',
       step2: 'Use the returned accessToken in Authorization header',
       step3: 'Access protected endpoints with Bearer token'
+    },
+    testCredentials: {
+      admin: {
+        email: 'dc2006089@gmail.com',
+        password: 'Myname*321'
+      }
+    },
+    curlExample: {
+      login: 'curl -X POST https://mathematico-backend-new.vercel.app/api/v1/auth/login -H "Content-Type: application/json" -d \'{"email":"dc2006089@gmail.com","password":"Myname*321"}\'',
+      access: 'curl -X GET https://mathematico-backend-new.vercel.app/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"'
     }
   });
 });

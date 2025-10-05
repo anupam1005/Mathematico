@@ -20,7 +20,12 @@ const authenticateToken = async (req, res, next) => {
         step3: 'Format: Authorization: Bearer <your-token>',
         example: 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
       },
-      publicInfo: 'Visit /api/v1/admin/info for API information without authentication'
+      publicInfo: 'Visit /api/v1/admin/info for API information without authentication',
+      endpoints: {
+        login: '/api/v1/auth/login',
+        info: '/api/v1/admin/info',
+        health: '/api/v1/auth/health'
+      }
     });
   }
 
