@@ -23,10 +23,19 @@ const login = async (req, res) => {
       });
     }
     
-    // Check if it's the hardcoded admin user (works without database)
+    // Check if it's the admin user
     // SECURITY: Use environment variables for admin credentials
-    const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Myname*321';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminEmail || !adminPassword) {
+      return res.status(500).json({
+        success: false,
+        error: 'Server Configuration Error',
+        message: 'Admin credentials not configured',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     if (email === adminEmail && password === adminPassword) {
       // Generate JWT tokens for admin
@@ -281,7 +290,16 @@ const register = async (req, res) => {
     }
 
     // Check if email is already taken (admin email)
-    const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    
+    if (!adminEmail) {
+      return res.status(500).json({
+        success: false,
+        error: 'Server Configuration Error',
+        message: 'Admin email not configured',
+        timestamp: new Date().toISOString()
+      });
+    }
     if (email === adminEmail) {
       return res.status(409).json({
         success: false,
@@ -605,7 +623,16 @@ const refreshToken = async (req, res) => {
       const decoded = verifyRefreshToken(refreshToken);
       
       // For admin user (environment-based)
-      const adminEmail = process.env.ADMIN_EMAIL || 'dc2006089@gmail.com';
+      const adminEmail = process.env.ADMIN_EMAIL;
+    
+    if (!adminEmail) {
+      return res.status(500).json({
+        success: false,
+        error: 'Server Configuration Error',
+        message: 'Admin email not configured',
+        timestamp: new Date().toISOString()
+      });
+    }
       if (decoded.id === 1 || decoded.email === adminEmail) {
         const userPayload = {
           id: 1,

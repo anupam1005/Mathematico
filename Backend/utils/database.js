@@ -20,7 +20,11 @@ const connectToDatabase = async () => {
 
   try {
     console.log('🔗 Connecting to MongoDB Atlas...');
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://anupamdas0515_db_user:8bO4aEEQ2TYAfCSu@mathematico-app.vszbcc9.mongodb.net/test?retryWrites=true&w=majority&appName=Mathematico-app';
+    const mongoUri = process.env.MONGODB_URI;
+    
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI environment variable is required');
+    }
     
     // Optimized connection options for serverless environment
     const options = {

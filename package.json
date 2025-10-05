@@ -4,13 +4,12 @@
   "description": "Mathematico Learning Platform - Mobile App, Backend, and Web Frontend",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --workspace=Frontend",
+    "dev": "npm run dev:backend",
     "dev:backend": "npm run dev --workspace=Backend",
     "dev:mobile": "npm run start --workspace=mathematico",
     "install:all": "npm install --workspaces"
   },
   "workspaces": [
-    "Frontend",
     "Backend",
     "mathematico"
   ],

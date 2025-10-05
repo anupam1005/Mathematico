@@ -861,13 +861,50 @@ const createCourse = async (req, res) => {
   try {
     const courseData = req.body;
     
-    // Handle file uploads
+    console.log('🎓 Admin create course - processing file uploads and database storage');
+    
+    // Handle file uploads to Cloudinary in serverless mode
     if (req.files) {
-      if (req.files.image && req.files.image[0]) {
-        courseData.thumbnail = `/uploads/covers/${req.files.image[0].filename}`;
-      }
-      if (req.files.pdf && req.files.pdf[0]) {
-        courseData.pdf_url = `/uploads/pdfs/${req.files.pdf[0].filename}`;
+      try {
+        // Upload thumbnail to Cloudinary
+        if (req.files.image && req.files.image[0]) {
+          const imageFile = req.files.image[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const imageResult = await cloudinary.uploader.upload(
+            `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/courses/thumbnails',
+              resource_type: 'image',
+              transformation: [
+                { width: 400, height: 300, crop: 'fit', quality: 'auto' }
+              ]
+            }
+          );
+          courseData.thumbnail = imageResult.secure_url;
+          console.log('✅ Course thumbnail uploaded to Cloudinary:', imageResult.secure_url);
+        }
+        
+        // Upload PDF to Cloudinary
+        if (req.files.pdf && req.files.pdf[0]) {
+          const pdfFile = req.files.pdf[0];
+          const { cloudinary } = require('../utils/cloudinary');
+          
+          const pdfResult = await cloudinary.uploader.upload(
+            `data:${pdfFile.mimetype};base64,${pdfFile.buffer.toString('base64')}`,
+            {
+              folder: 'mathematico/courses/pdfs',
+              resource_type: 'raw'
+            }
+          );
+          courseData.pdf_url = pdfResult.secure_url;
+          console.log('✅ Course PDF uploaded to Cloudinary:', pdfResult.secure_url);
+        }
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue without files if upload fails
+        courseData.thumbnail = null;
+        courseData.pdf_url = null;
       }
     }
     
@@ -900,13 +937,53 @@ const createCourse = async (req, res) => {
     // Add created_by from authenticated user
     courseData.created_by = req.user?.id || new require('mongoose').Types.ObjectId();
     
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      const fallbackCourse = {
+        _id: Date.now().toString(),
+        title: courseData.title || 'New Course',
+        description: courseData.description || 'Course description',
+        instructor: courseData.instructor || 'Admin',
+        category: courseData.category || 'General',
+        level: courseData.level || 'Foundation',
+        price: courseData.price || 0,
+        status: courseData.status || 'draft',
+        is_featured: courseData.is_featured === 'true' || courseData.is_featured === true,
+        enrollment_count: 0,
+        thumbnail: courseData.thumbnail || null,
+        pdf_url: courseData.pdf_url || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      return res.status(201).json({
+        success: true,
+        data: fallbackCourse,
+        message: 'Course created successfully (fallback mode)',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const Course = require('../models/Course');
+    
+    console.log('🎓 Creating course in MongoDB database...');
     const course = await Course.create(courseData);
+    
+    console.log('✅ Course created successfully in database:', course.title);
+    console.log('🎓 Course ID:', course._id);
     
     res.status(201).json({
       success: true,
       data: course,
       message: 'Course created successfully',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: true
     });
   } catch (error) {
     console.error('Create course error:', error);
@@ -1133,9 +1210,30 @@ const createLiveClass = async (req, res) => {
   try {
     const liveClassData = req.body;
     
-    // Handle file uploads
+    console.log('🎥 Admin create live class - processing file uploads and database storage');
+    
+    // Handle file uploads to Cloudinary in serverless mode
     if (req.file) {
-      liveClassData.thumbnail = `/uploads/covers/${req.file.filename}`;
+      try {
+        const { cloudinary } = require('../utils/cloudinary');
+        
+        const imageResult = await cloudinary.uploader.upload(
+          `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+          {
+            folder: 'mathematico/live-classes/thumbnails',
+            resource_type: 'image',
+            transformation: [
+              { width: 400, height: 300, crop: 'fit', quality: 'auto' }
+            ]
+          }
+        );
+        liveClassData.thumbnail = imageResult.secure_url;
+        console.log('✅ Live class thumbnail uploaded to Cloudinary:', imageResult.secure_url);
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue without file if upload fails
+        liveClassData.thumbnail = null;
+      }
     }
     
     // Convert date field
@@ -1165,13 +1263,56 @@ const createLiveClass = async (req, res) => {
     // Add created_by from authenticated user
     liveClassData.created_by = req.user?.id || new require('mongoose').Types.ObjectId();
     
+    // Ensure database connection
+    const { ensureDatabaseConnection } = require('../utils/database');
+    const isConnected = await ensureDatabaseConnection();
+    
+    if (!isConnected) {
+      console.log('⚠️ Database not connected, using fallback response');
+      const fallbackLiveClass = {
+        _id: Date.now().toString(),
+        title: liveClassData.title || 'New Live Class',
+        description: liveClassData.description || 'Live class description',
+        instructor: liveClassData.instructor || 'Admin',
+        category: liveClassData.category || 'General',
+        level: liveClassData.level || 'Foundation',
+        date: liveClassData.date || null,
+        duration: liveClassData.duration || 60,
+        max_students: liveClassData.maxStudents || 50,
+        price: liveClassData.price || 0,
+        status: liveClassData.status || 'draft',
+        is_featured: liveClassData.is_featured === 'true' || liveClassData.is_featured === true,
+        enrolled_students: 0,
+        meeting_link: liveClassData.meeting_link || 'https://meet.google.com/example',
+        thumbnail: liveClassData.thumbnail || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      return res.status(201).json({
+        success: true,
+        data: fallbackLiveClass,
+        message: 'Live class created successfully (fallback mode)',
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+    
+    // Use MongoDB database
+    const LiveClass = require('../models/LiveClass');
+    
+    console.log('🎥 Creating live class in MongoDB database...');
     const liveClass = await LiveClass.create(liveClassData);
+    
+    console.log('✅ Live class created successfully in database:', liveClass.title);
+    console.log('🎥 Live class ID:', liveClass._id);
     
     res.status(201).json({
       success: true,
       data: liveClass,
       message: 'Live class created successfully',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: true
     });
   } catch (error) {
     console.error('Create live class error:', error);

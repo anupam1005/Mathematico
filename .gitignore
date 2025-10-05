@@ -32,6 +32,11 @@ config.env.production
 */config.env
 */config.env.local
 */config.env.production
+**/config.env
+**/.env
+**/.env.*
+**/config.env.*
+**/.env.template
 
 # Logs
 logs/
