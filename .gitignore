@@ -172,6 +172,64 @@ setup-db-simple.js
 /ios
 /android
 
+# ===========================================
+# MATHEMATICO SUBMODULE IGNORES
+# ===========================================
+# These rules apply specifically to the mathematico submodule
+
+# Expo specific (submodule)
+mathematico/.expo/
+mathematico/expo-env.d.ts
+
+# Build outputs (submodule)
+mathematico/dist/
+mathematico/web-build/
+
+# Native development (submodule)
+mathematico/*.orig.*
+mathematico/*.jks
+mathematico/*.p8
+mathematico/*.p12
+mathematico/*.key
+mathematico/*.mobileprovision
+
+# Metro (submodule)
+mathematico/.metro-health-check*
+
+# Debug files (submodule)
+mathematico/npm-debug.*
+mathematico/yarn-debug.*
+mathematico/yarn-error.*
+
+# macOS (submodule)
+mathematico/.DS_Store
+mathematico/*.pem
+
+# Local env files (submodule)
+mathematico/.env*.local
+
+# TypeScript (submodule)
+mathematico/*.tsbuildinfo
+
+# Android (submodule - managed by Expo)
+mathematico/android/
+mathematico/android/app/build/
+mathematico/android/build/
+mathematico/android/.gradle/
+mathematico/android/local.properties
+mathematico/android/app/release/
+
+# iOS (submodule)
+mathematico/ios/build/
+mathematico/ios/Pods/
+mathematico/ios/*.xcworkspace
+mathematico/ios/*.xcuserdata
+mathematico/ios/Podfile.lock
+
+# Temporary files (submodule)
+mathematico/*.tmp
+mathematico/*.temp
+
 # SSL certificates and keys
 *.pem
 *.crt
