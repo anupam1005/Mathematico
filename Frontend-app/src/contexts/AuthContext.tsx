@@ -90,11 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.login(email, password);
       
       if (response.success && response.data) {
-        const { user: userData, token, tokens } = response.data;
-        
-        // Extract the access token from the response
-        const accessToken = token || tokens?.accessToken;
-        const refreshToken = tokens?.refreshToken;
+        const { user: userData, token: accessToken, refreshToken } = response.data;
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
@@ -231,7 +227,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
 
-      const response = await authService.refreshToken(refreshTokenValue);
+      const response = await authService.refreshToken();
       
       if (response.success && response.data) {
         const { token, refreshToken: newRefreshToken } = response.data;

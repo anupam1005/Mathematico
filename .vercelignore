@@ -3,8 +3,8 @@ Frontend/
 Frontend/**
 
 # Mobile app files
-mathematico/
-mathematico/**
+Frontend-app/
+Frontend-app/**
 
 # Development files
 *.log
@@ -23,10 +23,10 @@ Thumbs.db
 **/config.env.example
 **/config.env.production
 
-# Test files
-**/test-*.html
-**/test-*.js
-**/test-*.ts
+# Test files (database-related tests removed)
+# **/test-*.html
+# **/test-*.js
+# **/test-*.ts
 
 # Documentation
 *.md
@@ -39,9 +39,9 @@ Thumbs.db
 **/PROJECT_SETUP.md
 **/DATABASE_SETUP_README.md
 
-# Database files
-Database.sql
-**/Database.sql
+# Database files (removed - no database functionality)
+# Database.sql
+# **/Database.sql
 
 # IDE files
 .vscode/

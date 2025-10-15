@@ -115,7 +115,7 @@ export const testBackendEndpoints = async (): Promise<{
   message: string;
   endpoints: any;
 }> => {
-  const endpoints = {
+  const endpoints: any = {
     health: null,
     register: null,
     login: null

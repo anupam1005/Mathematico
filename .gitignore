@@ -130,10 +130,10 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Database files
-*.db
-*.sqlite
-*.sqlite3
+# Database files (removed - no database functionality)
+# *.db
+# *.sqlite
+# *.sqlite3
 
 # Uploads (if you don't want to commit uploaded files)
 uploads/
@@ -159,76 +159,76 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# Test files
-test-*.js
-test-*.html
-test-*.pdf
-test-*.png
-migrate-database.js
-admin-book-form.html
-setup-db-simple.js
+# Test files (database-related tests removed)
+# test-*.js
+# test-*.html
+# test-*.pdf
+# test-*.png
+# migrate-database.js
+# admin-book-form.html
+# setup-db-simple.js
 
 # Generated native folders
 /ios
 /android
 
 # ===========================================
-# MATHEMATICO SUBMODULE IGNORES
+# FRONTEND-APP IGNORES
 # ===========================================
-# These rules apply specifically to the mathematico submodule
+# These rules apply specifically to the Frontend-app folder
 
-# Expo specific (submodule)
-mathematico/.expo/
-mathematico/expo-env.d.ts
+# Expo specific (Frontend-app)
+Frontend-app/.expo/
+Frontend-app/expo-env.d.ts
 
-# Build outputs (submodule)
-mathematico/dist/
-mathematico/web-build/
+# Build outputs (Frontend-app)
+Frontend-app/dist/
+Frontend-app/web-build/
 
-# Native development (submodule)
-mathematico/*.orig.*
-mathematico/*.jks
-mathematico/*.p8
-mathematico/*.p12
-mathematico/*.key
-mathematico/*.mobileprovision
+# Native development (Frontend-app)
+Frontend-app/*.orig.*
+Frontend-app/*.jks
+Frontend-app/*.p8
+Frontend-app/*.p12
+Frontend-app/*.key
+Frontend-app/*.mobileprovision
 
-# Metro (submodule)
-mathematico/.metro-health-check*
+# Metro (Frontend-app)
+Frontend-app/.metro-health-check*
 
-# Debug files (submodule)
-mathematico/npm-debug.*
-mathematico/yarn-debug.*
-mathematico/yarn-error.*
+# Debug files (Frontend-app)
+Frontend-app/npm-debug.*
+Frontend-app/yarn-debug.*
+Frontend-app/yarn-error.*
 
-# macOS (submodule)
-mathematico/.DS_Store
-mathematico/*.pem
+# macOS (Frontend-app)
+Frontend-app/.DS_Store
+Frontend-app/*.pem
 
-# Local env files (submodule)
-mathematico/.env*.local
+# Local env files (Frontend-app)
+Frontend-app/.env*.local
 
-# TypeScript (submodule)
-mathematico/*.tsbuildinfo
+# TypeScript (Frontend-app)
+Frontend-app/*.tsbuildinfo
 
-# Android (submodule - managed by Expo)
-mathematico/android/
-mathematico/android/app/build/
-mathematico/android/build/
-mathematico/android/.gradle/
-mathematico/android/local.properties
-mathematico/android/app/release/
+# Android (Frontend-app - managed by Expo)
+Frontend-app/android/
+Frontend-app/android/app/build/
+Frontend-app/android/build/
+Frontend-app/android/.gradle/
+Frontend-app/android/local.properties
+Frontend-app/android/app/release/
 
-# iOS (submodule)
-mathematico/ios/build/
-mathematico/ios/Pods/
-mathematico/ios/*.xcworkspace
-mathematico/ios/*.xcuserdata
-mathematico/ios/Podfile.lock
+# iOS (Frontend-app)
+Frontend-app/ios/build/
+Frontend-app/ios/Pods/
+Frontend-app/ios/*.xcworkspace
+Frontend-app/ios/*.xcuserdata
+Frontend-app/ios/Podfile.lock
 
-# Temporary files (submodule)
-mathematico/*.tmp
-mathematico/*.temp
+# Temporary files (Frontend-app)
+Frontend-app/*.tmp
+Frontend-app/*.temp
 
 # SSL certificates and keys
 *.pem

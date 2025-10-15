@@ -6,17 +6,17 @@
   "scripts": {
     "dev": "npm run dev:backend",
     "dev:backend": "npm run dev --workspace=Backend",
-    "dev:mobile": "npm run start --workspace=mathematico",
+    "dev:mobile": "npm run start --workspace=Frontend-app",
     "install:all": "npm install --workspaces",
-    "build:android": "npm run build:android --workspace=mathematico",
-    "build:android-preview": "npm run build:android-preview --workspace=mathematico",
-    "build:ios": "npm run build:ios --workspace=mathematico",
-    "submit:android": "npm run submit:android --workspace=mathematico",
-    "submit:ios": "npm run submit:ios --workspace=mathematico"
+    "build:android": "npm run build:android --workspace=Frontend-app",
+    "build:android-preview": "npm run build:android-preview --workspace=Frontend-app",
+    "build:ios": "npm run build:ios --workspace=Frontend-app",
+    "submit:android": "npm run submit:android --workspace=Frontend-app",
+    "submit:ios": "npm run submit:ios --workspace=Frontend-app"
   },
   "workspaces": [
     "Backend",
-    "mathematico"
+    "Frontend-app"
   ],
   "engines": {
     "node": ">=18.0.0",

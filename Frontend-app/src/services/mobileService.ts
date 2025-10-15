@@ -48,62 +48,7 @@ export interface MobileApiResponse<T> {
     totalPages: number;
   };
   timestamp: string;
-}
-
-export interface Book {
-  _id: string;
-  title: string;
-  description: string;
-  author: string;
-  category: string;
-  coverImageUrl: string;
-  pdfUrl: string;
-  pages: number;
-  isbn: string;
-  status: string;
-  is_featured: boolean;
-  download_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Course {
-  _id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  category: string;
-  thumbnailUrl: string;
-  duration: number;
-  level: string;
-  price: number;
-  status: string;
-  is_featured: boolean;
-  enrollment_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LiveClass {
-  _id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  category: string;
-  thumbnailUrl: string;
-  startTime: string;
-  endTime: string;
-  status: string;
-  is_featured: boolean;
-  enrollment_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FeaturedContent {
-  books: Book[];
-  courses: Course[];
-  liveClasses: LiveClass[];
+  fallback?: boolean;
 }
 
 export interface Categories {
@@ -112,127 +57,177 @@ export interface Categories {
   liveClasses: string[];
 }
 
-const mobileService = {
-  // Health check
-  async getHealth(): Promise<MobileApiResponse<{ message: string; database: string }>> {
+class MobileService {
+  async getBooks(page: number = 1, limit: number = 10): Promise<MobileApiResponse<any[]>> {
     try {
-      const response = await mobileApi.get('/health');
+      const response = await mobileApi.get(`/books?page=${page}&limit=${limit}`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Health check failed');
+    } catch (error) {
+      console.error('Error fetching books:', error);
+      return {
+        success: true,
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 },
+        timestamp: new Date().toISOString()
+      };
     }
-  },
+  }
 
-  // Books
-  async getBooks(params?: {
-    page?: number;
-    limit?: number;
-    category?: string;
-    search?: string;
-  }): Promise<MobileApiResponse<Book[]>> {
+  async getCourses(page: number = 1, limit: number = 10): Promise<MobileApiResponse<any[]>> {
     try {
-      const response = await mobileApi.get('/books', { params });
+      const response = await mobileApi.get(`/courses?page=${page}&limit=${limit}`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch books');
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      return {
+        success: true,
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 },
+        timestamp: new Date().toISOString()
+      };
     }
-  },
+  }
 
-  async getBookById(id: string): Promise<MobileApiResponse<Book>> {
+  async getLiveClasses(page: number = 1, limit: number = 10): Promise<MobileApiResponse<any[]>> {
     try {
-      const response = await mobileApi.get(`/books/${id}`);
+      const response = await mobileApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch book');
+    } catch (error) {
+      console.error('Error fetching live classes:', error);
+      return {
+        success: true,
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 },
+        timestamp: new Date().toISOString()
+      };
     }
-  },
+  }
 
-  // Courses
-  async getCourses(params?: {
-    page?: number;
-    limit?: number;
-    category?: string;
-    search?: string;
-  }): Promise<MobileApiResponse<Course[]>> {
-    try {
-      const response = await mobileApi.get('/courses', { params });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch courses');
-    }
-  },
-
-  async getCourseById(id: string): Promise<MobileApiResponse<Course>> {
-    try {
-      const response = await mobileApi.get(`/courses/${id}`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch course');
-    }
-  },
-
-  // Live Classes
-  async getLiveClasses(params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    search?: string;
-  }): Promise<MobileApiResponse<LiveClass[]>> {
-    try {
-      const response = await mobileApi.get('/live-classes', { params });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch live classes');
-    }
-  },
-
-  async getLiveClassById(id: string): Promise<MobileApiResponse<LiveClass>> {
-    try {
-      const response = await mobileApi.get(`/live-classes/${id}`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch live class');
-    }
-  },
-
-  // Search
-  async searchContent(params: {
-    q: string;
-    type?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<MobileApiResponse<{
-    books: Book[];
-    courses: Course[];
-    liveClasses: LiveClass[];
+  async getFeaturedContent(): Promise<MobileApiResponse<{
+    books: any[];
+    courses: any[];
+    liveClasses: any[];
   }>> {
-    try {
-      const response = await mobileApi.get('/search', { params });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Search failed');
-    }
-  },
-
-  // Featured content
-  async getFeaturedContent(): Promise<MobileApiResponse<FeaturedContent>> {
     try {
       const response = await mobileApi.get('/featured');
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch featured content');
+    } catch (error) {
+      console.error('Error fetching featured content:', error);
+      return {
+        success: true,
+        data: {
+          books: [],
+          courses: [],
+          liveClasses: []
+        },
+        timestamp: new Date().toISOString()
+      };
     }
-  },
+  }
 
-  // Categories
   async getCategories(): Promise<MobileApiResponse<Categories>> {
     try {
       const response = await mobileApi.get('/categories');
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch categories');
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return {
+        success: true,
+        data: {
+          books: [],
+          courses: [],
+          liveClasses: []
+        },
+        timestamp: new Date().toISOString()
+      };
     }
-  },
-};
+  }
 
+  async searchContent(query: string, type?: string): Promise<MobileApiResponse<any[]>> {
+    try {
+      const params = new URLSearchParams({ query });
+      if (type) params.append('type', type);
+      
+      const response = await mobileApi.get(`/search?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error searching content:', error);
+      return {
+        success: true,
+        data: [],
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async getBookById(id: string): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.get(`/books/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching book:', error);
+      throw error;
+    }
+  }
+
+  async getCourseById(id: string): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.get(`/courses/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching course:', error);
+      throw error;
+    }
+  }
+
+  async getLiveClassById(id: string): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.get(`/live-classes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching live class:', error);
+      throw error;
+    }
+  }
+
+  async getMobileInfo(): Promise<MobileApiResponse<{
+    appName: string;
+    version: string;
+    database: string;
+    features: {
+      books: boolean;
+      courses: boolean;
+      liveClasses: boolean;
+      userRegistration: boolean;
+      userProfiles: boolean;
+    };
+    message: string;
+  }>> {
+    try {
+      const response = await mobileApi.get('/info');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching mobile info:', error);
+      return {
+        success: true,
+        data: {
+          appName: 'Mathematico',
+          version: '2.0.0',
+          database: 'disabled',
+          features: {
+            books: false,
+            courses: false,
+            liveClasses: false,
+            userRegistration: false,
+            userProfiles: false
+          },
+          message: 'Database functionality has been removed. Only admin authentication is available.'
+        },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+}
+
+export const mobileService = new MobileService();
 export default mobileService;

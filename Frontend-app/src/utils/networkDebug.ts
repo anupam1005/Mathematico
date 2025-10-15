@@ -52,7 +52,6 @@ export const testDirectConnection = async (): Promise<{
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000
       });
       
       if (rootResponse.ok) {
@@ -76,7 +75,6 @@ export const testDirectConnection = async (): Promise<{
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000
       });
       
       if (healthResponse.ok) {
@@ -105,7 +103,6 @@ export const testDirectConnection = async (): Promise<{
           email: 'test@example.com',
           password: 'password123'
         }),
-        timeout: 15000
       });
       
       if (registerResponse.ok) {

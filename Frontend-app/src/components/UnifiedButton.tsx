@@ -9,7 +9,7 @@ interface UnifiedButtonProps extends Omit<ButtonProps, 'style' | 'labelStyle'> {
   fullWidth?: boolean;
   style?: ViewStyle;
   labelStyle?: TextStyle;
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const UnifiedButton: React.FC<UnifiedButtonProps> = ({
@@ -44,7 +44,7 @@ export const UnifiedButton: React.FC<UnifiedButtonProps> = ({
   const buttonStyle = [
     buttonStyles[variant],
     getSizeStyles(),
-    fullWidth && { width: '100%' },
+    fullWidth && { width: '100%' as any },
     style,
   ];
 

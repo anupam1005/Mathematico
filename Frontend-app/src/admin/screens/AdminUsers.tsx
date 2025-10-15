@@ -31,6 +31,7 @@ import { EmptyState } from '../../components/EmptyState';
 
 interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   isAdmin: boolean;
@@ -159,8 +160,7 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
 
   const handleToggleAdmin = async (id: string, currentAdminStatus: boolean) => {
     try {
-      await adminService.updateUser({
-        id,
+      await adminService.updateUser(id, {
         isAdmin: !currentAdminStatus,
       });
       await loadUsers();
@@ -185,8 +185,7 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
     if (!selectedUser) return;
 
     try {
-      await adminService.updateUser({
-        id: selectedUser.id,
+      await adminService.updateUser(selectedUser.id, {
         ...editForm,
       });
       await loadUsers();

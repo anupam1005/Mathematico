@@ -31,14 +31,17 @@ import { EmptyState } from '../../components/EmptyState';
 
 interface Book {
   id: string | number;
+  _id?: string | number;
+  Id?: string | number;
   title: string;
   author?: string;
   category?: string;
   subject?: string;
   level?: string;
   status: string;
-  isPublished: boolean | number;
   downloads?: number;
+  downloadCount?: number;
+  isPublished: boolean | number;
   createdAt: string;
   created_at?: string;
   updated_at?: string;
@@ -223,7 +226,7 @@ export default function AdminBooks({ navigation }: any) {
     if (selectedBooks.size === books.length) {
       setSelectedBooks(new Set());
     } else {
-      setSelectedBooks(new Set(Array.isArray(books) ? books.map(book => book.id) : []));
+      setSelectedBooks(new Set(Array.isArray(books) ? books.map(book => book.id.toString()) : []));
     }
   };
 

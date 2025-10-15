@@ -1,4 +1,4 @@
-// Vercel serverless backend entry point for Mathematico - Optimized for Serverless
+// Vercel serverless backend entry point for Mathematico - No Database Version
 require('dotenv').config({ path: `${__dirname}/config.env` });
 console.log('✅ Environment variables loaded from config.env');
 
@@ -10,10 +10,6 @@ const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
 
-// Import MongoDB database connection utility
-const { connectToDatabase, getConnectionStatus } = require('./utils/database');
-const mongoose = require('mongoose');
-
 // Startup environment validation with enhanced security checks
 (function validateEnvironment() {
   try {
@@ -21,7 +17,6 @@ const mongoose = require('mongoose');
     const requiredVars = [
       'JWT_SECRET',
       'JWT_REFRESH_SECRET',
-      'MONGODB_URI',
       'CLOUDINARY_CLOUD_NAME',
       'CLOUDINARY_API_KEY',
       'CLOUDINARY_API_SECRET'
@@ -176,31 +171,6 @@ console.log('⚠️ Static file serving disabled for serverless mode - use Cloud
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    let dbHealth = { status: 'disconnected', type: 'mongodb' };
-    
-    // Try to connect to database if not connected
-    try {
-      const connection = await connectToDatabase();
-      if (connection && connection.readyState === 1) {
-        await connection.db.admin().ping();
-        dbHealth = { 
-          status: 'healthy', 
-          type: 'mongodb',
-          host: connection.host,
-          port: connection.port,
-          name: connection.name
-        };
-      } else {
-        dbHealth = { 
-          status: 'disconnected', 
-          type: 'mongodb',
-          message: 'MongoDB not connected - running in fallback mode'
-        };
-      }
-    } catch (error) {
-      dbHealth = { status: 'error', type: 'mongodb', error: error.message };
-    }
-    
     const systemInfo = {
       platform: os.platform(),
       arch: os.arch(),
@@ -213,7 +183,7 @@ app.get('/health', async (req, res) => {
     res.json({
       success: true,
       status: 'healthy',
-      database: dbHealth,
+      database: { status: 'disabled', type: 'none' },
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
       serverless: process.env.VERCEL === '1',
@@ -233,7 +203,6 @@ app.get('/health', async (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   try {
-    const dbStatus = getConnectionStatus();
     res.json({
       success: true,
       message: 'Mathematico Backend API is running',
@@ -241,9 +210,9 @@ app.get('/', (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       database: {
-        connected: dbStatus.isConnected,
-        readyState: dbStatus.readyState,
-        host: dbStatus.host || 'unknown'
+        connected: false,
+        readyState: 0,
+        host: 'none'
       },
       endpoints: {
         auth: '/api/v1/auth',
@@ -275,13 +244,6 @@ app.get('/', (req, res) => {
   }
 });
 
-// Initialize MongoDB connection for serverless mode
-// Database connection is handled by individual controllers
-// No global initialization needed for serverless mode
-
-// Database connection is handled by individual controllers
-// No global middleware needed for serverless mode
-
 // API Routes
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
@@ -300,320 +262,7 @@ try {
   process.exit(1);
 }
 
-
-// Fallback data for serverless mode when database is unavailable
-const FALLBACK_BOOKS = [
-  {
-    _id: '1',
-    title: 'Advanced Mathematics',
-    description: 'Comprehensive guide to advanced mathematical concepts',
-    author: 'Dr. John Smith',
-    category: 'Mathematics',
-    level: 'Advanced',
-    pages: 250,
-    isbn: '978-1234567890',
-    status: 'published',
-    is_featured: true,
-    download_count: 150,
-    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/advanced-math-cover.jpg',
-    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/advanced-math.pdf',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    _id: '2',
-    title: 'Calculus Fundamentals',
-    description: 'Learn calculus from the ground up',
-    author: 'Prof. Jane Doe',
-    category: 'Mathematics',
-    level: 'Foundation',
-    pages: 180,
-    isbn: '978-0987654321',
-    status: 'published',
-    is_featured: false,
-    download_count: 89,
-    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/calculus-fundamentals.jpg',
-    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/calculus-fundamentals.pdf',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    _id: '3',
-    title: 'Linear Algebra Made Easy',
-    description: 'A beginner-friendly approach to linear algebra concepts',
-    author: 'Dr. Sarah Wilson',
-    category: 'Mathematics',
-    level: 'Intermediate',
-    pages: 220,
-    isbn: '978-1122334455',
-    status: 'published',
-    is_featured: true,
-    download_count: 75,
-    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/linear-algebra.jpg',
-    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/linear-algebra.pdf',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    _id: '4',
-    title: 'Statistics and Probability',
-    description: 'Understanding data analysis and probability theory',
-    author: 'Prof. Michael Chen',
-    category: 'Statistics',
-    level: 'Intermediate',
-    pages: 300,
-    isbn: '978-5566778899',
-    status: 'published',
-    is_featured: false,
-    download_count: 120,
-    cover_image_url: 'https://res.cloudinary.com/duxjf7v40/image/upload/v1/mathematico/books/covers/statistics-probability.jpg',
-    pdf_url: 'https://res.cloudinary.com/duxjf7v40/raw/upload/v1/mathematico/books/pdfs/statistics-probability.pdf',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
-
-const FALLBACK_COURSES = [
-  {
-    _id: '1',
-    title: 'Advanced Mathematics',
-    description: 'Comprehensive guide to advanced mathematical concepts',
-    instructor: 'Dr. John Smith',
-    category: 'Mathematics',
-    level: 'Advanced',
-    price: 99.99,
-    status: 'published',
-    is_featured: true,
-    enrollment_count: 150,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    _id: '2',
-    title: 'Calculus Fundamentals',
-    description: 'Learn calculus from the ground up',
-    instructor: 'Prof. Jane Doe',
-    category: 'Mathematics',
-    level: 'Foundation',
-    price: 79.99,
-    status: 'published',
-    is_featured: false,
-    enrollment_count: 89,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
-
-const FALLBACK_LIVE_CLASSES = [
-  {
-    _id: '1',
-    title: 'Advanced Calculus Live Session',
-    description: 'Interactive live session on advanced calculus topics',
-    instructor: 'Dr. Emily Rodriguez',
-    category: 'Mathematics',
-    level: 'Advanced',
-    scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    duration: 90,
-    maxStudents: 50,
-    meetingLink: 'https://meet.google.com/advanced-calculus',
-    status: 'upcoming',
-    is_featured: true,
-    enrollment_count: 23,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    _id: '2',
-    title: 'Differential Equations Workshop',
-    description: 'Hands-on workshop on solving differential equations',
-    instructor: 'Prof. David Kim',
-    category: 'Mathematics',
-    level: 'Intermediate',
-    scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    duration: 120,
-    maxStudents: 30,
-    meetingLink: 'https://meet.google.com/diff-eq-workshop',
-    status: 'upcoming',
-    is_featured: false,
-    enrollment_count: 15,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
-
-// Direct fallback routes for serverless mode to ensure mobile API works
-app.get(`${API_PREFIX}/mobile/books`, (req, res) => {
-  try {
-    const { page = 1, limit = 10, status = 'published' } = req.query;
-    
-    // Filter books by status for students
-    const filteredBooks = FALLBACK_BOOKS.filter(book => 
-      status === 'all' || book.status === status
-    );
-    
-    res.json({
-      success: true,
-      data: filteredBooks,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: filteredBooks.length,
-        totalPages: Math.ceil(filteredBooks.length / parseInt(limit))
-      },
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch books',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-app.get(`${API_PREFIX}/mobile/courses`, (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    res.json({
-      success: true,
-      data: FALLBACK_COURSES,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: FALLBACK_COURSES.length,
-        totalPages: 1
-      },
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch courses',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-app.get(`${API_PREFIX}/mobile/live-classes`, (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    res.json({
-      success: true,
-      data: FALLBACK_LIVE_CLASSES,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: FALLBACK_LIVE_CLASSES.length,
-        totalPages: 1
-      },
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch live classes',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-app.get(`${API_PREFIX}/mobile/books/:id`, (req, res) => {
-  try {
-    const { id } = req.params;
-    const book = FALLBACK_BOOKS.find(b => b._id === id);
-    
-    if (!book) {
-      return res.status(404).json({
-        success: false,
-        message: 'Book not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: book,
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch book',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-app.get(`${API_PREFIX}/mobile/featured`, (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: {
-        books: FALLBACK_BOOKS.filter(book => book.is_featured),
-        courses: FALLBACK_COURSES.filter(course => course.is_featured),
-        liveClasses: FALLBACK_LIVE_CLASSES.filter(liveClass => liveClass.is_featured)
-      },
-      timestamp: new Date().toISOString(),
-      fallback: true
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch featured content',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Mobile API root endpoint
-app.get(`${API_PREFIX}/mobile`, (req, res) => {
-  res.json({
-    success: true,
-    message: 'Mobile API is working',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      books: `${API_PREFIX}/mobile/books`,
-      courses: `${API_PREFIX}/mobile/courses`,
-      liveClasses: `${API_PREFIX}/mobile/live-classes`,
-      featured: `${API_PREFIX}/mobile/featured`
-    }
-  });
-});
-
-// Admin API info endpoint (no auth required)
-app.get(`${API_PREFIX}/admin/info`, (req, res) => {
-  res.json({
-    success: true,
-    message: 'Mathematico Admin API',
-    version: '2.0.0',
-    timestamp: new Date().toISOString(),
-    authentication: {
-      required: true,
-      method: 'JWT Bearer Token',
-      loginEndpoint: `${API_PREFIX}/auth/login`,
-      description: 'Use admin credentials to get access token'
-    },
-    endpoints: {
-      dashboard: `${API_PREFIX}/admin/dashboard`,
-      users: `${API_PREFIX}/admin/users`,
-      books: `${API_PREFIX}/admin/books`,
-      courses: `${API_PREFIX}/admin/courses`,
-      liveClasses: `${API_PREFIX}/admin/live-classes`,
-      payments: `${API_PREFIX}/admin/payments`
-    },
-    instructions: {
-      step1: `Login at ${API_PREFIX}/auth/login with admin credentials`,
-      step2: 'Use the returned accessToken in Authorization header',
-      step3: 'Access protected endpoints with Bearer token'
-    }
-  });
-});
-
-// Mount routes (database connection handled in individual controllers)
+// Mount routes
 console.log('🔗 Mounting API routes...');
 
 // Mount all routes for serverless deployment
@@ -640,9 +289,9 @@ console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 app.get(`${API_PREFIX}`, (req, res) => {
   res.json({
     success: true,
-    message: 'Mathematico API - MongoDB Version',
+    message: 'Mathematico API - No Database Version',
     version: '2.0.0',
-    database: 'MongoDB Atlas',
+    database: 'None',
     environment: process.env.NODE_ENV || 'development',
     serverless: process.env.VERCEL === '1',
     timestamp: new Date().toISOString(),
@@ -710,12 +359,6 @@ const gracefulShutdown = async (signal) => {
   console.log(`🛑 ${signal} received, shutting down gracefully`);
   
   try {
-    // Close MongoDB connection
-    if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.close();
-      console.log('✅ MongoDB connection closed');
-    }
-    
     // Close server if running locally
     if (require.main === module && app.server) {
       app.server.close(() => {
@@ -746,8 +389,7 @@ if (require.main === module) {
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
     console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
-    const connectionStatus = getConnectionStatus();
-    console.log(`🗄️  Database: ${connectionStatus.isConnected ? 'Connected' : 'Disconnected'}`);
+    console.log(`🗄️  Database: Disabled`);
     console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
     console.log('==========================================\n');

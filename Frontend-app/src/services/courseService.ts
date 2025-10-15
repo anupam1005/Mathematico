@@ -1,10 +1,11 @@
-// @ts-nocheck
+import axios from 'axios';
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type CourseLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
-export type CourseStatus = 'draft' | 'active' | 'archived';
+export type CourseStatus = 'draft' | 'published' | 'archived';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -18,57 +19,100 @@ interface PaginatedResponse<T> {
 
 export interface BaseCourseData {
   title: string;
-  description: string;
-  price: number;
-  originalPrice: number;
-  level: CourseLevel;
-  category: string;
-  topics: string[];
-  slug?: string;
-  duration?: string;
-  status?: CourseStatus;
-  isFeatured?: boolean;
+  description?: string;
+  instructor?: string;
+  category?: string;
+  level?: CourseLevel;
+  price?: number;
+  originalPrice?: number;
+  duration?: number;
   thumbnailUrl?: string;
-  content?: string;
-  requirements?: string;
-  whatYouWillLearn?: string[];
-  whoIsThisFor?: string[];
+  videoUrl?: string;
+  materialsUrl?: string;
+  tags?: string[];
+  prerequisites?: string[];
+  learningObjectives?: string[];
 }
 
-export interface CreateCourseData extends Omit<BaseCourseData, 'status'> {
-  students?: number;
+export interface CreateCourseData extends BaseCourseData {
   status?: CourseStatus;
 }
+
+export interface UpdateCourseData extends Partial<BaseCourseData> {
+  status?: CourseStatus;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+}
+
+// Create axios instance for course endpoints
+const courseApi = axios.create({
+  baseURL: API_CONFIG.mobile,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+courseApi.interceptors.request.use(
+  async (config) => {
+    const token = await authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle token refresh
+courseApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshResult = await authService.refreshToken();
+        if (refreshResult.success) {
+          console.log('CourseService: Token refreshed successfully, retrying request...');
+          return courseApi(originalRequest);
+        } else {
+          console.log('CourseService: Token refresh failed, clearing tokens...');
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('refreshToken');
+        }
+      } catch (refreshError) {
+        console.error('CourseService: Token refresh error:', refreshError);
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 class CourseService {
   private async getAuthHeaders() {
-    const token = await authService.getToken();
+    let token = await authService.getToken();
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
+  private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      const url = `${API_CONFIG.mobile}${endpoint}`;
-      
-      const response = await fetch(url, {
+      const response = await courseApi({
+        url: endpoint,
         ...options,
-        headers: {
-          ...(await this.getAuthHeaders()),
-          ...options.headers,
-        },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const error = new Error(`HTTP error! status: ${response.status}`);
-        (error as any).response = { status: response.status, data: errorData };
-        throw error;
-      }
-
-      return response.json();
+      return response.data;
     } catch (error) {
       throw ErrorHandler.handleApiError(error);
     }
@@ -88,212 +132,112 @@ class CourseService {
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-      // Validate response
-      const validation = ErrorHandler.validateApiResponse(response);
-      if (!validation.success) {
-        console.warn('API response validation failed, using fallback data:', validation.error);
-        return {
-          data: ErrorHandler.createFallbackData('courses'),
-          meta: { total: 1, page, limit, totalPages: 1 }
-        };
-      }
-      
-      const backendData = response.data;
+      // Since database is disabled, always return empty data
       return {
-        data: backendData.courses || backendData || [],
-        meta: backendData.meta || backendData.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       console.error('Error fetching courses:', error);
-      // Return fallback data when API fails
       return {
-        data: ErrorHandler.createFallbackData('courses'),
-        meta: { total: 1, page, limit, totalPages: 1 }
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
       };
     }
   }
 
-  async getCourseById(id: string | number): Promise<any> {
+  async getCourseById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/courses/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching course:', error);
-      throw error;
+      throw ErrorHandler.handleApiError(error);
     }
   }
 
-  async createCourse(courseData: CreateCourseData | FormData): Promise<any> {
+  async getFeaturedCourses(): Promise<any[]> {
     try {
-      const isFormData = courseData instanceof FormData;
-      const response = await this.makeRequest('/courses', {
-        method: 'POST',
-        body: isFormData ? courseData : JSON.stringify(courseData),
-        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
-      });
-      return response.data;
+      const response = await this.makeRequest('/featured');
+      return response.data?.courses || [];
     } catch (error) {
-      console.error('Error creating course:', error);
-      throw error;
+      console.error('Error fetching featured courses:', error);
+      return [];
     }
   }
 
-  async updateCourse(id: string | number, courseData: Partial<CreateCourseData> | FormData): Promise<any> {
+  async searchCourses(query: string, filters?: {
+    category?: string;
+    level?: string;
+  }): Promise<PaginatedResponse<any>> {
     try {
-      const isFormData = courseData instanceof FormData;
-      const response = await this.makeRequest(`/courses/${id}`, {
-        method: 'PUT',
-        body: isFormData ? courseData : JSON.stringify(courseData),
-        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating course:', error);
-      throw error;
-    }
-  }
-
-  async deleteCourse(id: string | number): Promise<void> {
-    try {
-      await this.makeRequest(`/courses/${id}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('Error deleting course:', error);
-      throw error;
-    }
-  }
-
-  async publishCourse(id: string | number, isPublished: boolean): Promise<any> {
-    try {
-      const response = await this.makeRequest(`/courses/${id}/publish`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isPublished }),
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error publishing course:', error);
-      throw error;
-    }
-  }
-
-  async getAllCoursesAdmin(page: number = 1, limit: number = 10, status?: string): Promise<PaginatedResponse<any>> {
-    try {
-      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
-      if (status) params.append('status', status);
+      const params = new URLSearchParams({ search: query });
+      if (filters?.category) params.append('category', filters.category);
+      if (filters?.level) params.append('level', filters.level);
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-      if (response && response.success && response.data) {
-        const backendData = response.data;
-        return {
-          data: backendData.courses || backendData || [],
-          meta: backendData.meta || { total: 0, page, limit, totalPages: 0 }
-        };
-      }
-      
+      // Since database is disabled, always return empty data
       return {
-        data: response.data || [],
-        meta: response.meta || { total: 0, page, limit, totalPages: 0 }
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching admin courses:', error);
-      throw error;
+      console.error('Error searching courses:', error);
+      return {
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
+      };
     }
   }
 
-  async getCourseByIdAdmin(id: string | number): Promise<any> {
+  async getCoursesByCategory(category: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> {
     try {
-      const response = await this.makeRequest(`/courses/${id}`);
-      return response.data;
+      const response = await this.getCourses(page, limit, { category });
+      return response;
     } catch (error) {
-      console.error('Error fetching admin course:', error);
-      throw error;
+      console.error('Error fetching courses by category:', error);
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
+      };
     }
   }
 
-  async uploadThumbnail(file: File): Promise<{ url: string }> {
+  async getCoursesByLevel(level: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> {
     try {
-      const formData = new FormData();
-      formData.append('thumbnail', file);
-      
-      const response = await this.makeRequest('/courses/upload-thumbnail', {
-        method: 'POST',
-        body: formData,
-        headers: {},
-      });
-      return response.data;
+      const response = await this.getCourses(page, limit, { level });
+      return response;
     } catch (error) {
-      console.error('Error uploading thumbnail:', error);
-      throw error;
+      console.error('Error fetching courses by level:', error);
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
+      };
     }
   }
 
-  async togglePublishStatus(id: number): Promise<any> {
-    try {
-      const response = await this.makeRequest(`/courses/${id}/toggle-publish`, {
-        method: 'PATCH',
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error toggling publish status:', error);
-      throw error;
-    }
+  // Admin methods (will return errors since database is disabled)
+  async createCourse(courseData: CreateCourseData): Promise<any> {
+    throw new Error('Course creation is not available. Database functionality has been removed.');
   }
 
-  async getAllCourses(): Promise<any[]> {
-    try {
-      const response = await this.makeRequest('/courses');
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching all courses:', error);
-      throw error;
-    }
+  async updateCourse(id: string, courseData: UpdateCourseData): Promise<any> {
+    throw new Error('Course update is not available. Database functionality has been removed.');
   }
 
-  async getMyCourses(): Promise<any[]> {
-    try {
-      const response = await this.makeRequest('/my-courses');
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching my courses:', error);
-      throw error;
-    }
+  async deleteCourse(id: string): Promise<void> {
+    throw new Error('Course deletion is not available. Database functionality has been removed.');
   }
 
-  async enrollInCourse(courseId: string | number): Promise<void> {
-    try {
-      await this.makeRequest(`/course/${courseId}/enroll`, {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Error enrolling in course:', error);
-      throw error;
-    }
+  async uploadCourseThumbnail(courseId: string, imageUri: string): Promise<string> {
+    throw new Error('Course thumbnail upload is not available. Database functionality has been removed.');
   }
 
-  async getCourseProgress(courseId: string | number): Promise<any> {
-    try {
-      const response = await this.makeRequest(`/course/${courseId}/progress`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching course progress:', error);
-      throw error;
-    }
-  }
-
-  async updateCourseProgress(courseId: string | number, progressData: any): Promise<any> {
-    try {
-      const response = await this.makeRequest(`/course/${courseId}/progress`, {
-        method: 'PUT',
-        body: JSON.stringify(progressData),
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating course progress:', error);
-      throw error;
-    }
+  async uploadCourseVideo(courseId: string, videoUri: string): Promise<string> {
+    throw new Error('Course video upload is not available. Database functionality has been removed.');
   }
 }
 
 export const courseService = new CourseService();
+export default courseService;

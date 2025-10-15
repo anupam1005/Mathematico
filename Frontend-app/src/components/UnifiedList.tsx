@@ -6,8 +6,8 @@ import { listStyles, textStyles, designSystem } from '../styles/designSystem';
 interface ListItemProps {
   title: string;
   subtitle?: string;
-  leftIcon?: string;
-  rightIcon?: string;
+  leftIcon?: any;
+  rightIcon?: any;
   onPress?: () => void;
   style?: ViewStyle;
   isLast?: boolean;

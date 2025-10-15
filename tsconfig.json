@@ -1,4 +1,4 @@
-{
+{ 
   "compilerOptions": {
     "strict": true,
     "noImplicitAny": true,
@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "extends": "./mathematico/tsconfig.json"
+  "extends": "./Frontend-app/tsconfig.json"
 }

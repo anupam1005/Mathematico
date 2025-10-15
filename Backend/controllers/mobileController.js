@@ -1,62 +1,25 @@
-const Book = require('../models/Book');
-const Course = require('../models/Course');
-const LiveClass = require('../models/LiveClass');
-const User = require('../models/User');
-
-// Mobile Controller - Handles requests from React Native mobile app
+// Mobile Controller - Handles requests from React Native mobile app (No Database Version)
 
 /**
  * Get all courses for mobile app
  */
 const getAllCourses = async (req, res) => {
   try {
-    // Always use fallback data for serverless mode
-    const fallbackCourses = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        price: 99.99,
-        status: 'published',
-        is_featured: true,
-        enrollment_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        instructor: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        price: 79.99,
-        status: 'published',
-        is_featured: false,
-        enrollment_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    console.log('📱 Mobile courses endpoint - using fallback data');
+    // Return empty data since database is disabled
+    console.log('📱 Mobile courses endpoint - database disabled');
     res.json({
       success: true,
-      data: fallbackCourses,
+      data: [],
       pagination: {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 10,
-        total: fallbackCourses.length,
-        totalPages: 1
+        total: 0,
+        totalPages: 0
       },
-      timestamp: new Date().toISOString(),
-      fallback: true
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Get mobile courses error:', error);
+    console.error('Error fetching courses:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch courses',
@@ -65,118 +28,26 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-const getCourseById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Use fallback data for serverless mode
-    const fallbackCourses = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        instructor: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        price: 99.99,
-        status: 'published',
-        is_featured: true,
-        enrollment_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        instructor: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        price: 79.99,
-        status: 'published',
-        is_featured: false,
-        enrollment_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    const course = fallbackCourses.find(c => c._id === id);
-    
-    if (!course || course.status !== 'published') {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      success: true,
-      data: course,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get mobile course error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch course',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
+/**
+ * Get all books for mobile app
+ */
 const getAllBooks = async (req, res) => {
   try {
-    // Always use fallback data for serverless mode
-    const fallbackBooks = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        author: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        pages: 250,
-        isbn: '978-1234567890',
-        status: 'published',
-        is_featured: true,
-        download_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        author: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        pages: 180,
-        isbn: '978-0987654321',
-        status: 'published',
-        is_featured: false,
-        download_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    console.log('📱 Mobile books endpoint - using fallback data');
+    // Return empty data since database is disabled
+    console.log('📱 Mobile books endpoint - database disabled');
     res.json({
       success: true,
-      data: fallbackBooks,
+      data: [],
       pagination: {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 10,
-        total: fallbackBooks.length,
-        totalPages: 1
+        total: 0,
+        totalPages: 0
       },
-      timestamp: new Date().toISOString(),
-      fallback: true
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Get mobile books error:', error);
+    console.error('Error fetching books:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch books',
@@ -185,154 +56,26 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-const getBookById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Use fallback data for serverless mode
-    const fallbackBooks = [
-      {
-        _id: '1',
-        title: 'Advanced Mathematics',
-        description: 'Comprehensive guide to advanced mathematical concepts',
-        author: 'Dr. John Smith',
-        category: 'Mathematics',
-        level: 'Advanced',
-        pages: 250,
-        isbn: '978-1234567890',
-        status: 'published',
-        is_featured: true,
-        download_count: 150,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Calculus Fundamentals',
-        description: 'Learn calculus from the ground up',
-        author: 'Prof. Jane Doe',
-        category: 'Mathematics',
-        level: 'Foundation',
-        pages: 180,
-        isbn: '978-0987654321',
-        status: 'published',
-        is_featured: false,
-        download_count: 89,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '3',
-        title: 'Linear Algebra Made Easy',
-        description: 'Step-by-step guide to linear algebra concepts',
-        author: 'Dr. Sarah Wilson',
-        category: 'Mathematics',
-        level: 'Intermediate',
-        pages: 320,
-        isbn: '978-1122334455',
-        status: 'published',
-        is_featured: true,
-        download_count: 75,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '4',
-        title: 'Statistics and Probability',
-        description: 'Complete guide to statistical analysis and probability theory',
-        author: 'Prof. Michael Chen',
-        category: 'Mathematics',
-        level: 'Advanced',
-        pages: 400,
-        isbn: '978-5566778899',
-        status: 'published',
-        is_featured: false,
-        download_count: 120,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    const book = fallbackBooks.find(b => b._id === id);
-    
-    if (!book || book.status !== 'published') {
-      return res.status(404).json({
-        success: false,
-        message: 'Book not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      success: true,
-      data: book,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get mobile book error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch book',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
+/**
+ * Get all live classes for mobile app
+ */
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Always use fallback data for serverless mode
-    const fallbackLiveClasses = [
-      {
-        _id: '1',
-        title: 'Advanced Calculus Live Session',
-        description: 'Interactive live session on advanced calculus topics',
-        instructor: 'Dr. Emily Rodriguez',
-        category: 'Mathematics',
-        level: 'Advanced',
-        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-        duration: 90,
-        maxStudents: 50,
-        meetingLink: 'https://meet.google.com/advanced-calculus',
-        status: 'upcoming',
-        is_featured: true,
-        enrollment_count: 23,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Differential Equations Workshop',
-        description: 'Hands-on workshop on solving differential equations',
-        instructor: 'Prof. David Kim',
-        category: 'Mathematics',
-        level: 'Intermediate',
-        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
-        duration: 120,
-        maxStudents: 30,
-        meetingLink: 'https://meet.google.com/diff-eq-workshop',
-        status: 'upcoming',
-        is_featured: false,
-        enrollment_count: 15,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    console.log('📱 Mobile live classes endpoint - using fallback data');
+    // Return empty data since database is disabled
+    console.log('📱 Mobile live classes endpoint - database disabled');
     res.json({
       success: true,
-      data: fallbackLiveClasses,
+      data: [],
       pagination: {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 10,
-        total: fallbackLiveClasses.length,
-        totalPages: 1
+        total: 0,
+        totalPages: 0
       },
-      timestamp: new Date().toISOString(),
-      fallback: true
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Get mobile live classes error:', error);
+    console.error('Error fetching live classes:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
@@ -341,170 +84,24 @@ const getAllLiveClasses = async (req, res) => {
   }
 };
 
-const getLiveClassById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Use fallback data for serverless mode
-    const fallbackLiveClasses = [
-      {
-        _id: '1',
-        title: 'Advanced Calculus Live Session',
-        description: 'Interactive live session on advanced calculus topics',
-        instructor: 'Dr. Emily Rodriguez',
-        category: 'Mathematics',
-        level: 'Advanced',
-        scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 90,
-        maxStudents: 50,
-        meetingLink: 'https://meet.google.com/advanced-calculus',
-        status: 'upcoming',
-        is_featured: true,
-        enrollment_count: 23,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        _id: '2',
-        title: 'Differential Equations Workshop',
-        description: 'Hands-on workshop on solving differential equations',
-        instructor: 'Prof. David Kim',
-        category: 'Mathematics',
-        level: 'Intermediate',
-        scheduledAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 120,
-        maxStudents: 30,
-        meetingLink: 'https://meet.google.com/diff-eq-workshop',
-        status: 'upcoming',
-        is_featured: false,
-        enrollment_count: 15,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    const liveClass = fallbackLiveClasses.find(lc => lc._id === id);
-    
-    if (!liveClass) {
-      return res.status(404).json({
-        success: false,
-        message: 'Live class not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      success: true,
-      data: liveClass,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Get mobile live class error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch live class',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const search = async (req, res) => {
-  try {
-    const { q: query, type, page = 1, limit = 10 } = req.query;
-    
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query is required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const results = {};
-    const searchFilters = { search: query, status: 'published' };
-    
-    if (!type || type === 'courses') {
-      const courses = await Course.getAll(parseInt(page), parseInt(limit), searchFilters);
-      results.courses = courses;
-    }
-    
-    if (!type || type === 'books') {
-      const books = await Book.getAll(parseInt(page), parseInt(limit), searchFilters);
-      results.books = books;
-    }
-    
-    if (!type || type === 'live-classes') {
-      const liveClasses = await LiveClass.getAll(parseInt(page), parseInt(limit), { search: query });
-      results.liveClasses = liveClasses;
-    }
-
-    res.json({
-      success: true,
-      data: results,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Search error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Search failed',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
+/**
+ * Get featured content for mobile app
+ */
 const getFeaturedContent = async (req, res) => {
   try {
-    // Always use fallback data for serverless mode
-    const fallbackFeatured = {
-      books: [
-        {
-          _id: '1',
-          title: 'Advanced Mathematics',
-          description: 'Comprehensive guide to advanced mathematical concepts',
-          author: 'Dr. John Smith',
-          category: 'Mathematics',
-          level: 'Advanced',
-          is_featured: true,
-          created_at: new Date().toISOString()
-        }
-      ],
-      courses: [
-        {
-          _id: '1',
-          title: 'Advanced Mathematics',
-          description: 'Comprehensive guide to advanced mathematical concepts',
-          instructor: 'Dr. John Smith',
-          category: 'Mathematics',
-          level: 'Advanced',
-          is_featured: true,
-          created_at: new Date().toISOString()
-        }
-      ],
-      liveClasses: [
-        {
-          _id: '1',
-          title: 'Advanced Calculus Live Session',
-          description: 'Interactive live session on advanced calculus topics',
-          instructor: 'Dr. Emily Rodriguez',
-          category: 'Mathematics',
-          level: 'Advanced',
-          scheduledAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          is_featured: true,
-          created_at: new Date().toISOString()
-        }
-      ]
-    };
-    
-    console.log('📱 Mobile featured content endpoint - using fallback data');
+    // Return empty data since database is disabled
+    console.log('📱 Mobile featured content endpoint - database disabled');
     res.json({
       success: true,
-      data: fallbackFeatured,
-      timestamp: new Date().toISOString(),
-      fallback: true
+      data: {
+        books: [],
+        courses: [],
+        liveClasses: []
+      },
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Get featured content error:', error);
+    console.error('Error fetching featured content:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch featured content',
@@ -513,31 +110,153 @@ const getFeaturedContent = async (req, res) => {
   }
 };
 
-const getAppInfo = async (req, res) => {
+/**
+ * Get course by ID
+ */
+const getCourseById = async (req, res) => {
   try {
+    const { id } = req.params;
+    console.log('📱 Mobile course by ID endpoint - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'Course not found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching course:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get book by ID
+ */
+const getBookById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('📱 Mobile book by ID endpoint - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'Book not found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching book:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch book',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get live class by ID
+ */
+const getLiveClassById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('📱 Mobile live class by ID endpoint - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'Live class not found',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching live class:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get categories
+ */
+const getCategories = async (req, res) => {
+  try {
+    // Return empty categories since database is disabled
+    console.log('📱 Mobile categories endpoint - database disabled');
     res.json({
       success: true,
       data: {
-        version: '2.0.0',
-        name: 'Mathematico',
-        description: 'Your ultimate mathematics learning companion',
-        features: [
-          'Interactive courses',
-          'Digital books',
-          'Live classes',
-          'Progress tracking'
-        ],
-        supportEmail: 'support@mathematico.com',
-        termsUrl: 'https://mathematico.com/terms',
-        privacyUrl: 'https://mathematico.com/privacy'
+        books: [],
+        courses: [],
+        liveClasses: []
       },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Get app info error:', error);
+    console.error('Error fetching categories:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch app info',
+      message: 'Failed to fetch categories',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Search content
+ */
+const searchContent = async (req, res) => {
+  try {
+    const { query, type } = req.query;
+    console.log('📱 Mobile search endpoint - database disabled');
+    
+    res.json({
+      success: true,
+      data: [],
+      query: query,
+      type: type,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error searching content:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search content',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get mobile app info
+ */
+const getMobileInfo = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        appName: 'Mathematico',
+        version: '2.0.0',
+        database: 'disabled',
+        features: {
+          books: false,
+          courses: false,
+          liveClasses: false,
+          userRegistration: false,
+          userProfiles: false
+        },
+        message: 'Database functionality has been removed. Only admin authentication is available.'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting mobile info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get mobile info',
       timestamp: new Date().toISOString()
     });
   }
@@ -545,12 +264,13 @@ const getAppInfo = async (req, res) => {
 
 module.exports = {
   getAllCourses,
-  getCourseById,
   getAllBooks,
-  getBookById,
   getAllLiveClasses,
-  getLiveClassById,
-  search,
   getFeaturedContent,
-  getAppInfo
+  getCourseById,
+  getBookById,
+  getLiveClassById,
+  getCategories,
+  searchContent,
+  getMobileInfo
 };

@@ -1,8 +1,7 @@
 const { verifyAccessToken } = require('../utils/jwt');
-const User = require('../models/User');
 
 /**
- * Middleware to authenticate JWT token
+ * Middleware to authenticate JWT token (No Database Version)
  */
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -36,11 +35,12 @@ const authenticateToken = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
     console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, role: decoded.role, idType: typeof decoded.id });
     
-    // Check if it's the hardcoded admin
-    if (decoded.email === 'dc2006089@gmail.com' && decoded.role === 'admin') {
+    // Check if it's the admin user from environment variables
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {
         id: 1,
-        email: 'dc2006089@gmail.com',
+        email: adminEmail,
         name: 'Admin User',
         role: 'admin',
         isAdmin: true,
@@ -48,146 +48,115 @@ const authenticateToken = async (req, res, next) => {
         email_verified: true,
         is_active: true
       };
-      console.log('✅ Admin user set in request:', req.user);
-      next();
-      return;
+      console.log('✅ Admin user authenticated:', req.user.email);
+      return next();
     }
     
-    // Check if it's a fallback user (from in-memory storage)
-    const fallbackUsers = global.fallbackUsers || new Map();
-    const fallbackUser = fallbackUsers.get(decoded.email);
+    // For any other user, reject (no database to check against)
+    console.log('❌ User not found or not admin:', decoded.email);
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Invalid user. Only admin access is available.',
+      timestamp: new Date().toISOString()
+    });
     
-    if (fallbackUser) {
-      req.user = {
-        id: fallbackUser._id,
-        email: fallbackUser.email,
-        name: fallbackUser.name,
-        role: fallbackUser.role,
-        isAdmin: fallbackUser.is_admin,
-        is_admin: fallbackUser.is_admin,
-        email_verified: fallbackUser.email_verified,
-        is_active: fallbackUser.status === 'active'
-      };
-      console.log('✅ Fallback user set in request:', req.user);
-      next();
-      return;
-    }
-    
-    // Find user in database using the correct field name
-    // Convert string ID to MongoDB ObjectId if needed
-    const mongoose = require('mongoose');
-    let userId = decoded.id;
-    
-    // Handle different ID formats
-    if (typeof userId === 'string') {
-      if (userId.length === 24) {
-        // Valid MongoDB ObjectId string
-        userId = new mongoose.Types.ObjectId(userId);
-      } else {
-        // Try to find by string ID as well
-        const userByString = await User.findById(userId);
-        if (userByString) {
-          const user = userByString;
-          req.user = {
-            id: user._id,
-            email: user.email,
-            name: user.name,
-            role: user.role || 'user',
-            isAdmin: user.role === 'admin',
-            is_admin: user.role === 'admin',
-            email_verified: user.email_verified || true,
-            is_active: user.is_active !== false
-          };
-          next();
-          return;
-        }
-      }
-    }
-    
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-        message: 'User not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Set user information in request
-    req.user = {
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      role: user.role || 'user',
-      isAdmin: user.role === 'admin',
-      is_admin: user.role === 'admin',
-      email_verified: user.email_verified || true,
-      is_active: user.is_active !== false
-    };
-
-    next();
   } catch (error) {
-    console.error('❌ Token validation error:', error.message);
+    console.error('❌ Token verification failed:', error.message);
     return res.status(401).json({
       success: false,
       error: 'Unauthorized',
       message: 'Invalid or expired token',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      details: error.message
     });
   }
 };
 
 /**
- * Middleware to require specific role
+ * Middleware to check if user is admin
  */
-const requireRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-        message: 'Authentication required',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const userRole = req.user.role;
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
-
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Forbidden',
-        message: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    next();
-  };
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Authentication required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  if (!req.user.isAdmin && !req.user.is_admin) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden',
+      message: 'Admin access required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  next();
 };
 
 /**
- * Middleware to require admin role
+ * Middleware to check if user is authenticated (any valid user)
  */
-const requireAdmin = requireRole('admin');
+const requireAuth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Authentication required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  next();
+};
 
 /**
- * Middleware to require user role
+ * Optional authentication middleware (doesn't fail if no token)
  */
-const requireUser = requireRole('user');
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-/**
- * Middleware to require either user or admin role
- */
-const requireUserOrAdmin = requireRole(['user', 'admin']);
+  if (!token) {
+    // No token provided, continue without user
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = verifyAccessToken(token);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    
+    if (decoded.email === adminEmail && decoded.role === 'admin') {
+      req.user = {
+        id: 1,
+        email: adminEmail,
+        name: 'Admin User',
+        role: 'admin',
+        isAdmin: true,
+        is_admin: true,
+        email_verified: true,
+        is_active: true
+      };
+    } else {
+      req.user = null;
+    }
+    
+    next();
+  } catch (error) {
+    // Invalid token, continue without user
+    req.user = null;
+    next();
+  }
+};
 
 module.exports = {
   authenticateToken,
-  requireRole,
   requireAdmin,
-  requireUser,
-  requireUserOrAdmin
+  requireAuth,
+  optionalAuth
 };

@@ -1,80 +1,76 @@
-// @ts-nocheck
-import authService from './authService';
-import { API_CONFIG } from '../config';
+// Notification Service - Handles push notifications and in-app notifications (No Database Version)
 
-export interface Notification {
+export interface NotificationData {
   id: string;
   title: string;
   message: string;
-  type: 'course' | 'live_class' | 'book' | 'welcome' | 'general';
-  isRead: boolean;
-  createdAt: string;
-  readAt?: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  timestamp: Date;
+  read: boolean;
+  actionUrl?: string;
+}
+
+export interface NotificationResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  message?: string;
 }
 
 class NotificationService {
-  private async getAuthHeaders() {
-    const token = await authService.getToken();
+  async getNotifications(userId?: string): Promise<NotificationResponse> {
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      success: true,
+      data: [],
+      message: 'Database functionality has been removed'
     };
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const url = `${API_CONFIG.student}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...(await this.getAuthHeaders()),
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
+  async markAsRead(notificationId: string): Promise<NotificationResponse> {
+    throw new Error('Notification marking is not available. Database functionality has been removed.');
   }
 
-  async getNotifications(): Promise<Notification[]> {
-    try {
-      const response = await this.makeRequest('/notifications');
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      throw error;
-    }
+  async markAllAsRead(userId: string): Promise<NotificationResponse> {
+    throw new Error('Notification marking is not available. Database functionality has been removed.');
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<void> {
-    try {
-      await this.makeRequest(`/notifications/${notificationId}/read`, {
-        method: 'PUT',
-      });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
+  async deleteNotification(notificationId: string): Promise<NotificationResponse> {
+    throw new Error('Notification deletion is not available. Database functionality has been removed.');
   }
 
-  async markAllNotificationsAsRead(): Promise<void> {
-    try {
-      const notifications = await this.getNotifications();
-      const unreadNotifications = notifications.filter(n => !n.isRead);
-      
-      await Promise.all(
-        unreadNotifications.map(notification => 
-          this.markNotificationAsRead(notification.id)
-        )
-      );
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      throw error;
-    }
+  async sendNotification(userId: string, notification: Omit<NotificationData, 'id' | 'timestamp' | 'read'>): Promise<NotificationResponse> {
+    throw new Error('Notification sending is not available. Database functionality has been removed.');
+  }
+
+  async getUnreadCount(userId: string): Promise<NotificationResponse> {
+    return {
+      success: true,
+      data: { count: 0 },
+      message: 'Database functionality has been removed'
+    };
+  }
+
+  // Push notification methods
+  async registerForPushNotifications(): Promise<NotificationResponse> {
+    return {
+      success: true,
+      data: { registered: false },
+      message: 'Push notifications are not available. Database functionality has been removed.'
+    };
+  }
+
+  async unregisterFromPushNotifications(): Promise<NotificationResponse> {
+    return {
+      success: true,
+      data: { unregistered: true },
+      message: 'Push notifications are not available. Database functionality has been removed.'
+    };
+  }
+
+  async updatePushToken(token: string): Promise<NotificationResponse> {
+    throw new Error('Push token update is not available. Database functionality has been removed.');
   }
 }
 
 export const notificationService = new NotificationService();
+export default notificationService;

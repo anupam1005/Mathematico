@@ -9,9 +9,7 @@
     "vercel-build": "echo 'Build complete'",
     "postinstall": "echo 'Dependencies installed'",
     "export-docs": "node scripts/export-swagger.js",
-    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\"",
-    "migrate:user-settings": "node migrations/add-user-settings-table.js",
-    "db:migrate": "node migrations/add-user-settings-table.js"
+    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\""
   },
   "dependencies": {
     "axios": "^1.12.2",
@@ -25,7 +23,6 @@
     "helmet": "^8.1.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6",

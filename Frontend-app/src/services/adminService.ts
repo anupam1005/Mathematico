@@ -10,6 +10,12 @@ interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 // --- Utility: map snake_case <-> camelCase --- //
@@ -43,299 +49,338 @@ function toSnakeCase(obj: any): any {
 const adminApi = axios.create({
   baseURL: API_CONFIG.admin,
   timeout: 30000, // 30 seconds timeout
-  // Remove problematic configurations that might cause network issues
   validateStatus: (status) => status < 500,
-  // Simplified headers
   headers: {
     'Accept': 'application/json',
+    'Content-Type': 'application/json',
   },
 });
 
-// Add token automatically
+// Request interceptor to add auth token
 adminApi.interceptors.request.use(
   async (config) => {
-    const token = await authService.getToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await authService.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('AdminService: Error getting token:', error);
     }
-    // Add retry count to config
-    (config as any)._retryCount = (config as any)._retryCount || 0;
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('AdminService: Request interceptor error:', error);
+    return Promise.reject(error);
+  }
 );
 
-// Add retry interceptor for network errors
+// Response interceptor to handle token refresh
 adminApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // Retry logic for network errors
-    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
-      const retryCount = (originalRequest as any)._retryCount || 0;
-      if (retryCount < 3) {
-        (originalRequest as any)._retryCount = retryCount + 1;
-        console.log(`Retrying request (attempt ${(originalRequest as any)._retryCount})...`);
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * (originalRequest as any)._retryCount));
-        
-        return adminApi(originalRequest);
-      }
-    }
-    
-    return Promise.reject(error);
-  }
-);
-
-// Auto-refresh token if expired
-adminApi.interceptors.response.use(
-  (r) => r,
-  async (error) => {
-    const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      
       try {
-        console.log('Token expired, attempting refresh...');
         const refreshResult = await authService.refreshToken();
-        // refreshToken() returns data.token and data.refreshToken
-        if (refreshResult?.success && (refreshResult?.data?.token || refreshResult?.data?.accessToken)) {
-          const newToken = refreshResult.data.token || refreshResult.data.accessToken;
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        if (refreshResult.success) {
+          console.log('AdminService: Token refreshed successfully, retrying request...');
           return adminApi(originalRequest);
         } else {
-          console.log('Refresh token failed, clearing tokens');
-          await AsyncStorage.multiRemove(["authToken", "refreshToken", "user"]);
-          // Could navigate to login screen here if navigation is available
+          console.log('AdminService: Token refresh failed, clearing tokens...');
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('refreshToken');
         }
-      } catch (e) {
-        console.error('Refresh token error:', e);
-        await AsyncStorage.multiRemove(["authToken", "refreshToken", "user"]);
+      } catch (refreshError) {
+        console.error('AdminService: Token refresh error:', refreshError);
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
       }
     }
+    
     return Promise.reject(error);
   }
 );
 
+// ----------------- ADMIN SERVICE CLASS -----------------
 class AdminService {
-  async makeRequest<T = any>(
-    endpoint: string,
-    options: { method?: "GET" | "POST" | "PUT" | "DELETE"; data?: any; headers?: any } = {}
-  ) {
+  // Dashboard
+  async getDashboard(): Promise<ApiResponse<any>> {
     try {
-      const method = options.method || "GET";
-      
-      // Simplified config without complex settings
-      const config: any = { 
-        url: endpoint, 
-        method,
-        timeout: 30000, // 30 seconds
+      const response = await adminApi.get('/dashboard');
+      return {
+        success: true,
+        data: response.data.data || {
+          totalUsers: 0,
+          totalBooks: 0,
+          totalCourses: 0,
+          totalLiveClasses: 0,
+          totalRevenue: 0,
+          courseStats: { total: 0, published: 0, draft: 0 },
+          liveClassStats: { total: 0, upcoming: 0, completed: 0 }
+        }
       };
-
-      if (options.data) {
-        if (options.data instanceof FormData) {
-          // For FormData, let axios handle everything automatically
-          config.data = options.data;
-          // Don't set any Content-Type headers for FormData
-        } else {
-          // For JSON data
-          config.data = toSnakeCase(options.data);
-          config.headers = { 
-            "Content-Type": "application/json", 
-            ...(options.headers || {}) 
-          };
-        }
-      } else {
-        config.headers = options.headers || {};
-      }
-
-      console.log(`Admin API Request: ${method} ${endpoint}`);
-      console.log(`Admin API Request URL: ${adminApi.defaults.baseURL}${endpoint}`);
-      
-      const response = await adminApi(config);
-      console.log(`Admin API Response: ${response.status} ${response.statusText}`);
-      
-      return toCamelCase(response.data) as ApiResponse<T>;
-    } catch (error: any) {
-      console.error('Admin API Error:', error);
-      console.error('Error details:', {
-        code: error.code,
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          timeout: error.config?.timeout,
-          baseURL: error.config?.baseURL
-        }
-      });
-      
-      // Enhanced error handling
-      if (error.code === 'ERR_NETWORK' || error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || error.message?.includes('Network Error')) {
-        throw new Error('Network connection failed. Please check your internet connection and try again.');
-      } else if (error.code === 'ECONNABORTED') {
-        throw new Error('Request timeout. Please try again with a smaller file or check your connection.');
-      } else if (error.response?.status === 413) {
-        throw new Error('File too large. Please try with a smaller file.');
-      } else if (error.response?.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      } else if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else if (error.message) {
-        throw new Error(error.message);
-      } else {
-        throw new Error('An unexpected error occurred');
-      }
-    }
-  }
-
-  // ----------------- FILE UPLOAD -----------------
-  async uploadFile(file: any, type: "image" | "video" | "document" = "image") {
-    try {
-      const formData = new FormData();
-      formData.append("file", {
-        uri: file.uri,
-        name: file.fileName || `upload.${file.uri.split(".").pop()}`,
-        type: file.type || `application/${file.uri.split(".").pop()}`,
-      } as any);
-
-      const response = await this.makeRequest<{ url: string }>("/admin/upload", {
-        method: "POST",
-        data: formData,
-      });
-
-      return response.data?.url ?? null;
-    } catch (err) {
-      console.error("File upload error:", err);
-      throw err;
-    }
-  }
-
-  // ----------------- BOOKS -----------------
-  async getAllBooks() {
-    return this.makeRequest("/books");
-  }
-  async createBook(data: FormData) {
-    console.log('Creating book with FormData - React Native FormData detected');
-    
-    try {
-      console.log('📚 AdminService: Making book creation request...');
-      
-      // Add specific timeout and retry for book creation
-      const result = await this.makeRequest("/books", { 
-        method: "POST", 
-        data
-      });
-      
-      console.log('📚 AdminService: Book creation successful');
-      return result;
     } catch (error) {
-      console.error('📚 AdminService: Book creation failed:', error);
-      throw error;
+      console.error('Error fetching dashboard:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch dashboard data',
+        data: {
+          totalUsers: 0,
+          totalBooks: 0,
+          totalCourses: 0,
+          totalLiveClasses: 0,
+          totalRevenue: 0,
+          courseStats: { total: 0, published: 0, draft: 0 },
+          liveClassStats: { total: 0, upcoming: 0, completed: 0 }
+        }
+      };
     }
   }
-  async updateBook(id: string, data: FormData) {
-    return this.makeRequest(`/books/${id}`, { method: "PUT", data });
-  }
-  async deleteBook(id: string) {
-    return this.makeRequest(`/books/${id}`, { method: "DELETE" });
-  }
-  async updateBookStatus(id: string, status: string) {
-    return this.makeRequest(`/books/${id}/status`, {
-      method: "PUT",
-      data: { status },
-    });
+
+  // Users
+  async getAllUsers(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/users?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch users',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
   }
 
-  // ----------------- COURSES -----------------
-  async getAllCourses() {
-    return this.makeRequest("/courses");
-  }
-  async createCourse(data: FormData) {
-    return this.makeRequest("/courses", { method: "POST", data });
-  }
-  async updateCourse(id: string, data: FormData) {
-    return this.makeRequest(`/courses/${id}`, { method: "PUT", data });
-  }
-  async deleteCourse(id: string) {
-    return this.makeRequest(`/courses/${id}`, { method: "DELETE" });
-  }
-  async updateCourseStatus(id: string, status: string) {
-    return this.makeRequest(`/courses/${id}/status`, {
-      method: "PUT",
-      data: { status },
-    });
+  async getUserById(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/users/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      return { success: false, error: 'Failed to fetch user' };
+    }
   }
 
-  // ----------------- LIVE CLASSES -----------------
-  async getAllLiveClasses() {
-    return this.makeRequest("/live-classes");
-  }
-  async createLiveClass(data: any) {
-    return this.makeRequest("/live-classes", { method: "POST", data });
-  }
-  async updateLiveClass(id: string, data: any) {
-    return this.makeRequest(`/live-classes/${id}`, { method: "PUT", data });
-  }
-  async deleteLiveClass(id: string) {
-    return this.makeRequest(`/live-classes/${id}`, { method: "DELETE" });
-  }
-  // ✅ FIX: add missing status update function
-  async updateLiveClassStatus(id: string, status: string) {
-    return this.makeRequest(`/live-classes/${id}/status`, {
-      method: "PUT",
-      data: { status },
-    });
+  async createUser(userData: any): Promise<ApiResponse<any>> {
+    throw new Error('User creation is not available. Database functionality has been removed.');
   }
 
-  // ----------------- USERS -----------------
-  async getAllUsers() {
-    return this.makeRequest("/users");
-  }
-  async updateUser(id: string, data: any) {
-    return this.makeRequest(`/users/${id}`, { method: "PUT", data });
-  }
-  async deleteUser(id: string) {
-    return this.makeRequest(`/users/${id}`, { method: "DELETE" });
-  }
-  async updateUserStatus(id: string, isActive: boolean) {
-    return this.makeRequest(`/users/${id}/status`, {
-      method: "PUT",
-      data: { is_active: isActive },
-    });
+  async updateUser(id: string, userData: any): Promise<ApiResponse<any>> {
+    throw new Error('User update is not available. Database functionality has been removed.');
   }
 
-  // ----------------- PAYMENTS -----------------
-  async getAllPayments() {
-    return this.makeRequest("/payments");
-  }
-  async getPaymentStats() {
-    return this.makeRequest("/payments/stats");
-  }
-  async updatePaymentStatus(id: string, status: string, metadata?: any) {
-    return this.makeRequest(`/payments/${id}/status`, {
-      method: "PUT",
-      data: { status, metadata },
-    });
+  async updateUserStatus(id: string, status: boolean): Promise<ApiResponse<any>> {
+    throw new Error('User status update is not available. Database functionality has been removed.');
   }
 
-  // ----------------- DASHBOARD -----------------
-  async getDashboardStats() {
-    return this.makeRequest("/dashboard");
+  async deleteUser(id: string): Promise<ApiResponse<any>> {
+    throw new Error('User deletion is not available. Database functionality has been removed.');
   }
 
-  // ----------------- SETTINGS -----------------
-  async getSettings() {
-    return this.makeRequest("/settings");
+  // Books
+  async getAllBooks(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/books?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      console.error('Error fetching books:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch books',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
   }
-  
-  async updateSettings(settings: any) {
-    return this.makeRequest("/settings", {
-      method: "PUT",
-      data: settings,
-    });
+
+  async getBookById(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/books/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching book:', error);
+      return { success: false, error: 'Failed to fetch book' };
+    }
+  }
+
+  async createBook(bookData: any): Promise<ApiResponse<any>> {
+    throw new Error('Book creation is not available. Database functionality has been removed.');
+  }
+
+  async updateBook(id: string, bookData: any): Promise<ApiResponse<any>> {
+    throw new Error('Book update is not available. Database functionality has been removed.');
+  }
+
+  async updateBookStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Book status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteBook(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Book deletion is not available. Database functionality has been removed.');
+  }
+
+  // Courses
+  async getAllCourses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/courses?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch courses',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
+  }
+
+  async getCourseById(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/courses/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching course:', error);
+      return { success: false, error: 'Failed to fetch course' };
+    }
+  }
+
+  async createCourse(courseData: any): Promise<ApiResponse<any>> {
+    throw new Error('Course creation is not available. Database functionality has been removed.');
+  }
+
+  async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
+    throw new Error('Course update is not available. Database functionality has been removed.');
+  }
+
+  async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Course status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteCourse(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Course deletion is not available. Database functionality has been removed.');
+  }
+
+  // Live Classes
+  async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/live-classes?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      console.error('Error fetching live classes:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch live classes',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
+  }
+
+  async getLiveClassById(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/live-classes/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching live class:', error);
+      return { success: false, error: 'Failed to fetch live class' };
+    }
+  }
+
+  async createLiveClass(liveClassData: any): Promise<ApiResponse<any>> {
+    throw new Error('Live class creation is not available. Database functionality has been removed.');
+  }
+
+  async updateLiveClass(id: string, liveClassData: any): Promise<ApiResponse<any>> {
+    throw new Error('Live class update is not available. Database functionality has been removed.');
+  }
+
+  async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Live class status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteLiveClass(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Live class deletion is not available. Database functionality has been removed.');
+  }
+
+  // Payments
+  async getPayments(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/payments?page=${page}&limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch payments',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
+  }
+
+  async getPaymentById(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get(`/payments/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching payment:', error);
+      return { success: false, error: 'Failed to fetch payment' };
+    }
+  }
+
+  // Admin Info
+  async getAdminInfo(): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get('/info');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error fetching admin info:', error);
+      return {
+        success: true,
+        data: {
+          adminName: 'Admin User',
+          email: 'admin@mathematico.com',
+          role: 'admin',
+          permissions: ['read', 'write', 'delete'],
+          database: 'disabled',
+          features: {
+            userManagement: false,
+            bookManagement: false,
+            courseManagement: false,
+            liveClassManagement: false,
+            paymentManagement: false
+          },
+          message: 'Database functionality has been removed. Only authentication is available.'
+        }
+      };
+    }
   }
 }
 

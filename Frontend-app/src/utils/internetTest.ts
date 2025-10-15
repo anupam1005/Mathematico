@@ -12,8 +12,7 @@ export const testInternetConnectivity = async (): Promise<{
     // Test 1: Google DNS
     try {
       const googleResponse = await fetch('https://8.8.8.8', {
-        method: 'GET',
-        timeout: 5000
+        method: 'GET'
       });
       console.log('✅ Google DNS accessible');
     } catch (error) {
@@ -23,8 +22,7 @@ export const testInternetConnectivity = async (): Promise<{
     // Test 2: Cloudflare DNS
     try {
       const cloudflareResponse = await fetch('https://1.1.1.1', {
-        method: 'GET',
-        timeout: 5000
+        method: 'GET'
       });
       console.log('✅ Cloudflare DNS accessible');
     } catch (error) {
@@ -38,7 +36,6 @@ export const testInternetConnectivity = async (): Promise<{
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000
       });
       
       if (httpbinResponse.ok) {
@@ -66,7 +63,6 @@ export const testInternetConnectivity = async (): Promise<{
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000
       });
       
       if (jsonResponse.ok) {

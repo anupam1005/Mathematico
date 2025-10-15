@@ -187,7 +187,7 @@ export class ErrorHandler {
   }
 
   static createFallbackData<T>(type: 'courses' | 'books' | 'liveClasses' | 'users'): T[] {
-    // Return empty arrays for production
+    // Return empty arrays since database functionality has been removed
     return [] as T[];
   }
 

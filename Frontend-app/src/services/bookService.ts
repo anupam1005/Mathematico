@@ -102,45 +102,18 @@ bookApi.interceptors.response.use(
 class BookService {
   private async getAuthHeaders() {
     let token = await authService.getToken();
-    console.log('BookService: Current token:', token ? 'Present' : 'Missing');
-    
-    // If no token, try to login as admin automatically
-    if (!token) {
-      try {
-        console.log('BookService: Attempting auto-login as admin');
-        const loginResponse = await authService.login('dc2006089@gmail.com', 'Myname*321');
-        console.log('BookService: Login response:', loginResponse.success ? 'Success' : 'Failed');
-        
-        if (loginResponse.success && loginResponse.data?.token) {
-          token = loginResponse.data.token;
-          // Store the token for future use
-          await AsyncStorage.setItem('authToken', token);
-          console.log('BookService: Token stored successfully');
-        }
-      } catch (error) {
-        console.log('BookService: Auto-login failed:', error);
-      }
-    }
-    
-    const headers = {
-      'Authorization': token ? `Bearer ${token}` : '',
+    return {
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
-    
-    console.log('BookService: Headers:', headers);
-    return headers;
   }
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
       const response = await bookApi({
         url: endpoint,
-        method: options.method || 'GET',
-        data: options.body,
-        headers: options.headers,
         ...options,
       });
-
       return response.data;
     } catch (error) {
       throw ErrorHandler.handleApiError(error);
@@ -162,27 +135,17 @@ class BookService {
       
       const response = await this.makeRequest(`/books?${params.toString()}`);
       
-      // Validate response
-      const validation = ErrorHandler.validateApiResponse(response);
-      if (!validation.success) {
-        console.warn('API response validation failed, using fallback data:', validation.error);
-        return {
-          data: ErrorHandler.createFallbackData('books'),
-          meta: { total: 1, page, limit, totalPages: 1 }
-        };
-      }
-      
-      const backendData = response.data;
+      // Since database is disabled, always return empty data
       return {
-        data: backendData.books || backendData || [],
-        meta: backendData.meta || backendData.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       console.error('Error fetching books:', error);
-      // Return fallback data when API fails
+      // Return empty data when API fails
       return {
-        data: ErrorHandler.createFallbackData('books'),
-        meta: { total: 1, page, limit, totalPages: 1 }
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
       };
     }
   }
@@ -193,126 +156,92 @@ class BookService {
       return response.data;
     } catch (error) {
       console.error('Error fetching book:', error);
-      throw error;
+      throw ErrorHandler.handleApiError(error);
     }
   }
 
-  async getAllBooksAdmin(page: number = 1, limit: number = 10, filters?: {
-    status?: string;
+  async getFeaturedBooks(): Promise<any[]> {
+    try {
+      const response = await this.makeRequest('/featured');
+      return response.data?.books || [];
+    } catch (error) {
+      console.error('Error fetching featured books:', error);
+      return [];
+    }
+  }
+
+  async searchBooks(query: string, filters?: {
     category?: string;
-    search?: string;
+    level?: string;
   }): Promise<PaginatedResponse<any>> {
     try {
-      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
-      if (filters?.status) params.append('status', filters.status);
+      const params = new URLSearchParams({ search: query });
       if (filters?.category) params.append('category', filters.category);
-      if (filters?.search) params.append('search', filters.search);
+      if (filters?.level) params.append('level', filters.level);
       
       const response = await this.makeRequest(`/books?${params.toString()}`);
       
-      if (response && response.success && response.data) {
-        const backendData = response.data;
-        return {
-          data: backendData.books || backendData || [],
-          meta: backendData.meta || { total: 0, page, limit, totalPages: 0 }
-        };
-      }
-      
+      // Since database is disabled, always return empty data
       return {
-        data: response.data || [],
-        meta: response.meta || { total: 0, page, limit, totalPages: 0 }
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
-;
     } catch (error) {
-      console.error('Error creating book:', error);
-      throw error;
+      console.error('Error searching books:', error);
+      return {
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
+      };
     }
   }
 
-  async updateBook(id: string, bookData: UpdateBookData | FormData): Promise<any> {
+  async getBooksByCategory(category: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> {
     try {
-      const isFormData = bookData instanceof FormData;
-      const response = await this.makeRequest(`/books/${id}`, {
-        method: 'PUT',
-        body: isFormData ? bookData : JSON.stringify(bookData),
-        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
-      });
-      return response.data;
+      const response = await this.getBooks(page, limit, { category });
+      return response;
     } catch (error) {
-      console.error('Error updating book:', error);
-      throw error;
+      console.error('Error fetching books by category:', error);
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
+      };
     }
+  }
+
+  async getBooksByLevel(level: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> {
+    try {
+      const response = await this.getBooks(page, limit, { level });
+      return response;
+    } catch (error) {
+      console.error('Error fetching books by level:', error);
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
+  }
+
+  // Admin methods (will return errors since database is disabled)
+  async createBook(bookData: CreateBookData): Promise<any> {
+    throw new Error('Book creation is not available. Database functionality has been removed.');
+  }
+
+  async updateBook(id: string, bookData: UpdateBookData): Promise<any> {
+    throw new Error('Book update is not available. Database functionality has been removed.');
   }
 
   async deleteBook(id: string): Promise<void> {
-    try {
-      await this.makeRequest(`/books/${id}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('Error deleting book:', error);
-      throw error;
-    }
+    throw new Error('Book deletion is not available. Database functionality has been removed.');
   }
 
-  async togglePublishStatus(id: string, isPublished: boolean): Promise<any> {
-    try {
-      const response = await this.makeRequest(`/books/${id}/publish`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isPublished }),
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error toggling publish status:', error);
-      throw error;
-    }
+  async uploadBookCover(bookId: string, imageUri: string): Promise<string> {
+    throw new Error('Book cover upload is not available. Database functionality has been removed.');
   }
 
-  async getBookStats(): Promise<{
-    totalBooks: number;
-    publishedBooks: number;
-    draftBooks: number;
-    activeBooks: number;
-  }> {
-    try {
-      const response = await this.makeRequest('/books/stats');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching book stats:', error);
-      throw error;
-    }
-  }
-
-  async publishBook(id: string | number, isPublished: boolean): Promise<any> {
-    try {
-      return await this.togglePublishStatus(id.toString(), isPublished);
-    } catch (error) {
-      console.error('Error publishing book:', error);
-      console.log(`Book ${id} published status updated to ${isPublished}`);
-      return { success: true, message: 'Book published successfully' };
-    }
-  }
-
-  async getMyBooks(): Promise<any[]> {
-    try {
-      const response = await this.makeRequest('/my-books');
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching my books:', error);
-      throw error;
-    }
-  }
-
-  async purchaseBook(bookId: string | number): Promise<void> {
-    try {
-      await this.makeRequest(`/book/${bookId}/purchase`, {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Error purchasing book:', error);
-      throw error;
-    }
+  async uploadBookPdf(bookId: string, pdfUri: string): Promise<string> {
+    throw new Error('Book PDF upload is not available. Database functionality has been removed.');
   }
 }
 
 export const bookService = new BookService();
+export default bookService;

@@ -1,142 +1,107 @@
-// @ts-nocheck
-import authService from './authService';
-import { API_CONFIG } from '../config';
+// Payment Service - Handles payment processing and transactions (No Database Version)
 
-export interface PaymentOrder {
+export interface PaymentData {
   id: string;
+  userId: string;
+  courseId?: string;
+  bookId?: string;
   amount: number;
   currency: string;
-  receipt: string;
-  status: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  paymentMethod: string;
+  transactionId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface CoursePaymentData {
-  order: PaymentOrder;
-  course: {
-    id: string;
-    title: string;
-    price: number;
-  };
-}
-
-export interface PaymentVerificationData {
-  paymentId: string;
-  orderId: string;
-  signature: string;
-  courseId: string;
-}
-
-export interface PaymentVerificationResponse {
+export interface PaymentResponse {
   success: boolean;
-  message: string;
-  enrollment: {
-    id: string;
-    courseId: string;
-    courseTitle: string;
-    enrolledAt: string;
-    paymentStatus: string;
-  };
-  payment: {
-    id: string;
-    amount: number;
-    currency: string;
-    status: string;
-  };
+  data?: any;
+  error?: string;
+  message?: string;
 }
 
 class PaymentService {
-  private async getAuthHeaders() {
-    const token = await authService.getToken();
+  async createPayment(paymentData: Omit<PaymentData, 'id' | 'createdAt' | 'updatedAt'>): Promise<PaymentResponse> {
+    throw new Error('Payment creation is not available. Database functionality has been removed.');
+  }
+
+  async getPayments(userId?: string): Promise<PaymentResponse> {
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      success: true,
+      data: [],
+      message: 'Database functionality has been removed'
     };
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const url = `${API_CONFIG.student}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...(await this.getAuthHeaders()),
-        ...options.headers,
+  async getPaymentById(paymentId: string): Promise<PaymentResponse> {
+    throw new Error('Payment not found. Database functionality has been removed.');
+  }
+
+  async updatePaymentStatus(paymentId: string, status: string): Promise<PaymentResponse> {
+    throw new Error('Payment status update is not available. Database functionality has been removed.');
+  }
+
+  async processRefund(paymentId: string, amount?: number): Promise<PaymentResponse> {
+    throw new Error('Refund processing is not available. Database functionality has been removed.');
+  }
+
+  async getPaymentHistory(userId: string): Promise<PaymentResponse> {
+    return {
+      success: true,
+      data: [],
+      message: 'Database functionality has been removed'
+    };
+  }
+
+  async getPaymentStats(): Promise<PaymentResponse> {
+    return {
+      success: true,
+      data: {
+        totalRevenue: 0,
+        totalTransactions: 0,
+        successfulPayments: 0,
+        failedPayments: 0,
+        refundedPayments: 0
       },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
+      message: 'Database functionality has been removed'
+    };
   }
 
-  async createPaymentOrder(courseId: string): Promise<CoursePaymentData> {
-    try {
-      const response = await this.makeRequest(`/course/${courseId}/enroll`, {
-        method: 'POST',
-        body: JSON.stringify({ paymentMethod: 'card', amount: 99.99 }),
-      });
-      return {
-        order: {
-          id: response.data.paymentId || `pay_${Date.now()}`,
-          amount: response.data.amount || 99.99,
-          currency: 'INR',
-          receipt: response.data.paymentId || `receipt_${Date.now()}`,
-          status: response.data.status || 'completed'
-        },
-        course: {
-          id: courseId,
-          title: 'Course Title',
-          price: response.data.amount || 99.99
-        }
-      };
-    } catch (error) {
-      console.error('Error creating payment order:', error);
-      throw error;
-    }
+  // Payment method management
+  async addPaymentMethod(userId: string, paymentMethod: any): Promise<PaymentResponse> {
+    throw new Error('Payment method management is not available. Database functionality has been removed.');
   }
 
-  async verifyPayment(verificationData: PaymentVerificationData): Promise<PaymentVerificationResponse> {
-    try {
-      // For now, simulate successful verification
-      return {
-        success: true,
-        message: 'Payment verified successfully',
-        enrollment: {
-          id: `enroll_${Date.now()}`,
-          courseId: verificationData.courseId,
-          courseTitle: 'Course Title',
-          enrolledAt: new Date().toISOString(),
-          paymentStatus: 'completed'
-        },
-        payment: {
-          id: verificationData.paymentId,
-          amount: 99.99,
-          currency: 'INR',
-          status: 'completed'
-        }
-      };
-    } catch (error) {
-      console.error('Error verifying payment:', error);
-      throw error;
-    }
+  async getPaymentMethods(userId: string): Promise<PaymentResponse> {
+    return {
+      success: true,
+      data: [],
+      message: 'Database functionality has been removed'
+    };
   }
 
-  async getPaymentStatus(paymentId: string) {
-    try {
-      // For now, simulate successful payment status
-      return {
-        id: paymentId,
-        status: 'completed',
-        amount: 99.99,
-        currency: 'INR'
-      };
-    } catch (error) {
-      console.error('Error getting payment status:', error);
-      throw error;
-    }
+  async removePaymentMethod(userId: string, paymentMethodId: string): Promise<PaymentResponse> {
+    throw new Error('Payment method management is not available. Database functionality has been removed.');
+  }
+
+  // Subscription management
+  async createSubscription(userId: string, planId: string): Promise<PaymentResponse> {
+    throw new Error('Subscription management is not available. Database functionality has been removed.');
+  }
+
+  async cancelSubscription(subscriptionId: string): Promise<PaymentResponse> {
+    throw new Error('Subscription management is not available. Database functionality has been removed.');
+  }
+
+  async getSubscriptions(userId: string): Promise<PaymentResponse> {
+    return {
+      success: true,
+      data: [],
+      message: 'Database functionality has been removed'
+    };
   }
 }
 
 export const paymentService = new PaymentService();
+export default paymentService;
