@@ -308,25 +308,41 @@ usersRoutes = safeRequire('./routes/users', 'users');
 // Mount routes
 console.log('🔗 Mounting API routes...');
 
-// Mount all routes for serverless deployment
-app.use(`${API_PREFIX}/auth`, authRoutes);
-console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+// Mount all routes for serverless deployment (only if loaded)
+if (authRoutes) {
+  app.use(`${API_PREFIX}/auth`, authRoutes);
+  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+} else {
+  console.warn('⚠️ Auth routes not mounted');
+}
 
-// Admin routes
-app.use(`${API_PREFIX}/admin`, adminRoutes);
-console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+if (adminRoutes) {
+  app.use(`${API_PREFIX}/admin`, adminRoutes);
+  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+} else {
+  console.warn('⚠️ Admin routes not mounted');
+}
 
-// Mobile routes
-app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+if (mobileRoutes) {
+  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+} else {
+  console.warn('⚠️ Mobile routes not mounted');
+}
 
-// Users routes
-app.use(`${API_PREFIX}/users`, usersRoutes);
-console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+if (usersRoutes) {
+  app.use(`${API_PREFIX}/users`, usersRoutes);
+  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+} else {
+  console.warn('⚠️ Users routes not mounted');
+}
 
-// Student routes
-app.use(`${API_PREFIX}/student`, studentRoutes);
-console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
+if (studentRoutes) {
+  app.use(`${API_PREFIX}/student`, studentRoutes);
+  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
+} else {
+  console.warn('⚠️ Student routes not mounted');
+}
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
