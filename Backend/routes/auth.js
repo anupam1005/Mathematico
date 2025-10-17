@@ -4,6 +4,14 @@ const { authenticateToken } = require('../middlewares/auth');
 
 // Import dependencies for auth logic
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+const connectDB = require('../config/database');
+let UserModel;
+try {
+  UserModel = require('../models/User');
+  console.log('✅ User model loaded in auth routes');
+} catch (e) {
+  console.warn('⚠️ Failed to load User model in auth routes:', e && e.message ? e.message : e);
+}
 
 // Import auth controller with database connection
 let authController;
@@ -16,7 +24,7 @@ try {
   console.error('AuthController error details:', error);
   // Fallback auth handlers for serverless
   authController = {
-    login: (req, res) => {
+    login: async (req, res) => {
       try {
         const { email, password } = req.body;
 
@@ -27,21 +35,91 @@ try {
           });
         }
 
-        let userPayload;
+        // Check for admin login first
         if (email === "dc2006089@gmail.com" && password === "Myname*321") {
-          userPayload = {
-            id: 1,
-            email,
+          const adminPayload = {
+            id: "admin-1",
+            email: "dc2006089@gmail.com",
             name: "Admin User",
             role: "admin",
             isAdmin: true,
+            email_verified: true,
+            is_active: true
           };
-        } else {
+
+          const accessToken = generateAccessToken(adminPayload);
+          const refreshToken = generateRefreshToken({ id: adminPayload.id });
+
+          return res.json({
+            success: true,
+            message: "Admin login successful",
+            data: {
+              user: {
+                ...adminPayload,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              tokens: {
+                accessToken,
+                refreshToken,
+                expiresIn: 3600,
+              },
+            },
+          });
+        }
+
+        // For regular users, check database
+        if (!UserModel) {
+          return res.status(503).json({ success: false, message: 'User model unavailable' });
+        }
+
+        // Ensure DB is connected (cached in serverless)
+        await connectDB();
+
+        // Find user by email (include password for comparison)
+        const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+password');
+        
+        if (!user) {
           return res.status(401).json({
             success: false,
             message: "Invalid email or password",
           });
         }
+
+        // Check if user is active
+        if (!user.isActive) {
+          return res.status(401).json({
+            success: false,
+            message: "Account is deactivated. Please contact support.",
+          });
+        }
+
+        // Verify password
+        const isPasswordValid = await user.comparePassword(password);
+        if (!isPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid email or password",
+          });
+        }
+
+        // Update last login and login count
+        user.lastLogin = new Date();
+        user.loginCount = (user.loginCount || 0) + 1;
+        await user.save();
+
+        // Get public profile (without password)
+        const publicUser = user.getPublicProfile();
+        
+        const userPayload = {
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role || 'student',
+          isAdmin: user.role === 'admin',
+          email_verified: user.isEmailVerified,
+          is_active: user.isActive
+        };
 
         const accessToken = generateAccessToken(userPayload);
         const refreshToken = generateRefreshToken({ id: userPayload.id });
@@ -50,11 +128,7 @@ try {
           success: true,
           message: "Login successful",
           data: {
-            user: {
-              ...userPayload,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
+            user: publicUser,
             tokens: {
               accessToken,
               refreshToken,
@@ -78,18 +152,31 @@ try {
           });
         }
 
-        // For now, allow registration but only create a basic user record
-        // In a real app, you'd hash the password and store in database
+        if (!UserModel) {
+          return res.status(503).json({ success: false, message: 'User model unavailable' });
+        }
+
+        // Ensure DB is connected (cached in serverless)
+        await connectDB();
+
+        // Check for existing user
+        const existing = await UserModel.findOne({ email: email.toLowerCase() });
+        if (existing) {
+          return res.status(409).json({ success: false, message: 'Email already exists' });
+        }
+
+        // Create and save user (password hashed via model pre-save)
+        const created = await UserModel.create({ name, email, password });
+
+        const publicUser = created.getPublicProfile();
         const userPayload = {
-          id: Date.now(), // Simple ID generation
-          email,
-          name,
-          role: "user",
-          isAdmin: false,
-          email_verified: false,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          id: created._id.toString(),
+          email: created.email,
+          name: created.name,
+          role: created.role || 'student',
+          isAdmin: created.role === 'admin',
+          email_verified: created.isEmailVerified,
+          is_active: created.isActive
         };
 
         const accessToken = generateAccessToken(userPayload);
@@ -99,7 +186,7 @@ try {
           success: true,
           message: "Registration successful",
           data: {
-            user: userPayload,
+            user: publicUser,
             tokens: {
               accessToken,
               refreshToken,
