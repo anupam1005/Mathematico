@@ -35,6 +35,8 @@ router.get('/health', (req, res) => {
 // Book routes
 router.get('/books', mobileController.getAllBooks);
 router.get('/books/:id', mobileController.getBookById);
+router.get('/books/:id/viewer', mobileController.getSecurePdfViewer);
+router.get('/books/:id/stream', mobileController.streamSecurePdf);
 
 // Course routes
 router.get('/courses', mobileController.getAllCourses);
