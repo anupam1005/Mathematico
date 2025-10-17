@@ -2,9 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 
-// Import MongoDB models
-const User = require('../models/User');
-console.log('✅ MongoDB models loaded for users routes');
+// Import MongoDB models with safe fallback
+let User;
+try {
+  User = require('../models/User');
+  console.log('✅ MongoDB models loaded for users routes');
+} catch (error) {
+  console.warn('⚠️ User model not available, using fallback user store');
+  User = {
+    findById: async () => null,
+    updateUser: async () => null
+  };
+}
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);

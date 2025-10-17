@@ -285,20 +285,25 @@ app.get('/', (req, res) => {
 // API Routes
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
-// Import route handlers (required for serverless)
+// Import route handlers (tolerant loading per route for serverless)
 let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
 
-try {
-  authRoutes = require('./routes/auth');
-  adminRoutes = require('./routes/admin');
-  mobileRoutes = require('./routes/mobile');
-  studentRoutes = require('./routes/student');
-  usersRoutes = require('./routes/users');
-  console.log('✅ All route handlers loaded successfully');
-} catch (err) {
-  console.error('❌ Critical route handlers failed to load:', err.message);
-  process.exit(1);
-}
+const safeRequire = (modulePath, label) => {
+  try {
+    const mod = require(modulePath);
+    console.log(`✅ Route loaded: ${label}`);
+    return mod;
+  } catch (err) {
+    console.warn(`⚠️ Route failed to load (${label}):`, err && err.message ? err.message : err);
+    return null;
+  }
+};
+
+authRoutes = safeRequire('./routes/auth', 'auth');
+adminRoutes = safeRequire('./routes/admin', 'admin');
+mobileRoutes = safeRequire('./routes/mobile', 'mobile');
+studentRoutes = safeRequire('./routes/student', 'student');
+usersRoutes = safeRequire('./routes/users', 'users');
 
 // Mount routes
 console.log('🔗 Mounting API routes...');

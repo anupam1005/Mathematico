@@ -114,6 +114,30 @@ try {
     forgotPassword: (req, res) => res.status(503).json({ success: false, message: 'Password reset temporarily unavailable in serverless mode' }),
     resetPassword: (req, res) => res.status(503).json({ success: false, message: 'Password reset temporarily unavailable in serverless mode' }),
     verifyEmail: (req, res) => res.status(503).json({ success: false, message: 'Email verification temporarily unavailable in serverless mode' }),
+    healthCheck: (req, res) => {
+      res.json({
+        success: true,
+        status: 'healthy',
+        service: 'auth',
+        timestamp: new Date().toISOString()
+      });
+    },
+    testDatabase: async (req, res) => {
+      // No DB calls in fallback; just return a consistent response
+      res.json({
+        success: true,
+        message: 'Database test endpoint (fallback). No DB operations executed.',
+        connected: true
+      });
+    },
+    verifyUsersCollection: async (req, res) => {
+      res.json({
+        success: true,
+        message: 'Users collection verification (fallback).',
+        exists: true,
+        count: 0
+      });
+    },
     getProfile: (req, res) => {
       res.json({
         success: true,

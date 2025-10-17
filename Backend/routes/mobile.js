@@ -1,9 +1,25 @@
 const express = require('express');
 const router = express.Router();
 
-// Import mobile controller
-const mobileController = require('../controllers/mobileController');
-console.log('✅ MobileController loaded successfully');
+// Import mobile controller (fallback to no-op handlers if missing)
+let mobileController;
+try {
+  mobileController = require('../controllers/mobileController');
+  console.log('✅ MobileController loaded successfully');
+} catch (error) {
+  console.warn('⚠️ MobileController not available, using fallback handlers');
+  mobileController = {
+    getAllBooks: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
+    getBookById: (req, res) => res.status(404).json({ success: false, message: 'Book not found (fallback)' }),
+    getAllCourses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
+    getCourseById: (req, res) => res.status(404).json({ success: false, message: 'Course not found (fallback)' }),
+    getAllLiveClasses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
+    getLiveClassById: (req, res) => res.status(404).json({ success: false, message: 'Live class not found (fallback)' }),
+    search: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
+    getFeaturedContent: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
+    getAppInfo: (req, res) => res.json({ success: true, data: { version: 'fallback', status: 'ok' } })
+  };
+}
 
 // ============= ROUTE DEFINITIONS =============
 
