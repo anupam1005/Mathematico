@@ -85,9 +85,24 @@ const app = express();
 // Trust proxy for Vercel
 app.set('trust proxy', 1);
 
-// Handle favicon requests to prevent unnecessary 404/500 noise in serverless
+// Handle favicon requests explicitly to avoid 500s in serverless
+const TINY_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
+
 app.get('/favicon.ico', (req, res) => {
-  res.status(204).end();
+  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Length', buffer.length);
+  res.status(200).end(buffer);
+});
+
+app.head('/favicon.ico', (req, res) => {
+  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Length', buffer.length);
+  res.status(200).end();
 });
 
 // Security middleware

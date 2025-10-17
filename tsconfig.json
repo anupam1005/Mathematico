@@ -11,5 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler"
   },
-  "extends": "./Frontend-app/tsconfig.json"
+  "extends": "./Frontend-app/tsconfig.json",
+  "exclude": [
+    "Backend/**",
+    "node_modules",
+    "**/*.js"
+  ]
 }
