@@ -1,6 +1,9 @@
-// Vercel serverless backend entry point for Mathematico - No Database Version
+// Mathematico Backend with MongoDB Database
 require('dotenv').config({ path: `${__dirname}/config.env` });
 console.log('✅ Environment variables loaded from config.env');
+
+// Database connection
+const connectDB = require('./config/database');
 
 const express = require("express");
 const cors = require("cors");
@@ -81,6 +84,11 @@ const app = express();
 
 // Trust proxy for Vercel
 app.set('trust proxy', 1);
+
+// Handle favicon requests to prevent unnecessary 404/500 noise in serverless
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
 
 // Security middleware
 const helmet = require('helmet');
@@ -183,7 +191,11 @@ app.get('/health', async (req, res) => {
     res.json({
       success: true,
       status: 'healthy',
-      database: { status: 'disabled', type: 'none' },
+      database: { 
+        status: 'connected', 
+        type: 'mongodb',
+        host: process.env.MONGODB_URI ? 'connected' : 'not configured'
+      },
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
       serverless: process.env.VERCEL === '1',
@@ -210,9 +222,9 @@ app.get('/', (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       database: {
-        connected: false,
-        readyState: 0,
-        host: 'none'
+        connected: true,
+        readyState: 1,
+        host: 'mongodb'
       },
       endpoints: {
         auth: '/api/v1/auth',
@@ -289,9 +301,9 @@ console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 app.get(`${API_PREFIX}`, (req, res) => {
   res.json({
     success: true,
-    message: 'Mathematico API - No Database Version',
+    message: 'Mathematico API - MongoDB Version',
     version: '2.0.0',
-    database: 'None',
+    database: 'MongoDB',
     environment: process.env.NODE_ENV || 'development',
     serverless: process.env.VERCEL === '1',
     timestamp: new Date().toISOString(),
@@ -383,15 +395,30 @@ module.exports = app;
 // Start server for local development
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.server = app.listen(PORT, () => {
-    console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
-    console.log(`🌐 Server running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-    console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
-    console.log(`🗄️  Database: Disabled`);
-    console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
-    console.log('==========================================\n');
-  });
+  
+  // Connect to database first, then start server
+  const startServer = async () => {
+    try {
+      // Connect to MongoDB
+      await connectDB();
+      
+      // Start the server
+      app.server = app.listen(PORT, () => {
+        console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
+        console.log(`🌐 Server running on port ${PORT}`);
+        console.log(`📊 Health check: http://localhost:${PORT}/health`);
+        console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
+        console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
+        console.log(`🗄️  Database: MongoDB Connected`);
+        console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
+        console.log('==========================================\n');
+      });
+    } catch (error) {
+      console.error('❌ Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+  
+  startServer();
 }
