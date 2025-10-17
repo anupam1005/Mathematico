@@ -85,6 +85,17 @@ const app = express();
 // Trust proxy for Vercel
 app.set('trust proxy', 1);
 
+// Initialize database connection in serverless and local environments
+// Fire-and-forget to avoid blocking cold starts; connection is cached
+(async () => {
+  try {
+    await connectDB();
+    console.log('✅ Database initialized');
+  } catch (err) {
+    console.error('⚠️ Database initialization failed (continuing to serve requests):', err && err.message ? err.message : err);
+  }
+})();
+
 // Handle favicon requests explicitly to avoid 500s in serverless
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
