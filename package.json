@@ -37,6 +37,7 @@
     "@rollup/rollup-linux-x64-gnu": "npm:rollup",
     "@rollup/rollup-linux-x64-musl": "npm:rollup",
     "@rollup/rollup-darwin-x64": "npm:rollup",
-    "@rollup/rollup-darwin-arm64": "npm:rollup"
+    "@rollup/rollup-darwin-arm64": "npm:rollup",
+    "@react-native/gradle-plugin": "0.76.5"
   }
 }

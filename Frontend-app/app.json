@@ -4,7 +4,7 @@
     "slug": "mathematico-app",
     "version": "2.0.0",
     "orientation": "portrait",
-    "owner": "satyam2504",
+    "owner": "testaccount125",
     "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "web": {
@@ -12,7 +12,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e3b40b82-86b0-49d3-a4cc-1b92721969b9"
+        "projectId": "f4a7320d-9731-4ddb-9e3f-a8c056934cd9"
       }
     },
     "android": {

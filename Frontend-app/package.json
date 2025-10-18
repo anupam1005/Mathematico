@@ -51,17 +51,24 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@babel/preset-env": "^7.25.0",
-    "@react-native/gradle-plugin": "^0.76.5",
+    "@react-native/gradle-plugin": "0.76.5",
     "@types/react": "~18.3.12",
     "babel-preset-expo": "~11.0.0",
     "metro-cache": "^0.81.5",
     "typescript": "~5.6.2"
   },
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "overrides": {
     "@rollup/rollup-linux-x64-gnu": "npm:rollup",
     "@rollup/rollup-linux-x64-musl": "npm:rollup",
     "@rollup/rollup-darwin-x64": "npm:rollup",
-    "@rollup/rollup-darwin-arm64": "npm:rollup"
+    "@rollup/rollup-darwin-arm64": "npm:rollup",
+    "@react-native/gradle-plugin": "0.76.5"
+  },
+  "resolutions": {
+    "@react-native/gradle-plugin": "0.76.5"
   },
   "expo": {
     "install": {
@@ -70,7 +77,6 @@
         "react-native-svg",
         "expo",
         "expo-file-system",
-        "@react-native/gradle-plugin",
         "react-native",
         "react-native-gesture-handler",
         "react-native-reanimated",
