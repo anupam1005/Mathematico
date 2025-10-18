@@ -20,8 +20,6 @@ const connectDB = async () => {
 
       const options = {
         dbName: process.env.MONGODB_DB || 'mathematico',
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 45000,

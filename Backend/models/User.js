@@ -97,6 +97,26 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   
+  // Refresh Token Management (for secure authentication)
+  refreshTokens: [{
+    tokenHash: {
+      type: String,
+      required: true
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    deviceInfo: {
+      userAgent: String,
+      ip: String
+    }
+  }],
+  
   // Learning Progress
   enrolledCourses: [{
     courseId: {
@@ -182,8 +202,7 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Indexes for better performance
-userSchema.index({ email: 1 });
+// Indexes for better performance (email index already created by unique: true)
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ createdAt: -1 });
@@ -237,6 +256,54 @@ userSchema.statics.findByEmail = function(email) {
 // Static method to find active users
 userSchema.statics.findActiveUsers = function() {
   return this.find({ isActive: true });
+};
+
+// Instance method to add refresh token
+userSchema.methods.addRefreshToken = function(tokenHash, expiresAt, deviceInfo = {}) {
+  // Remove expired tokens
+  this.refreshTokens = this.refreshTokens.filter(token => token.expiresAt > new Date());
+  
+  // Limit to 5 active refresh tokens per user (multiple devices)
+  if (this.refreshTokens.length >= 5) {
+    this.refreshTokens.shift(); // Remove oldest token
+  }
+  
+  this.refreshTokens.push({
+    tokenHash,
+    expiresAt,
+    deviceInfo
+  });
+  
+  return this.save();
+};
+
+// Instance method to remove refresh token
+userSchema.methods.removeRefreshToken = function(tokenHash) {
+  this.refreshTokens = this.refreshTokens.filter(token => token.tokenHash !== tokenHash);
+  return this.save();
+};
+
+// Instance method to clear all refresh tokens (logout from all devices)
+userSchema.methods.clearAllRefreshTokens = function() {
+  this.refreshTokens = [];
+  return this.save();
+};
+
+// Instance method to verify refresh token
+userSchema.methods.hasValidRefreshToken = function(tokenHash) {
+  const token = this.refreshTokens.find(t => t.tokenHash === tokenHash);
+  
+  if (!token) return false;
+  
+  // Check if token is expired
+  if (token.expiresAt < new Date()) {
+    // Remove expired token
+    this.refreshTokens = this.refreshTokens.filter(t => t.tokenHash !== tokenHash);
+    this.save();
+    return false;
+  }
+  
+  return true;
 };
 
 module.exports = mongoose.model('User', userSchema);

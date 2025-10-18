@@ -11,7 +11,7 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: { 
-    fileSize: 50 * 1024 * 1024, // 50MB for PDFs
+    fileSize: 10 * 1024 * 1024 * 1024, // 10GB for PDFs
     files: 2 // Maximum 2 files (cover + PDF)
   },
   fileFilter: (req, file, cb) => {
@@ -78,14 +78,9 @@ router.get('/info', (req, res) => {
       step2: 'Use the returned accessToken in Authorization header',
       step3: 'Access protected endpoints with Bearer token'
     },
-    testCredentials: {
-      admin: {
-        email: 'dc2006089@gmail.com',
-        password: 'Myname*321'
-      }
-    },
+    note: 'Use your registered admin account credentials to login',
     curlExample: {
-      login: 'curl -X POST https://mathematico-backend-new.vercel.app/api/v1/auth/login -H "Content-Type: application/json" -d \'{"email":"dc2006089@gmail.com","password":"Myname*321"}\'',
+      login: 'curl -X POST https://mathematico-backend-new.vercel.app/api/v1/auth/login -H "Content-Type: application/json" -d \'{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}\'',
       access: 'curl -X GET https://mathematico-backend-new.vercel.app/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"'
     }
   });

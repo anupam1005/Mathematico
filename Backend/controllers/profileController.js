@@ -155,5 +155,8 @@ module.exports = {
   changePassword,
   getUserSettings,
   updateUserSettings,
-  deleteAccount
+  deleteAccount,
+  // Aliases for route compatibility
+  getPreferences: getUserSettings,
+  updatePreferences: updateUserSettings
 };

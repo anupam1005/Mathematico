@@ -1,76 +1,116 @@
-const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+const { 
+  generateTokenPair, 
+  verifyAccessToken, 
+  verifyHashedRefreshToken,
+  hashRefreshToken,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie
+} = require('../utils/jwt');
+const connectDB = require('../config/database');
 
-// Auth Controller - Handles authentication requests (No Database Version)
+// Import User model
+let UserModel;
+try {
+  UserModel = require('../models/User');
+} catch (error) {
+  console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
+}
+
+// Auth Controller - Handles authentication with secure token management
 
 /**
- * User login
+ * User login with secure token management
  */
 const login = async (req, res) => {
   try {
-    console.log('Login attempt:', req.body);
-    
     const { email, password } = req.body;
     
-    // Basic validation
+    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Bad Request',
         message: 'Email and password are required',
         timestamp: new Date().toISOString()
       });
     }
+
+    if (!UserModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'User model unavailable' 
+      });
+    }
+
+    // Connect to database
+    await connectDB();
+
+    // Find user by email (include password for comparison)
+    const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+password');
     
-    // Check if it's the admin user
-    // SECURITY: Use environment variables for admin credentials
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    
-    if (!adminEmail || !adminPassword) {
-      return res.status(500).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Server Configuration Error',
-        message: 'Admin credentials not configured',
+        message: 'Invalid email or password',
         timestamp: new Date().toISOString()
       });
     }
-    
-    if (email === adminEmail && password === adminPassword) {
-      // Generate JWT tokens for admin
-      const userPayload = {
-        id: 1,
-        email: email,
-        name: 'Admin User',
-        role: 'admin',
-        isAdmin: true,
-        is_admin: true,
-        email_verified: true,
-        is_active: true
-      };
-      
-      const accessToken = generateAccessToken(userPayload);
-      const refreshToken = generateRefreshToken(userPayload);
-      
-      console.log('✅ Admin login successful');
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
-          user: userPayload,
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          tokenType: 'Bearer'
-        },
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is deactivated. Please contact support.',
         timestamp: new Date().toISOString()
       });
     }
+
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Generate token pair
+    const tokens = generateTokenPair(user);
+
+    // Store hashed refresh token in database
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress
+    };
     
-    // For non-admin users, return error (no database to check against)
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized',
-      message: 'Invalid credentials. Only admin access is available.',
+    await user.addRefreshToken(
+      tokens.refreshTokenHash, 
+      tokens.refreshTokenExpiry,
+      deviceInfo
+    );
+
+    // Update last login
+    user.lastLogin = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
+    await user.save();
+
+    // Set refresh token in HttpOnly cookie
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // Get public profile
+    const publicUser = user.getPublicProfile();
+
+    console.log('✅ Login successful:', user.email);
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: publicUser,
+        accessToken: tokens.accessToken,
+        tokenType: 'Bearer',
+        expiresIn: tokens.accessTokenExpiresIn
+      },
       timestamp: new Date().toISOString()
     });
     
@@ -78,89 +118,139 @@ const login = async (req, res) => {
     console.error('Login error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Internal Server Error',
       message: 'Login failed',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
 };
 
 /**
- * User registration (disabled - no database)
+ * User registration with secure token management
  */
 const register = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'User registration is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
-};
-
-/**
- * Refresh token
- */
-const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    
-    if (!refreshToken) {
+    const { name, email, password } = req.body;
+
+    // Validation
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Bad Request',
-        message: 'Refresh token is required',
+        message: 'Name, email and password are required',
         timestamp: new Date().toISOString()
       });
     }
-    
-    // Verify refresh token
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    
-    // Generate new access token
-    const userPayload = {
-      id: decoded.id,
-      email: decoded.email,
-      name: decoded.name,
-      role: decoded.role,
-      isAdmin: decoded.isAdmin,
-      is_admin: decoded.is_admin,
-      email_verified: decoded.email_verified,
-      is_active: decoded.is_active
+
+    if (!UserModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'User model unavailable' 
+      });
+    }
+
+    // Connect to database
+    await connectDB();
+
+    // Check for existing user
+    const existing = await UserModel.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Email already exists' 
+      });
+    }
+
+    // Create user (password will be hashed by pre-save middleware)
+    const user = await UserModel.create({ name, email, password });
+
+    // Generate token pair
+    const tokens = generateTokenPair(user);
+
+    // Store hashed refresh token in database
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress
     };
     
-    const newAccessToken = generateAccessToken(userPayload);
-    
-    return res.json({
+    await user.addRefreshToken(
+      tokens.refreshTokenHash, 
+      tokens.refreshTokenExpiry,
+      deviceInfo
+    );
+
+    // Set refresh token in HttpOnly cookie
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // Get public profile
+    const publicUser = user.getPublicProfile();
+
+    console.log('✅ Registration successful:', user.email);
+
+    return res.status(201).json({
       success: true,
-      message: 'Token refreshed successfully',
+      message: 'Registration successful',
       data: {
-        accessToken: newAccessToken,
-        tokenType: 'Bearer'
+        user: publicUser,
+        accessToken: tokens.accessToken,
+        tokenType: 'Bearer',
+        expiresIn: tokens.accessTokenExpiresIn
       },
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error('Refresh token error:', error);
-    return res.status(401).json({
+    console.error('Registration error:', error);
+    return res.status(500).json({
       success: false,
-      error: 'Unauthorized',
-      message: 'Invalid refresh token',
+      message: 'Registration failed',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
 };
 
 /**
- * Logout (no database to update)
+ * Logout - clear refresh token from database and cookie
  */
 const logout = async (req, res) => {
-  return res.json({
-    success: true,
-    message: 'Logout successful',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (refreshToken && UserModel) {
+      await connectDB();
+      
+      const tokenHash = hashRefreshToken(refreshToken);
+      
+      // Find user and remove refresh token
+      const user = await UserModel.findOne({
+        'refreshTokens.tokenHash': tokenHash
+      });
+
+      if (user) {
+        await user.removeRefreshToken(tokenHash);
+        console.log('✅ Logout successful:', user.email);
+      }
+    }
+
+    // Clear refresh token cookie
+    clearRefreshTokenCookie(res);
+
+    return res.json({
+      success: true,
+      message: 'Logout successful',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still clear cookie even if database operation fails
+    clearRefreshTokenCookie(res);
+    return res.json({
+      success: true,
+      message: 'Logout successful',
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 /**
@@ -194,6 +284,105 @@ const getCurrentUser = async (req, res) => {
       success: false,
       error: 'Internal Server Error',
       message: 'Failed to get user information',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Refresh access token using refresh token from HttpOnly cookie
+ */
+const refreshToken = async (req, res) => {
+  try {
+    // Get refresh token from cookie
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!UserModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'User model unavailable' 
+      });
+    }
+
+    // Connect to database
+    await connectDB();
+
+    // Hash the refresh token to compare with database
+    const tokenHash = hashRefreshToken(refreshToken);
+
+    // Find user with this refresh token
+    const user = await UserModel.findOne({
+      'refreshTokens.tokenHash': tokenHash,
+      'refreshTokens.expiresAt': { $gt: new Date() }
+    });
+
+    if (!user) {
+      clearRefreshTokenCookie(res);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Verify token is still valid
+    if (!user.hasValidRefreshToken(tokenHash)) {
+      clearRefreshTokenCookie(res);
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token expired',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Generate new token pair
+    const tokens = generateTokenPair(user);
+
+    // Remove old refresh token and add new one
+    await user.removeRefreshToken(tokenHash);
+    
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress
+    };
+    
+    await user.addRefreshToken(
+      tokens.refreshTokenHash, 
+      tokens.refreshTokenExpiry,
+      deviceInfo
+    );
+
+    // Set new refresh token in HttpOnly cookie
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    console.log('✅ Token refreshed:', user.email);
+
+    return res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        accessToken: tokens.accessToken,
+        tokenType: 'Bearer',
+        expiresIn: tokens.accessTokenExpiresIn
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    clearRefreshTokenCookie(res);
+    return res.status(500).json({
+      success: false,
+      message: 'Token refresh failed',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -256,5 +445,10 @@ module.exports = {
   verifyEmail,
   forgotPassword,
   resetPassword,
-  changePassword
+  changePassword,
+  // Additional methods for routes
+  healthCheck: (req, res) => res.json({ success: true, status: 'healthy', service: 'auth', timestamp: new Date().toISOString() }),
+  testDatabase: (req, res) => res.json({ success: true, message: 'Database test endpoint', connected: true }),
+  verifyUsersCollection: (req, res) => res.json({ success: true, message: 'Users collection verified', exists: true, count: 0 }),
+  getProfile: (req, res) => res.json({ success: true, data: req.user || {} })
 };

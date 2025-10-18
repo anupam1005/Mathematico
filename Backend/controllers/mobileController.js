@@ -38,16 +38,35 @@ try {
  */
 const getAllCourses = async (req, res) => {
   try {
-    // Return empty data since database is disabled
-    console.log('📱 Mobile courses endpoint - database disabled');
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const courses = await CourseModel.find({ 
+      status: 'published',
+      isAvailable: true 
+    })
+      .select('-enrolledStudents -reviews')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await CourseModel.countDocuments({ status: 'published', isAvailable: true });
+
     res.json({
       success: true,
-      data: [],
+      data: courses,
       pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       },
       timestamp: new Date().toISOString()
     });
@@ -56,6 +75,7 @@ const getAllCourses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch courses',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -365,16 +385,40 @@ const streamSecurePdf = async (req, res) => {
  */
 const getAllLiveClasses = async (req, res) => {
   try {
-    // Return empty data since database is disabled
-    console.log('📱 Mobile live classes endpoint - database disabled');
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const liveClasses = await LiveClassModel.find({ 
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
+      startTime: { $gte: new Date() }
+    })
+      .select('-enrolledStudents -reviews')
+      .sort({ startTime: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await LiveClassModel.countDocuments({ 
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
+      startTime: { $gte: new Date() }
+    });
+
     res.json({
       success: true,
-      data: [],
+      data: liveClasses,
       pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       },
       timestamp: new Date().toISOString()
     });
@@ -383,6 +427,7 @@ const getAllLiveClasses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -432,29 +477,6 @@ const getCourseById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch course',
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-/**
- * Get book by ID
- */
-const getBookById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log('📱 Mobile book by ID endpoint - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Book not found',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error fetching book:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch book',
       timestamp: new Date().toISOString()
     });
   }
@@ -577,6 +599,8 @@ module.exports = {
   getCourseById,
   getLiveClassById,
   getCategories,
+  search: searchContent,
   searchContent,
+  getAppInfo: getMobileInfo,
   getMobileInfo
 };

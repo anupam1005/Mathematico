@@ -7,6 +7,7 @@ const connectDB = require('./config/database');
 
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const path = require("path");
 const fs = require("fs");
 const rateLimit = require("express-rate-limit");
@@ -197,6 +198,9 @@ app.use(limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser middleware (for secure refresh tokens)
+app.use(cookieParser());
 
 // Static file serving - disabled for serverless mode
 // In serverless mode, files should be served from Cloudinary or CDN

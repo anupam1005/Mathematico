@@ -74,7 +74,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 1024 * 1024 * 1024, // 1GB default, configurable
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 * 1024, // 10GB default, configurable
     files: 2, // Maximum 2 files (PDF + cover image)
     fieldSize: 1024 * 1024, // 1MB for field data
     fieldNameSize: 100 // Max field name length

@@ -24,10 +24,12 @@ const withTimeout = (fn, timeoutMs = 25000) => {
 };
 
 // Import models
-let BookModel, UserModel;
+let BookModel, UserModel, CourseModel, LiveClassModel;
 try {
   BookModel = require('../models/Book');
   UserModel = require('../models/User');
+  CourseModel = require('../models/Course');
+  LiveClassModel = require('../models/LiveClass');
   console.log('✅ Admin models loaded successfully');
 } catch (error) {
   console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
@@ -569,25 +571,48 @@ const deleteBook = async (req, res) => {
 
 const getAllCourses = async (req, res) => {
   try {
-    console.log('🎓 Admin courses - database disabled');
-    
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const { status, category, subject, grade } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (category) query.category = category;
+    if (subject) query.subject = subject;
+    if (grade) query.grade = grade;
+
+    const courses = await CourseModel.find(query)
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await CourseModel.countDocuments(query);
+
     res.json({
       success: true,
-      data: [],
+      data: courses,
       pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       },
-      timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error fetching courses:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch courses',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -595,12 +620,28 @@ const getAllCourses = async (req, res) => {
 
 const getCourseById = async (req, res) => {
   try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
     const { id } = req.params;
-    console.log('📖 Admin course by ID - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Course not found',
+
+    const course = await CourseModel.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('enrolledStudents.student', 'name email');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -608,61 +649,195 @@ const getCourseById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch course',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
 };
 
 const createCourse = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Course creation is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+
+    const courseData = {
+      ...req.body,
+      createdBy: req.user.id,
+      status: 'draft'
+    };
+
+    // Handle file upload if present
+    if (req.files && req.files.image && req.files.image[0]) {
+      try {
+        const imageResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+              resource_type: 'image', 
+              folder: 'mathematico/courses/thumbnails',
+              public_id: `course_${Date.now()}`,
+              format: 'jpg',
+              quality: 'auto'
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.files.image[0].buffer);
+        });
+        courseData.thumbnail = imageResult.secure_url;
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    }
+
+    const course = await CourseModel.create(courseData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Course created successfully',
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const updateCourse = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Course update is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const updateData = req.body;
+
+    delete updateData._id;
+    delete updateData.createdBy;
+    delete updateData.createdAt;
+
+    const course = await CourseModel.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Course updated successfully',
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const deleteCourse = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Course deletion is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const course = await CourseModel.findByIdAndDelete(id);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Course deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 // ============= LIVE CLASS MANAGEMENT =============
 
 const getAllLiveClasses = async (req, res) => {
   try {
-    console.log('🎥 Admin live classes - database disabled');
-    
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const { status, category, subject, grade } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (category) query.category = category;
+    if (subject) query.subject = subject;
+    if (grade) query.grade = grade;
+
+    const liveClasses = await LiveClassModel.find(query)
+      .populate('createdBy', 'name email')
+      .populate('instructor.instructorId', 'name email')
+      .sort({ startTime: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await LiveClassModel.countDocuments(query);
+
     res.json({
       success: true,
-      data: [],
+      data: liveClasses,
       pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       },
-      timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error fetching live classes:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -670,12 +845,29 @@ const getAllLiveClasses = async (req, res) => {
 
 const getLiveClassById = async (req, res) => {
   try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
     const { id } = req.params;
-    console.log('📺 Admin live class by ID - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Live class not found',
+
+    const liveClass = await LiveClassModel.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('instructor.instructorId', 'name email')
+      .populate('enrolledStudents.student', 'name email');
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -683,36 +875,146 @@ const getLiveClassById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live class',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
 };
 
 const createLiveClass = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Live class creation is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+
+    const liveClassData = {
+      ...req.body,
+      createdBy: req.user.id,
+      status: 'scheduled'
+    };
+
+    // Handle file upload if present
+    if (req.file) {
+      try {
+        const imageResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+              resource_type: 'image', 
+              folder: 'mathematico/liveclasses/thumbnails',
+              public_id: `liveclass_${Date.now()}`,
+              format: 'jpg',
+              quality: 'auto'
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+        liveClassData.thumbnail = imageResult.secure_url;
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    }
+
+    const liveClass = await LiveClassModel.create(liveClassData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Live class created successfully',
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create live class',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const updateLiveClass = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Live class update is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const updateData = req.body;
+
+    delete updateData._id;
+    delete updateData.createdBy;
+    delete updateData.createdAt;
+
+    const liveClass = await LiveClassModel.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Live class updated successfully',
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update live class',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const deleteLiveClass = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Live class deletion is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const liveClass = await LiveClassModel.findByIdAndDelete(id);
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Live class deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete live class',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 // ============= PAYMENT MANAGEMENT =============
@@ -806,6 +1108,7 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  updateUserStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
   // Book Management
   getAllBooks: withTimeout(getAllBooks),
@@ -821,6 +1124,9 @@ module.exports = {
   createCourse,
   updateCourse,
   deleteCourse,
+  updateCourseStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  uploadCourseThumbnail: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  toggleCoursePublish: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
   // Live Class Management
   getAllLiveClasses,
@@ -828,10 +1134,24 @@ module.exports = {
   createLiveClass,
   updateLiveClass,
   deleteLiveClass,
+  updateLiveClassStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
   // Payment Management
   getAllPayments,
   getPaymentById,
+  updatePaymentStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  
+  // File Upload
+  uploadFile: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  
+  // Statistics
+  getBookStats: (req, res) => res.json({ success: true, data: { total: 0, published: 0, draft: 0 } }),
+  getCourseStats: (req, res) => res.json({ success: true, data: { total: 0, published: 0, draft: 0 } }),
+  getLiveClassStats: (req, res) => res.json({ success: true, data: { total: 0, upcoming: 0, completed: 0 } }),
+  
+  // Settings
+  getSettings: (req, res) => res.json({ success: true, data: {} }),
+  updateSettings: (req, res) => res.json({ success: true, message: 'Settings updated' }),
   
   // Admin Info
   getAdminInfo

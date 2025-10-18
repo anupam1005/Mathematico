@@ -35,38 +35,7 @@ try {
           });
         }
 
-        // Check for admin login first
-        if (email === "dc2006089@gmail.com" && password === "Myname*321") {
-          const adminPayload = {
-            id: "admin-1",
-            email: "dc2006089@gmail.com",
-            name: "Admin User",
-            role: "admin",
-            isAdmin: true,
-            email_verified: true,
-            is_active: true
-          };
-
-          const accessToken = generateAccessToken(adminPayload);
-          const refreshToken = generateRefreshToken({ id: adminPayload.id });
-
-          return res.json({
-            success: true,
-            message: "Admin login successful",
-            data: {
-              user: {
-                ...adminPayload,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              tokens: {
-                accessToken,
-                refreshToken,
-                expiresIn: 3600,
-              },
-            },
-          });
-        }
+        // No hardcoded admin credentials - all users must be in database
 
         // For regular users, check database
         if (!UserModel) {
@@ -204,46 +173,10 @@ try {
     },
     logout: (req, res) => res.json({ success: true, message: 'Logout successful' }),
     refreshToken: (req, res) => {
-      try {
-        const { refreshToken } = req.body;
-        
-        if (!refreshToken) {
-          return res.status(400).json({
-            success: false,
-            message: "Refresh token is required"
-          });
-        }
-
-        // For demo purposes, generate new tokens
-        const userPayload = {
-          id: 1,
-          email: "dc2006089@gmail.com",
-          name: "Admin User",
-          role: "admin",
-          isAdmin: true,
-        };
-
-        const newAccessToken = generateAccessToken(userPayload);
-        const newRefreshToken = generateRefreshToken({ id: userPayload.id });
-
-        res.json({
-          success: true,
-          message: "Token refreshed successfully",
-          data: {
-            tokens: {
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken,
-              expiresIn: 3600
-            }
-          }
-        });
-      } catch (error) {
-        console.error("Refresh token error:", error);
-        res.status(500).json({
-          success: false,
-          message: "Failed to refresh token"
-        });
-      }
+      res.status(501).json({
+        success: false,
+        message: "Token refresh not implemented in fallback mode"
+      });
     },
     forgotPassword: (req, res) => res.status(503).json({ success: false, message: 'Password reset temporarily unavailable in serverless mode' }),
     resetPassword: (req, res) => res.status(503).json({ success: false, message: 'Password reset temporarily unavailable in serverless mode' }),
