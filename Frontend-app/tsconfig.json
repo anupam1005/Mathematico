@@ -24,7 +24,12 @@
         "services/*",
         "config/*"
       ]
-    }
+    },
+    "types": [
+      "node",
+      "jest",
+      "@testing-library/jest-dom"
+    ]
   },
   "include": [
     "**/*.ts",
@@ -34,9 +39,7 @@
   ],
   "exclude": [
     "node_modules",
-    "babel.config.js",
-    "metro.config.js",
-    "jest.config.js"
+    "**/__tests__/*"
   ],
   "extends": "expo/tsconfig.base"
 }
