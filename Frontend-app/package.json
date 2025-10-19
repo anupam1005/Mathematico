@@ -99,10 +99,11 @@
     "install": {
       "exclude": [
         "react",
+        "react-dom",
+        "react-native",
         "react-native-svg",
         "expo",
         "expo-file-system",
-        "react-native",
         "react-native-gesture-handler",
         "react-native-reanimated",
         "react-native-screens",
