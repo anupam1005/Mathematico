@@ -39,5 +39,8 @@
     "@rollup/rollup-darwin-x64": "npm:rollup",
     "@rollup/rollup-darwin-arm64": "npm:rollup",
     "@react-native/gradle-plugin": "0.76.5"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-private-property-in-object": "^7.27.1"
   }
 }
