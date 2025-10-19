@@ -32,6 +32,7 @@
     "expo-font": "~13.0.4",
     "expo-image-picker": "~16.0.2",
     "expo-linear-gradient": "~14.0.1",
+    "expo-secure-store": "~15.0.7",
     "expo-splash-screen": "~0.29.16",
     "expo-status-bar": "~2.0.0",
     "expo-updates": "~0.27.4",

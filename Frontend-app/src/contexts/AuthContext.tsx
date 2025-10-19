@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
 import authService from '../services/authService';
 
@@ -55,14 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (token) {
         // Token is valid, try to get user data from storage
-        const userDataString = await AsyncStorage.getItem('user');
-        if (userDataString) {
-          const userData = JSON.parse(userDataString);
+        const storedUser = await SecureStore.getItemAsync('user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
           // If no user data, clear token and logout
-          await AsyncStorage.removeItem('authToken');
+          await SecureStore.deleteItemAsync('authToken');
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -73,8 +73,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Auth check failed:', error);
       // Clear invalid tokens
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('refreshToken');
+      await SecureStore.deleteItemAsync('authToken');
+      await SecureStore.deleteItemAsync('refreshToken');
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -94,13 +94,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await AsyncStorage.setItem('authToken', accessToken);
+          await SecureStore.setItemAsync('authToken', accessToken);
           console.log('AuthContext: Access token stored after login');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await AsyncStorage.setItem('refreshToken', refreshToken);
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
           console.log('AuthContext: Refresh token stored after login');
         }
         
@@ -118,8 +118,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updated_at: new Date().toISOString(),
         };
         
-        // Store user data in AsyncStorage
-        await AsyncStorage.setItem('user', JSON.stringify(user));
+        // Store user data in SecureStore
+        await SecureStore.setItemAsync('user', JSON.stringify(user));
         
         setUser(user);
         setIsAuthenticated(true);
@@ -153,13 +153,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await AsyncStorage.setItem('authToken', accessToken);
+          await SecureStore.setItemAsync('authToken', accessToken);
           console.log('AuthContext: Access token stored after registration');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await AsyncStorage.setItem('refreshToken', refreshToken);
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
           console.log('AuthContext: Refresh token stored after registration');
         }
         
@@ -177,8 +177,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updated_at: userData.updated_at || new Date().toISOString(),
         };
         
-        // Store user data in AsyncStorage
-        await AsyncStorage.setItem('user', JSON.stringify(user));
+        // Store user data in SecureStore
+        await SecureStore.setItemAsync('user', JSON.stringify(user));
         
         setUser(user);
         setIsAuthenticated(true);
@@ -210,9 +210,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       // Clear all local storage
-      await authService.clearInvalidTokens();
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('userData');
+      await SecureStore.deleteItemAsync('user');
+      await SecureStore.deleteItemAsync('authToken');
+      await SecureStore.deleteItemAsync('refreshToken');
       
       // Update state
       setUser(null);
@@ -222,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const refreshTokenValue = await AsyncStorage.getItem('refreshToken');
+      const refreshTokenValue = await SecureStore.getItemAsync('refreshToken');
       if (!refreshTokenValue) {
         return false;
       }
@@ -230,13 +230,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.refreshToken();
       
       if (response.success && response.data) {
-        const { token, refreshToken: newRefreshToken } = response.data;
+        const { token: newAccessToken, refreshToken: newRefreshToken } = response.data;
         
         // Update tokens
-        // await AsyncStorage.setItem('authToken', token); // Temporarily disabled
-        // if (newRefreshToken) {
-        //   await AsyncStorage.setItem('refreshToken', newRefreshToken); // Temporarily disabled
-        // }
+        if (newAccessToken) {
+          await SecureStore.setItemAsync('authToken', newAccessToken);
+        }
+        if (newRefreshToken) {
+          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+        }
         
         return true;
       } else {
@@ -266,8 +268,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Update state
         setUser(updatedUser);
         
-        // Persist to AsyncStorage
-        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        // Persist to SecureStore
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
         
         return true;
       } else {
