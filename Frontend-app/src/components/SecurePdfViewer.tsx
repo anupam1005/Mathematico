@@ -229,11 +229,11 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         showsVerticalScrollIndicator={false}
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
-        onShouldStartLoadWithRequest={(request) => {
+        onShouldStartLoadWithRequest={(request: any) => {
           // Only allow the secure PDF URL
           return request.url.includes('cloudinary.com') || request.url.startsWith('data:');
         }}
-        onMessage={(event) => {
+        onMessage={(event: any) => {
           // Handle any messages from the WebView
           console.log('WebView message:', event.nativeEvent.data);
         }}

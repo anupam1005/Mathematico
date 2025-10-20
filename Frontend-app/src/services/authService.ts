@@ -2,6 +2,34 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
 
+// Utility function to safely handle errors and prevent NONE property assignment
+const createSafeError = (error: any) => {
+  try {
+    return {
+      message: error?.message || 'Unknown error',
+      code: error?.code || 'UNKNOWN',
+      response: error?.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      } : null,
+      config: error?.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        headers: { ...error.config.headers },
+        _retry: error.config._retry || false
+      } : null
+    };
+  } catch (e) {
+    return {
+      message: 'Error processing error object',
+      code: 'ERROR_PROCESSING',
+      response: null,
+      config: null
+    };
+  }
+};
+
 // Create axios instance for auth endpoints
 const api = axios.create({
   baseURL: API_CONFIG.auth,
@@ -44,13 +72,21 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    console.error('AuthService: Response error:', error.message);
-    console.error('AuthService: Error code:', error.code);
-    console.error('AuthService: Error response:', error.response?.data);
-    console.error('AuthService: Error status:', error.response?.status);
-    const originalRequest = error.config;
+    // Create a completely safe error object to prevent NONE property assignment issues
+    const safeError = createSafeError(error);
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    console.error('AuthService: Response error:', safeError.message);
+    console.error('AuthService: Error code:', safeError.code);
+    console.error('AuthService: Error response:', safeError.response?.data);
+    console.error('AuthService: Error status:', safeError.response?.status);
+    
+    // Create a new request object to avoid modifying the original
+    const originalRequest = safeError.config ? {
+      ...safeError.config,
+      headers: { ...safeError.config.headers }
+    } : null;
+    
+    if (safeError.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
@@ -81,8 +117,14 @@ api.interceptors.response.use(
             }
             
             // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${actualToken}`;
-            return api(originalRequest);
+            const retryRequest = {
+              ...originalRequest,
+              headers: {
+                ...originalRequest.headers,
+                Authorization: `Bearer ${actualToken}`
+              }
+            };
+            return api(retryRequest);
           } else {
             console.error('AuthService: Invalid refresh response structure:', response.data);
             throw new Error('Invalid refresh response');
@@ -183,19 +225,22 @@ const authService = {
     } catch (error: any) {
       console.error('AuthService: Login error:', error);
       
+      // Create a safe error object to prevent property assignment issues
+      const safeError = createSafeError(error);
+      
       // Provide more specific error messages
       let errorMessage = 'Login failed';
       
-      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+      if (safeError.code === 'NETWORK_ERROR' || safeError.message?.includes('Network Error')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (error.response?.status === 404) {
+      } else if (safeError.response?.status === 404) {
         errorMessage = 'Server not found. Please check if the backend server is running.';
-      } else if (error.response?.status === 500) {
+      } else if (safeError.response?.status === 500) {
         errorMessage = 'Server error. Please try again later.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (safeError.response?.data?.message) {
+        errorMessage = safeError.response.data.message;
+      } else if (safeError.message) {
+        errorMessage = safeError.message;
       }
       
       return {
@@ -255,21 +300,24 @@ const authService = {
     } catch (error: any) {
       console.error('AuthService: Registration error:', error);
       
+      // Create a safe error object to prevent property assignment issues
+      const safeError = createSafeError(error);
+      
       // Provide more specific error messages
       let errorMessage = 'Registration failed';
       
-      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+      if (safeError.code === 'NETWORK_ERROR' || safeError.message?.includes('Network Error')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (error.response?.status === 404) {
+      } else if (safeError.response?.status === 404) {
         errorMessage = 'Server not found. Please check if the backend server is running.';
-      } else if (error.response?.status === 500) {
+      } else if (safeError.response?.status === 500) {
         errorMessage = 'Server error. Please try again later.';
-      } else if (error.response?.status === 409) {
+      } else if (safeError.response?.status === 409) {
         errorMessage = 'Email already exists. Please use a different email address.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (safeError.response?.data?.message) {
+        errorMessage = safeError.response.data.message;
+      } else if (safeError.message) {
+        errorMessage = safeError.message;
       }
       
       return {
