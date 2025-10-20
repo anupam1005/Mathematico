@@ -1,8 +1,9 @@
 {
   "name": "mathematico-platform",
   "version": "1.0.0",
-  "description": "Mathematico Learning Platform - Mobile App, Backend, and Web Frontend",
+  "description": "Mathematico Learning Platform - Unified Monorepo (Backend + Frontend)",
   "private": true,
+
   "scripts": {
     "dev": "npm run dev:backend",
     "dev:backend": "npm run dev --workspace=Backend",
@@ -12,27 +13,20 @@
     "build:android-preview": "npm run build:android-preview --workspace=Frontend-app",
     "build:ios": "npm run build:ios --workspace=Frontend-app",
     "submit:android": "npm run submit:android --workspace=Frontend-app",
-    "submit:ios": "npm run submit:ios --workspace=Frontend-app"
+    "submit:ios": "npm run submit:ios --workspace=Frontend-app",
+    "clean": "rd /s /q node_modules && rd /s /q Backend\\node_modules && rd /s /q Frontend-app\\node_modules && del package-lock.json"
   },
+
   "workspaces": [
     "Backend",
     "Frontend-app"
   ],
+
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-  "keywords": [
-    "education",
-    "mathematics",
-    "learning",
-    "mobile-app",
-    "react-native",
-    "express",
-    "nodejs"
-  ],
-  "author": "Mathematico Team",
-  "license": "MIT",
+
   "overrides": {
     "@rollup/rollup-linux-x64-gnu": "npm:rollup",
     "@rollup/rollup-linux-x64-musl": "npm:rollup",
@@ -40,7 +34,22 @@
     "@rollup/rollup-darwin-arm64": "npm:rollup",
     "@react-native/gradle-plugin": "0.76.5"
   },
+
   "devDependencies": {
     "@babel/plugin-transform-private-property-in-object": "^7.27.1"
-  }
+  },
+
+  "keywords": [
+    "mathematico",
+    "education",
+    "react-native",
+    "express",
+    "backend",
+    "mobile",
+    "monorepo",
+    "learning"
+  ],
+
+  "author": "Mathematico Team",
+  "license": "MIT"
 }
