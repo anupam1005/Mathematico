@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "commonjs",
+    "module": "Node16",
     "lib": ["es2020"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noImplicitAny": true,
@@ -16,12 +16,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "types": ["node", "jest", "@testing-library/jest-dom"]
+    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "allowJs": true,
+    "checkJs": true
   },
-  "extends": "./Frontend-app/tsconfig.json",
-  "exclude": [
-    "Backend/**",
-    "node_modules",
-    "**/*.js"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "**/*.js"]
 }

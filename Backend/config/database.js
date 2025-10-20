@@ -14,9 +14,19 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     try {
-      // Use provided cluster; allow dbName override via env
-      const mongoURI = (process.env.MONGODB_URI || 'mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/')
-        .trim();
+      // Default connection string (for development)
+      const defaultMongoURI = 'mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/mathematico?retryWrites=true&w=majority';
+      
+      // Use provided MONGODB_URI or fallback to default
+      let mongoURI = process.env.MONGODB_URI || defaultMongoURI;
+      mongoURI = mongoURI.trim();
+
+      // Ensure the connection string includes the database name and options
+      if (!mongoURI.includes('retryWrites')) {
+        mongoURI = mongoURI.endsWith('/') 
+          ? `${mongoURI}mathematico?retryWrites=true&w=majority`
+          : `${mongoURI}/mathematico?retryWrites=true&w=majority`;
+      }
 
       const options = {
         dbName: process.env.MONGODB_DB || 'mathematico',
@@ -24,6 +34,8 @@ const connectDB = async () => {
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 45000,
         bufferCommands: false,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
       };
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {

@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const validator = require('validator');
 
 const userSchema = new mongoose.Schema({
   // Basic Information
@@ -17,14 +20,25 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    validate: [validator.isEmail, 'Please provide a valid email']
   },
   
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't include password in queries by default
+    minlength: [8, 'Password must be at least 8 characters'],
+    select: false, // Don't include password in queries by default
+    validate: {
+      validator: function(v) {
+        return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(v);
+      },
+      message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+    }
+  },
+  
+  passwordChangedAt: {
+    type: Date,
+    select: false
   },
   
   phone: {
@@ -195,11 +209,30 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  
+  // Account deactivation
+  deactivated: {
+    type: Boolean,
+    default: false,
+    select: false
+  },
+  
+  // Account lockout
+  loginAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  },
+  lockUntil: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toObject: { virtuals: true },
+  id: false
 });
 
 // Indexes for better performance (email index already created by unique: true)
@@ -232,6 +265,87 @@ userSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Check if password was changed after token was issued
+userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+    return JWTTimestamp < changedTimestamp;
+  }
+  // False means NOT changed
+  return false;
+};
+
+// Generate password reset token
+userSchema.methods.createPasswordResetToken = function() {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+    
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return resetToken;
+};
+
+// Generate email verification token
+userSchema.methods.createEmailVerificationToken = function() {
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  
+  this.emailVerificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+    
+  return verificationToken;
+};
+
+// Generate JWT token
+userSchema.methods.generateAuthToken = function() {
+  return jwt.sign(
+    { id: this._id, role: this.role },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
+  );
+};
+
+// Check if account is locked
+userSchema.virtual('isLocked').get(function() {
+  return this.lockUntil && this.lockUntil > Date.now();
+});
+
+// Handle failed login attempts
+userSchema.methods.incrementLoginAttempts = async function() {
+  // If we have a previous lock that has expired
+  if (this.lockUntil && this.lockUntil < Date.now()) {
+    return await this.updateOne({
+      $set: { loginAttempts: 1 },
+      $unset: { lockUntil: 1 }
+    });
+  }
+  
+  // Otherwise we're incrementing
+  const updates = { $inc: { loginAttempts: 1 } };
+  
+  // Lock the account if we've reached max attempts and it's not locked already
+  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
+    updates.$set = { lockUntil: Date.now() + 3600000 }; // 1 hour
+  }
+  
+  return await this.updateOne(updates);
+};
+
+// Reset login attempts after successful login
+userSchema.methods.resetLoginAttempts = async function() {
+  return await this.updateOne({
+    $set: { loginAttempts: 0 },
+    $unset: { lockUntil: 1 }
+  });
+};
 
 // Instance method to check password
 userSchema.methods.comparePassword = async function(candidatePassword) {

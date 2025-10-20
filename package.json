@@ -40,6 +40,8 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.22",
     "@types/testing-library__jest-dom": "^5.14.9",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
     "typescript": "^5.9.3"
   },
   "keywords": [
