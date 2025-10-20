@@ -1,0 +1,145 @@
+// src/admin/screens/CourseForm.tsx
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { adminService } from "../../services/adminService";
+import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
+
+interface CourseFormProps {
+  courseId?: string;
+  onSuccess?: () => void;
+}
+
+export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
+  const [formData, setFormData] = useState<any>({
+    title: "",
+    description: "",
+    price: "",
+    originalPrice: "",
+    level: "",
+    category: "",
+    status: "draft",
+    students: "",
+    image: null,
+    pdf: null,
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (courseId) {
+      setLoading(true);
+      adminService.getAllCourses().then((res: any) => {
+        const course = res.data?.find((c: any) => c.id === courseId);
+        if (course) {
+          setFormData({
+            ...course,
+            price: course.price?.toString(),
+            originalPrice: course.originalPrice?.toString(),
+            students: course.students?.toString(),
+            image: null,
+            pdf: null,
+          });
+        }
+      }).finally(() => setLoading(false));
+    }
+  }, [courseId]);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (!result.canceled) setFormData({ ...formData, image: result.assets[0] });
+  };
+
+  const pickPDF = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setFormData({ ...formData, pdf: result.assets[0] });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title || !formData.price) {
+      return Alert.alert("Error", "Title and Price are required.");
+    }
+
+    setLoading(true);
+    try {
+      const data = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value != null) {
+          if (key === "image" && value && typeof value === 'object' && 'uri' in value) {
+            data.append("image", { uri: value.uri, type: "image/jpeg", name: "course.jpg" } as any);
+          } else if (key === "pdf" && value && typeof value === 'object' && 'uri' in value) {
+            data.append("pdf", { uri: value.uri, type: "application/pdf", name: ('name' in value ? value.name : "course.pdf") || "course.pdf" } as any);
+          } else {
+            data.append(key, value.toString());
+          }
+        }
+      });
+
+      if (courseId) {
+        await adminService.updateCourse(courseId, data);
+        Alert.alert("Success", "Course updated successfully");
+      } else {
+        await adminService.createCourse(data);
+        Alert.alert("Success", "Course created successfully");
+      }
+      onSuccess?.();
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+      <Text style={styles.label}>Title</Text>
+      <TextInput style={styles.input} value={formData.title} onChangeText={t => setFormData({ ...formData, title: t })} />
+
+      <Text style={styles.label}>Description</Text>
+      <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.description} onChangeText={t => setFormData({ ...formData, description: t })} />
+
+      <Text style={styles.label}>Price</Text>
+      <TextInput style={styles.input} keyboardType="numeric" value={formData.price} onChangeText={t => setFormData({ ...formData, price: t })} />
+
+      <Text style={styles.label}>Original Price</Text>
+      <TextInput style={styles.input} keyboardType="numeric" value={formData.originalPrice} onChangeText={t => setFormData({ ...formData, originalPrice: t })} />
+
+      <Text style={styles.label}>Level</Text>
+      <TextInput style={styles.input} value={formData.level} onChangeText={t => setFormData({ ...formData, level: t })} />
+
+      <Text style={styles.label}>Category</Text>
+      <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
+
+      <Text style={styles.label}>Status</Text>
+      <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />
+
+      <Text style={styles.label}>Students</Text>
+      <TextInput style={styles.input} keyboardType="numeric" value={formData.students} onChangeText={t => setFormData({ ...formData, students: t })} />
+
+      <TouchableOpacity style={styles.button} onPress={pickImage}>
+        <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={pickPDF}>
+        <Text style={styles.buttonText}>{formData.pdf ? "Change PDF" : "Upload PDF"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{courseId ? "Update Course" : "Create Course"}</Text>}
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff", padding: 20 },
+  label: { fontSize: 16, fontWeight: "bold", marginTop: 10 },
+  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginTop: 5 },
+  button: { backgroundColor: "#007bff", padding: 10, marginTop: 15, borderRadius: 5, alignItems: "center" },
+  buttonText: { color: "#fff" },
+  submitButton: { backgroundColor: "green", padding: 15, marginTop: 20, borderRadius: 5, alignItems: "center" },
+  submitText: { color: "#fff", fontWeight: "bold" },
+});

@@ -1,0 +1,261 @@
+# ===========================================
+# MATHEMATICO PROJECT - ROOT .GITIGNORE
+# ===========================================
+# This is the main .gitignore for the entire project
+# Subdirectory .gitignore files can override specific rules
+
+# Dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+*/dist/
+build/
+*/build/
+web-build/
+
+# Environment variables - CRITICAL SECURITY
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*/.env
+*/.env.local
+*/.env.development.local
+*/.env.test.local
+*/.env.production.local
+config.env
+config.env.local
+config.env.production
+*/config.env
+*/config.env.local
+*/config.env.production
+**/config.env
+**/.env
+**/.env.*
+**/config.env.*
+**/.env.template
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Database files (removed - no database functionality)
+# *.db
+# *.sqlite
+# *.sqlite3
+
+# Uploads (if you don't want to commit uploaded files)
+uploads/
+*/uploads/
+
+# ===========================================
+# PROJECT-SPECIFIC IGNORES
+# ===========================================
+
+# Expo specific
+.expo/
+expo-env.d.ts
+
+# Native development
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Test files (database-related tests removed)
+# test-*.js
+# test-*.html
+# test-*.pdf
+# test-*.png
+# migrate-database.js
+# admin-book-form.html
+# setup-db-simple.js
+
+# Generated native folders
+/ios
+/android
+**/android/
+**/ios/
+**/.gradle/
+**/build/
+**/android_backup/
+
+# ===========================================
+# FRONTEND-APP IGNORES
+# ===========================================
+# These rules apply specifically to the Frontend-app folder
+
+# Expo specific (Frontend-app)
+Frontend-app/.expo/
+Frontend-app/expo-env.d.ts
+
+# Build outputs (Frontend-app)
+Frontend-app/dist/
+Frontend-app/web-build/
+
+# Native development (Frontend-app)
+Frontend-app/*.orig.*
+Frontend-app/*.jks
+Frontend-app/*.p8
+Frontend-app/*.p12
+Frontend-app/*.key
+Frontend-app/*.mobileprovision
+
+# Metro (Frontend-app)
+Frontend-app/.metro-health-check*
+
+# Debug files (Frontend-app)
+Frontend-app/npm-debug.*
+Frontend-app/yarn-debug.*
+Frontend-app/yarn-error.*
+
+# macOS (Frontend-app)
+Frontend-app/.DS_Store
+Frontend-app/*.pem
+
+# Local env files (Frontend-app)
+Frontend-app/.env*.local
+
+# TypeScript (Frontend-app)
+Frontend-app/*.tsbuildinfo
+
+# Android (Frontend-app - managed by Expo)
+Frontend-app/android/
+Frontend-app/android/app/build/
+Frontend-app/android/build/
+Frontend-app/android/.gradle/
+Frontend-app/android/local.properties
+Frontend-app/android/app/release/
+
+# iOS (Frontend-app)
+Frontend-app/ios/build/
+Frontend-app/ios/Pods/
+Frontend-app/ios/*.xcworkspace
+Frontend-app/ios/*.xcuserdata
+Frontend-app/ios/Podfile.lock
+
+# Temporary files (Frontend-app)
+Frontend-app/*.tmp
+Frontend-app/*.temp
+
+# SSL certificates and keys
+*.pem
+*.crt
+*.p12
+*.jks
+
+# Backup files
+*.bak
+*.backup
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
