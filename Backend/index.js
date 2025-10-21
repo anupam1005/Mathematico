@@ -467,7 +467,7 @@ module.exports = app;
 
 // Start server for local development
 if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
+  const PORT = 5001; // Hardcoded to 5001 to avoid conflicts
   
   // Connect to database first, then start server
   const startServer = async () => {
