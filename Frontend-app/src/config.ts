@@ -10,10 +10,14 @@ const USE_LOCAL_BACKEND = process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true';
 // Decide backend URL
 let BACKEND: string;
 
-// Use local backend for development
-// Comment this line and uncomment the line below to use serverless backend
-BACKEND = LOCAL_DEV;
-// BACKEND = PROD_BACKEND;
+// Use serverless backend for production, local for development
+if (process.env.NODE_ENV === 'production' || __DEV__ === false) {
+  BACKEND = PROD_BACKEND;
+  console.log('🚀 Using serverless backend for production');
+} else {
+  BACKEND = LOCAL_DEV;
+  console.log('🔧 Using local backend for development');
+}
 
 export const API_CONFIG = {
   auth: `${BACKEND.replace(/\/$/, '')}/api/v1/auth`,

@@ -4,7 +4,8 @@
   "functions": {
     "Backend/index.js": {
       "runtime": "@vercel/node",
-      "maxDuration": 30
+      "maxDuration": 30,
+      "memory": 1024
     }
   },
   "routes": [
@@ -18,5 +19,24 @@
     "MONGODB_URI": "mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/",
     "MONGODB_DB": "mathematico"
   },
-  "regions": ["iad1"]
+  "regions": ["iad1", "sfo1", "lhr1"],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With"
+        }
+      ]
+    }
+  ]
 }
