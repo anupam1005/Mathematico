@@ -22,13 +22,27 @@ const PlatformConstants = {
     // Android specific constants
     uiMode: 'normal',
     nightMode: 'notnight',
+    // Add more Android constants as needed
+    isDevice: true,
+    isTablet: false,
   }),
   
   ...(Platform.OS === 'ios' && {
     // iOS specific constants
     forceTouchAvailable: false,
     interfaceIdiom: 'phone',
+    // Add more iOS constants as needed
+    isDevice: true,
+    isTablet: false,
+  }),
+  
+  // Web specific constants
+  ...(Platform.OS === 'web' && {
+    isDevice: true,
+    isTablet: false,
   }),
 };
 
+// Export both default and named export for compatibility
 export default PlatformConstants;
+export { PlatformConstants };

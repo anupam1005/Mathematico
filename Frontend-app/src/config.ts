@@ -10,9 +10,10 @@ const USE_LOCAL_BACKEND = process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true';
 // Decide backend URL
 let BACKEND: string;
 
-// Always use serverless backend for registration to work properly
-// Forcing serverless mode to avoid CORS issues
-BACKEND = PROD_BACKEND;
+// Use local backend for development
+// Comment this line and uncomment the line below to use serverless backend
+BACKEND = LOCAL_DEV;
+// BACKEND = PROD_BACKEND;
 
 export const API_CONFIG = {
   auth: `${BACKEND.replace(/\/$/, '')}/api/v1/auth`,
