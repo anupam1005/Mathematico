@@ -265,7 +265,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     try {
+      console.log('AuthContext: Starting profile update with data:', data);
       const response = await authService.updateProfile(data);
+      console.log('AuthContext: Profile update response:', response);
       
       if (response.success && response.data) {
         const updatedUser = {
@@ -275,19 +277,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           is_admin: response.data.isAdmin || response.data.role === 'admin',
         };
         
+        console.log('AuthContext: Updated user object:', updatedUser);
+        
         // Update state
         setUser(updatedUser);
+        console.log('AuthContext: User state updated');
         
         // Persist to SecureStore
         await Storage.setItem('user', JSON.stringify(updatedUser));
+        console.log('AuthContext: User data persisted to storage');
         
         return true;
       } else {
+        console.error('AuthContext: Profile update failed:', response.message);
         Alert.alert('Update Failed', response.message || 'Profile update failed');
         return false;
       }
     } catch (error) {
-      console.error('Profile update error:', error);
+      console.error('AuthContext: Profile update error:', error);
       Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');
       return false;
     }

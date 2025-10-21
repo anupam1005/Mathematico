@@ -67,6 +67,8 @@ export default function ProfileScreen({ navigation }: any) {
 
     const success = await updateProfile({ name: editName.trim() });
     if (success) {
+      // Update the local editName state to reflect the change immediately
+      setEditName(editName.trim());
       setShowEditDialog(false);
       Alert.alert('Success', 'Profile updated successfully');
     }

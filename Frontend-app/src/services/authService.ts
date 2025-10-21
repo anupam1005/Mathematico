@@ -385,7 +385,10 @@ const authService = {
 
   async updateProfile(data: any): Promise<{ success: boolean; message: string; data?: any }> {
     try {
+      console.log('AuthService: Starting profile update request with data:', data);
       const token = await this.getToken();
+      console.log('AuthService: Using token for profile update:', token ? 'Token present' : 'No token');
+      
       const response = await axios.put(`${API_CONFIG.auth}/profile`, data, {
         headers: {
           'Content-Type': 'application/json',
@@ -394,12 +397,16 @@ const authService = {
         }
       });
       
+      console.log('AuthService: Profile update response:', response.data);
+      
       return {
         success: true,
         message: 'Profile updated successfully',
         data: response.data.data,
       };
     } catch (error: any) {
+      console.error('AuthService: Profile update error:', error);
+      console.error('AuthService: Error response:', error.response?.data);
       return {
         success: false,
         message: error.response?.data?.message || 'Profile update failed',
