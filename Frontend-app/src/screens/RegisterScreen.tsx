@@ -112,6 +112,14 @@ export default function RegisterScreen({ navigation }: any) {
             <Paragraph style={styles.cardSubtitle}>
               Start your learning journey today
             </Paragraph>
+            
+            {/* Student Registration Note */}
+            <View style={styles.studentNote}>
+              <Text style={styles.studentNoteText}>
+                <Text style={styles.studentNoteTitle}>Student Registration:</Text>{'\n'}
+                Create your account with a strong password to access learning materials
+              </Text>
+            </View>
 
             <View style={styles.form}>
               <TextInput
@@ -321,6 +329,23 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textSecondary,
     textAlign: 'center',
     marginBottom: designSystem.spacing.lg,
+  },
+  studentNote: {
+    backgroundColor: designSystem.colors.secondary + '10',
+    borderLeftWidth: 4,
+    borderLeftColor: designSystem.colors.secondary,
+    padding: designSystem.spacing.md,
+    marginBottom: designSystem.spacing.lg,
+    borderRadius: designSystem.borderRadius.sm,
+  },
+  studentNoteText: {
+    ...designSystem.typography.caption,
+    color: designSystem.colors.textPrimary,
+    lineHeight: 18,
+  },
+  studentNoteTitle: {
+    fontWeight: 'bold',
+    color: designSystem.colors.secondary,
   },
   form: {
     marginTop: designSystem.spacing.md,

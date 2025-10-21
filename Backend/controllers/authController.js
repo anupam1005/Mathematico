@@ -44,7 +44,58 @@ const login = async (req, res) => {
     // Connect to database
     await connectDB();
 
-    // Find user by email (include password for comparison)
+    // Special handling for admin user
+    const ADMIN_EMAIL = 'dc2006089@gmail.com';
+    const ADMIN_PASSWORD = 'Myname*321';
+    
+    if (email.toLowerCase() === ADMIN_EMAIL) {
+      // Admin login - direct password check without database lookup
+      if (password === ADMIN_PASSWORD) {
+        // Create admin user object
+        const adminUser = {
+          _id: 'admin-user-id',
+          name: 'Admin User',
+          email: ADMIN_EMAIL,
+          role: 'admin',
+          isAdmin: true,
+          isActive: true,
+          lastLogin: new Date(),
+          loginCount: 1
+        };
+
+        // Generate token pair for admin
+        const tokens = generateTokenPair(adminUser);
+
+        console.log('✅ Admin login successful:', ADMIN_EMAIL);
+
+        return res.json({
+          success: true,
+          message: 'Admin login successful',
+          data: {
+            user: {
+              id: adminUser._id,
+              name: adminUser.name,
+              email: adminUser.email,
+              role: adminUser.role,
+              isAdmin: true,
+              isActive: true
+            },
+            accessToken: tokens.accessToken,
+            tokenType: 'Bearer',
+            expiresIn: tokens.accessTokenExpiresIn
+          },
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin credentials',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    // Regular user login - find user in database
     const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+password');
     
     if (!user) {
@@ -137,6 +188,16 @@ const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Name, email and password are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Prevent admin email registration
+    const ADMIN_EMAIL = 'dc2006089@gmail.com';
+    if (email.toLowerCase() === ADMIN_EMAIL) {
+      return res.status(403).json({
+        success: false,
+        message: 'This email is reserved for admin use. Please use a different email.',
         timestamp: new Date().toISOString()
       });
     }
