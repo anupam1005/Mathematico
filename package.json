@@ -5,12 +5,14 @@
   "private": true,
   "scripts": {
     "dev:backend": "cd Backend && npm run dev",
-    "dev:mobile": "cd Frontend-app && npx expo start --clear",
+    "dev:mobile": "cd Frontend-app && npx expo start --dev-client --clear",
     "start:backend": "cd Backend && npm start",
-    "start:mobile": "cd Frontend-app && npx expo start",
+    "start:mobile": "cd Frontend-app && npx expo start --dev-client",
     "install:backend": "cd Backend && npm install",
     "install:mobile": "cd Frontend-app && npm install",
-    "install:all": "npm run install:backend && npm run install:mobile"
+    "install:all": "npm run install:backend && npm run install:mobile",
+    "clean:all": "cd Backend && rm -rf node_modules package-lock.json && cd ../Frontend-app && rm -rf node_modules package-lock.json .expo",
+    "reset:all": "npm run clean:all && npm run install:all"
   },
   "engines": {
     "node": ">=18.0.0",
