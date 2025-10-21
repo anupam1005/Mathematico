@@ -34,8 +34,8 @@ const connectDB = async () => {
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 45000,
         bufferCommands: false,
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        // Removed deprecated options: useNewUrlParser and useUnifiedTopology
+        // These are no longer needed in Mongoose 6+ and cause warnings
       };
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {
