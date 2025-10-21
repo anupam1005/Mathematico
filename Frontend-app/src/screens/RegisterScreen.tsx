@@ -52,10 +52,10 @@ export default function RegisterScreen({ navigation }: any) {
 
     if (!password.trim()) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
     }
 
     if (!confirmPassword.trim()) {
@@ -171,6 +171,26 @@ export default function RegisterScreen({ navigation }: any) {
               {errors.password && (
                 <Text style={styles.errorText}>{errors.password}</Text>
               )}
+              
+              {/* Password Requirements */}
+              <View style={styles.passwordRequirements}>
+                <Text style={styles.requirementsTitle}>Password Requirements:</Text>
+                <Text style={[styles.requirement, password.length >= 8 && styles.requirementMet]}>
+                  • At least 8 characters
+                </Text>
+                <Text style={[styles.requirement, /[a-z]/.test(password) && styles.requirementMet]}>
+                  • One lowercase letter (a-z)
+                </Text>
+                <Text style={[styles.requirement, /[A-Z]/.test(password) && styles.requirementMet]}>
+                  • One uppercase letter (A-Z)
+                </Text>
+                <Text style={[styles.requirement, /\d/.test(password) && styles.requirementMet]}>
+                  • One number (0-9)
+                </Text>
+                <Text style={[styles.requirement, /[@$!%*?&]/.test(password) && styles.requirementMet]}>
+                  • One special character (@$!%*?&)
+                </Text>
+              </View>
 
               <TextInput
                 label="Confirm Password"
@@ -363,5 +383,29 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textTertiary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  passwordRequirements: {
+    marginTop: designSystem.spacing.sm,
+    marginBottom: designSystem.spacing.md,
+    padding: designSystem.spacing.sm,
+    backgroundColor: designSystem.colors.surface,
+    borderRadius: designSystem.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: designSystem.colors.border,
+  },
+  requirementsTitle: {
+    ...designSystem.typography.caption,
+    color: designSystem.colors.textSecondary,
+    fontWeight: 'bold',
+    marginBottom: designSystem.spacing.xs,
+  },
+  requirement: {
+    ...designSystem.typography.caption,
+    color: designSystem.colors.textTertiary,
+    marginBottom: designSystem.spacing.xs,
+  },
+  requirementMet: {
+    color: designSystem.colors.success || '#4CAF50',
+    textDecorationLine: 'line-through',
   },
 });
