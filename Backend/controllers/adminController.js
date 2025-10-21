@@ -281,13 +281,7 @@ const createBook = async (req, res) => {
       tags = []
     } = req.body;
 
-    // Validate required fields
-    if (!title || !description || !author || !category || !subject || !grade) {
-      return res.status(400).json({
-        success: false,
-        message: 'Title, description, author, category, subject, and grade are required'
-      });
-    }
+    // No validation - admin can input anything they want
 
     // Handle file uploads to Cloudinary
     let coverImageUrl = '';

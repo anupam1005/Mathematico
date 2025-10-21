@@ -35,8 +35,8 @@ const authenticateToken = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
     console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, role: decoded.role, idType: typeof decoded.id });
     
-    // Check if it's the admin user from environment variables
-    const adminEmail = process.env.ADMIN_EMAIL;
+    // Check if it's the admin user (hardcoded email)
+    const adminEmail = 'dc2006089@gmail.com';
     if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {
         id: 1,
@@ -134,7 +134,7 @@ const optionalAuth = async (req, res, next) => {
 
   try {
     const decoded = verifyAccessToken(token);
-    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminEmail = 'dc2006089@gmail.com';
     
     if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {

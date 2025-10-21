@@ -82,9 +82,7 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.author) {
-      return Alert.alert("Error", "Please fill all required fields (Title and Author).");
-    }
+    // No validation - admin can input anything they want
 
     setLoading(true);
     setUploadProgress(0);
