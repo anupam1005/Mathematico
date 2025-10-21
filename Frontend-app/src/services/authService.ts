@@ -343,17 +343,21 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      await axios.post(`${API_CONFIG.auth}/logout`, {}, {
+      console.log('AuthService: Starting logout request to:', `${API_CONFIG.auth}/logout`);
+      const response = await axios.post(`${API_CONFIG.auth}/logout`, {}, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
+      console.log('AuthService: Logout response:', response.data);
       return {
         success: true,
         message: 'Logout successful',
       };
     } catch (error: any) {
+      console.error('AuthService: Logout error:', error);
+      console.error('AuthService: Error response:', error.response?.data);
       return {
         success: false,
         message: error.response?.data?.message || 'Logout failed',

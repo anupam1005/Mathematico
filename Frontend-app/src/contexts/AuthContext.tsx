@@ -204,19 +204,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
+      console.log('AuthContext: Starting logout process');
       // Call logout API to invalidate tokens
+      console.log('AuthContext: Calling authService.logout()');
       await authService.logout();
+      console.log('AuthContext: Backend logout successful');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('AuthContext: Logout error:', error);
     } finally {
+      console.log('AuthContext: Clearing local storage');
       // Clear all local storage
+      console.log('AuthContext: Deleting user from storage');
       await Storage.deleteItem('user');
+      console.log('AuthContext: Deleting authToken from storage');
       await Storage.deleteItem('authToken');
+      console.log('AuthContext: Deleting refreshToken from storage');
       await Storage.deleteItem('refreshToken');
       
+      console.log('AuthContext: Updating state - setting user to null');
       // Update state
       setUser(null);
       setIsAuthenticated(false);
+      console.log('AuthContext: State updated - user:', null, 'isAuthenticated:', false);
+      console.log('AuthContext: Logout process completed');
     }
   };
 

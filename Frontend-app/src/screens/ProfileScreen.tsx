@@ -36,12 +36,25 @@ export default function ProfileScreen({ navigation }: any) {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleLogout = () => {
+    console.log('ProfileScreen: Logout button pressed');
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout },
+        { 
+          text: 'Logout', 
+          style: 'destructive', 
+          onPress: async () => {
+            console.log('ProfileScreen: Logout confirmed, calling logout function');
+            try {
+              await logout();
+              console.log('ProfileScreen: Logout completed successfully');
+            } catch (error) {
+              console.error('ProfileScreen: Logout error:', error);
+            }
+          }
+        },
       ]
     );
   };

@@ -52,14 +52,19 @@ const authenticateToken = async (req, res, next) => {
       return next();
     }
     
-    // For any other user, reject (no database to check against)
-    console.log('❌ User not found or not admin:', decoded.email);
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized',
-      message: 'Invalid user. Only admin access is available.',
-      timestamp: new Date().toISOString()
-    });
+    // For regular users, allow access with basic user info
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      name: decoded.name || decoded.email.split('@')[0],
+      role: decoded.role || 'student',
+      isAdmin: decoded.role === 'admin',
+      is_admin: decoded.role === 'admin',
+      email_verified: true,
+      is_active: true
+    };
+    console.log('✅ Regular user authenticated:', req.user.email);
+    return next();
     
   } catch (error) {
     console.error('❌ Token verification failed:', error.message);
