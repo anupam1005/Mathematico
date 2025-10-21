@@ -226,13 +226,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if bookData is FormData or regular object
+      const isFormData = bookData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = bookData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(bookData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/books`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookData)
+        headers,
+        body
       });
 
       const result = await response.json();
@@ -259,13 +274,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if bookData is FormData or regular object
+      const isFormData = bookData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = bookData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(bookData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/books/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookData)
+        headers,
+        body
       });
 
       const result = await response.json();
@@ -386,13 +416,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if courseData is FormData or regular object
+      const isFormData = courseData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = courseData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(courseData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/courses`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(courseData)
+        headers,
+        body
       });
 
       const result = await response.json();
@@ -419,13 +464,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if courseData is FormData or regular object
+      const isFormData = courseData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = courseData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(courseData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/courses/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(courseData)
+        headers,
+        body
       });
 
       const result = await response.json();
@@ -546,13 +606,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if liveClassData is FormData or regular object
+      const isFormData = liveClassData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = liveClassData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(liveClassData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/live-classes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(liveClassData)
+        headers,
+        body
       });
 
       const result = await response.json();
@@ -579,13 +654,28 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
+      // Check if liveClassData is FormData or regular object
+      const isFormData = liveClassData instanceof FormData;
+      
+      const headers: any = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      let body: any;
+      
+      if (isFormData) {
+        // For FormData, don't set Content-Type, let the browser set it with boundary
+        body = liveClassData;
+      } else {
+        // For JSON data
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(liveClassData);
+      }
+
       const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(liveClassData)
+        headers,
+        body
       });
 
       const result = await response.json();
