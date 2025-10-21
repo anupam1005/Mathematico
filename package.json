@@ -14,8 +14,9 @@
     "clean:all": "cd Backend && rm -rf node_modules package-lock.json && cd ../Frontend-app && rm -rf node_modules package-lock.json .expo",
     "reset:all": "npm run clean:all && npm run install:all",
     "test:backend": "node test-backend.js",
-    "deploy": "npx vercel --prod --confirm",
-    "deploy:dev": "npx vercel --confirm"
+    "deploy": "npx vercel --prod --yes --name mathematico-backend",
+    "deploy:dev": "npx vercel --yes --name mathematico-backend",
+    "deploy:script": "chmod +x deploy-vercel.sh && ./deploy-vercel.sh"
   },
   "engines": {
     "node": ">=18.0.0",
