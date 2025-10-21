@@ -15,9 +15,13 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     title: "",
     description: "",
     category: "",
+    subject: "",
+    grade: "",
     level: "",
     duration: "",
     maxStudents: "",
+    startTime: new Date(),
+    endTime: new Date(),
     scheduledAt: new Date(),
     status: "draft",
     meetingLink: "",
@@ -101,11 +105,27 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
       <Text style={styles.label}>Category</Text>
       <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
 
+      <Text style={styles.label}>Subject</Text>
+      <TextInput style={styles.input} value={formData.subject} onChangeText={t => setFormData({ ...formData, subject: t })} />
+
+      <Text style={styles.label}>Grade</Text>
+      <TextInput style={styles.input} value={formData.grade} onChangeText={t => setFormData({ ...formData, grade: t })} />
+
       <Text style={styles.label}>Level</Text>
       <TextInput style={styles.input} value={formData.level} onChangeText={t => setFormData({ ...formData, level: t })} />
 
       <Text style={styles.label}>Duration (minutes)</Text>
       <TextInput style={styles.input} keyboardType="numeric" value={formData.duration} onChangeText={t => setFormData({ ...formData, duration: t })} />
+
+      <Text style={styles.label}>Start Time</Text>
+      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
+        <Text>{formData.startTime.toLocaleString()}</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.label}>End Time</Text>
+      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
+        <Text>{formData.endTime.toLocaleString()}</Text>
+      </TouchableOpacity>
 
       <Text style={styles.label}>Max Students</Text>
       <TextInput style={styles.input} keyboardType="numeric" value={formData.maxStudents} onChangeText={t => setFormData({ ...formData, maxStudents: t })} />

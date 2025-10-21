@@ -96,15 +96,6 @@ export default function LoginScreen({ navigation }: any) {
             <Paragraph style={styles.cardSubtitle}>
               Sign in to continue your learning journey
             </Paragraph>
-            
-            {/* Admin Login Note */}
-            <View style={styles.adminNote}>
-              <Text style={styles.adminNoteText}>
-                <Text style={styles.adminNoteTitle}>Admin Login:</Text>{'\n'}
-                Email: dc2006089@gmail.com{'\n'}
-                Password: Myname*321
-              </Text>
-            </View>
 
             <View style={styles.form}>
               <TextInput
@@ -245,23 +236,6 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textSecondary,
     textAlign: 'center',
     marginBottom: designSystem.spacing.lg,
-  },
-  adminNote: {
-    backgroundColor: designSystem.colors.primary + '10',
-    borderLeftWidth: 4,
-    borderLeftColor: designSystem.colors.primary,
-    padding: designSystem.spacing.md,
-    marginBottom: designSystem.spacing.lg,
-    borderRadius: designSystem.borderRadius.sm,
-  },
-  adminNoteText: {
-    ...designSystem.typography.caption,
-    color: designSystem.colors.textPrimary,
-    lineHeight: 18,
-  },
-  adminNoteTitle: {
-    fontWeight: 'bold',
-    color: designSystem.colors.primary,
   },
   form: {
     marginTop: designSystem.spacing.md,

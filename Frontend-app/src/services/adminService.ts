@@ -218,19 +218,133 @@ class AdminService {
   }
 
   async createBook(bookData: any): Promise<ApiResponse<any>> {
-    throw new Error('Book creation is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Creating book with data:', bookData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/books`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Book created successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Book creation failed:', result);
+        return { success: false, error: result.message || 'Failed to create book' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Book creation error:', error);
+      return { success: false, error: error.message || 'Failed to create book' };
+    }
   }
 
   async updateBook(id: string, bookData: any): Promise<ApiResponse<any>> {
-    throw new Error('Book update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating book with ID:', id, 'data:', bookData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/books/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Book updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Book update failed:', result);
+        return { success: false, error: result.message || 'Failed to update book' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Book update error:', error);
+      return { success: false, error: error.message || 'Failed to update book' };
+    }
   }
 
   async updateBookStatus(id: string, status: string): Promise<ApiResponse<any>> {
-    throw new Error('Book status update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating book status for ID:', id, 'status:', status);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/books/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Book status updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Book status update failed:', result);
+        return { success: false, error: result.message || 'Failed to update book status' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Book status update error:', error);
+      return { success: false, error: error.message || 'Failed to update book status' };
+    }
   }
 
   async deleteBook(id: string): Promise<ApiResponse<any>> {
-    throw new Error('Book deletion is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Deleting book with ID:', id);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/books/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Book deleted successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Book deletion failed:', result);
+        return { success: false, error: result.message || 'Failed to delete book' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Book deletion error:', error);
+      return { success: false, error: error.message || 'Failed to delete book' };
+    }
   }
 
   // Courses
@@ -264,19 +378,133 @@ class AdminService {
   }
 
   async createCourse(courseData: any): Promise<ApiResponse<any>> {
-    throw new Error('Course creation is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Creating course with data:', courseData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/courses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(courseData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Course created successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Course creation failed:', result);
+        return { success: false, error: result.message || 'Failed to create course' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Course creation error:', error);
+      return { success: false, error: error.message || 'Failed to create course' };
+    }
   }
 
   async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
-    throw new Error('Course update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating course with ID:', id, 'data:', courseData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/courses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(courseData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Course updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Course update failed:', result);
+        return { success: false, error: result.message || 'Failed to update course' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Course update error:', error);
+      return { success: false, error: error.message || 'Failed to update course' };
+    }
   }
 
   async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
-    throw new Error('Course status update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating course status for ID:', id, 'status:', status);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/courses/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Course status updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Course status update failed:', result);
+        return { success: false, error: result.message || 'Failed to update course status' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Course status update error:', error);
+      return { success: false, error: error.message || 'Failed to update course status' };
+    }
   }
 
   async deleteCourse(id: string): Promise<ApiResponse<any>> {
-    throw new Error('Course deletion is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Deleting course with ID:', id);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/courses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Course deleted successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Course deletion failed:', result);
+        return { success: false, error: result.message || 'Failed to delete course' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Course deletion error:', error);
+      return { success: false, error: error.message || 'Failed to delete course' };
+    }
   }
 
   // Live Classes
@@ -310,19 +538,133 @@ class AdminService {
   }
 
   async createLiveClass(liveClassData: any): Promise<ApiResponse<any>> {
-    throw new Error('Live class creation is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Creating live class with data:', liveClassData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/live-classes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(liveClassData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Live class created successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Live class creation failed:', result);
+        return { success: false, error: result.message || 'Failed to create live class' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Live class creation error:', error);
+      return { success: false, error: error.message || 'Failed to create live class' };
+    }
   }
 
   async updateLiveClass(id: string, liveClassData: any): Promise<ApiResponse<any>> {
-    throw new Error('Live class update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating live class with ID:', id, 'data:', liveClassData);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(liveClassData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Live class updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Live class update failed:', result);
+        return { success: false, error: result.message || 'Failed to update live class' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Live class update error:', error);
+      return { success: false, error: error.message || 'Failed to update live class' };
+    }
   }
 
   async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
-    throw new Error('Live class status update is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Updating live class status for ID:', id, 'status:', status);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Live class status updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Live class status update failed:', result);
+        return { success: false, error: result.message || 'Failed to update live class status' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Live class status update error:', error);
+      return { success: false, error: error.message || 'Failed to update live class status' };
+    }
   }
 
   async deleteLiveClass(id: string): Promise<ApiResponse<any>> {
-    throw new Error('Live class deletion is not available. Database functionality has been removed.');
+    try {
+      console.log('AdminService: Deleting live class with ID:', id);
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('AdminService: Live class deleted successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        console.error('AdminService: Live class deletion failed:', result);
+        return { success: false, error: result.message || 'Failed to delete live class' };
+      }
+    } catch (error: any) {
+      console.error('AdminService: Live class deletion error:', error);
+      return { success: false, error: error.message || 'Failed to delete live class' };
+    }
   }
 
   // Payments

@@ -19,6 +19,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     originalPrice: "",
     level: "",
     category: "",
+    subject: "",
+    grade: "",
     status: "draft",
     students: "",
     image: null,
@@ -112,6 +114,12 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
 
       <Text style={styles.label}>Category</Text>
       <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
+
+      <Text style={styles.label}>Subject</Text>
+      <TextInput style={styles.input} value={formData.subject} onChangeText={t => setFormData({ ...formData, subject: t })} />
+
+      <Text style={styles.label}>Grade</Text>
+      <TextInput style={styles.input} value={formData.grade} onChangeText={t => setFormData({ ...formData, grade: t })} />
 
       <Text style={styles.label}>Status</Text>
       <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />

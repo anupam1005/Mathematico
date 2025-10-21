@@ -21,6 +21,8 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
     author: "",
     description: "",
     category: "",
+    subject: "",
+    grade: "",
     pages: "",
     isbn: "",
     status: "draft",
@@ -48,6 +50,8 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
               author: book.author || "",
               description: book.description || "",
               category: book.category || "",
+              subject: book.subject || "",
+              grade: book.grade || "",
               pages: book.pages?.toString() || "",
               isbn: book.isbn || "",
               status: book.status || "draft",
@@ -162,6 +166,8 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
       data.append("author", formData.author);
       data.append("description", formData.description || "");
       data.append("category", formData.category || "General");
+      data.append("subject", formData.subject || "Mathematics");
+      data.append("grade", formData.grade || "Class 9");
       data.append("pages", formData.pages || "0");
       data.append("isbn", formData.isbn || "");
       data.append("status", formData.status || "draft");
@@ -215,6 +221,8 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
           author: formData.author,
           description: formData.description || "",
           category: formData.category || "General",
+          subject: formData.subject || "Mathematics",
+          grade: formData.grade || "Class 9",
           pages: formData.pages || "0",
           isbn: formData.isbn || "",
           status: formData.status || "draft",
@@ -305,6 +313,8 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
             author: formData.author,
             description: formData.description || "",
             category: formData.category || "General",
+            subject: formData.subject || "Mathematics",
+            grade: formData.grade || "Class 9",
             pages: formData.pages || "0",
             isbn: formData.isbn || "",
             status: formData.status || "draft",
@@ -396,6 +406,12 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
 
       <Text style={styles.label}>Category</Text>
       <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
+
+      <Text style={styles.label}>Subject</Text>
+      <TextInput style={styles.input} value={formData.subject} onChangeText={t => setFormData({ ...formData, subject: t })} />
+
+      <Text style={styles.label}>Grade</Text>
+      <TextInput style={styles.input} value={formData.grade} onChangeText={t => setFormData({ ...formData, grade: t })} />
 
       <Text style={styles.label}>Pages</Text>
       <TextInput style={styles.input} keyboardType="numeric" value={formData.pages} onChangeText={t => setFormData({ ...formData, pages: t })} />
