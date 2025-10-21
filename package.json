@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev:backend": "cd Backend && npm run dev",
-    "dev:mobile": "cd Frontend-app && npx expo start --dev-client --clear",
+    "dev:mobile": "cd Frontend-app && npm run dev",
     "start:backend": "cd Backend && npm start",
     "start:mobile": "cd Frontend-app && npx expo start --dev-client",
     "install:backend": "cd Backend && npm install",

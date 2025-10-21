@@ -18,4 +18,10 @@ config.resolver.alias = {
   'react-native': require.resolve('react-native'),
 };
 
+// Add PlatformConstants polyfill for development
+config.resolver.alias = {
+  ...config.resolver.alias,
+  'react-native/Libraries/Utilities/PlatformConstants': require.resolve('./src/utils/PlatformConstantsPolyfill.js'),
+};
+
 module.exports = config;
