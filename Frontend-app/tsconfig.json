@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
+    "module": "node16",
     "lib": [
       "es2020",
       "dom",
@@ -12,7 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -32,11 +33,11 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    "types.d.ts",
-    "src/types/**/*"
+    "types.d.ts"
   ],
   "exclude": [
     "node_modules",
     "**/__tests__/*"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

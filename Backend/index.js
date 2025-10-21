@@ -1,11 +1,6 @@
-// Mathematico Backend - Serverless Optimized
-// Load environment variables (works in both local and serverless)
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({ path: `${__dirname}/config.env` });
-  console.log('✅ Environment variables loaded from config.env');
-} else {
-  console.log('✅ Environment variables loaded from serverless environment');
-}
+// Mathematico Backend with MongoDB Database
+require('dotenv').config({ path: `${__dirname}/config.env` });
+console.log('✅ Environment variables loaded from config.env');
 
 // Database connection
 const connectDB = require('./config/database');
@@ -135,7 +130,6 @@ const corsOptions = {
     console.log('🌐 CORS request from origin:', origin);
     
     const allowedOrigins = [
-      // Development origins
       'http://localhost:3000',
       'http://localhost:19006',
       'http://localhost:8081',
@@ -148,14 +142,9 @@ const corsOptions = {
       'http://localhost:19004',
       'http://localhost:19005',
       'http://localhost:19006',
-      
-      // Production serverless origins
       'https://mathematico-frontend.vercel.app',
       'https://mathematico-backend-new.vercel.app',
       'https://mathematico-app.vercel.app',
-      'https://mathematico-platform.vercel.app',
-      
-      // Mobile app origins
       'exp://192.168.1.100:8081', // Expo development
       'exp://localhost:8081', // Expo development
       'exp://localhost:8082', // Expo development
@@ -166,19 +155,14 @@ const corsOptions = {
       'exp://127.0.0.1:8081', // Local development
       'exp://127.0.0.1:8082', // Local development
       'exp://127.0.0.1:8083', // Local development
-      
-      // Mobile app protocols
       'capacitor://localhost', // Capacitor apps
       'ionic://localhost', // Ionic apps
+      'http://localhost', // Local development
+      'https://localhost', // Local HTTPS
       'file://', // File protocol for mobile apps
       'app://', // App protocol for mobile apps
       'mathematico://', // Custom app scheme
-      'com.anonymous.mathematico://', // Android app scheme
-      'com.anupam1505.mathematicoapp://', // Production Android app scheme
-      
-      // Local development
-      'http://localhost', // Local development
-      'https://localhost', // Local HTTPS
+      'com.anonymous.mathematico://' // Android app scheme
     ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
