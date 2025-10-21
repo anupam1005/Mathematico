@@ -436,6 +436,79 @@ const changePassword = async (req, res) => {
   });
 };
 
+/**
+ * Create admin user (development only)
+ */
+const createAdmin = async (req, res) => {
+  try {
+    // Only allow in development or if no admin exists
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin creation not allowed in production',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!UserModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'User model unavailable' 
+      });
+    }
+
+    // Connect to database
+    await connectDB();
+
+    // Check if admin already exists
+    const existingAdmin = await UserModel.findOne({ role: 'admin' });
+    if (existingAdmin) {
+      return res.status(409).json({
+        success: false,
+        message: 'Admin user already exists',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Create admin user
+    const adminData = {
+      name: 'Admin User',
+      email: 'admin@mathematico.com',
+      password: 'AdminPass@2024',
+      role: 'admin',
+      isActive: true,
+      isEmailVerified: true
+    };
+
+    const adminUser = await UserModel.create(adminData);
+    const publicUser = adminUser.getPublicProfile();
+
+    console.log('✅ Admin user created:', adminUser.email);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Admin user created successfully',
+      data: {
+        user: publicUser,
+        credentials: {
+          email: 'admin@mathematico.com',
+          password: 'AdminPass@2024'
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Admin creation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create admin user',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -446,6 +519,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  createAdmin,
   // Additional methods for routes
   healthCheck: (req, res) => res.json({ success: true, status: 'healthy', service: 'auth', timestamp: new Date().toISOString() }),
   testDatabase: (req, res) => res.json({ success: true, message: 'Database test endpoint', connected: true }),

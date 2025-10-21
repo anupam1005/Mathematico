@@ -1,42 +1,26 @@
 {
   "version": 2,
-  "name": "mathematico-backend",
-  "functions": {
-    "Backend/index.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30,
-      "memory": 1024
+  "builds": [
+    {
+      "src": "Backend/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
-  },
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
+  "functions": {
+    "Backend/index.js": {
+      "runtime": "@vercel/node",
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "env": {
     "NODE_ENV": "production",
-    "VERCEL": "1",
-    "BACKEND_URL": "https://mathematico-backend-new.vercel.app",
-    "FRONTEND_URL": "https://mathematico-frontend.vercel.app",
-    "MONGODB_URI": "mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/",
-    "MONGODB_DB": "mathematico"
-  },
-  "regions": ["iad1", "sfo1", "lhr1"],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With"
-        }
-      ]
-    }
-  ]
+    "VERCEL": "1"
+  }
 }

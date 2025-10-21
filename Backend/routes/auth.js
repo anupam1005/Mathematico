@@ -230,6 +230,9 @@ router.post('/register', (req, res, next) => {
   console.log('📝 Registration request received:', req.body);
   next();
 }, authController.register);
+
+// Admin creation route (development only)
+router.post('/create-admin', authController.createAdmin);
 router.post('/logout', authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
