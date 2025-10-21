@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
 import authService from '../services/authService';
+import { Storage } from '../utils/storage';
 
 export interface User {
   id: string;
@@ -55,14 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (token) {
         // Token is valid, try to get user data from storage
-        const storedUser = await SecureStore.getItemAsync('user');
+        const storedUser = await Storage.getItem('user');
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
           // If no user data, clear token and logout
-          await SecureStore.deleteItemAsync('authToken');
+          await Storage.deleteItem('authToken');
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -73,8 +73,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Auth check failed:', error);
       // Clear invalid tokens
-      await SecureStore.deleteItemAsync('authToken');
-      await SecureStore.deleteItemAsync('refreshToken');
+      await Storage.deleteItem('authToken');
+      await Storage.deleteItem('refreshToken');
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -94,13 +94,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await SecureStore.setItemAsync('authToken', accessToken);
+          await Storage.setItem('authToken', accessToken);
           console.log('AuthContext: Access token stored after login');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await SecureStore.setItemAsync('refreshToken', refreshToken);
+          await Storage.setItem('refreshToken', refreshToken);
           console.log('AuthContext: Refresh token stored after login');
         }
         
@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // Store user data in SecureStore
-        await SecureStore.setItemAsync('user', JSON.stringify(user));
+        await Storage.setItem('user', JSON.stringify(user));
         
         setUser(user);
         setIsAuthenticated(true);
@@ -153,13 +153,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await SecureStore.setItemAsync('authToken', accessToken);
+          await Storage.setItem('authToken', accessToken);
           console.log('AuthContext: Access token stored after registration');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await SecureStore.setItemAsync('refreshToken', refreshToken);
+          await Storage.setItem('refreshToken', refreshToken);
           console.log('AuthContext: Refresh token stored after registration');
         }
         
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // Store user data in SecureStore
-        await SecureStore.setItemAsync('user', JSON.stringify(user));
+        await Storage.setItem('user', JSON.stringify(user));
         
         setUser(user);
         setIsAuthenticated(true);
@@ -210,9 +210,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       // Clear all local storage
-      await SecureStore.deleteItemAsync('user');
-      await SecureStore.deleteItemAsync('authToken');
-      await SecureStore.deleteItemAsync('refreshToken');
+      await Storage.deleteItem('user');
+      await Storage.deleteItem('authToken');
+      await Storage.deleteItem('refreshToken');
       
       // Update state
       setUser(null);
@@ -222,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const refreshTokenValue = await SecureStore.getItemAsync('refreshToken');
+      const refreshTokenValue = await Storage.getItem('refreshToken');
       if (!refreshTokenValue) {
         return false;
       }
@@ -234,10 +234,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Update tokens
         if (newAccessToken) {
-          await SecureStore.setItemAsync('authToken', newAccessToken);
+          await Storage.setItem('authToken', newAccessToken);
         }
         if (newRefreshToken) {
-          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+          await Storage.setItem('refreshToken', newRefreshToken);
         }
         
         return true;
@@ -269,7 +269,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(updatedUser);
         
         // Persist to SecureStore
-        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+        await Storage.setItem('user', JSON.stringify(updatedUser));
         
         return true;
       } else {
