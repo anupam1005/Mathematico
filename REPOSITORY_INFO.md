@@ -4,7 +4,6 @@ This code is now hosted at:
 https://github.com/anupam1005/Mathematico
 
 ## Repository Migration
-- Original repository: https://github.com/anupam1005/SirProject
 - Current repository: https://github.com/anupam1005/Mathematico
 
 ## Project Overview
