@@ -346,12 +346,12 @@ const createBook = async (req, res) => {
 
     // Create book data
     const bookData = {
-      title,
-      description,
-      author,
-      category,
-      subject,
-      grade,
+      title: title || 'Untitled Book',
+      description: description || 'No description provided',
+      author: author || 'Unknown Author',
+      category: category || 'general',
+      subject: subject || 'General',
+      grade: grade || 'All Levels',
       pages: pages ? parseInt(pages) : undefined,
       price: price ? parseFloat(price) : 0,
       currency,
@@ -362,10 +362,10 @@ const createBook = async (req, res) => {
       publicationYear: publicationYear ? parseInt(publicationYear) : undefined,
       language,
       tags: Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim()),
-      coverImage: coverImageUrl,
-      pdfFile: pdfFileUrl,
+      coverImage: coverImageUrl || '',
+      pdfFile: pdfFileUrl || '',
       status: 'draft', // Start as draft
-      createdBy: req.user.id || 'admin-1', // Use admin ID
+      createdBy: req.user?.id || null, // Use admin ID or null
       isAvailable: true
     };
 

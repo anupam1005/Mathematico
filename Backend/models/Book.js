@@ -4,23 +4,21 @@ const bookSchema = new mongoose.Schema({
   // Basic Information
   title: {
     type: String,
-    required: [true, 'Book title is required'],
+    required: false,
     trim: true,
-    minlength: [2, 'Title must be at least 2 characters'],
     maxlength: [200, 'Title cannot exceed 200 characters']
   },
   
   description: {
     type: String,
-    required: [true, 'Book description is required'],
+    required: false,
     trim: true,
-    minlength: [10, 'Description must be at least 10 characters'],
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
   
   author: {
     type: String,
-    required: [true, 'Author name is required'],
+    required: false,
     trim: true,
     maxlength: [100, 'Author name cannot exceed 100 characters']
   },
@@ -35,7 +33,7 @@ const bookSchema = new mongoose.Schema({
   // Categorization
   category: {
     type: String,
-    required: [true, 'Category is required'],
+    required: false,
     enum: [
       'mathematics',
       'physics',
@@ -53,13 +51,13 @@ const bookSchema = new mongoose.Schema({
   
   subject: {
     type: String,
-    required: [true, 'Subject is required'],
+    required: false,
     trim: true
   },
   
   grade: {
     type: String,
-    required: [true, 'Grade level is required'],
+    required: false,
     trim: true
   },
   
@@ -100,12 +98,12 @@ const bookSchema = new mongoose.Schema({
   // Media Files
   coverImage: {
     type: String, // URL to cover image
-    required: [true, 'Cover image is required']
+    required: false
   },
   
   pdfFile: {
     type: String, // URL to PDF file
-    required: [true, 'PDF file is required']
+    required: false
   },
   
   samplePages: [{
@@ -115,7 +113,7 @@ const bookSchema = new mongoose.Schema({
   // Pricing and Availability
   price: {
     type: Number,
-    required: [true, 'Price is required'],
+    required: false,
     min: [0, 'Price cannot be negative']
   },
   
@@ -152,7 +150,7 @@ const bookSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   
   // Statistics
