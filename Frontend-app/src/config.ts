@@ -2,21 +2,17 @@
 import { Platform } from 'react-native';
 
 const PROD_BACKEND = 'https://mathematico-backend-new.vercel.app'; // ✅ Your Vercel serverless backend
-const LOCAL_EMULATOR = 'http://10.0.2.2:5000'; // Android emulator loopback
+const LOCAL_EMULATOR = 'http://10.0.2.2:5001'; // Android emulator loopback (updated port)
+const LOCAL_DEV = 'http://localhost:5001'; // Local development
 const localIp = (process.env.REACT_NATIVE_LOCAL_BACKEND || '').trim();
 const USE_LOCAL_BACKEND = process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true';
 
 // Decide backend URL
 let BACKEND: string;
 
-// Always use serverless backend (no need for local server)
-if (USE_LOCAL_BACKEND && localIp) {
-  // Only use local if explicitly configured
-  BACKEND = `http://${localIp}:5000`;
-} else {
-  // ✅ Default to serverless backend (works everywhere)
-  BACKEND = PROD_BACKEND;
-}
+// Always use serverless backend for registration to work properly
+// Forcing serverless mode to avoid CORS issues
+BACKEND = PROD_BACKEND;
 
 export const API_CONFIG = {
   auth: `${BACKEND.replace(/\/$/, '')}/api/v1/auth`,

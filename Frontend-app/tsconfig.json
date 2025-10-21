@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "skipDefaultLibCheck": true,
+    "module": "esnext",
     "types": [],
     "baseUrl": "./src",
     "paths": {

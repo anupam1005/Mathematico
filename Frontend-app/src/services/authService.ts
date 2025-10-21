@@ -37,7 +37,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
   },
+  withCredentials: false, // Set to false to avoid CORS preflight issues
   // Add request/response interceptors for debugging
   validateStatus: function (status) {
     return status >= 200 && status < 300; // default
