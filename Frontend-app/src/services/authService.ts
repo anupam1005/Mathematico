@@ -99,11 +99,11 @@ api.interceptors.response.use(
           });
           
           if (response.data.success && response.data.data) {
-            const { tokens } = response.data.data;
+            const { accessToken, tokenType, expiresIn } = response.data.data;
             
             // Extract tokens from the backend response structure
-            const actualToken = tokens?.accessToken;
-            const actualRefreshToken = tokens?.refreshToken;
+            const actualToken = accessToken;
+            const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
             
             // Store new tokens
             if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
@@ -152,7 +152,7 @@ export interface LoginResponse {
   data?: {
     user: any;
     token: string;
-    refreshToken: string;
+    refreshToken?: string;
   };
 }
 
@@ -188,11 +188,11 @@ const authService = {
       console.log('AuthService: Login response received:', response.data);
       
       if (response.data.success && response.data.data) {
-        const { user, tokens } = response.data.data;
+        const { user, accessToken, tokenType, expiresIn } = response.data.data;
         
         // Extract tokens from the backend response structure
-        const actualToken = tokens?.accessToken;
-        const actualRefreshToken = tokens?.refreshToken;
+        const actualToken = accessToken;
+        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
         
         // Validate tokens before storing
         if (!actualToken || actualToken === 'null' || actualToken === 'undefined') {
@@ -220,7 +220,7 @@ const authService = {
           data: {
             user: user,
             token: actualToken,
-            refreshToken: actualRefreshToken
+            refreshToken: actualRefreshToken || undefined
           },
         };
       } else {
@@ -279,11 +279,11 @@ const authService = {
       console.log('AuthService: Registration response received:', response.data);
       
       if (response.data.success && response.data.data) {
-        const { user, tokens } = response.data.data;
+        const { user, accessToken, tokenType, expiresIn } = response.data.data;
         
         // Extract tokens from the backend response structure
-        const actualToken = tokens?.accessToken;
-        const actualRefreshToken = tokens?.refreshToken;
+        const actualToken = accessToken;
+        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
         
         // Store tokens if available
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
@@ -302,7 +302,7 @@ const authService = {
           data: {
             user: user,
             token: actualToken,
-            refreshToken: actualRefreshToken
+            refreshToken: actualRefreshToken || undefined
           },
         };
       } else {
@@ -499,11 +499,11 @@ const authService = {
       });
       
       if (response.data.success && response.data.data) {
-        const { tokens } = response.data.data;
+        const { accessToken, tokenType, expiresIn } = response.data.data;
         
         // Extract tokens from the backend response structure
-        const actualToken = tokens?.accessToken;
-        const actualRefreshToken = tokens?.refreshToken;
+        const actualToken = accessToken;
+        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
         
         // Store new tokens
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
@@ -521,7 +521,7 @@ const authService = {
           message: response.data.message || 'Token refreshed successfully',
           data: {
             token: actualToken,
-            refreshToken: actualRefreshToken,
+            refreshToken: actualRefreshToken || undefined,
           },
         };
       } else {
