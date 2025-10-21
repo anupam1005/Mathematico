@@ -172,9 +172,17 @@ const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       console.log('AuthService: Attempting login to:', API_CONFIG.auth);
-      const response = await api.post('/login', {
+      console.log('AuthService: Full login URL:', `${API_CONFIG.auth}/login`);
+      
+      // Use the full URL for the serverless backend
+      const response = await axios.post(`${API_CONFIG.auth}/login`, {
         email,
         password,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
       
       console.log('AuthService: Login response received:', response.data);
@@ -256,10 +264,16 @@ const authService = {
       console.log('AuthService: Full registration URL:', `${API_CONFIG.auth}/register`);
       console.log('AuthService: Registration payload:', { name, email, password: '***' });
       
-      const response = await api.post('/register', {
+      // Use the full URL for the serverless backend
+      const response = await axios.post(`${API_CONFIG.auth}/register`, {
         name,
         email,
         password,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
       
       console.log('AuthService: Registration response received:', response.data);
@@ -329,7 +343,12 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      await api.post('/logout');
+      await axios.post(`${API_CONFIG.auth}/logout`, {}, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
       return {
         success: true,
         message: 'Logout successful',
@@ -345,7 +364,14 @@ const authService = {
   async getCurrentUser(): Promise<any> {
     try {
       // Backend exposes /api/v1/auth/profile
-      const response = await api.get('/profile');
+      const token = await this.getToken();
+      const response = await axios.get(`${API_CONFIG.auth}/profile`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to get user data');
@@ -355,7 +381,14 @@ const authService = {
 
   async updateProfile(data: any): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const response = await api.put('/profile', data);
+      const token = await this.getToken();
+      const response = await axios.put(`${API_CONFIG.auth}/profile`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       return {
         success: true,
@@ -372,9 +405,16 @@ const authService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.put('/change-password', {
+      const token = await this.getToken();
+      const response = await axios.put(`${API_CONFIG.auth}/change-password`, {
         currentPassword,
         newPassword,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       return {
@@ -391,8 +431,13 @@ const authService = {
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post('/forgot-password', {
+      const response = await axios.post(`${API_CONFIG.auth}/forgot-password`, {
         email,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
       
       return {
@@ -409,9 +454,14 @@ const authService = {
 
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post('/reset-password', {
+      const response = await axios.post(`${API_CONFIG.auth}/reset-password`, {
         token,
         newPassword,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
       
       return {
@@ -441,6 +491,11 @@ const authService = {
       
       const response = await axios.post(`${API_CONFIG.auth}/refresh-token`, {
         refreshToken,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
       
       if (response.data.success && response.data.data) {
