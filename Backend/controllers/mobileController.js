@@ -48,19 +48,45 @@ const getAllCourses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const { status, category, level, search } = req.query;
+
+    // Build query object
+    const query = { isAvailable: true };
+    
+    // Add status filter (default to published if not specified)
+    if (status) {
+      query.status = status;
+    } else {
+      query.status = 'published';
+    }
+    
+    // Add category filter
+    if (category) {
+      query.category = category;
+    }
+    
+    // Add level filter
+    if (level) {
+      query.level = level;
+    }
+    
+    // Add search filter
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { instructor: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     console.log('📱 Mobile: Querying courses with filters:', { 
-      status: 'published', 
-      isAvailable: true,
+      query,
       page, 
       limit, 
       skip 
     });
 
-    const courses = await CourseModel.find({ 
-      status: 'published',
-      isAvailable: true 
-    })
+    const courses = await CourseModel.find(query)
       .select('-enrolledStudents -reviews -curriculum')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -69,7 +95,7 @@ const getAllCourses = async (req, res) => {
 
     console.log('📱 Mobile: Found courses:', courses.length);
 
-    const total = await CourseModel.countDocuments({ status: 'published', isAvailable: true });
+    const total = await CourseModel.countDocuments(query);
 
     res.json({
       success: true,
@@ -409,21 +435,51 @@ const getAllLiveClasses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const { status, category, level, search } = req.query;
+
+    // Build query object
+    const query = { isAvailable: true };
+    
+    // Add status filter (default to scheduled/live if not specified)
+    if (status) {
+      if (status === 'upcoming') {
+        query.status = { $in: ['scheduled', 'live'] };
+        query.startTime = { $gte: new Date() };
+      } else {
+        query.status = status;
+      }
+    } else {
+      query.status = { $in: ['scheduled', 'live'] };
+      query.startTime = { $gte: new Date() };
+    }
+    
+    // Add category filter
+    if (category) {
+      query.category = category;
+    }
+    
+    // Add level filter
+    if (level) {
+      query.level = level;
+    }
+    
+    // Add search filter
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { instructor: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     console.log('📱 Mobile: Querying live classes with filters:', { 
-      status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
-      startTime: { $gte: new Date() },
+      query,
       page, 
       limit, 
       skip 
     });
 
-    const liveClasses = await LiveClassModel.find({ 
-      status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
-      startTime: { $gte: new Date() }
-    })
+    const liveClasses = await LiveClassModel.find(query)
       .select('-enrolledStudents -reviews')
       .sort({ startTime: 1 })
       .skip(skip)
@@ -432,11 +488,7 @@ const getAllLiveClasses = async (req, res) => {
 
     console.log('📱 Mobile: Found live classes:', liveClasses.length);
 
-    const total = await LiveClassModel.countDocuments({ 
-      status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
-      startTime: { $gte: new Date() }
-    });
+    const total = await LiveClassModel.countDocuments(query);
 
     res.json({
       success: true,
@@ -455,6 +507,102 @@ const getAllLiveClasses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Start live class
+ */
+const startLiveClass = async (req, res) => {
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    console.log('📱 Mobile: Starting live class...');
+    await connectDB();
+
+    const { id } = req.params;
+    console.log('📱 Mobile: Live class ID:', id);
+
+    const liveClass = await LiveClassModel.findById(id);
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Use the model method to start the class
+    await liveClass.startClass();
+
+    console.log('📱 Mobile: Live class started successfully:', liveClass.title);
+
+    res.json({
+      success: true,
+      message: 'Live class started successfully',
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Mobile: Error starting live class:', error);
+    console.error('❌ Mobile: Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start live class',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * End live class
+ */
+const endLiveClass = async (req, res) => {
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    console.log('📱 Mobile: Ending live class...');
+    await connectDB();
+
+    const { id } = req.params;
+    console.log('📱 Mobile: Live class ID:', id);
+
+    const liveClass = await LiveClassModel.findById(id);
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Use the model method to end the class
+    await liveClass.endClass();
+
+    console.log('📱 Mobile: Live class ended successfully:', liveClass.title);
+
+    res.json({
+      success: true,
+      message: 'Live class ended successfully',
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Mobile: Error ending live class:', error);
+    console.error('❌ Mobile: Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to end live class',
       error: error.message,
       timestamp: new Date().toISOString()
     });
@@ -572,7 +720,6 @@ const getLiveClassById = async (req, res) => {
     // Get live class details
     const liveClass = await LiveClassModel.findOne({
       _id: id,
-      status: { $in: ['scheduled', 'live'] },
       isAvailable: true
     }).select('-enrolledStudents -reviews').lean();
 
@@ -689,9 +836,11 @@ module.exports = {
   getSecurePdfViewer: withTimeout(getSecurePdfViewer),
   streamSecurePdf: withTimeout(streamSecurePdf),
   getAllLiveClasses: withTimeout(getAllLiveClasses),
+  getLiveClassById: withTimeout(getLiveClassById),
+  startLiveClass: withTimeout(startLiveClass),
+  endLiveClass: withTimeout(endLiveClass),
   getFeaturedContent: withTimeout(getFeaturedContent),
   getCourseById: withTimeout(getCourseById),
-  getLiveClassById: withTimeout(getLiveClassById),
   getCategories: withTimeout(getCategories),
   search: withTimeout(searchContent),
   searchContent: withTimeout(searchContent),

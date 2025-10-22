@@ -128,7 +128,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadFeaturedCourses = async () => {
     try {
-      const response = await courseService.getCourses(1, 4, { status: 'active' });
+      const response = await courseService.getCourses(1, 4, { status: 'published' });
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedCourses(response.data);
       } else {
@@ -142,7 +142,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadFeaturedBooks = async () => {
     try {
-      const response = await bookService.getBooks(1, 4, { status: 'active' });
+      const response = await bookService.getBooks(1, 4, { status: 'published' });
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedBooks(response.data);
       } else {
@@ -156,7 +156,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadUpcomingClasses = async () => {
     try {
-      const response = await liveClassService.getLiveClasses(1, 3, { status: 'scheduled' });
+      const response = await liveClassService.getLiveClasses(1, 3, { status: 'upcoming' });
       if (response && response.data && Array.isArray(response.data)) {
         setUpcomingClasses(response.data);
       } else {
@@ -301,7 +301,7 @@ export default function HomeScreen({ navigation }: any) {
           >
             {liveClass.level}
           </Chip>
-          <Text style={textStyles.body}>₹{liveClass.price}</Text>
+          <Text style={textStyles.body}>FREE</Text>
         </View>
       </View>
     </UnifiedCard>

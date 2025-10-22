@@ -126,6 +126,7 @@ export default function AdminBooks({ navigation }: any) {
   };
 
   const handleDelete = (id: string) => {
+    console.log('AdminBooks: Delete button clicked for book ID:', id);
     Alert.alert(
       'Delete Book',
       'Are you sure you want to delete this book?',
@@ -136,15 +137,22 @@ export default function AdminBooks({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.deleteBook(id);
-              // Remove the book from local state immediately
-              setBooks(prevBooks => prevBooks.filter(book => {
-                const bookId = book.id || book._id || book.Id;
-                return bookId !== id;
-              }));
-              Alert.alert('Success', 'Book deleted successfully');
+              console.log('AdminBooks: Attempting to delete book with ID:', id);
+              const result = await adminService.deleteBook(id);
+              console.log('AdminBooks: Delete result:', result);
+              
+              if (result.success) {
+                // Remove the book from local state immediately
+                setBooks(prevBooks => prevBooks.filter(book => {
+                  const bookId = book.id || book._id || book.Id;
+                  return bookId !== id;
+                }));
+                Alert.alert('Success', 'Book deleted successfully');
+              } else {
+                Alert.alert('Error', result.error || 'Failed to delete book');
+              }
             } catch (error) {
-              console.error('Error deleting book:', error);
+              console.error('AdminBooks: Error deleting book:', error);
               Alert.alert('Error', 'Failed to delete book');
             }
           },

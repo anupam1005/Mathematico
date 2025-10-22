@@ -157,35 +157,7 @@ const liveClassSchema = new mongoose.Schema({
     type: String // URL to preview video
   },
   
-  // Pricing and Enrollment
-  price: {
-    type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative']
-  },
-  
-  currency: {
-    type: String,
-    default: 'INR',
-    enum: ['INR', 'USD', 'EUR', 'GBP']
-  },
-  
-  isFree: {
-    type: Boolean,
-    default: false
-  },
-  
-  discount: {
-    percentage: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0
-    },
-    validUntil: {
-      type: Date
-    }
-  },
+  // Enrollment (no pricing)
   
   // Instructor Information
   instructor: {
@@ -491,17 +463,9 @@ liveClassSchema.pre('save', function(next) {
   next();
 });
 
-// Virtual for formatted price
-liveClassSchema.virtual('formattedPrice').get(function() {
-  if (this.isFree) return 'Free';
-  
-  let price = this.price;
-  if (this.discount.percentage > 0 && 
-      (!this.discount.validUntil || this.discount.validUntil > new Date())) {
-    price = price * (1 - this.discount.percentage / 100);
-  }
-  
-  return `${this.currency} ${price.toFixed(2)}`;
+// Virtual for free status (all live classes are free)
+liveClassSchema.virtual('isFree').get(function() {
+  return true;
 });
 
 // Virtual for enrollment count

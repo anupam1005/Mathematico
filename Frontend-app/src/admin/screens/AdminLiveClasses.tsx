@@ -94,6 +94,7 @@ export default function AdminLiveClasses({ navigation }: any) {
 
   const handleDelete = (liveClass: LiveClass) => {
     const id = getLiveClassId(liveClass);
+    console.log('AdminLiveClasses: Delete button clicked for live class ID:', id);
     if (!id) {
       Alert.alert('Error', 'Invalid live class ID');
       return;
@@ -109,10 +110,18 @@ export default function AdminLiveClasses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.deleteLiveClass(id);
-              await loadLiveClasses();
-              Alert.alert('Success', 'Live class deleted successfully');
+              console.log('AdminLiveClasses: Attempting to delete live class with ID:', id);
+              const result = await adminService.deleteLiveClass(id);
+              console.log('AdminLiveClasses: Delete result:', result);
+              
+              if (result.success) {
+                await loadLiveClasses();
+                Alert.alert('Success', 'Live class deleted successfully');
+              } else {
+                Alert.alert('Error', result.error || 'Failed to delete live class');
+              }
             } catch (error) {
+              console.error('AdminLiveClasses: Error deleting live class:', error);
               Alert.alert('Error', 'Failed to delete live class');
             }
           },
@@ -129,17 +138,20 @@ export default function AdminLiveClasses({ navigation }: any) {
     }
     
     try {
-      // If draft, publish to upcoming; otherwise unpublish to draft
-      let newStatus = 'upcoming';
-      if (liveClass.status === 'draft') {
-        newStatus = 'upcoming';
-      } else if (liveClass.status === 'upcoming' || liveClass.status === 'live' || liveClass.status === 'completed' || liveClass.status === 'cancelled') {
-        newStatus = 'draft';
+      // Map frontend status to backend status
+      let newStatus = 'scheduled'; // Default to scheduled (published)
+      
+      // If currently scheduled/live/completed, cancel it (unpublish)
+      if (liveClass.status === 'scheduled' || liveClass.status === 'live' || liveClass.status === 'completed') {
+        newStatus = 'cancelled';
+      } else if (liveClass.status === 'cancelled' || liveClass.status === 'postponed') {
+        // If cancelled/postponed, make it scheduled (publish)
+        newStatus = 'scheduled';
       }
       
       await adminService.updateLiveClassStatus(id, newStatus);
       await loadLiveClasses();
-      Alert.alert('Success', newStatus === 'upcoming' ? 'Live class published successfully' : 'Live class unpublished');
+      Alert.alert('Success', newStatus === 'scheduled' ? 'Live class published successfully' : 'Live class unpublished');
     } catch (error) {
       console.error('Error updating live class status:', error);
       Alert.alert('Error', 'Failed to update live class status');
@@ -295,7 +307,7 @@ export default function AdminLiveClasses({ navigation }: any) {
         >
           Edit
         </Button>
-        {item.status === 'upcoming' && (
+        {item.status === 'scheduled' && (
           <Button
             mode="outlined"
             onPress={() => handleStartLiveClass(item)}
@@ -319,9 +331,9 @@ export default function AdminLiveClasses({ navigation }: any) {
           mode="outlined"
           onPress={() => handleTogglePublish(item)}
           style={styles.actionButton}
-          textColor={item.status === 'draft' ? designSystem.colors.success : designSystem.colors.warning}
+          textColor={item.status === 'cancelled' || item.status === 'postponed' ? designSystem.colors.success : designSystem.colors.warning}
         >
-          {item.status === 'draft' ? 'Publish' : 'Unpublish'}
+          {item.status === 'cancelled' || item.status === 'postponed' ? 'Publish' : 'Unpublish'}
         </Button>
         <Button
           mode="outlined"

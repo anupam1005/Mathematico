@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 const PROD_BACKEND = 'https://mathematico-backend-new.vercel.app'; // ✅ Your Vercel serverless backend
 const LOCAL_EMULATOR = 'http://10.0.2.2:5001'; // Android emulator loopback (updated port)
-const LOCAL_DEV = 'http://localhost:5001'; // Local development
+const LOCAL_DEV = 'http://localhost:5000'; // Local development
 const localIp = (process.env.REACT_NATIVE_LOCAL_BACKEND || '').trim();
 const USE_LOCAL_BACKEND = process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true';
 
@@ -33,6 +33,9 @@ export const CURRENCY_CONFIG = {
   symbol: '₹',
   code: 'INR'
 };
+
+// Razorpay Configuration - Now fetched securely from backend
+// No sensitive keys stored in frontend code
 
 console.log('📡 API Configuration:', {
   auth: API_CONFIG.auth,

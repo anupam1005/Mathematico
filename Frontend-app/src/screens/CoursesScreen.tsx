@@ -47,7 +47,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         search: searchQuery || undefined,
         category: selectedCategory || undefined,
         level: selectedLevel || undefined,
-        status: 'active',
+        status: 'published',
       };
 
       const response = await courseService.getCourses(pageNum, 10, filters);

@@ -331,7 +331,7 @@ app.get('/', (req, res) => {
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // Import route handlers (tolerant loading per route for serverless)
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
+let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes, paymentRoutes;
 
 const safeRequire = (modulePath, label) => {
   try {
@@ -349,6 +349,7 @@ adminRoutes = safeRequire('./routes/admin', 'admin');
 mobileRoutes = safeRequire('./routes/mobile', 'mobile');
 studentRoutes = safeRequire('./routes/student', 'student');
 usersRoutes = safeRequire('./routes/users', 'users');
+paymentRoutes = safeRequire('./routes/payment', 'payment');
 
 // Mount routes
 console.log('🔗 Mounting API routes...');
@@ -387,6 +388,13 @@ if (studentRoutes) {
   console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
 } else {
   console.warn('⚠️ Student routes not mounted');
+}
+
+if (paymentRoutes) {
+  app.use(`${API_PREFIX}/payments`, paymentRoutes);
+  console.log(`✅ Payment routes mounted at ${API_PREFIX}/payments`);
+} else {
+  console.warn('⚠️ Payment routes not mounted');
 }
 
 // Root API endpoint

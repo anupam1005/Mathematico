@@ -45,6 +45,8 @@ router.get('/courses/:id', mobileController.getCourseById);
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
+router.put('/live-classes/:id/start', mobileController.startLiveClass);
+router.put('/live-classes/:id/end', mobileController.endLiveClass);
 
 // Search routes
 router.get('/search', mobileController.search);

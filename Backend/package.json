@@ -28,6 +28,8 @@
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.16",
+    "razorpay": "^2.9.6",
+    "react-native-razorpay": "^2.3.0",
     "sharp": "^0.33.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

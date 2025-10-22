@@ -93,6 +93,7 @@ export default function AdminCourses({ navigation }: any) {
 
   const handleDelete = (course: Course) => {
     const id = getCourseId(course);
+    console.log('AdminCourses: Delete button clicked for course ID:', id);
     if (!id) {
       Alert.alert('Error', 'Invalid course ID');
       return;
@@ -108,10 +109,18 @@ export default function AdminCourses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.deleteCourse(id);
-              await loadCourses();
-              Alert.alert('Success', 'Course deleted successfully');
+              console.log('AdminCourses: Attempting to delete course with ID:', id);
+              const result = await adminService.deleteCourse(id);
+              console.log('AdminCourses: Delete result:', result);
+              
+              if (result.success) {
+                await loadCourses();
+                Alert.alert('Success', 'Course deleted successfully');
+              } else {
+                Alert.alert('Error', result.error || 'Failed to delete course');
+              }
             } catch (error) {
+              console.error('AdminCourses: Error deleting course:', error);
               Alert.alert('Error', 'Failed to delete course');
             }
           },

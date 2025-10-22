@@ -13,6 +13,7 @@ export const getStatusColor = (status: string): string => {
     case 'completed':
       return designSystem.colors.textSecondary;
     case 'cancelled':
+    case 'postponed':
       return designSystem.colors.error;
     case 'scheduled':
       return designSystem.colors.info;

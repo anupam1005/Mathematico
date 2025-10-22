@@ -22,6 +22,7 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import BookDetailScreen from './src/screens/BookDetailScreen';
 import CourseDetailScreen from './src/screens/CourseDetailScreen';
 import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
+import CheckoutScreen from './src/screens/CheckoutScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
@@ -163,6 +164,15 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Live Class Details',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen 
+        name="Checkout" 
+        component={CheckoutScreen}
+        options={{
+          headerShown: true,
+          title: 'Checkout',
           headerBackTitle: 'Back',
         }}
       />

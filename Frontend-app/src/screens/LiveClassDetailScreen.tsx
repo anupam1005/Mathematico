@@ -26,7 +26,6 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
   const { liveClassId } = route.params;
   const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     loadLiveClass();
@@ -40,8 +39,34 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (response.success && response.data) {
         // Handle both single object and array responses
         const liveClassData = Array.isArray(response.data) ? response.data[0] : response.data;
-        setLiveClass(liveClassData);
+        console.log('Live class data received:', liveClassData);
+        
+        // Ensure all required properties exist with fallbacks
+        const safeLiveClassData = {
+          _id: liveClassData._id || liveClassData.id || '',
+          title: liveClassData.title || 'Untitled Live Class',
+          description: liveClassData.description || '',
+          status: liveClassData.status || 'unknown',
+          level: liveClassData.level || 'All Levels',
+          category: liveClassData.category || 'General',
+          thumbnail_url: liveClassData.thumbnail_url || null,
+          scheduled_at: liveClassData.scheduled_at || liveClassData.startTime || null,
+          duration: liveClassData.duration || 0,
+          enrolled_students: liveClassData.enrolled_students || 0,
+          max_students: liveClassData.max_students || 0,
+          subject: liveClassData.subject || 'General',
+          class: liveClassData.class || 'All Classes',
+          topics: liveClassData.topics || [],
+          prerequisites: liveClassData.prerequisites || null,
+          materials: liveClassData.materials || null,
+          notes: liveClassData.notes || null,
+          recording_url: liveClassData.recording_url || null,
+          ...liveClassData // Spread any additional properties
+        };
+        
+        setLiveClass(safeLiveClassData);
       } else {
+        console.error('Failed to load live class:', response.message);
         Alert.alert('Error', response.message || 'Failed to load live class');
         navigation.goBack();
       }
@@ -54,35 +79,66 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     }
   };
 
-  const handleEnroll = async () => {
+
+  const handleStartLiveClass = async () => {
     if (!liveClass) return;
 
     Alert.alert(
-      'Enroll in Live Class',
-      `Are you sure you want to enroll in "${liveClass.title}"?`,
+      'Start Live Class',
+      `Are you sure you want to start "${liveClass.title}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Enroll', onPress: enrollInLiveClass },
+        { text: 'Start', onPress: startLiveClass },
       ]
     );
   };
 
-  const enrollInLiveClass = async () => {
+  const handleEndLiveClass = async () => {
+    if (!liveClass) return;
+
+    Alert.alert(
+      'End Live Class',
+      `Are you sure you want to end "${liveClass.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'End', onPress: endLiveClass },
+      ]
+    );
+  };
+
+  const startLiveClass = async () => {
     try {
-      setEnrolling(true);
-      const response = await liveClassService.enrollInLiveClass(liveClassId);
+      console.log('Starting live class with ID:', liveClassId);
+      const response = await liveClassService.startLiveClass(liveClassId);
       
       if (response.success) {
-        Alert.alert('Success', 'Successfully enrolled in live class!');
-        // You might want to update UI or navigate somewhere
+        Alert.alert('Success', 'Live class started successfully!');
+        // Reload the live class data to update the status
+        await loadLiveClass();
       } else {
-        Alert.alert('Error', response.message || 'Failed to enroll in live class');
+        Alert.alert('Error', response.message || 'Failed to start live class');
       }
     } catch (error) {
-      console.error('Error enrolling in live class:', error);
-      Alert.alert('Error', 'Failed to enroll in live class');
-    } finally {
-      setEnrolling(false);
+      console.error('Error starting live class:', error);
+      Alert.alert('Error', 'Failed to start live class');
+    }
+  };
+
+  const endLiveClass = async () => {
+    try {
+      console.log('Ending live class with ID:', liveClassId);
+      const response = await liveClassService.endLiveClass(liveClassId);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Live class ended successfully!');
+        // Reload the live class data to update the status
+        await loadLiveClass();
+      } else {
+        Alert.alert('Error', response.message || 'Failed to end live class');
+      }
+    } catch (error) {
+      console.error('Error ending live class:', error);
+      Alert.alert('Error', 'Failed to end live class');
     }
   };
 
@@ -123,12 +179,27 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (!dateString) return 'TBD';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const isUpcoming = (dateString: string) => {
-    return new Date(dateString) > new Date();
+    if (!dateString) return false;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return false;
+      return date > new Date();
+    } catch (error) {
+      console.error('Error checking if date is upcoming:', error);
+      return false;
+    }
   };
 
   const isLive = (status: string) => {
@@ -148,7 +219,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     );
   }
 
-  if (!liveClass) {
+  if (!liveClass || typeof liveClass !== 'object') {
     return (
       <View style={styles.errorContainer}>
         <Icon name="error" size={64} color={designSystem.colors.error} />
@@ -160,8 +231,9 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     );
   }
 
-  return (
-    <ScrollView style={styles.container}>
+  try {
+    return (
+      <ScrollView style={styles.container}>
       {/* Live Class Header */}
       <Card style={styles.headerCard}>
         <Card.Cover
@@ -174,13 +246,13 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         />
         <Card.Content style={styles.headerContent}>
           <View style={styles.titleContainer}>
-            <Title style={styles.title}>{liveClass.title}</Title>
+            <Title style={styles.title}>{liveClass.title || 'Untitled Live Class'}</Title>
             <Chip
               mode="flat"
               style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status) }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
-              {liveClass.status.toUpperCase()}
+              {(liveClass.status || 'unknown').toUpperCase()}
             </Chip>
           </View>
           <View style={styles.metaContainer}>
@@ -189,17 +261,14 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
               style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
-              {liveClass.level}
+              {liveClass.level || 'All Levels'}
             </Chip>
             <Chip mode="outlined" style={styles.categoryChip}>
-              {liveClass.category}
+              {liveClass.category || 'General'}
             </Chip>
           </View>
           <View style={styles.priceContainer}>
-            {liveClass.original_price && liveClass.original_price > liveClass.price && (
-              <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
-            )}
-            <Text style={styles.price}>₹{liveClass.price}</Text>
+            <Text style={styles.price}>FREE</Text>
           </View>
         </Card.Content>
       </Card>
@@ -208,7 +277,11 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.sectionTitle}>Description</Title>
-          <Paragraph style={styles.description}>{liveClass.description}</Paragraph>
+          <Paragraph style={styles.description}>
+            {liveClass.description && typeof liveClass.description === 'string' 
+              ? liveClass.description 
+              : 'No description available.'}
+          </Paragraph>
         </Card.Content>
       </Card>
 
@@ -220,27 +293,27 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
             <View style={styles.detailItem}>
               <Icon name="schedule" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Scheduled:</Text>
-              <Text style={styles.detailValue}>{formatDate(liveClass.scheduled_at)}</Text>
+              <Text style={styles.detailValue}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
             </View>
             <View style={styles.detailItem}>
               <Icon name="access-time" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Duration:</Text>
-              <Text style={styles.detailValue}>{liveClass.duration} minutes</Text>
+              <Text style={styles.detailValue}>{liveClass.duration || 0} minutes</Text>
             </View>
             <View style={styles.detailItem}>
               <Icon name="group" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Enrolled:</Text>
-              <Text style={styles.detailValue}>{liveClass.enrolled_students}/{liveClass.max_students}</Text>
+              <Text style={styles.detailValue}>{liveClass.enrolled_students || 0}/{liveClass.max_students || 0}</Text>
             </View>
             <View style={styles.detailItem}>
               <Icon name="category" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Subject:</Text>
-              <Text style={styles.detailValue}>{liveClass.subject}</Text>
+              <Text style={styles.detailValue}>{liveClass.subject || 'General'}</Text>
             </View>
             <View style={styles.detailItem}>
               <Icon name="school" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
-              <Text style={styles.detailValue}>{liveClass.class}</Text>
+              <Text style={styles.detailValue}>{liveClass.class || 'All Classes'}</Text>
             </View>
           </View>
         </Card.Content>
@@ -263,7 +336,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Prerequisites */}
-      {liveClass.prerequisites && (
+      {liveClass.prerequisites && typeof liveClass.prerequisites === 'string' && liveClass.prerequisites.trim() && (
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Prerequisites</Title>
@@ -273,7 +346,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Materials */}
-      {liveClass.materials && (
+      {liveClass.materials && typeof liveClass.materials === 'string' && liveClass.materials.trim() && (
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Materials Required</Title>
@@ -283,7 +356,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Notes */}
-      {liveClass.notes && (
+      {liveClass.notes && typeof liveClass.notes === 'string' && liveClass.notes.trim() && (
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Additional Notes</Title>
@@ -311,23 +384,34 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionContainer}>
-        {isUpcoming(liveClass.scheduled_at) && !isCompleted(liveClass.status) && (
+        {/* Start Live Class Button */}
+        {liveClass.status === 'scheduled' && (
           <Button
             mode="contained"
-            onPress={handleEnroll}
-            style={styles.enrollButton}
-            contentStyle={styles.enrollButtonContent}
-            disabled={enrolling}
-            icon="school"
+            onPress={handleStartLiveClass}
+            style={styles.startButton}
+            contentStyle={styles.startButtonContent}
+            icon="play-circle"
           >
-            {enrolling ? (
-              <ActivityIndicator color={designSystem.colors.surface} />
-            ) : (
-              `Enroll Now - ₹${liveClass.price}`
-            )}
+            Start Live Class
           </Button>
         )}
         
+        {/* End Live Class Button */}
+        {liveClass.status === 'live' && (
+          <Button
+            mode="contained"
+            onPress={handleEndLiveClass}
+            style={styles.endButton}
+            contentStyle={styles.endButtonContent}
+            icon="stop-circle"
+          >
+            End Live Class
+          </Button>
+        )}
+        
+        
+        {/* Join Live Class Button */}
         {isLive(liveClass.status) && (
           <Button
             mode="contained"
@@ -340,6 +424,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           </Button>
         )}
         
+        {/* View Recording Button */}
         {isCompleted(liveClass.status) && (
           <Button
             mode="outlined"
@@ -353,7 +438,19 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         )}
       </View>
     </ScrollView>
-  );
+    );
+  } catch (error) {
+    console.error('Error rendering LiveClassDetailScreen:', error);
+    return (
+      <View style={styles.errorContainer}>
+        <Icon name="error" size={64} color={designSystem.colors.error} />
+        <Text style={styles.errorText}>Error loading live class details</Text>
+        <Button mode="contained" onPress={() => navigation.goBack()}>
+          Go Back
+        </Button>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -517,6 +614,24 @@ const styles = StyleSheet.create({
     ...designSystem.shadows.md,
   },
   joinButtonContent: {
+    paddingVertical: designSystem.spacing.md,
+  },
+  startButton: {
+    borderRadius: designSystem.borderRadius.md,
+    backgroundColor: designSystem.colors.success,
+    marginBottom: designSystem.spacing.sm,
+    ...designSystem.shadows.md,
+  },
+  startButtonContent: {
+    paddingVertical: designSystem.spacing.md,
+  },
+  endButton: {
+    borderRadius: designSystem.borderRadius.md,
+    backgroundColor: designSystem.colors.error,
+    marginBottom: designSystem.spacing.sm,
+    ...designSystem.shadows.md,
+  },
+  endButtonContent: {
     paddingVertical: designSystem.spacing.md,
   },
   recordingButtonContent: {

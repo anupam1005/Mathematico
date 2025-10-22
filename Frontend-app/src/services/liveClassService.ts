@@ -132,7 +132,13 @@ class LiveClassService {
       
       const response = await this.makeRequest(`/live-classes?${params.toString()}`);
       
-      // Since database is disabled, always return empty data
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: 0, page, limit, totalPages: 0 }
+        };
+      }
+      
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -149,10 +155,27 @@ class LiveClassService {
   async getLiveClassById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/live-classes/${id}`);
-      return response;
+      
+      if (response && response.data) {
+        return {
+          success: true,
+          data: response.data,
+          message: 'Live class fetched successfully'
+        };
+      }
+      
+      return {
+        success: false,
+        data: null,
+        message: 'Live class not found'
+      };
     } catch (error) {
       console.error('Error fetching live class:', error);
-      throw ErrorHandler.handleApiError(error);
+      return {
+        success: false,
+        data: null,
+        message: 'Failed to fetch live class'
+      };
     }
   }
 
@@ -163,6 +186,64 @@ class LiveClassService {
     } catch (error) {
       console.error('Error fetching featured live classes:', error);
       return [];
+    }
+  }
+
+  async startLiveClass(id: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/live-classes/${id}/start`, {
+        method: 'PUT'
+      });
+      
+      if (response && response.success) {
+        return {
+          success: true,
+          data: response.data,
+          message: 'Live class started successfully'
+        };
+      }
+      
+      return {
+        success: false,
+        data: null,
+        message: 'Failed to start live class'
+      };
+    } catch (error) {
+      console.error('Error starting live class:', error);
+      return {
+        success: false,
+        data: null,
+        message: 'Failed to start live class'
+      };
+    }
+  }
+
+  async endLiveClass(id: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/live-classes/${id}/end`, {
+        method: 'PUT'
+      });
+      
+      if (response && response.success) {
+        return {
+          success: true,
+          data: response.data,
+          message: 'Live class ended successfully'
+        };
+      }
+      
+      return {
+        success: false,
+        data: null,
+        message: 'Failed to end live class'
+      };
+    } catch (error) {
+      console.error('Error ending live class:', error);
+      return {
+        success: false,
+        data: null,
+        message: 'Failed to end live class'
+      };
     }
   }
 

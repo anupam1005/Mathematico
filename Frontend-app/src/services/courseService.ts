@@ -132,7 +132,13 @@ class CourseService {
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-      // Since database is disabled, always return empty data
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: 0, page, limit, totalPages: 0 }
+        };
+      }
+      
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }

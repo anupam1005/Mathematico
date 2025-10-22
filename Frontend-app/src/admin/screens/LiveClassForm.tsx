@@ -23,7 +23,7 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     startTime: new Date(),
     endTime: new Date(),
     scheduledAt: new Date(),
-    status: "draft",
+    status: "scheduled",
     meetingLink: "",
     image: null,
   });
@@ -60,34 +60,89 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.meetingLink || !formData.duration || !formData.maxStudents) {
-      return Alert.alert("Error", "Please fill all required fields (Title, Meeting Link, Duration, Max Students).");
+    console.log('LiveClassForm: Submit button clicked');
+    console.log('LiveClassForm: Form data:', formData);
+    
+    // Enhanced validation
+    const requiredFields = ['title', 'description', 'category', 'subject', 'grade', 'level', 'duration', 'maxStudents', 'meetingLink'];
+    const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
+    
+    if (missingFields.length > 0) {
+      console.log('LiveClassForm: Validation failed - missing required fields:', missingFields);
+      return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
+    }
+    
+    // Validate duration and maxStudents are numbers
+    if (isNaN(Number(formData.duration)) || Number(formData.duration) <= 0) {
+      return Alert.alert("Error", "Duration must be a positive number");
+    }
+    
+    if (isNaN(Number(formData.maxStudents)) || Number(formData.maxStudents) <= 0) {
+      return Alert.alert("Error", "Max Students must be a positive number");
     }
 
     setLoading(true);
     try {
+      console.log('LiveClassForm: Creating FormData...');
       const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value != null) {
-          if (key === "image" && value && typeof value === 'object' && 'uri' in value) {
-            if (value.uri) data.append("image", { uri: value.uri, type: "image/jpeg", name: "liveclass.jpg" } as any);
-          } else if (key === "scheduledAt" && value instanceof Date) {
-            data.append(key, value.toISOString());
-          } else {
-            data.append(key, value.toString());
-          }
+      
+      // Prepare the data object with proper formatting
+      const processedData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.category,
+        subject: formData.subject.trim(),
+        grade: formData.grade.trim(),
+        level: formData.level,
+        duration: Number(formData.duration),
+        maxStudents: Number(formData.maxStudents),
+        startTime: formData.scheduledAt.toISOString(),
+        endTime: new Date(formData.scheduledAt.getTime() + (Number(formData.duration) * 60000)).toISOString(),
+        meetingLink: formData.meetingLink.trim(),
+        status: formData.status || 'scheduled',
+        isAvailable: true
+      };
+      
+      console.log('LiveClassForm: Processed data:', processedData);
+      
+      // Add all fields to FormData
+      Object.entries(processedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          data.append(key, value.toString());
         }
       });
+      
+      // Handle image upload
+      if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
+        if (formData.image.uri) {
+          data.append("image", { uri: formData.image.uri, type: "image/jpeg", name: "liveclass.jpg" } as any);
+        }
+      }
 
+      console.log('LiveClassForm: FormData created, submitting...');
+      
       if (liveClassId) {
-        await adminService.updateLiveClass(liveClassId, data);
-        Alert.alert("Success", "Live class updated successfully");
+        console.log('LiveClassForm: Updating live class with ID:', liveClassId);
+        const result = await adminService.updateLiveClass(liveClassId, data);
+        console.log('LiveClassForm: Update result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Live class updated successfully");
+        } else {
+          Alert.alert("Error", result.error || "Failed to update live class");
+        }
       } else {
-        await adminService.createLiveClass(data);
-        Alert.alert("Success", "Live class created successfully");
+        console.log('LiveClassForm: Creating new live class...');
+        const result = await adminService.createLiveClass(data);
+        console.log('LiveClassForm: Create result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Live class created successfully");
+        } else {
+          Alert.alert("Error", result.error || "Failed to create live class");
+        }
       }
       onSuccess?.();
     } catch (err: any) {
+      console.error('LiveClassForm: Error during submission:', err);
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -138,6 +193,7 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
 
       <Text style={styles.label}>Meeting Link</Text>
       <TextInput style={styles.input} value={formData.meetingLink} onChangeText={t => setFormData({ ...formData, meetingLink: t })} />
+
 
       <Text style={styles.label}>Status</Text>
       <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />

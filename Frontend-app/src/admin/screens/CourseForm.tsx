@@ -61,34 +61,95 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.price) {
-      return Alert.alert("Error", "Title and Price are required.");
+    console.log('CourseForm: Submit button clicked');
+    console.log('CourseForm: Form data:', formData);
+    
+    // Enhanced validation
+    const requiredFields = ['title', 'description', 'price', 'level', 'category', 'subject', 'grade'];
+    const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
+    
+    if (missingFields.length > 0) {
+      console.log('CourseForm: Validation failed - missing required fields:', missingFields);
+      return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
+    }
+    
+    // Validate price is a number
+    if (isNaN(Number(formData.price)) || Number(formData.price) < 0) {
+      return Alert.alert("Error", "Price must be a valid number");
+    }
+    
+    // Validate students is a number if provided
+    if (formData.students && (isNaN(Number(formData.students)) || Number(formData.students) < 0)) {
+      return Alert.alert("Error", "Students count must be a valid number");
     }
 
     setLoading(true);
     try {
+      console.log('CourseForm: Creating FormData...');
       const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value != null) {
-          if (key === "image" && value && typeof value === 'object' && 'uri' in value) {
-            data.append("image", { uri: value.uri, type: "image/jpeg", name: "course.jpg" } as any);
-          } else if (key === "pdf" && value && typeof value === 'object' && 'uri' in value) {
-            data.append("pdf", { uri: value.uri, type: "application/pdf", name: ('name' in value ? value.name : "course.pdf") || "course.pdf" } as any);
-          } else {
-            data.append(key, value.toString());
-          }
+      
+      // Prepare the data object with proper formatting
+      const processedData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        price: Number(formData.price),
+        originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
+        level: formData.level,
+        category: formData.category,
+        subject: formData.subject.trim(),
+        grade: formData.grade.trim(),
+        status: formData.status || 'draft',
+        students: formData.students ? Number(formData.students) : 0,
+        isAvailable: true
+      };
+      
+      console.log('CourseForm: Processed data:', processedData);
+      
+      // Add all fields to FormData
+      Object.entries(processedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          data.append(key, value.toString());
         }
       });
+      
+      // Handle image upload
+      if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
+        if (formData.image.uri) {
+          data.append("image", { uri: formData.image.uri, type: "image/jpeg", name: "course.jpg" } as any);
+        }
+      }
+      
+      // Handle PDF upload
+      if (formData.pdf && typeof formData.pdf === 'object' && 'uri' in formData.pdf) {
+        if (formData.pdf.uri) {
+          data.append("pdf", { uri: formData.pdf.uri, type: "application/pdf", name: ('name' in formData.pdf ? formData.pdf.name : "course.pdf") || "course.pdf" } as any);
+        }
+      }
 
+      console.log('CourseForm: FormData created, submitting...');
+      
       if (courseId) {
-        await adminService.updateCourse(courseId, data);
-        Alert.alert("Success", "Course updated successfully");
+        console.log('CourseForm: Updating course with ID:', courseId);
+        const result = await adminService.updateCourse(courseId, data);
+        console.log('CourseForm: Update result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Course updated successfully");
+        } else {
+          Alert.alert("Error", result.error || "Failed to update course");
+        }
       } else {
-        await adminService.createCourse(data);
-        Alert.alert("Success", "Course created successfully");
+        console.log('CourseForm: Creating new course...');
+        const result = await adminService.createCourse(data);
+        console.log('CourseForm: Create result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Course created successfully");
+        } else {
+          Alert.alert("Error", result.error || "Failed to create course");
+        }
       }
       onSuccess?.();
     } catch (err: any) {
+      console.error('CourseForm: Error during submission:', err);
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
       setLoading(false);

@@ -185,7 +185,7 @@ export default function LiveClassesScreen({ navigation }: any) {
             >
               {liveClass.level}
             </Chip>
-            <Text style={styles.price}>₹{liveClass.price}</Text>
+            <Text style={styles.price}>FREE</Text>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>

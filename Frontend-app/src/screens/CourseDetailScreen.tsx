@@ -27,7 +27,6 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   const { courseId } = route.params;
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     loadCourse();
@@ -58,33 +57,12 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   const handleEnroll = async () => {
     if (!course) return;
 
-    Alert.alert(
-      'Enroll in Course',
-      `Are you sure you want to enroll in "${course.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Enroll', onPress: enrollInCourse },
-      ]
-    );
-  };
-
-  const enrollInCourse = async () => {
-    try {
-      setEnrolling(true);
-      const response = await courseService.enrollInCourse(courseId);
-      
-      if (response.success) {
-        Alert.alert('Success', 'Successfully enrolled in course!');
-        // You might want to navigate to course content or update UI
-      } else {
-        Alert.alert('Error', response.message || 'Failed to enroll in course');
-      }
-    } catch (error) {
-      console.error('Error enrolling in course:', error);
-      Alert.alert('Error', 'Failed to enroll in course');
-    } finally {
-      setEnrolling(false);
-    }
+    // Navigate to checkout screen for payment
+    navigation.navigate('Checkout', {
+      type: 'course',
+      itemId: courseId,
+      itemData: course
+    });
   };
 
   const getLevelColor = (level: string) => {
@@ -261,13 +239,8 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           onPress={handleEnroll}
           style={styles.enrollButton}
           contentStyle={styles.enrollButtonContent}
-          disabled={enrolling}
         >
-          {enrolling ? (
-            <ActivityIndicator color={designSystem.colors.surface} />
-          ) : (
-            `Enroll Now - ₹${course.price}`
-          )}
+          {`Enroll Now - ₹${course.price}`}
         </Button>
       </View>
     </ScrollView>
