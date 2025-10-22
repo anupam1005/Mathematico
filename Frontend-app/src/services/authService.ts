@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
+import { Storage } from '../utils/storage';
 
 // Utility function to safely handle errors and prevent NONE property assignment
 const createSafeError = (error: any) => {
@@ -52,7 +53,7 @@ api.interceptors.request.use(
     console.log('AuthService: Method:', config.method);
     console.log('AuthService: Headers:', config.headers);
     
-    const token = await AsyncStorage.getItem('authToken');
+    const token = await Storage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -90,7 +91,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
+        const refreshToken = await Storage.getItem('refreshToken');
         if (refreshToken) {
           console.log('AuthService: Attempting token refresh...');
           
@@ -107,12 +108,12 @@ api.interceptors.response.use(
             
             // Store new tokens
             if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-              await AsyncStorage.setItem('authToken', actualToken);
+              await Storage.setItem('authToken', actualToken);
               console.log('AuthService: New access token stored via interceptor');
             }
             
             if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-              await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+              await Storage.setItem('refreshToken', actualRefreshToken);
               console.log('AuthService: New refresh token stored via interceptor');
             }
             
@@ -136,8 +137,8 @@ api.interceptors.response.use(
       } catch (refreshError: any) {
         console.error('AuthService: Token refresh failed:', refreshError.message);
         // Refresh failed, clear tokens and redirect to login
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('refreshToken');
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('refreshToken');
         console.log('AuthService: Tokens cleared, user needs to login again');
       }
     }
@@ -204,12 +205,12 @@ const authService = {
         }
         
         // Store access token
-        await AsyncStorage.setItem('authToken', actualToken);
+        await Storage.setItem('authToken', actualToken);
         console.log('AuthService: Access token stored successfully');
         
         // Store refresh token if available
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+          await Storage.setItem('refreshToken', actualRefreshToken);
           console.log('AuthService: Refresh token stored successfully');
         }
         
@@ -287,12 +288,12 @@ const authService = {
         
         // Store tokens if available
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-          await AsyncStorage.setItem('authToken', actualToken);
+          await Storage.setItem('authToken', actualToken);
           console.log('AuthService: Access token stored after registration');
         }
         
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+          await Storage.setItem('refreshToken', actualRefreshToken);
           console.log('AuthService: Refresh token stored after registration');
         }
         
@@ -489,7 +490,7 @@ const authService = {
 
   async refreshToken(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      const refreshToken = await Storage.getItem('refreshToken');
       
       if (!refreshToken) {
         return {
@@ -518,12 +519,12 @@ const authService = {
         
         // Store new tokens
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-          await AsyncStorage.setItem('authToken', actualToken);
+          await Storage.setItem('authToken', actualToken);
           console.log('AuthService: New access token stored via manual refresh');
         }
         
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+          await Storage.setItem('refreshToken', actualRefreshToken);
           console.log('AuthService: New refresh token stored via manual refresh');
         }
         
@@ -546,8 +547,8 @@ const authService = {
       console.error('AuthService: Manual token refresh failed:', error.message);
       
       // Clear tokens on refresh failure
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('refreshToken');
+      await Storage.deleteItem('authToken');
+      await Storage.deleteItem('refreshToken');
       
       return {
         success: false,
@@ -558,14 +559,14 @@ const authService = {
 
   async getToken(): Promise<string | null> {
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
       
       if (token && token !== 'null' && token !== 'undefined') {
         // Basic validation - check if it's not empty and not a dummy token
         if (token.startsWith('admin-token-') || token.startsWith('user-token-')) {
           console.error('AuthService: Dummy token detected, removing');
-          await AsyncStorage.removeItem('authToken');
+          await Storage.deleteItem('authToken');
           return null;
         }
         
@@ -584,8 +585,8 @@ const authService = {
   async clearInvalidTokens(): Promise<void> {
     try {
       console.log('AuthService: Clearing all invalid tokens...');
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user');
+      await Storage.deleteItem('authToken');
+      await Storage.deleteItem('user');
       console.log('AuthService: All tokens cleared');
     } catch (error) {
       console.error('Error clearing tokens:', error);

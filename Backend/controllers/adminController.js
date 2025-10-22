@@ -1,6 +1,7 @@
 // Admin Controller - Handles admin panel operations with MongoDB
 const connectDB = require('../config/database');
 const cloudinary = require('cloudinary').v2;
+const mongoose = require('mongoose');
 
 // Serverless timeout wrapper (Vercel has 30s limit)
 const withTimeout = (fn, timeoutMs = 25000) => {
@@ -281,6 +282,10 @@ const createBook = async (req, res) => {
       tags = []
     } = req.body;
 
+    // Validate category against enum values
+    const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'reference', 'textbook'];
+    const finalCategory = validCategories.includes(category) ? category : 'general';
+
     // No validation - admin can input anything they want
 
     // Handle file uploads to Cloudinary
@@ -349,10 +354,10 @@ const createBook = async (req, res) => {
       title: title || 'Untitled Book',
       description: description || 'No description provided',
       author: author || 'Unknown Author',
-      category: category || 'general',
+      category: finalCategory, // Use validated category
       subject: subject || 'General',
       grade: grade || 'All Levels',
-      pages: pages ? parseInt(pages) : undefined,
+      pages: pages ? Math.max(1, parseInt(pages)) : 1, // Ensure at least 1 page
       price: price ? parseFloat(price) : 0,
       currency,
       isFree: isFree === 'true' || isFree === true,
@@ -365,7 +370,7 @@ const createBook = async (req, res) => {
       coverImage: coverImageUrl || '',
       pdfFile: pdfFileUrl || '',
       status: 'draft', // Start as draft
-      createdBy: req.user?.id || null, // Use admin ID or null
+      createdBy: req.user?.id || new mongoose.Types.ObjectId(), // Use admin ID or generate new ObjectId
       isAvailable: true
     };
 

@@ -3,6 +3,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import authService from "./authService";
 import { API_CONFIG } from "../config";
+import { Storage } from "../utils/storage";
 
 // Generic API response type
 interface ApiResponse<T = any> {
@@ -91,13 +92,13 @@ adminApi.interceptors.response.use(
           return adminApi(originalRequest);
         } else {
           console.log('AdminService: Token refresh failed, clearing tokens...');
-          await AsyncStorage.removeItem('authToken');
-          await AsyncStorage.removeItem('refreshToken');
+          await Storage.deleteItem('authToken');
+          await Storage.deleteItem('refreshToken');
         }
       } catch (refreshError) {
         console.error('AdminService: Token refresh error:', refreshError);
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('refreshToken');
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('refreshToken');
       }
     }
     

@@ -163,10 +163,10 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
       data.append("title", formData.title);
       data.append("author", formData.author);
       data.append("description", formData.description || "");
-      data.append("category", formData.category || "General");
+      data.append("category", formData.category || "general"); // Use valid enum value
       data.append("subject", formData.subject || "Mathematics");
       data.append("grade", formData.grade || "Class 9");
-      data.append("pages", formData.pages || "0");
+      data.append("pages", Math.max(1, parseInt(formData.pages) || 1).toString()); // Ensure at least 1 page
       data.append("isbn", formData.isbn || "");
       data.append("status", formData.status || "draft");
       data.append("level", "Foundation"); // Default level
@@ -218,10 +218,10 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
           title: formData.title,
           author: formData.author,
           description: formData.description || "",
-          category: formData.category || "General",
+          category: formData.category || "general", // Use valid enum value
           subject: formData.subject || "Mathematics",
           grade: formData.grade || "Class 9",
-          pages: formData.pages || "0",
+          pages: Math.max(1, parseInt(formData.pages) || 1), // Ensure at least 1 page
           isbn: formData.isbn || "",
           status: formData.status || "draft",
           level: "Foundation"
