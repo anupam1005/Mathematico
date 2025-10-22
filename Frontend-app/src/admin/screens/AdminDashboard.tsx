@@ -30,37 +30,59 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Set up auto-refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      loadDashboardData();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const data = await adminService.getDashboardStats();
-      console.log('Dashboard data received:', data);
+      setError(null);
       
-      // Ensure we have the correct structure with fallbacks
+      const response = await adminService.getDashboardStats();
+      
+      // Check if response is successful
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch dashboard data');
+      }
+      
+      // Extract data from the response structure
+      const data = response?.data || response;
+      
+      // Map backend data to frontend structure
       const dashboardData: DashboardStats = {
         stats: {
-          totalUsers: data?.totalUsers || data?.stats?.totalUsers || 0,
-          totalStudents: data?.totalStudents || data?.stats?.totalStudents || 0,
-          totalCourses: data?.totalCourses || data?.stats?.totalCourses || 0,
-          totalModules: data?.totalModules || data?.stats?.totalModules || 0,
-          totalLessons: data?.totalLessons || data?.stats?.totalLessons || 0,
-          totalRevenue: data?.totalRevenue || data?.stats?.totalRevenue || 0,
-          activeBatches: data?.activeBatches || data?.stats?.activeBatches || 0,
+          totalUsers: data?.totalUsers || 0,
+          totalStudents: data?.totalUsers || 0, // Use totalUsers as students for now
+          totalCourses: data?.totalCourses || 0,
+          totalModules: data?.courseStats?.total || data?.totalCourses || 0,
+          totalLessons: 0, // Not available in backend yet
+          totalRevenue: data?.totalRevenue || 0,
+          activeBatches: data?.liveClassStats?.upcoming || 0,
         },
-        recentUsers: Array.isArray(data?.recentUsers) ? data.recentUsers : 
-                   Array.isArray(data?.recentActivity) ? data.recentActivity.filter((item: any) => item.type === 'user') : [],
-        recentCourses: Array.isArray(data?.recentCourses) ? data.recentCourses : 
-                     Array.isArray(data?.recentActivity) ? data.recentActivity.filter((item: any) => item.type === 'course') : [],
+        recentUsers: Array.isArray(data?.recentUsers) ? data.recentUsers : [],
+        recentCourses: Array.isArray(data?.recentCourses) ? data.recentCourses : [],
       };
       
       setStats(dashboardData);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      
       // Set empty data when API fails
       setStats({
         stats: {
@@ -85,6 +107,15 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
     await loadDashboardData();
     setRefreshing(false);
   };
+
+  // Add focus listener to refresh data when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDashboardData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const StatCard = ({ title, value, icon, color, subtitle }: any) => (
     <View style={styles.statCard}>
@@ -148,12 +179,54 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
             <View style={styles.headerText}>
               <Text style={textStyles.heading}>Analytics Dashboard</Text>
               <Text style={textStyles.bodySecondary}>
-                Here's what's happening with your platform today.
+                {refreshing ? 'Updating data...' : 'Here\'s what\'s happening with your platform today.'}
               </Text>
+              {lastUpdated && (
+                <Text style={[textStyles.caption, { color: designSystem.colors.textSecondary, marginTop: 4 }]}>
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                </Text>
+              )}
             </View>
-            <Icon name="admin-panel-settings" size={48} color={designSystem.colors.primary} />
+            <View style={styles.headerActions}>
+              <TouchableOpacity 
+                style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}
+                onPress={onRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color={designSystem.colors.primary} />
+                ) : (
+                  <Icon 
+                    name="refresh" 
+                    size={24} 
+                    color={designSystem.colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+              <Icon name="admin-panel-settings" size={48} color={designSystem.colors.primary} />
+            </View>
           </View>
         </UnifiedCard>
+
+        {/* Error Display */}
+        {error && (
+          <UnifiedCard variant="outlined" style={[styles.errorCard, { borderColor: designSystem.colors.error }]}>
+            <View style={styles.errorContent}>
+              <Icon name="error" size={24} color={designSystem.colors.error} />
+              <View style={styles.errorText}>
+                <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
+                  {error}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={loadDashboardData}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </UnifiedCard>
+        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -321,6 +394,48 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: designSystem.spacing.sm,
+  },
+  refreshButton: {
+    padding: designSystem.spacing.sm,
+    borderRadius: designSystem.borderRadius.md,
+    backgroundColor: designSystem.colors.background,
+    ...designSystem.shadows.sm,
+  },
+  refreshButtonDisabled: {
+    opacity: 0.6,
+  },
+  refreshingIcon: {
+    transform: [{ rotate: '360deg' }],
+  },
+  errorCard: {
+    margin: designSystem.spacing.md,
+    marginTop: designSystem.spacing.sm,
+    borderWidth: 1,
+  },
+  errorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: designSystem.spacing.sm,
+  },
+  errorText: {
+    flex: 1,
+  },
+  errorButton: {
+    marginTop: designSystem.spacing.sm,
+    paddingHorizontal: designSystem.spacing.md,
+    paddingVertical: designSystem.spacing.sm,
+    backgroundColor: designSystem.colors.error,
+    borderRadius: designSystem.borderRadius.md,
+  },
+  errorButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',

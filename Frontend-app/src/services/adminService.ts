@@ -142,6 +142,11 @@ class AdminService {
     }
   }
 
+  // Dashboard Stats (alias for getDashboard)
+  async getDashboardStats(): Promise<ApiResponse<any>> {
+    return this.getDashboard();
+  }
+
   // Users
   async getAllUsers(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {

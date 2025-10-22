@@ -53,9 +53,62 @@ try {
  */
 const getDashboard = async (req, res) => {
   try {
-    console.log('📊 Admin dashboard - database disabled');
+    // Ensure database connection
+    await connectDB();
     
+    // Get real statistics from database
+    const [
+      totalUsers,
+      totalBooks,
+      totalCourses,
+      totalLiveClasses,
+      publishedCourses,
+      draftCourses,
+      upcomingClasses,
+      completedClasses
+    ] = await Promise.all([
+      UserModel ? UserModel.countDocuments({}) : 0,
+      BookModel ? BookModel.countDocuments({}) : 0,
+      CourseModel ? CourseModel.countDocuments({}) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({}) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'published' }) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'draft' }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: 'upcoming' }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: 'completed' }) : 0
+    ]);
+
     const dashboardData = {
+      totalUsers,
+      totalBooks,
+      totalCourses,
+      totalLiveClasses,
+      totalRevenue: 0, // TODO: Implement revenue calculation
+      courseStats: { 
+        total: totalCourses, 
+        published: publishedCourses, 
+        draft: draftCourses 
+      },
+      liveClassStats: { 
+        total: totalLiveClasses, 
+        upcoming: upcomingClasses, 
+        completed: completedClasses 
+      },
+      // Recent activity data (empty for now - can be populated from actual database queries)
+      recentUsers: [],
+      recentCourses: []
+    };
+
+    res.json({
+      success: true,
+      data: dashboardData,
+      timestamp: new Date().toISOString(),
+      message: 'Dashboard data retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    
+    // Fallback to zero data if database fails
+    const fallbackData = {
       totalUsers: 0,
       totalBooks: 0,
       totalCourses: 0,
@@ -67,16 +120,9 @@ const getDashboard = async (req, res) => {
 
     res.json({
       success: true,
-      data: dashboardData,
+      data: fallbackData,
       timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
-    });
-  } catch (error) {
-    console.error('Dashboard error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch dashboard data',
-      timestamp: new Date().toISOString()
+      message: 'Dashboard data retrieved with fallback values'
     });
   }
 };
