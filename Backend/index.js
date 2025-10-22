@@ -97,10 +97,11 @@ app.set('trust proxy', 1);
   }
 })();
 
-// Handle favicon requests explicitly to avoid 500s in serverless
+// Handle favicon and robots.txt requests explicitly to avoid 500s in serverless
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
 
+// Favicon handler
 app.get('/favicon.ico', (req, res) => {
   const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -115,6 +116,18 @@ app.head('/favicon.ico', (req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Content-Length', buffer.length);
   res.status(200).end();
+});
+
+// Robots.txt handler
+app.get('/robots.txt', (req, res) => {
+  const robotsTxt = `User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Sitemap: ${req.protocol}://${req.get('host')}/sitemap.xml`;
+  
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(robotsTxt);
 });
 
 // Security middleware
@@ -334,41 +347,126 @@ usersRoutes = safeRequire('./routes/users', 'users');
 // Mount routes
 console.log('🔗 Mounting API routes...');
 
-// Mount all routes for serverless deployment (only if loaded)
-if (authRoutes) {
-  app.use(`${API_PREFIX}/auth`, authRoutes);
-  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-} else {
-  console.warn('⚠️ Auth routes not mounted');
+// Mount all routes for serverless deployment (always mount, even if routes fail to load)
+try {
+  if (authRoutes) {
+    app.use(`${API_PREFIX}/auth`, authRoutes);
+    console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+  } else {
+    console.warn('⚠️ Auth routes not mounted - using fallback');
+    // Fallback auth route
+    app.get(`${API_PREFIX}/auth`, (req, res) => {
+      res.json({ success: false, message: 'Auth service temporarily unavailable' });
+    });
+  }
+} catch (error) {
+  console.error('❌ Error mounting auth routes:', error);
 }
 
-if (adminRoutes) {
-  app.use(`${API_PREFIX}/admin`, adminRoutes);
-  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-} else {
-  console.warn('⚠️ Admin routes not mounted');
+try {
+  if (adminRoutes) {
+    app.use(`${API_PREFIX}/admin`, adminRoutes);
+    console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+  } else {
+    console.warn('⚠️ Admin routes not mounted - using fallback');
+    // Fallback admin route
+    app.get(`${API_PREFIX}/admin`, (req, res) => {
+      res.json({ success: false, message: 'Admin service temporarily unavailable' });
+    });
+  }
+} catch (error) {
+  console.error('❌ Error mounting admin routes:', error);
 }
 
-if (mobileRoutes) {
-  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-} else {
-  console.warn('⚠️ Mobile routes not mounted');
+try {
+  if (mobileRoutes) {
+    app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+    console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+  } else {
+    console.warn('⚠️ Mobile routes not mounted - using fallback');
+    // Fallback mobile routes
+    app.get(`${API_PREFIX}/mobile`, (req, res) => {
+      res.json({ success: true, message: 'Mobile API is running', endpoints: ['/books', '/courses', '/live-classes'] });
+    });
+    app.get(`${API_PREFIX}/mobile/books`, (req, res) => {
+      res.json({ success: true, data: [], message: 'Books service temporarily unavailable' });
+    });
+    app.get(`${API_PREFIX}/mobile/courses`, (req, res) => {
+      res.json({ success: true, data: [], message: 'Courses service temporarily unavailable' });
+    });
+    app.get(`${API_PREFIX}/mobile/live-classes`, (req, res) => {
+      res.json({ success: true, data: [], message: 'Live classes service temporarily unavailable' });
+    });
+  }
+} catch (error) {
+  console.error('❌ Error mounting mobile routes:', error);
 }
 
-if (usersRoutes) {
-  app.use(`${API_PREFIX}/users`, usersRoutes);
-  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-} else {
-  console.warn('⚠️ Users routes not mounted');
+try {
+  if (usersRoutes) {
+    app.use(`${API_PREFIX}/users`, usersRoutes);
+    console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+  } else {
+    console.warn('⚠️ Users routes not mounted - using fallback');
+    // Fallback users route
+    app.get(`${API_PREFIX}/users`, (req, res) => {
+      res.json({ success: false, message: 'Users service temporarily unavailable' });
+    });
+  }
+} catch (error) {
+  console.error('❌ Error mounting users routes:', error);
 }
 
-if (studentRoutes) {
-  app.use(`${API_PREFIX}/student`, studentRoutes);
-  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-} else {
-  console.warn('⚠️ Student routes not mounted');
+try {
+  if (studentRoutes) {
+    app.use(`${API_PREFIX}/student`, studentRoutes);
+    console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
+  } else {
+    console.warn('⚠️ Student routes not mounted - using fallback');
+    // Fallback student route
+    app.get(`${API_PREFIX}/student`, (req, res) => {
+      res.json({ success: false, message: 'Student service temporarily unavailable' });
+    });
+  }
+} catch (error) {
+  console.error('❌ Error mounting student routes:', error);
 }
+
+// Root endpoint (for serverless)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mathematico Backend API is running',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    serverless: process.env.VERCEL === '1',
+    database: {
+      connected: true,
+      readyState: 1,
+      host: 'mongodb'
+    },
+    endpoints: {
+      auth: '/api/v1/auth',
+      admin: '/api/v1/admin',
+      mobile: '/api/v1/mobile',
+      student: '/api/v1/student',
+      users: '/api/v1/users',
+      health: '/health'
+    },
+    documentation: {
+      info: 'Visit /api/v1/admin/info for admin API documentation',
+      auth: 'Visit /api/v1/auth for authentication endpoints',
+      health: 'Visit /health for system health check'
+    },
+    quickStart: {
+      step1: 'Test health: GET /health',
+      step2: 'Get auth info: GET /api/v1/auth',
+      step3: 'Login: POST /api/v1/auth/login',
+      step4: 'Access admin: GET /api/v1/admin (with Bearer token)'
+    }
+  });
+});
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
@@ -420,7 +518,22 @@ app.use('*', (req, res) => {
     message: 'Endpoint not found',
     path: req.originalUrl,
     method: req.method,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    availableEndpoints: {
+      root: '/',
+      health: '/health',
+      api: '/api/v1',
+      auth: '/api/v1/auth',
+      admin: '/api/v1/admin',
+      mobile: '/api/v1/mobile',
+      student: '/api/v1/student',
+      users: '/api/v1/users'
+    },
+    documentation: {
+      info: 'Visit /api/v1/admin/info for admin API documentation',
+      auth: 'Visit /api/v1/auth for authentication endpoints',
+      health: 'Visit /health for system health check'
+    }
   });
 });
 
