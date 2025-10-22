@@ -492,12 +492,44 @@ const getFeaturedContent = async (req, res) => {
  */
 const getCourseById = async (req, res) => {
   try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    // Ensure DB is connected (serverless-safe)
+    try {
+      await connectDB();
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        error: dbError.message
+      });
+    }
+
     const { id } = req.params;
-    console.log('📱 Mobile course by ID endpoint - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Course not found',
+
+    // Get course details
+    const course = await CourseModel.findOne({
+      _id: id,
+      status: 'published',
+      isAvailable: true
+    }).select('-enrolledStudents -reviews -curriculum').lean();
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found or not available'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -505,6 +537,7 @@ const getCourseById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch course',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -515,12 +548,44 @@ const getCourseById = async (req, res) => {
  */
 const getLiveClassById = async (req, res) => {
   try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'LiveClass model unavailable' 
+      });
+    }
+
+    // Ensure DB is connected (serverless-safe)
+    try {
+      await connectDB();
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        error: dbError.message
+      });
+    }
+
     const { id } = req.params;
-    console.log('📱 Mobile live class by ID endpoint - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Live class not found',
+
+    // Get live class details
+    const liveClass = await LiveClassModel.findOne({
+      _id: id,
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true
+    }).select('-enrolledStudents -reviews').lean();
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found or not available'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -528,6 +593,7 @@ const getLiveClassById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live class',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }

@@ -259,3 +259,5 @@ Frontend-app/*.temp
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+.vercel

@@ -1,14 +1,19 @@
 {
   "version": 2,
-  "name": "mathematico-backend",
-  "functions": {
-    "Backend/index.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "Backend/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30
+      }
     }
-  },
+  ],
   "routes": [
-    { "src": "/(.*)", "dest": "/Backend/index.js" }
+    {
+      "src": "/(.*)",
+      "dest": "/Backend/index.js"
+    }
   ],
   "env": {
     "NODE_ENV": "production",
@@ -16,7 +21,10 @@
     "BACKEND_URL": "https://mathematico-backend-new.vercel.app",
     "FRONTEND_URL": "https://mathematico-frontend.vercel.app",
     "MONGODB_URI": "mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/",
-    "MONGODB_DB": "mathematico"
+    "MONGODB_DB": "mathematico",
+    "API_PREFIX": "/api/v1",
+    "RATE_LIMIT_WINDOW_MS": "900000",
+    "RATE_LIMIT_MAX_REQUESTS": "100"
   },
   "regions": ["iad1"]
 }

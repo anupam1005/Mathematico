@@ -149,7 +149,7 @@ class CourseService {
   async getCourseById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/courses/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching course:', error);
       throw ErrorHandler.handleApiError(error);
@@ -237,7 +237,51 @@ class CourseService {
   async uploadCourseVideo(courseId: string, videoUri: string): Promise<string> {
     throw new Error('Course video upload is not available. Database functionality has been removed.');
   }
+
+  async enrollInCourse(courseId: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/courses/${courseId}/enroll`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
+  }
 }
 
 export const courseService = new CourseService();
 export default courseService;
+
+// Export Course type for use in components
+export type Course = BaseCourseData & {
+  _id?: string;
+  id?: string;
+  Id?: string;
+  title: string;
+  description?: string;
+  instructor?: string;
+  category?: string;
+  level?: CourseLevel;
+  price?: number;
+  original_price?: number;
+  duration?: string;
+  thumbnail_url?: string;
+  videoUrl?: string;
+  materialsUrl?: string;
+  students?: number;
+  enrolledStudents?: number;
+  subject?: string;
+  class?: string;
+  what_you_will_learn?: string[];
+  who_is_this_for?: string[];
+  requirements?: string;
+  topics?: string[];
+  status?: CourseStatus;
+  isAvailable?: boolean;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};

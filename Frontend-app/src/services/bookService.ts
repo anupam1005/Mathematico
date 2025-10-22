@@ -160,7 +160,7 @@ class BookService {
   async getBookById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/books/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching book:', error);
       throw ErrorHandler.handleApiError(error);
@@ -248,7 +248,49 @@ class BookService {
   async uploadBookPdf(bookId: string, pdfUri: string): Promise<string> {
     throw new Error('Book PDF upload is not available. Database functionality has been removed.');
   }
+
+  async downloadBook(bookId: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/books/${bookId}/download`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Error downloading book:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
+  }
 }
 
 export const bookService = new BookService();
 export default bookService;
+
+// Export Book type for use in components
+export type Book = BaseBookData & {
+  _id?: string;
+  id?: string;
+  Id?: string;
+  title: string;
+  author?: string;
+  publisher?: string;
+  category?: string;
+  subject?: string;
+  class?: string;
+  level?: BookLevel;
+  cover_image_url?: string;
+  pdfFile?: string;
+  pages?: number;
+  downloads?: number;
+  downloadCount?: number;
+  isbn?: string;
+  tags?: string[];
+  table_of_contents?: string;
+  summary?: string;
+  description?: string;
+  status?: BookStatus;
+  isAvailable?: boolean;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};

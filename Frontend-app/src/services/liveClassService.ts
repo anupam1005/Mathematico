@@ -149,7 +149,7 @@ class LiveClassService {
   async getLiveClassById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/live-classes/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching live class:', error);
       throw ErrorHandler.handleApiError(error);
@@ -250,7 +250,53 @@ class LiveClassService {
   async joinLiveClass(liveClassId: string): Promise<string> {
     throw new Error('Live class joining is not available. Database functionality has been removed.');
   }
+
+  async enrollInLiveClass(liveClassId: string): Promise<any> {
+    try {
+      const response = await this.makeRequest(`/live-classes/${liveClassId}/enroll`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Error enrolling in live class:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
+  }
 }
 
 export const liveClassService = new LiveClassService();
 export default liveClassService;
+
+// Export LiveClass type for use in components
+export type LiveClass = BaseLiveClassData & {
+  _id?: string;
+  id?: string;
+  Id?: string;
+  title: string;
+  description?: string;
+  instructor?: string;
+  category?: string;
+  level?: LiveClassLevel;
+  scheduled_at?: string;
+  startTime?: string;
+  duration?: number;
+  max_students?: number;
+  enrolled_students?: number;
+  meetingLink?: string;
+  thumbnail_url?: string;
+  price?: number;
+  original_price?: number;
+  status?: LiveClassStatus;
+  subject?: string;
+  class?: string;
+  topics?: string[];
+  prerequisites?: string;
+  materials?: string;
+  notes?: string;
+  recording_url?: string;
+  isAvailable?: boolean;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
