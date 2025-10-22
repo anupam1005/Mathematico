@@ -42,20 +42,32 @@ const getAllCourses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'Course model unavailable' });
     }
 
+    console.log('📱 Mobile: Fetching courses...');
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    console.log('📱 Mobile: Querying courses with filters:', { 
+      status: 'published', 
+      isAvailable: true,
+      page, 
+      limit, 
+      skip 
+    });
+
     const courses = await CourseModel.find({ 
       status: 'published',
       isAvailable: true 
     })
-      .select('-enrolledStudents -reviews')
+      .select('-enrolledStudents -reviews -curriculum')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean(); // Use lean() to get plain JavaScript objects without virtuals
+
+    console.log('📱 Mobile: Found courses:', courses.length);
 
     const total = await CourseModel.countDocuments({ status: 'published', isAvailable: true });
 
@@ -71,7 +83,8 @@ const getAllCourses = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching courses:', error);
+    console.error('❌ Mobile: Error fetching courses:', error);
+    console.error('❌ Mobile: Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch courses',
@@ -127,7 +140,8 @@ const getAllBooks = async (req, res) => {
       .select('-pdfFile') // Don't include PDF file URL in list
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean(); // Use lean() to get plain JavaScript objects without virtuals
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
@@ -389,11 +403,21 @@ const getAllLiveClasses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
     }
 
+    console.log('📱 Mobile: Fetching live classes...');
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+
+    console.log('📱 Mobile: Querying live classes with filters:', { 
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
+      startTime: { $gte: new Date() },
+      page, 
+      limit, 
+      skip 
+    });
 
     const liveClasses = await LiveClassModel.find({ 
       status: { $in: ['scheduled', 'live'] },
@@ -403,7 +427,10 @@ const getAllLiveClasses = async (req, res) => {
       .select('-enrolledStudents -reviews')
       .sort({ startTime: 1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean(); // Use lean() to get plain JavaScript objects without virtuals
+
+    console.log('📱 Mobile: Found live classes:', liveClasses.length);
 
     const total = await LiveClassModel.countDocuments({ 
       status: { $in: ['scheduled', 'live'] },
@@ -423,7 +450,8 @@ const getAllLiveClasses = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching live classes:', error);
+    console.error('❌ Mobile: Error fetching live classes:', error);
+    console.error('❌ Mobile: Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
@@ -589,18 +617,18 @@ const getMobileInfo = async (req, res) => {
 };
 
 module.exports = {
-  getAllCourses,
+  getAllCourses: withTimeout(getAllCourses),
   getAllBooks: withTimeout(getAllBooks),
   getBookById: withTimeout(getBookById),
   getSecurePdfViewer: withTimeout(getSecurePdfViewer),
   streamSecurePdf: withTimeout(streamSecurePdf),
-  getAllLiveClasses,
-  getFeaturedContent,
-  getCourseById,
-  getLiveClassById,
-  getCategories,
-  search: searchContent,
-  searchContent,
-  getAppInfo: getMobileInfo,
-  getMobileInfo
+  getAllLiveClasses: withTimeout(getAllLiveClasses),
+  getFeaturedContent: withTimeout(getFeaturedContent),
+  getCourseById: withTimeout(getCourseById),
+  getLiveClassById: withTimeout(getLiveClassById),
+  getCategories: withTimeout(getCategories),
+  search: withTimeout(searchContent),
+  searchContent: withTimeout(searchContent),
+  getAppInfo: withTimeout(getMobileInfo),
+  getMobileInfo: withTimeout(getMobileInfo)
 };

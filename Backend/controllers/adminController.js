@@ -191,6 +191,7 @@ const getAllBooks = async (req, res) => {
     }
 
     // Get books with pagination
+    console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
     const books = await BookModel.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
@@ -199,6 +200,15 @@ const getAllBooks = async (req, res) => {
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
+    
+    console.log('📚 Found books:', books.length);
+    console.log('📚 Total books in database:', total);
+    console.log('📚 Database name:', mongoose.connection.db.databaseName);
+    console.log('📚 Collection name:', BookModel.collection.name);
+    
+    // Check if collection exists and has documents
+    const collectionStats = await mongoose.connection.db.collection(BookModel.collection.name).countDocuments();
+    console.log('📚 Direct collection count:', collectionStats);
 
     res.json({
       success: true,
@@ -253,7 +263,10 @@ const createBook = async (req, res) => {
 
     // Ensure DB is connected (serverless-safe)
     try {
+      console.log('🔗 Attempting to connect to database...');
       await connectDB();
+      console.log('✅ Database connection successful');
+      console.log('📊 Database ready state:', mongoose.connection.readyState);
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
       return res.status(503).json({
@@ -370,12 +383,17 @@ const createBook = async (req, res) => {
       coverImage: coverImageUrl || '',
       pdfFile: pdfFileUrl || '',
       status: 'draft', // Start as draft
-      createdBy: req.user?.id || new mongoose.Types.ObjectId(), // Use admin ID or generate new ObjectId
+      createdBy: req.user?.id, // Use admin ID from auth middleware
       isAvailable: true
     };
 
+    console.log('📚 Creating book with data:', JSON.stringify(bookData, null, 2));
+    console.log('📚 BookModel available:', !!BookModel);
+    console.log('📚 Database connection status:', mongoose.connection.readyState);
+
     // Create book in database
     const book = await BookModel.create(bookData);
+    console.log('✅ Book created successfully:', book._id);
 
     res.status(201).json({
       success: true,
@@ -486,9 +504,20 @@ const updateBookStatus = async (req, res) => {
       });
     }
 
+    // Prepare update data
+    const updateData = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    // Set publishedAt when status changes to 'published'
+    if (status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+
     const book = await BookModel.findByIdAndUpdate(
       id,
-      { status, updatedAt: new Date() },
+      updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email');
 
@@ -756,6 +785,81 @@ const updateCourse = async (req, res) => {
   }
 };
 
+const updateCourseStatus = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    // Ensure DB is connected (serverless-safe)
+    try {
+      console.log('🔗 Attempting to connect to database...');
+      await connectDB();
+      console.log('✅ Database connection successful');
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        error: dbError.message
+      });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['draft', 'published', 'archived'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status (draft, published, archived) is required'
+      });
+    }
+
+    // Prepare update data
+    const updateData = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    // Set publishedAt when status changes to 'published'
+    if (status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+
+    const course = await CourseModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Course ${status} successfully`,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Update course status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 const deleteCourse = async (req, res) => {
   try {
     if (!CourseModel) {
@@ -982,6 +1086,86 @@ const updateLiveClass = async (req, res) => {
   }
 };
 
+const updateLiveClassStatus = async (req, res) => {
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'LiveClass model unavailable' 
+      });
+    }
+
+    // Ensure DB is connected (serverless-safe)
+    try {
+      console.log('🔗 Attempting to connect to database...');
+      await connectDB();
+      console.log('✅ Database connection successful');
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        error: dbError.message
+      });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['scheduled', 'live', 'completed', 'cancelled', 'archived'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status (scheduled, live, completed, cancelled, archived) is required'
+      });
+    }
+
+    // Prepare update data
+    const updateData = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    // Set startedAt when status changes to 'live'
+    if (status === 'live') {
+      updateData.startedAt = new Date();
+    }
+    
+    // Set completedAt when status changes to 'completed'
+    if (status === 'completed') {
+      updateData.completedAt = new Date();
+    }
+
+    const liveClass = await LiveClassModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Live class ${status} successfully`,
+      data: liveClass,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Update live class status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update live class status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 const deleteLiveClass = async (req, res) => {
   try {
     if (!LiveClassModel) {
@@ -1123,7 +1307,7 @@ module.exports = {
   createCourse,
   updateCourse,
   deleteCourse,
-  updateCourseStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  updateCourseStatus: withTimeout(updateCourseStatus),
   uploadCourseThumbnail: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   toggleCoursePublish: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
@@ -1133,7 +1317,7 @@ module.exports = {
   createLiveClass,
   updateLiveClass,
   deleteLiveClass,
-  updateLiveClassStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  updateLiveClassStatus: withTimeout(updateLiveClassStatus),
   
   // Payment Management
   getAllPayments,

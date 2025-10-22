@@ -1,4 +1,5 @@
 const { verifyAccessToken } = require('../utils/jwt');
+const mongoose = require('mongoose');
 
 /**
  * Middleware to authenticate JWT token (No Database Version)
@@ -39,7 +40,7 @@ const authenticateToken = async (req, res, next) => {
     const adminEmail = 'dc2006089@gmail.com';
     if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {
-        id: 1,
+        id: new mongoose.Types.ObjectId(), // Use proper ObjectId instead of number
         email: adminEmail,
         name: 'Admin User',
         role: 'admin',
@@ -138,7 +139,7 @@ const optionalAuth = async (req, res, next) => {
     
     if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {
-        id: 1,
+        id: new mongoose.Types.ObjectId(), // Use proper ObjectId instead of number
         email: adminEmail,
         name: 'Admin User',
         role: 'admin',

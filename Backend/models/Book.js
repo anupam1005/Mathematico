@@ -369,4 +369,4 @@ bookSchema.statics.searchBooks = function(query, filters = {}) {
   return this.find(searchQuery).sort({ score: { $meta: 'textScore' } });
 };
 
-module.exports = mongoose.model('Book', bookSchema);
+module.exports = mongoose.model('Book', bookSchema, 'book');

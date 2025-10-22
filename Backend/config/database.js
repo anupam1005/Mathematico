@@ -42,6 +42,10 @@ const connectDB = async () => {
         const { host, name } = mongooseInstance.connection;
         console.log(`✅ MongoDB Connected: ${host}`);
         console.log(`📊 Database: ${name}`);
+        console.log(`🔗 Connection String: ${mongoURI}`);
+        console.log(`📋 Available Collections:`, mongooseInstance.connection.db.listCollections().toArray().then(collections => {
+          console.log('Collections:', collections.map(c => c.name));
+        }));
 
         // Connection event listeners
         mongoose.connection.on('connected', () => {

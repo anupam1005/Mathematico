@@ -135,7 +135,14 @@ class BookService {
       
       const response = await this.makeRequest(`/books?${params.toString()}`);
       
-      // Since database is disabled, always return empty data
+      // Return the actual data from the API
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: response.data.length, page, limit, totalPages: 1 }
+        };
+      }
+      
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }

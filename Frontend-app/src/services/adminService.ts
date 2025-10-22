@@ -324,7 +324,7 @@ class AdminService {
       }
 
       const response = await fetch(`${API_CONFIG.admin}/books/${id}/status`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -514,7 +514,7 @@ class AdminService {
       }
 
       const response = await fetch(`${API_CONFIG.admin}/courses/${id}/status`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -704,7 +704,7 @@ class AdminService {
       }
 
       const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}/status`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`

@@ -424,9 +424,13 @@ courseSchema.pre('save', function(next) {
 
 // Pre-save middleware to calculate total lessons
 courseSchema.pre('save', function(next) {
-  this.totalLessons = this.curriculum.reduce((total, module) => {
-    return total + module.lessons.length;
-  }, 0);
+  if (this.curriculum && Array.isArray(this.curriculum)) {
+    this.totalLessons = this.curriculum.reduce((total, module) => {
+      return total + (module.lessons && Array.isArray(module.lessons) ? module.lessons.length : 0);
+    }, 0);
+  } else {
+    this.totalLessons = 0;
+  }
   next();
 });
 
