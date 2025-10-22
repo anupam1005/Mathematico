@@ -16,9 +16,7 @@
     "deploy:serverless": "vercel --prod",
     "deploy:preview": "vercel",
     "deploy:logs": "vercel logs",
-    "setup:env": "node setup-env.js",
-    "deploy:windows": "deploy.bat",
-    "deploy:linux": "./deploy.sh"
+    "setup:env": "node setup-env.js"
   },
   "engines": {
     "node": ">=18.0.0",
