@@ -97,10 +97,11 @@ app.set('trust proxy', 1);
   }
 })();
 
-// Handle favicon requests explicitly to avoid 500s in serverless
+// Handle favicon and robots.txt requests explicitly to avoid 500s in serverless
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
 
+// Favicon handler
 app.get('/favicon.ico', (req, res) => {
   const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -115,6 +116,18 @@ app.head('/favicon.ico', (req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Content-Length', buffer.length);
   res.status(200).end();
+});
+
+// Robots.txt handler
+app.get('/robots.txt', (req, res) => {
+  const robotsTxt = `User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Sitemap: ${req.protocol}://${req.get('host')}/sitemap.xml`;
+  
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(robotsTxt);
 });
 
 // Security middleware

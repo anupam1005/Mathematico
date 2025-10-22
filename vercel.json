@@ -11,6 +11,14 @@
   ],
   "routes": [
     {
+      "src": "/favicon.ico",
+      "dest": "/Backend/index.js"
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/Backend/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/Backend/index.js"
     }
