@@ -4,7 +4,6 @@ console.log('✅ Environment variables loaded from config.env');
 
 // Database connection
 const connectDB = require('./config/database');
-const mongoose = require('mongoose');
 
 const express = require("express");
 const cors = require("cors");
@@ -98,11 +97,10 @@ app.set('trust proxy', 1);
   }
 })();
 
-// Handle favicon and robots.txt requests explicitly to avoid 500s in serverless
+// Handle favicon requests explicitly to avoid 500s in serverless
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
 
-// Favicon handler
 app.get('/favicon.ico', (req, res) => {
   const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -117,18 +115,6 @@ app.head('/favicon.ico', (req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Content-Length', buffer.length);
   res.status(200).end();
-});
-
-// Robots.txt handler
-app.get('/robots.txt', (req, res) => {
-  const robotsTxt = `User-agent: *
-Disallow: /api/
-Disallow: /admin/
-Sitemap: ${req.protocol}://${req.get('host')}/sitemap.xml`;
-  
-  res.setHeader('Content-Type', 'text/plain');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.status(200).send(robotsTxt);
 });
 
 // Security middleware
@@ -260,12 +246,7 @@ app.get('/health', async (req, res) => {
       database: { 
         status: 'connected', 
         type: 'mongodb',
-        host: process.env.MONGODB_URI ? 'connected' : 'not configured',
-        connectionPool: {
-          readyState: mongoose.connection.readyState,
-          host: mongoose.connection.host,
-          name: mongoose.connection.name
-        }
+        host: process.env.MONGODB_URI ? 'connected' : 'not configured'
       },
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
@@ -353,92 +334,41 @@ usersRoutes = safeRequire('./routes/users', 'users');
 // Mount routes
 console.log('🔗 Mounting API routes...');
 
-// Mount all routes for serverless deployment (always mount, even if routes fail to load)
-try {
-  if (authRoutes) {
-    app.use(`${API_PREFIX}/auth`, authRoutes);
-    console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-  } else {
-    console.warn('⚠️ Auth routes not mounted - using fallback');
-    // Fallback auth route
-    app.get(`${API_PREFIX}/auth`, (req, res) => {
-      res.json({ success: false, message: 'Auth service temporarily unavailable' });
-    });
-  }
-} catch (error) {
-  console.error('❌ Error mounting auth routes:', error);
+// Mount all routes for serverless deployment (only if loaded)
+if (authRoutes) {
+  app.use(`${API_PREFIX}/auth`, authRoutes);
+  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
+} else {
+  console.warn('⚠️ Auth routes not mounted');
 }
 
-try {
-  if (adminRoutes) {
-    app.use(`${API_PREFIX}/admin`, adminRoutes);
-    console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-  } else {
-    console.warn('⚠️ Admin routes not mounted - using fallback');
-    // Fallback admin route
-    app.get(`${API_PREFIX}/admin`, (req, res) => {
-      res.json({ success: false, message: 'Admin service temporarily unavailable' });
-    });
-  }
-} catch (error) {
-  console.error('❌ Error mounting admin routes:', error);
+if (adminRoutes) {
+  app.use(`${API_PREFIX}/admin`, adminRoutes);
+  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
+} else {
+  console.warn('⚠️ Admin routes not mounted');
 }
 
-try {
-  if (mobileRoutes) {
-    app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-    console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-  } else {
-    console.warn('⚠️ Mobile routes not mounted - using fallback');
-    // Fallback mobile routes
-    app.get(`${API_PREFIX}/mobile`, (req, res) => {
-      res.json({ success: true, message: 'Mobile API is running', endpoints: ['/books', '/courses', '/live-classes'] });
-    });
-    app.get(`${API_PREFIX}/mobile/books`, (req, res) => {
-      res.json({ success: true, data: [], message: 'Books service temporarily unavailable' });
-    });
-    app.get(`${API_PREFIX}/mobile/courses`, (req, res) => {
-      res.json({ success: true, data: [], message: 'Courses service temporarily unavailable' });
-    });
-    app.get(`${API_PREFIX}/mobile/live-classes`, (req, res) => {
-      res.json({ success: true, data: [], message: 'Live classes service temporarily unavailable' });
-    });
-  }
-} catch (error) {
-  console.error('❌ Error mounting mobile routes:', error);
+if (mobileRoutes) {
+  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
+  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
+} else {
+  console.warn('⚠️ Mobile routes not mounted');
 }
 
-try {
-  if (usersRoutes) {
-    app.use(`${API_PREFIX}/users`, usersRoutes);
-    console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-  } else {
-    console.warn('⚠️ Users routes not mounted - using fallback');
-    // Fallback users route
-    app.get(`${API_PREFIX}/users`, (req, res) => {
-      res.json({ success: false, message: 'Users service temporarily unavailable' });
-    });
-  }
-} catch (error) {
-  console.error('❌ Error mounting users routes:', error);
+if (usersRoutes) {
+  app.use(`${API_PREFIX}/users`, usersRoutes);
+  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+} else {
+  console.warn('⚠️ Users routes not mounted');
 }
 
-try {
-  if (studentRoutes) {
-    app.use(`${API_PREFIX}/student`, studentRoutes);
-    console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-  } else {
-    console.warn('⚠️ Student routes not mounted - using fallback');
-    // Fallback student route
-    app.get(`${API_PREFIX}/student`, (req, res) => {
-      res.json({ success: false, message: 'Student service temporarily unavailable' });
-    });
-  }
-} catch (error) {
-  console.error('❌ Error mounting student routes:', error);
+if (studentRoutes) {
+  app.use(`${API_PREFIX}/student`, studentRoutes);
+  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
+} else {
+  console.warn('⚠️ Student routes not mounted');
 }
-
-// Root endpoint removed - duplicate of the one above
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
@@ -490,22 +420,7 @@ app.use('*', (req, res) => {
     message: 'Endpoint not found',
     path: req.originalUrl,
     method: req.method,
-    timestamp: new Date().toISOString(),
-    availableEndpoints: {
-      root: '/',
-      health: '/health',
-      api: '/api/v1',
-      auth: '/api/v1/auth',
-      admin: '/api/v1/admin',
-      mobile: '/api/v1/mobile',
-      student: '/api/v1/student',
-      users: '/api/v1/users'
-    },
-    documentation: {
-      info: 'Visit /api/v1/admin/info for admin API documentation',
-      auth: 'Visit /api/v1/auth for authentication endpoints',
-      health: 'Visit /health for system health check'
-    }
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -524,38 +439,28 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Graceful shutdown - serverless compatible
+// Graceful shutdown
 const gracefulShutdown = async (signal) => {
   console.log(`🛑 ${signal} received, shutting down gracefully`);
   
   try {
-    // Only close server if running locally (not in serverless)
+    // Close server if running locally
     if (require.main === module && app.server) {
       app.server.close(() => {
         console.log('✅ HTTP server closed');
-        // Don't call process.exit in serverless environment
-        if (process.env.VERCEL !== '1') {
-          process.exit(0);
-        }
+        process.exit(0);
       });
     } else {
-      // In serverless, just log and let Vercel handle cleanup
-      console.log('✅ Serverless function shutting down gracefully');
+      process.exit(0);
     }
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
-    // Don't call process.exit in serverless
-    if (process.env.VERCEL !== '1') {
-      process.exit(1);
-    }
+    process.exit(1);
   }
 };
 
-// Only register shutdown handlers in local development
-if (require.main === module) {
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Export for Vercel
 module.exports = app;

@@ -6,15 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "npx nodemon index.js",
-    "build": "echo 'Build complete - no build step required for serverless'",
-    "vercel-build": "echo 'Vercel build complete'",
-    "postinstall": "echo 'Dependencies installed successfully'",
+    "vercel-build": "echo 'Build complete'",
+    "postinstall": "echo 'Dependencies installed'",
     "export-docs": "node scripts/export-swagger.js",
-    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\"",
-    "deploy": "vercel --prod",
-    "deploy:preview": "vercel",
-    "logs": "vercel logs",
-    "dev:serverless": "vercel dev"
+    "test-api": "node -e \"const app = require('./index.js'); console.log('✅ API loads successfully');\""
   },
   "dependencies": {
     "axios": "^1.7.7",
