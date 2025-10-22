@@ -4,6 +4,7 @@ console.log('✅ Environment variables loaded from config.env');
 
 // Database connection
 const connectDB = require('./config/database');
+const mongoose = require('mongoose');
 
 const express = require("express");
 const cors = require("cors");
@@ -259,7 +260,12 @@ app.get('/health', async (req, res) => {
       database: { 
         status: 'connected', 
         type: 'mongodb',
-        host: process.env.MONGODB_URI ? 'connected' : 'not configured'
+        host: process.env.MONGODB_URI ? 'connected' : 'not configured',
+        connectionPool: {
+          readyState: mongoose.connection.readyState,
+          host: mongoose.connection.host,
+          name: mongoose.connection.name
+        }
       },
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
@@ -432,41 +438,7 @@ try {
   console.error('❌ Error mounting student routes:', error);
 }
 
-// Root endpoint (for serverless)
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Mathematico Backend API is running',
-    version: '2.0.0',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    serverless: process.env.VERCEL === '1',
-    database: {
-      connected: true,
-      readyState: 1,
-      host: 'mongodb'
-    },
-    endpoints: {
-      auth: '/api/v1/auth',
-      admin: '/api/v1/admin',
-      mobile: '/api/v1/mobile',
-      student: '/api/v1/student',
-      users: '/api/v1/users',
-      health: '/health'
-    },
-    documentation: {
-      info: 'Visit /api/v1/admin/info for admin API documentation',
-      auth: 'Visit /api/v1/auth for authentication endpoints',
-      health: 'Visit /health for system health check'
-    },
-    quickStart: {
-      step1: 'Test health: GET /health',
-      step2: 'Get auth info: GET /api/v1/auth',
-      step3: 'Login: POST /api/v1/auth/login',
-      step4: 'Access admin: GET /api/v1/admin (with Bearer token)'
-    }
-  });
-});
+// Root endpoint removed - duplicate of the one above
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
@@ -552,28 +524,38 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Graceful shutdown
+// Graceful shutdown - serverless compatible
 const gracefulShutdown = async (signal) => {
   console.log(`🛑 ${signal} received, shutting down gracefully`);
   
   try {
-    // Close server if running locally
+    // Only close server if running locally (not in serverless)
     if (require.main === module && app.server) {
       app.server.close(() => {
         console.log('✅ HTTP server closed');
-        process.exit(0);
+        // Don't call process.exit in serverless environment
+        if (process.env.VERCEL !== '1') {
+          process.exit(0);
+        }
       });
     } else {
-      process.exit(0);
+      // In serverless, just log and let Vercel handle cleanup
+      console.log('✅ Serverless function shutting down gracefully');
     }
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
-    process.exit(1);
+    // Don't call process.exit in serverless
+    if (process.env.VERCEL !== '1') {
+      process.exit(1);
+    }
   }
 };
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// Only register shutdown handlers in local development
+if (require.main === module) {
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 // Export for Vercel
 module.exports = app;
