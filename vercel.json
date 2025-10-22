@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "npm run vercel-build",
   "builds": [
     {
       "src": "Backend/index.js",
@@ -23,6 +24,11 @@
       "dest": "/Backend/index.js"
     }
   ],
+  "functions": {
+    "Backend/index.js": {
+      "maxDuration": 30
+    }
+  },
   "env": {
     "NODE_ENV": "production",
     "VERCEL": "1",

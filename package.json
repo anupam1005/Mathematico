@@ -13,6 +13,7 @@
     "install:all": "npm run install:backend && npm run install:mobile",
     "clean:all": "cd Backend && rm -rf node_modules package-lock.json && cd ../Frontend-app && rm -rf node_modules package-lock.json .expo",
     "reset:all": "npm run clean:all && npm run install:all",
+    "vercel-build": "cd Backend && npm run vercel-build",
     "deploy:serverless": "vercel --prod",
     "deploy:preview": "vercel",
     "deploy:logs": "vercel logs",
