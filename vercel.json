@@ -5,10 +5,13 @@
       "src": "Backend/index.js",
       "use": "@vercel/node",
       "config": {
-        "maxDuration": 30
+        "maxDuration": 30,
+        "memory": 1024
       }
     }
   ],
+  "outputDirectory": null,
+  "installCommand": "npm install",
   "routes": [
     {
       "src": "/favicon.ico",
