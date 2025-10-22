@@ -10,8 +10,7 @@
       }
     }
   ],
-  "outputDirectory": null,
-  "installCommand": "npm install",
+  "outputDirectory": "public",
   "routes": [
     {
       "src": "/favicon.ico",
