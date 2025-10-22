@@ -13,6 +13,25 @@ const fs = require("fs");
 const rateLimit = require("express-rate-limit");
 const os = require("os");
 const jwt = require("jsonwebtoken");
+const net = require("net");
+
+// Utility function to check if a port is available
+const isPortAvailable = (port) => {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    
+    server.listen(port, () => {
+      server.once('close', () => {
+        resolve(true);
+      });
+      server.close();
+    });
+    
+    server.on('error', () => {
+      resolve(false);
+    });
+  });
+};
 
 // Startup environment validation with enhanced security checks
 (function validateEnvironment() {
@@ -467,16 +486,39 @@ module.exports = app;
 
 // Start server for local development
 if (require.main === module) {
-  const PORT = 5001; // Hardcoded to 5001 to avoid conflicts
-  
   // Connect to database first, then start server
   const startServer = async () => {
     try {
       // Connect to MongoDB
       await connectDB();
       
+      // Find an available port
+      const findAvailablePort = async () => {
+        const defaultPort = process.env.PORT || 5002;
+        const alternativePorts = [5003, 5004, 5005, 3001, 3002, 8000, 8001, 5001];
+        
+        // Check default port first
+        if (await isPortAvailable(defaultPort)) {
+          return defaultPort;
+        }
+        
+        console.log(`⚠️ Port ${defaultPort} is in use. Searching for available port...`);
+        
+        // Try alternative ports
+        for (const port of alternativePorts) {
+          if (await isPortAvailable(port)) {
+            console.log(`✅ Found available port: ${port}`);
+            return port;
+          }
+        }
+        
+        throw new Error('No available ports found. Please stop other services or specify a different port.');
+      };
+      
+      const PORT = await findAvailablePort();
+      
       // Start the server
-      app.server = app.listen(PORT, () => {
+      const server = app.listen(PORT, () => {
         console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
         console.log(`🌐 Server running on port ${PORT}`);
         console.log(`📊 Health check: http://localhost:${PORT}/health`);
@@ -487,6 +529,16 @@ if (require.main === module) {
         console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
         console.log('==========================================\n');
       });
+
+      // Handle any server errors
+      server.on('error', (err) => {
+        console.error('❌ Server error:', err);
+        process.exit(1);
+      });
+
+      // Store server reference for graceful shutdown
+      app.server = server;
+      
     } catch (error) {
       console.error('❌ Failed to start server:', error);
       process.exit(1);
