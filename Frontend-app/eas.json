@@ -7,21 +7,18 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "workflow": "bare",
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
-      "workflow": "bare",
       "android": {
         "buildType": "app-bundle"
       }
     },
     "production": {
       "distribution": "store",
-      "workflow": "bare",
       "node": "20.18.3",
       "android": {
         "buildType": "app-bundle"
