@@ -4,9 +4,9 @@ export default {
   expo: {
     name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico - Learn Mathematics',
     slug: 'mathematico-app',
-    version: '2.0.0',
+    version: '5.0.0',
     orientation: 'portrait',
-    owner: 'testaccount0515',
+    owner: 'anupamtest',
     icon: './assets/icon.png',
     newArchEnabled: false,
     sdkVersion: '54.0.0',
@@ -15,7 +15,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: '6bc3167a-315b-4be1-9b1b-8398fdc59921'
+        projectId: 'b5c4d3e2-f1a0-9b8c-7d6e-5f4a3b2c1d0e'
       }
     },
     android: {
