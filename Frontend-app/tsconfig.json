@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "esnext",
     "module": "esnext",
     "lib": [
-      "es2020",
+      "esnext",
       "dom",
       "dom.iterable"
     ],
@@ -13,7 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -38,6 +38,5 @@
   "exclude": [
     "node_modules",
     "**/__tests__/*"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }

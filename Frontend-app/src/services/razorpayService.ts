@@ -1,5 +1,6 @@
 // Razorpay Payment Service
 import { API_CONFIG } from '../config';
+import { Platform } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 
 export interface RazorpayOrder {
@@ -233,6 +234,16 @@ class RazorpayService {
   async openCheckout(options: any): Promise<RazorpayPaymentResponse> {
     try {
       console.log('RazorpayService: Opening Razorpay checkout with options:', options);
+      
+      // Check if running on web platform
+      if (Platform.OS === 'web') {
+        console.warn('RazorpayService: Running on web platform, payment not supported');
+        return {
+          success: false,
+          error: 'Web platform not supported',
+          message: 'Razorpay payment is only available on mobile devices. Please use the mobile app to complete your purchase.',
+        };
+      }
       
       // Get secure configuration from backend
       const config = await this.getConfig();

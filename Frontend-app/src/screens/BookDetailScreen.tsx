@@ -26,7 +26,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
   const { bookId } = route.params;
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     loadBook();
@@ -55,38 +54,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
       navigation.goBack();
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!book) return;
-
-    Alert.alert(
-      'Download Book',
-      `Are you sure you want to download "${book.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Download', onPress: downloadBook },
-      ]
-    );
-  };
-
-  const downloadBook = async () => {
-    try {
-      setDownloading(true);
-      const response = await bookService.downloadBook(bookId);
-      
-      if (response.success && response.data?.downloadUrl) {
-        Alert.alert('Success', 'Download link generated! Check your downloads.');
-        // In a real app, you would open the download URL or handle the file download
-      } else {
-        Alert.alert('Error', response.message || 'Failed to generate download link');
-      }
-    } catch (error) {
-      console.error('Error downloading book:', error);
-      Alert.alert('Error', 'Failed to download book');
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -249,21 +216,16 @@ export default function BookDetailScreen({ navigation, route }: any) {
         </Card>
       )}
 
-      {/* Download Button */}
-      <View style={styles.downloadContainer}>
+      {/* Read Book Button */}
+      <View style={styles.readContainer}>
         <Button
           mode="contained"
-          onPress={handleDownload}
-          style={styles.downloadButton}
-          contentStyle={styles.downloadButtonContent}
-          disabled={downloading}
-          icon="download"
+          onPress={() => navigation.navigate('SecurePdf', { bookId, bookTitle: book.title })}
+          style={styles.readButton}
+          contentStyle={styles.readButtonContent}
+          icon="book-open"
         >
-          {downloading ? (
-            <ActivityIndicator color={designSystem.colors.surface} />
-          ) : (
-            'Download Book'
-          )}
+          Read Book
         </Button>
       </View>
     </ScrollView>
@@ -398,15 +360,15 @@ const styles = StyleSheet.create({
     marginRight: designSystem.spacing.sm,
     marginBottom: designSystem.spacing.sm,
   },
-  downloadContainer: {
+  readContainer: {
     padding: designSystem.spacing.lg,
     paddingBottom: designSystem.spacing.xl,
   },
-  downloadButton: {
+  readButton: {
     borderRadius: designSystem.borderRadius.md,
     ...designSystem.shadows.md,
   },
-  downloadButtonContent: {
+  readButtonContent: {
     paddingVertical: designSystem.spacing.md,
   },
 });

@@ -23,6 +23,7 @@ import BookDetailScreen from './src/screens/BookDetailScreen';
 import CourseDetailScreen from './src/screens/CourseDetailScreen';
 import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
+import SecurePdfScreen from './src/screens/SecurePdfScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
@@ -174,6 +175,13 @@ function AppNavigator() {
           headerShown: true,
           title: 'Checkout',
           headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen 
+        name="SecurePdf" 
+        component={SecurePdfScreen}
+        options={{
+          headerShown: false,
         }}
       />
 

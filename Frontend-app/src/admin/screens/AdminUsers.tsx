@@ -23,7 +23,6 @@ import {
   HelperText,
 } from 'react-native-paper';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';

@@ -170,7 +170,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
       <Surface style={styles.headerSurface} elevation={4}>
         <View style={styles.headerContent}>
           <View style={styles.headerIconContainer}>
-            <Icon name="payment" size={32} color={designSystem.colors.surface} />
+            <Icon name="lock" size={32} color={designSystem.colors.surface} />
           </View>
           <Title style={styles.headerTitle}>Secure Checkout</Title>
           <Paragraph style={styles.headerSubtitle}>
@@ -237,7 +237,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
               mode={paymentMethod === 'upi' ? 'contained' : 'outlined'}
               onPress={() => setPaymentMethod('upi')}
               style={styles.paymentMethodButton}
-              icon="phone-android"
+              icon="account-balance-wallet"
             >
               UPI
             </Button>
@@ -276,7 +276,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
           style={styles.paymentButton}
           contentStyle={styles.paymentButtonContent}
           disabled={loading}
-          icon={loading ? undefined : "payment"}
+          icon={loading ? undefined : "credit-card"}
         >
           {loading ? (
             <ActivityIndicator color={designSystem.colors.surface} />
