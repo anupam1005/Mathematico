@@ -223,10 +223,6 @@ Frontend-app/android/build/
 Frontend-app/android/.gradle/
 Frontend-app/android/local.properties
 Frontend-app/android/app/release/
-# Allow gradlew files
-!Frontend-app/android/gradlew
-!Frontend-app/android/gradlew.bat
-!Frontend-app/android/gradle/
 !Frontend-app/android/gradle/**
 
 # iOS (Frontend-app)
