@@ -25,7 +25,8 @@ export default {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      permissions: []
+      permissions: [],
+      gradleVersion: "8.2.1"
     },
     plugins: IS_DEV ? [
       'expo-secure-store',

@@ -21,10 +21,15 @@
       "distribution": "store",
       "node": "20.18.3",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "env": {
+          "GRADLE_VERSION": "8.2.1"
+        }
       },
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false"
       }
     }
   },
