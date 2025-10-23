@@ -9,7 +9,7 @@ export default {
     owner: 'testaccount05',
     icon: './assets/icon.png',
     newArchEnabled: false,
-    sdkVersion: '54.0.0',
+    sdkVersion: '51.0.0',
     web: {
       favicon: './assets/favicon.png'
     },
