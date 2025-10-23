@@ -6,7 +6,7 @@ export default {
     slug: 'mathematico-app',
     version: '5.0.0',
     orientation: 'portrait',
-    owner: 'anupamtest',
+    owner: 'anupamfinal0515',
     icon: './assets/icon.png',
     newArchEnabled: false,
     sdkVersion: '54.0.0',
@@ -15,7 +15,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: '3429e57b-a57e-4cff-831a-4f118393b321'
+        projectId: '90909414-fff8-4441-bd94-b3dd56d1e4f1'
       }
     },
     android: {
