@@ -15,7 +15,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: ''
+        projectId: 'f885b1d9-297c-45d3-a1d0-724e773ca46d'
       }
     },
     android: {
