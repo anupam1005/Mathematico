@@ -6,7 +6,7 @@ export default {
     slug: 'mathematico-app',
     version: '5.0.0',
     orientation: 'portrait',
-    owner: 'testaccount051',
+    owner: 'testaccount05',
     icon: './assets/icon.png',
     newArchEnabled: false,
     sdkVersion: '54.0.0',
@@ -15,7 +15,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: '165d655f-d0b9-4f0b-a8a9-3239c684e9ba'
+        projectId: ''
       }
     },
     android: {
