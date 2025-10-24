@@ -108,7 +108,17 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={<TextInput.Icon icon="email" />}
+                left={
+                  <TextInput.Icon 
+                    icon={({ size, color }) => (
+                      <Ionicons 
+                        name="mail-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -125,16 +135,26 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="password"
                 error={!!errors.password}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
+                left={
+                  <TextInput.Icon 
+                    icon={({ size, color }) => (
+                      <Ionicons 
+                        name="lock-closed-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
                 right={
                   <TextInput.Icon
                     icon={({ size, color }) => (
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={size} 
-                  color={color} 
-                />
-              )}
+                      <Ionicons 
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )}
                     onPress={() => setShowPassword(!showPassword)}
                   />
                 }

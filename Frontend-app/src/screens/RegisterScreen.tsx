@@ -131,9 +131,17 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="name"
                 error={!!errors.name}
                 style={styles.input}
-                left={<TextInput.Icon icon={({ size, color }) => (
-                <Ionicons name="person-outline" size={size} color={color} />
-              )} />}
+                left={
+                <TextInput.Icon 
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name="person-outline" 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
+                    />
+                  )} 
+                />
+              }
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -151,9 +159,17 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={<TextInput.Icon icon={({ size, color }) => (
-                <Ionicons name="mail-outline" size={size} color={color} />
-              )} />}
+                left={
+                <TextInput.Icon 
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name="mail-outline" 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
+                    />
+                  )} 
+                />
+              }
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -170,16 +186,24 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.password}
                 style={styles.input}
-                left={<TextInput.Icon icon={({ size, color }) => (
-                <Ionicons name="lock-closed-outline" size={size} color={color} />
-              )} />}
+                left={
+                <TextInput.Icon 
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name="lock-closed-outline" 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
+                    />
+                  )} 
+                />
+              }
               right={
                 <TextInput.Icon
                   icon={({ size, color }) => (
                     <Ionicons 
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                      size={size} 
-                      color={color} 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
                     />
                   )}
                   onPress={() => setShowPassword(!showPassword)}
@@ -221,16 +245,24 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.confirmPassword}
                 style={styles.input}
-                left={<TextInput.Icon icon={({ size, color }) => (
-                <Ionicons name="lock-closed-outline" size={size} color={color} />
-              )} />}
+                left={
+                <TextInput.Icon 
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name="lock-closed-outline" 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
+                    />
+                  )} 
+                />
+              }
               right={
                 <TextInput.Icon
                   icon={({ size, color }) => (
                     <Ionicons 
                       name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                      size={size} 
-                      color={color} 
+                      size={24} 
+                      color={color || designSystem.colors.primary} 
                     />
                   )}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
