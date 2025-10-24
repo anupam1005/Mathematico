@@ -20,7 +20,7 @@ import {
   Divider,
   Checkbox,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
@@ -131,7 +131,9 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="name"
                 error={!!errors.name}
                 style={styles.input}
-                left={<TextInput.Icon icon="account" />}
+                left={<TextInput.Icon icon={({ size, color }) => (
+                <Ionicons name="person-outline" size={size} color={color} />
+              )} />}
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -149,7 +151,9 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={<TextInput.Icon icon="email" />}
+                left={<TextInput.Icon icon={({ size, color }) => (
+                <Ionicons name="mail-outline" size={size} color={color} />
+              )} />}
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -166,13 +170,21 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.password}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
+                left={<TextInput.Icon icon={({ size, color }) => (
+                <Ionicons name="lock-closed-outline" size={size} color={color} />
+              )} />}
+              right={
+                <TextInput.Icon
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                      size={size} 
+                      color={color} 
+                    />
+                  )}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }  
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />
@@ -209,13 +221,21 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.confirmPassword}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon
-                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  />
-                }
+                left={<TextInput.Icon icon={({ size, color }) => (
+                <Ionicons name="lock-closed-outline" size={size} color={color} />
+              )} />}
+              right={
+                <TextInput.Icon
+                  icon={({ size, color }) => (
+                    <Ionicons 
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
+                      size={size} 
+                      color={color} 
+                    />
+                  )}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                />
+              }  
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm password input field"
               />
@@ -353,6 +373,10 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: designSystem.spacing.sm,
   },
+  inputIcon: {
+    marginRight: 10,
+    alignSelf: 'center',
+  },
   errorText: {
     color: designSystem.colors.error,
     ...designSystem.typography.caption,
@@ -376,9 +400,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   registerButton: {
-    marginBottom: designSystem.spacing.lg,
-    borderRadius: designSystem.borderRadius.md,
-    ...designSystem.shadows.md,
+    marginTop: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonContent: {
     paddingVertical: designSystem.spacing.md,
