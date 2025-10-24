@@ -109,7 +109,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anupam1505.mathematicoapp'
+    namespace "com.mathematicolearnmathematics"
     defaultConfig {
         applicationId 'com.anupam1505.mathematicoapp'
         minSdkVersion rootProject.ext.minSdkVersion
