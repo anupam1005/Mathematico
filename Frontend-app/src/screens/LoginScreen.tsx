@@ -18,7 +18,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -110,7 +110,7 @@ export default function LoginScreen({ navigation }: any) {
                 style={styles.input}
                 left={
                   <TextInput.Icon 
-                    icon={({ size, color }) => (
+                    icon={({ color }) => (
                       <Ionicons 
                         name="mail-outline" 
                         size={24} 
@@ -137,7 +137,7 @@ export default function LoginScreen({ navigation }: any) {
                 style={styles.input}
                 left={
                   <TextInput.Icon 
-                    icon={({ size, color }) => (
+                    icon={({ color }) => (
                       <Ionicons 
                         name="lock-closed-outline" 
                         size={24} 
@@ -148,7 +148,7 @@ export default function LoginScreen({ navigation }: any) {
                 }
                 right={
                   <TextInput.Icon
-                    icon={({ size, color }) => (
+                    icon={({ color }) => (
                       <Ionicons 
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
                         size={24} 

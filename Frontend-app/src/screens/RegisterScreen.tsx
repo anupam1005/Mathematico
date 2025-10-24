@@ -20,7 +20,7 @@ import {
   Divider,
   Checkbox,
 } from 'react-native-paper';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
@@ -132,16 +132,16 @@ export default function RegisterScreen({ navigation }: any) {
                 error={!!errors.name}
                 style={styles.input}
                 left={
-                <TextInput.Icon 
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name="person-outline" 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )} 
-                />
-              }
+                  <TextInput.Icon 
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name="person-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -160,16 +160,16 @@ export default function RegisterScreen({ navigation }: any) {
                 error={!!errors.email}
                 style={styles.input}
                 left={
-                <TextInput.Icon 
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name="mail-outline" 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )} 
-                />
-              }
+                  <TextInput.Icon 
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name="mail-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -187,28 +187,28 @@ export default function RegisterScreen({ navigation }: any) {
                 error={!!errors.password}
                 style={styles.input}
                 left={
-                <TextInput.Icon 
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name="lock-closed-outline" 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )} 
-                />
-              }
-              right={
-                <TextInput.Icon
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }  
+                  <TextInput.Icon 
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name="lock-closed-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
+                right={
+                  <TextInput.Icon
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }  
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />
@@ -246,28 +246,28 @@ export default function RegisterScreen({ navigation }: any) {
                 error={!!errors.confirmPassword}
                 style={styles.input}
                 left={
-                <TextInput.Icon 
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name="lock-closed-outline" 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )} 
-                />
-              }
-              right={
-                <TextInput.Icon
-                  icon={({ size, color }) => (
-                    <Ionicons 
-                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                      size={24} 
-                      color={color || designSystem.colors.primary} 
-                    />
-                  )}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                />
-              }  
+                  <TextInput.Icon 
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name="lock-closed-outline" 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )} 
+                  />
+                }
+                right={
+                  <TextInput.Icon
+                    icon={({ color }) => (
+                      <Ionicons 
+                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
+                        size={24} 
+                        color={color || designSystem.colors.primary} 
+                      />
+                    )}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                }  
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm password input field"
               />
