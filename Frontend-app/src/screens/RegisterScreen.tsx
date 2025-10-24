@@ -20,7 +20,7 @@ import {
   Divider,
   Checkbox,
 } from 'react-native-paper';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
@@ -131,17 +131,7 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="name"
                 error={!!errors.name}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="person-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="account" />}
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -159,17 +149,7 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="mail-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="email" />}
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -186,29 +166,13 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.password}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="lock-closed-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )}
+                    icon={showPassword ? 'eye-off' : 'eye'}
                     onPress={() => setShowPassword(!showPassword)}
                   />
-                }  
+                }
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />
@@ -245,29 +209,13 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.confirmPassword}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="lock-closed-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )}
+                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   />
-                }  
+                }
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm password input field"
               />
@@ -405,10 +353,6 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: designSystem.spacing.sm,
   },
-  inputIcon: {
-    marginRight: 10,
-    alignSelf: 'center',
-  },
   errorText: {
     color: designSystem.colors.error,
     ...designSystem.typography.caption,
@@ -432,15 +376,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   registerButton: {
-    marginTop: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonIcon: {
-    marginRight: 8,
+    marginBottom: designSystem.spacing.lg,
+    borderRadius: designSystem.borderRadius.md,
+    ...designSystem.shadows.md,
   },
   buttonContent: {
     paddingVertical: designSystem.spacing.md,

@@ -18,7 +18,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -108,17 +108,7 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="mail-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="email" />}
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -135,26 +125,10 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="password"
                 error={!!errors.password}
                 style={styles.input}
-                left={
-                  <TextInput.Icon 
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name="lock-closed-outline" 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )} 
-                  />
-                }
+                left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon
-                    icon={({ color }) => (
-                      <Ionicons 
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                        size={24} 
-                        color={color || designSystem.colors.primary} 
-                      />
-                    )}
+                    icon={showPassword ? 'eye-off' : 'eye'}
                     onPress={() => setShowPassword(!showPassword)}
                   />
                 }
@@ -184,7 +158,7 @@ export default function LoginScreen({ navigation }: any) {
                 accessibilityLabel="Sign in button"
               >
                 {isLoading ? (
-                  <Ionicons name="mail-outline" size={20} color={designSystem.colors.primary} style={styles.inputIcon} />
+                  <ActivityIndicator color={designSystem.colors.surface} />
                 ) : (
                   'Sign In'
                 )}
@@ -269,14 +243,11 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: designSystem.spacing.sm,
   },
-  inputIcon: {
-    marginRight: 10,
-    alignSelf: 'center',
-  },
   errorText: {
     color: designSystem.colors.error,
     ...designSystem.typography.caption,
     marginBottom: designSystem.spacing.sm,
+    marginLeft: designSystem.spacing.sm,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -286,15 +257,9 @@ const styles = StyleSheet.create({
     color: designSystem.colors.primary,
   },
   loginButton: {
-    marginTop: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonIcon: {
-    marginRight: 8,
+    marginBottom: designSystem.spacing.lg,
+    borderRadius: designSystem.borderRadius.md,
+    ...designSystem.shadows.md,
   },
   buttonContent: {
     paddingVertical: designSystem.spacing.md,
