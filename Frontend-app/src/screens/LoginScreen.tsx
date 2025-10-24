@@ -18,7 +18,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -128,7 +128,13 @@ export default function LoginScreen({ navigation }: any) {
                 left={<TextInput.Icon icon="lock" />}
                 right={
                   <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
+                    icon={({ size, color }) => (
+                <Ionicons 
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                  size={size} 
+                  color={color} 
+                />
+              )}
                     onPress={() => setShowPassword(!showPassword)}
                   />
                 }
@@ -158,7 +164,7 @@ export default function LoginScreen({ navigation }: any) {
                 accessibilityLabel="Sign in button"
               >
                 {isLoading ? (
-                  <ActivityIndicator color={designSystem.colors.surface} />
+                  <Ionicons name="mail-outline" size={20} color={designSystem.colors.primary} style={styles.inputIcon} />
                 ) : (
                   'Sign In'
                 )}
@@ -243,11 +249,14 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: designSystem.spacing.sm,
   },
+  inputIcon: {
+    marginRight: 10,
+    alignSelf: 'center',
+  },
   errorText: {
     color: designSystem.colors.error,
     ...designSystem.typography.caption,
     marginBottom: designSystem.spacing.sm,
-    marginLeft: designSystem.spacing.sm,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -257,9 +266,15 @@ const styles = StyleSheet.create({
     color: designSystem.colors.primary,
   },
   loginButton: {
-    marginBottom: designSystem.spacing.lg,
-    borderRadius: designSystem.borderRadius.md,
-    ...designSystem.shadows.md,
+    marginTop: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonContent: {
     paddingVertical: designSystem.spacing.md,
