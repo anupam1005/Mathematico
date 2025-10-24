@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "owner": "testaccount125",
     "icon": "./assets/icon.png",
-    "newArchEnabled": false,
     "web": {
       "favicon": "./assets/favicon.png"
     },
