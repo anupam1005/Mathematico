@@ -8,7 +8,6 @@ export default {
     orientation: 'portrait',
     owner: 'anupam08',
     icon: './assets/icon.png',
-    newArchEnabled: false,
     sdkVersion: '51.0.0',
     web: {
       favicon: './assets/favicon.png'
