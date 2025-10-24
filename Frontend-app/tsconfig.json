@@ -1,32 +1,28 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable"
-    ],
+    "module": "Node16",
+    "lib": ["es2017"],
     "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    "jsx": "react-native",
     "noEmit": true,
-    "jsx": "react-jsx",
-    "baseUrl": "./src",
+    "isolatedModules": true,
+    "strict": true,
+    "moduleResolution": "Node16",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "./",
     "paths": {
-      "*": [
-        "*",
-        "admin/*",
-        "services/*",
-        "config/*"
-      ]
-    }
+      "*": ["src/*"],
+      "@/*": ["src/*"]
+    },
+    "types": [
+      "@types/jest",
+      "@react-navigation/native"
+    ]
   },
   "include": [
     "**/*.ts",

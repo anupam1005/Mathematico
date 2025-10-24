@@ -67,6 +67,7 @@
     "@react-native-community/cli": "^20.0.2",
     "@react-native/gradle-plugin": "0.76.5",
     "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react-native": "^13.3.3",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.28.0",
