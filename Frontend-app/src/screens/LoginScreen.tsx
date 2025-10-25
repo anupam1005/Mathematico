@@ -10,7 +10,6 @@ import {
   Image,
 } from 'react-native';
 import {
-  TextInput,
   Button,
   Card,
   Title,
@@ -18,7 +17,8 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
+import { CustomTextInput } from '../components/CustomTextInput';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -98,7 +98,7 @@ export default function LoginScreen({ navigation }: any) {
             </Paragraph>
 
             <View style={styles.form}>
-              <TextInput
+              <CustomTextInput
                 label="Email"
                 value={email}
                 onChangeText={setEmail}
@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={<TextInput.Icon icon="email" />}
+                leftIcon="email"
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -116,7 +116,7 @@ export default function LoginScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.email}</Text>
               )}
 
-              <TextInput
+              <CustomTextInput
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
@@ -125,13 +125,9 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="password"
                 error={!!errors.password}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
+                leftIcon="lock"
+                rightIcon={showPassword ? 'eye-off' : 'eye'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />

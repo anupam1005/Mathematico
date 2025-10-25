@@ -16,7 +16,7 @@ import {
   List,
   Divider,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
 import settingsService from '../services/settingsService';

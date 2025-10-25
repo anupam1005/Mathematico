@@ -1,9 +1,10 @@
 // src/admin/screens/CourseForm.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
+import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
 
 interface CourseFormProps {
@@ -158,35 +159,100 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-      <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={formData.title} onChangeText={t => setFormData({ ...formData, title: t })} />
+      <CustomTextInput
+        label="Title"
+        value={formData.title}
+        onChangeText={t => setFormData({ ...formData, title: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="school"
+      />
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.description} onChangeText={t => setFormData({ ...formData, description: t })} />
+      <CustomTextInput
+        label="Description"
+        value={formData.description}
+        onChangeText={t => setFormData({ ...formData, description: t })}
+        style={styles.input}
+        mode="outlined"
+        multiline
+        numberOfLines={3}
+        leftIcon="description"
+      />
 
-      <Text style={styles.label}>Price</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.price} onChangeText={t => setFormData({ ...formData, price: t })} />
+      <CustomTextInput
+        label="Price"
+        value={formData.price}
+        onChangeText={t => setFormData({ ...formData, price: t })}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="attach-money"
+      />
 
-      <Text style={styles.label}>Original Price</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.originalPrice} onChangeText={t => setFormData({ ...formData, originalPrice: t })} />
+      <CustomTextInput
+        label="Original Price"
+        value={formData.originalPrice}
+        onChangeText={t => setFormData({ ...formData, originalPrice: t })}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="attach-money"
+      />
 
-      <Text style={styles.label}>Level</Text>
-      <TextInput style={styles.input} value={formData.level} onChangeText={t => setFormData({ ...formData, level: t })} />
+      <CustomTextInput
+        label="Level"
+        value={formData.level}
+        onChangeText={t => setFormData({ ...formData, level: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="grade"
+      />
 
-      <Text style={styles.label}>Category</Text>
-      <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
+      <CustomTextInput
+        label="Category"
+        value={formData.category}
+        onChangeText={t => setFormData({ ...formData, category: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="folder"
+      />
 
-      <Text style={styles.label}>Subject</Text>
-      <TextInput style={styles.input} value={formData.subject} onChangeText={t => setFormData({ ...formData, subject: t })} />
+      <CustomTextInput
+        label="Subject"
+        value={formData.subject}
+        onChangeText={t => setFormData({ ...formData, subject: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="menu-book"
+      />
 
-      <Text style={styles.label}>Grade</Text>
-      <TextInput style={styles.input} value={formData.grade} onChangeText={t => setFormData({ ...formData, grade: t })} />
+      <CustomTextInput
+        label="Grade"
+        value={formData.grade}
+        onChangeText={t => setFormData({ ...formData, grade: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="grade"
+      />
 
-      <Text style={styles.label}>Status</Text>
-      <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />
+      <CustomTextInput
+        label="Status"
+        value={formData.status}
+        onChangeText={t => setFormData({ ...formData, status: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="info"
+      />
 
-      <Text style={styles.label}>Students</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.students} onChangeText={t => setFormData({ ...formData, students: t })} />
+      <CustomTextInput
+        label="Students"
+        value={formData.students}
+        onChangeText={t => setFormData({ ...formData, students: t })}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="people"
+      />
 
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>

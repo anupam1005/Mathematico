@@ -6,8 +6,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+
+
+import { Icon } from './src/components/Icon';
 import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 // Import screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -38,9 +44,6 @@ import { theme } from './src/styles/theme';
 // Import Auth Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
-// Import ErrorBoundary
-import ErrorBoundary from './src/components/ErrorBoundary';
-
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -49,8 +52,8 @@ function MainTabs() {
   
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+      screenOptions={({ route }: any) => ({
+        tabBarIcon: ({ focused, color, size }: any) => {
           let iconName: any;
 
           if (route.name === 'Home') {
@@ -229,50 +232,40 @@ function AppContent() {
   const [fontError, setFontError] = useState(false);
 
   useEffect(() => {
-    async function loadFonts() {
+    async function prepare() {
       try {
-        // Try to load custom fonts, but don't crash if they fail
-        await Font.loadAsync({
-          MaterialIcons: require('./src/assets/fonts/MaterialIcons.ttf'),
-        });
-        console.log('✅ Custom fonts loaded successfully');
+        // Skip custom font loading to avoid ExpoFontLoader issues
+        console.log('✅ Using system fonts for compatibility');
         setFontsLoaded(true);
       } catch (error) {
-        console.warn('⚠️ Custom font loading failed, using system fonts:', error);
-        setFontError(true);
-        setFontsLoaded(true); // Continue without custom fonts
+        console.warn('⚠️ Font preparation failed:', error);
+        setFontsLoaded(true);
+      } finally {
+        // Hide splash screen
+        await SplashScreen.hideAsync();
       }
     }
     
-    // Add a timeout to prevent hanging
-    const timeout = setTimeout(() => {
-      console.warn('⚠️ Font loading timeout, continuing with system fonts');
-      setFontsLoaded(true);
-    }, 5000);
-    
-    loadFonts().finally(() => {
-      clearTimeout(timeout);
-    });
+    prepare();
   }, []);
 
   if (!fontsLoaded) {
-    return null; // Show loading screen
+    return null;
   }
 
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <PaperProvider theme={theme as any}>
-          <AuthProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-          </AuthProvider>
-        </PaperProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <PaperProvider theme={theme as any}>
+        <AuthProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
+
 
 export default function App() {
   return (

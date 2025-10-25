@@ -17,7 +17,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { designSystem } from '../styles/designSystem';

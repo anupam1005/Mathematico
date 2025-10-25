@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { UnifiedButton } from './UnifiedButton';
 import { emptyStateStyles, textStyles, designSystem } from '../styles/designSystem';
 

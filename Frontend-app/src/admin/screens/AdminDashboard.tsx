@@ -14,7 +14,7 @@ import {
   FAB,
   Chip,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../../components/Icon';
 // import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { adminService, DashboardStats } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';

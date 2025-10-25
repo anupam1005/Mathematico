@@ -17,12 +17,13 @@ import {
   Avatar,
   Dialog,
   Portal,
-  TextInput,
+
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
 import { icons } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { CustomTextInput } from '../components/CustomTextInput';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
 
@@ -246,12 +247,13 @@ export default function ProfileScreen({ navigation }: any) {
         <Dialog visible={showEditDialog} onDismiss={() => setShowEditDialog(false)}>
           <Dialog.Title>Edit Profile</Dialog.Title>
           <Dialog.Content>
-            <TextInput
+            <CustomTextInput
               label="Name"
               value={editName}
               onChangeText={setEditName}
               mode="outlined"
               style={styles.dialogInput}
+              leftIcon="person"
             />
           </Dialog.Content>
           <Dialog.Actions>
@@ -268,29 +270,32 @@ export default function ProfileScreen({ navigation }: any) {
         <Dialog visible={showPasswordDialog} onDismiss={() => setShowPasswordDialog(false)}>
           <Dialog.Title>Change Password</Dialog.Title>
           <Dialog.Content>
-            <TextInput
+            <CustomTextInput
               label="Current Password"
               value={currentPassword}
               onChangeText={setCurrentPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
+              leftIcon="lock"
             />
-            <TextInput
+            <CustomTextInput
               label="New Password"
               value={newPassword}
               onChangeText={setNewPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
+              leftIcon="lock"
             />
-            <TextInput
+            <CustomTextInput
               label="Confirm New Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
+              leftIcon="lock"
             />
           </Dialog.Content>
           <Dialog.Actions>

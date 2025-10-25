@@ -8,7 +8,7 @@ export default {
     orientation: 'portrait',
     owner: 'anupam08',
     icon: './assets/icon.png',
-    sdkVersion: '51.0.0',
+    sdkVersion: '54.0.0',
     web: {
       favicon: './assets/favicon.png'
     },
@@ -29,9 +29,11 @@ export default {
     },
     plugins: IS_DEV ? [
       'expo-secure-store',
-      'expo-dev-client'
+      'expo-dev-client',
+      'expo-font'
     ] : [
-      'expo-secure-store'
+      'expo-secure-store',
+      'expo-font'
     ],
     // Add platform-specific configurations
     platforms: ['ios', 'android', 'web'],

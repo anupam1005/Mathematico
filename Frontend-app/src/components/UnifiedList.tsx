@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from './Icon';
 import { listStyles, textStyles, designSystem } from '../styles/designSystem';
 
 interface ListItemProps {

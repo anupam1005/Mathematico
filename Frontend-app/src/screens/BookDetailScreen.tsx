@@ -16,7 +16,7 @@ import {
   Chip,
   ActivityIndicator,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { designSystem } from '../styles/designSystem';

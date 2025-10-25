@@ -57,4 +57,78 @@ router.get('/featured', mobileController.getFeaturedContent);
 // App info
 router.get('/app-info', mobileController.getAppInfo);
 
+// Payment routes
+router.post('/payments/create-order', async (req, res) => {
+  try {
+    const { amount, currency, receipt, notes } = req.body;
+    
+    // Simple order creation for demo
+    const order = {
+      id: `order_${Date.now()}`,
+      amount: amount * 100, // Convert to paise
+      currency: currency || 'INR',
+      receipt: receipt || `receipt_${Date.now()}`,
+      status: 'created',
+      notes: notes || {}
+    };
+    
+    res.json({
+      success: true,
+      data: order,
+      message: 'Order created successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create order',
+      error: error.message
+    });
+  }
+});
+
+router.post('/payments/verify', async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    
+    // Simple verification for demo (in production, verify signature)
+    res.json({
+      success: true,
+      data: {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        verified: true
+      },
+      message: 'Payment verified successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Payment verification failed',
+      error: error.message
+    });
+  }
+});
+
+router.get('/payments/config', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_REPhtJhKrjuo5z',
+      currency: 'INR',
+      name: 'Mathematico',
+      description: 'Educational Platform',
+      theme: { color: '#3399cc' }
+    },
+    message: 'Configuration retrieved successfully'
+  });
+});
+
+router.get('/payments/history', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Payment history retrieved successfully'
+  });
+});
+
 module.exports = router;

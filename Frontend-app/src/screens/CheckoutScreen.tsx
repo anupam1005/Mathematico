@@ -14,13 +14,13 @@ import {
   Title,
   Paragraph,
   Button,
-  TextInput,
+
   Divider,
   ActivityIndicator,
   Chip,
   Surface,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { razorpayService } from '../services/razorpayService';
@@ -77,6 +77,24 @@ export default function CheckoutScreen({ navigation, route }: any) {
       });
 
       if (paymentResponse.success) {
+        // Check if this is demo mode
+        if (paymentResponse.message && paymentResponse.message.includes('Demo')) {
+          Alert.alert(
+            'Demo Payment Successful! 🎉',
+            `Demo payment completed for "${itemData.title}". In production, this would be a real payment.\n\nYou can now access your ${getItemType().toLowerCase()}.`,
+            [
+              {
+                text: 'Continue Learning',
+                onPress: () => {
+                  navigation.navigate('MainTabs');
+                }
+              }
+            ]
+          );
+          setLoading(false);
+          return;
+        }
+        
         // Verify payment
         await processPayment(orderResponse.data, paymentResponse.data);
       } else {
@@ -237,7 +255,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
               mode={paymentMethod === 'upi' ? 'contained' : 'outlined'}
               onPress={() => setPaymentMethod('upi')}
               style={styles.paymentMethodButton}
-              icon="account-balance-wallet"
+              icon="account-balance"
             >
               UPI
             </Button>

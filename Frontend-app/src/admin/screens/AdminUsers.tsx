@@ -19,10 +19,11 @@ import {
   FAB,
   Portal,
   Modal,
-  TextInput,
+
   HelperText,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../../components/Icon';
+import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
@@ -448,18 +449,20 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
         >
           <Title>Edit User</Title>
           <View style={styles.editForm}>
-            <TextInput
+            <CustomTextInput
               label="Name"
               value={editForm.name || ''}
               onChangeText={(text) => setEditForm({ ...editForm, name: text })}
               style={styles.input}
+              leftIcon="person"
             />
-            <TextInput
+            <CustomTextInput
               label="Email"
               value={editForm.email || ''}
               onChangeText={(text) => setEditForm({ ...editForm, email: text })}
               style={styles.input}
               keyboardType="email-address"
+              leftIcon="email"
             />
             <View style={styles.switchContainer}>
               <Text style={textStyles.body}>Admin privileges</Text>

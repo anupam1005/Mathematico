@@ -10,7 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book, BookFilters } from '../services/bookService';
 import { theme } from '../styles/theme';

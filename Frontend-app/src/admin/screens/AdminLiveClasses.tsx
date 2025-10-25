@@ -18,7 +18,7 @@ import {
   Checkbox,
   Menu,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../../components/Icon';
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
 import { useAuth } from '../../contexts/AuthContext';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { LucideIcon, icons } from 'lucide-react-native';
+import { Icon } from './Icon';
 import { UnifiedCard } from './UnifiedCard';
 import { statsStyles, textStyles, designSystem } from '../styles/designSystem';
 
@@ -55,11 +55,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
               statsStyles.icon,
               { backgroundColor: stat.color || designSystem.colors.surfaceVariant }
             ]}>
-              {(() => {
-                const Key = (stat.icon as keyof typeof icons) || 'Circle';
-                const IconCmp: LucideIcon = (icons as any)[Key] || icons.Circle;
-                return <IconCmp size={20} color={stat.color || designSystem.colors.primary} />;
-              })()}
+              <Icon 
+                name={stat.icon} 
+                size={20} 
+                color={stat.color || designSystem.colors.primary} 
+              />
             </View>
             <Text style={statsStyles.number}>
               {stat.value}

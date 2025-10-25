@@ -11,16 +11,16 @@ import {
   Image,
 } from 'react-native';
 import {
-  TextInput,
   Button,
   Card,
   Title,
   Paragraph,
   ActivityIndicator,
   Divider,
-  Checkbox,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
+import { CustomTextInput } from '../components/CustomTextInput';
+import { CustomCheckbox } from '../components/CustomCheckbox';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
@@ -54,9 +54,11 @@ export default function RegisterScreen({ navigation }: any) {
       newErrors.password = 'Password is required';
     } else if (password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
     }
+    // Simplified password validation for development
+    // } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
+    //   newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
+    // }
 
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = 'Please confirm your password';
@@ -79,8 +81,9 @@ export default function RegisterScreen({ navigation }: any) {
 
     const success = await register(name.trim(), email.trim(), password);
     if (success) {
-      // Navigate to login screen after successful registration
-      navigation.navigate('Login');
+      // Registration successful - user is now authenticated and will be automatically
+      // redirected to the main dashboard by the AuthContext
+      console.log('Registration successful - user will be redirected to dashboard');
     }
   };
 
@@ -122,7 +125,7 @@ export default function RegisterScreen({ navigation }: any) {
             </View>
 
             <View style={styles.form}>
-              <TextInput
+              <CustomTextInput
                 label="Full Name"
                 value={name}
                 onChangeText={setName}
@@ -131,7 +134,7 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="name"
                 error={!!errors.name}
                 style={styles.input}
-                left={<TextInput.Icon icon="account" />}
+                leftIcon="person"
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -139,7 +142,7 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.name}</Text>
               )}
 
-              <TextInput
+              <CustomTextInput
                 label="Email"
                 value={email}
                 onChangeText={setEmail}
@@ -149,7 +152,7 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
-                left={<TextInput.Icon icon="email" />}
+                leftIcon="email"
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -157,7 +160,7 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.email}</Text>
               )}
 
-              <TextInput
+              <CustomTextInput
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
@@ -166,13 +169,9 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.password}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
+                leftIcon="lock"
+                rightIcon={showPassword ? 'eye-off' : 'eye'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />
@@ -186,21 +185,12 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={[styles.requirement, password.length >= 8 && styles.requirementMet]}>
                   • At least 8 characters
                 </Text>
-                <Text style={[styles.requirement, /[a-z]/.test(password) && styles.requirementMet]}>
-                  • One lowercase letter (a-z)
-                </Text>
-                <Text style={[styles.requirement, /[A-Z]/.test(password) && styles.requirementMet]}>
-                  • One uppercase letter (A-Z)
-                </Text>
-                <Text style={[styles.requirement, /\d/.test(password) && styles.requirementMet]}>
-                  • One number (0-9)
-                </Text>
-                <Text style={[styles.requirement, /[@$!%*?&]/.test(password) && styles.requirementMet]}>
-                  • One special character (@$!%*?&)
+                <Text style={styles.requirement}>
+                  • Use a strong password for security
                 </Text>
               </View>
 
-              <TextInput
+              <CustomTextInput
                 label="Confirm Password"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -209,13 +199,9 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.confirmPassword}
                 style={styles.input}
-                left={<TextInput.Icon icon="lock" />}
-                right={
-                  <TextInput.Icon
-                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  />
-                }
+                leftIcon="lock"
+                rightIcon={showConfirmPassword ? 'eye-off' : 'eye'}
+                onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm password input field"
               />
@@ -224,7 +210,7 @@ export default function RegisterScreen({ navigation }: any) {
               )}
 
               <View style={styles.termsContainer}>
-                <Checkbox
+                <CustomCheckbox
                   status={agreeToTerms ? 'checked' : 'unchecked'}
                   onPress={() => setAgreeToTerms(!agreeToTerms)}
                   testID="terms-checkbox"

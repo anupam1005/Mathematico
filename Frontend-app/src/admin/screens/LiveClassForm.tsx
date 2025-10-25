@@ -1,9 +1,10 @@
 // src/admin/screens/LiveClassForm.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { adminService } from "../../services/adminService";
+import { CustomTextInput } from "../../components/CustomTextInput";
 
 interface LiveClassFormProps {
   liveClassId?: string;
@@ -151,26 +152,71 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-      <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={formData.title} onChangeText={t => setFormData({ ...formData, title: t })} />
+      <CustomTextInput
+        label="Title"
+        value={formData.title}
+        onChangeText={t => setFormData({ ...formData, title: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="videocam"
+      />
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.description} onChangeText={t => setFormData({ ...formData, description: t })} />
+      <CustomTextInput
+        label="Description"
+        value={formData.description}
+        onChangeText={t => setFormData({ ...formData, description: t })}
+        style={styles.input}
+        mode="outlined"
+        multiline
+        numberOfLines={3}
+        leftIcon="description"
+      />
 
-      <Text style={styles.label}>Category</Text>
-      <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
+      <CustomTextInput
+        label="Category"
+        value={formData.category}
+        onChangeText={t => setFormData({ ...formData, category: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="folder"
+      />
 
-      <Text style={styles.label}>Subject</Text>
-      <TextInput style={styles.input} value={formData.subject} onChangeText={t => setFormData({ ...formData, subject: t })} />
+      <CustomTextInput
+        label="Subject"
+        value={formData.subject}
+        onChangeText={t => setFormData({ ...formData, subject: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="menu-book"
+      />
 
-      <Text style={styles.label}>Grade</Text>
-      <TextInput style={styles.input} value={formData.grade} onChangeText={t => setFormData({ ...formData, grade: t })} />
+      <CustomTextInput
+        label="Grade"
+        value={formData.grade}
+        onChangeText={t => setFormData({ ...formData, grade: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="grade"
+      />
 
-      <Text style={styles.label}>Level</Text>
-      <TextInput style={styles.input} value={formData.level} onChangeText={t => setFormData({ ...formData, level: t })} />
+      <CustomTextInput
+        label="Level"
+        value={formData.level}
+        onChangeText={t => setFormData({ ...formData, level: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="grade"
+      />
 
-      <Text style={styles.label}>Duration (minutes)</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.duration} onChangeText={t => setFormData({ ...formData, duration: t })} />
+      <CustomTextInput
+        label="Duration (minutes)"
+        value={formData.duration}
+        onChangeText={t => setFormData({ ...formData, duration: t })}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="access-time"
+      />
 
       <Text style={styles.label}>Start Time</Text>
       <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
@@ -182,8 +228,15 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         <Text>{formData.endTime.toLocaleString()}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.label}>Max Students</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.maxStudents} onChangeText={t => setFormData({ ...formData, maxStudents: t })} />
+      <CustomTextInput
+        label="Max Students"
+        value={formData.maxStudents}
+        onChangeText={t => setFormData({ ...formData, maxStudents: t })}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="people"
+      />
 
       <Text style={styles.label}>Scheduled At</Text>
       <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
@@ -191,12 +244,23 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
       </TouchableOpacity>
       {showDatePicker && <DateTimePicker value={formData.scheduledAt} mode="datetime" display="default" onChange={handleDateChange} />}
 
-      <Text style={styles.label}>Meeting Link</Text>
-      <TextInput style={styles.input} value={formData.meetingLink} onChangeText={t => setFormData({ ...formData, meetingLink: t })} />
+      <CustomTextInput
+        label="Meeting Link"
+        value={formData.meetingLink}
+        onChangeText={t => setFormData({ ...formData, meetingLink: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="link"
+      />
 
-
-      <Text style={styles.label}>Status</Text>
-      <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />
+      <CustomTextInput
+        label="Status"
+        value={formData.status}
+        onChangeText={t => setFormData({ ...formData, status: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="info"
+      />
 
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>

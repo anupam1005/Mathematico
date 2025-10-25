@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {
-  TextInput,
   Button,
   Switch,
   ActivityIndicator,
@@ -18,7 +17,8 @@ import {
   Title,
   SegmentedButtons,
 } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { Icon } from '../../components/Icon';
+import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
@@ -125,15 +125,16 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>General Settings</Title>
         
-        <TextInput
+        <CustomTextInput
           label="Site Name"
           value={settings.site_name}
           onChangeText={(text) => handleSettingChange('site_name', text)}
           style={styles.input}
           mode="outlined"
+          leftIcon="home"
         />
         
-        <TextInput
+        <CustomTextInput
           label="Site Description"
           value={settings.site_description}
           onChangeText={(text) => handleSettingChange('site_description', text)}
@@ -141,15 +142,17 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
           mode="outlined"
           multiline
           numberOfLines={3}
+          leftIcon="description"
         />
         
-        <TextInput
+        <CustomTextInput
           label="Contact Email"
           value={settings.contact_email}
           onChangeText={(text) => handleSettingChange('contact_email', text)}
           style={styles.input}
           mode="outlined"
           keyboardType="email-address"
+          leftIcon="email"
         />
         
         <View style={styles.switchContainer}>
@@ -195,13 +198,14 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>Email Settings</Title>
         
-        <TextInput
+        <CustomTextInput
           label="Contact Email"
           value={settings.contact_email}
           onChangeText={(text) => handleSettingChange('contact_email', text)}
           style={styles.input}
           mode="outlined"
           keyboardType="email-address"
+          leftIcon="email"
         />
         
         <View style={styles.switchContainer}>
@@ -221,22 +225,24 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>File Upload Settings</Title>
         
-        <TextInput
+        <CustomTextInput
           label="Maximum File Size (MB)"
           value={settings.max_file_size.toString()}
           onChangeText={(text) => handleSettingChange('max_file_size', parseInt(text) || 10)}
           style={styles.input}
           mode="outlined"
           keyboardType="numeric"
+          leftIcon="folder"
         />
         
-        <TextInput
+        <CustomTextInput
           label="Supported File Types"
           value={settings.supported_file_types}
           onChangeText={(text) => handleSettingChange('supported_file_types', text)}
           style={styles.input}
           mode="outlined"
           placeholder="jpg,jpeg,png,pdf,doc,docx"
+          leftIcon="description"
         />
         <Text style={textStyles.caption}>
           Comma-separated list of file extensions

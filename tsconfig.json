@@ -16,7 +16,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "types": [],
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": ".",

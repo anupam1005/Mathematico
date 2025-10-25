@@ -2,8 +2,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Icon } from '../components/Icon';
 
 // Import Admin Screens
 import AdminDashboard from './screens/AdminDashboard';
@@ -28,8 +27,6 @@ function AdminTabs() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: string;
-          let IconComponent = Icon;
-
           if (route.name === 'Dashboard') {
             iconName = 'dashboard';
           } else if (route.name === 'Books') {
@@ -48,7 +45,7 @@ function AdminTabs() {
             iconName = 'help';
           }
 
-          return <IconComponent name={iconName} size={size} color={color} />;
+          return <Icon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#3b82f6',
         tabBarInactiveTintColor: 'gray',

@@ -11,8 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Title, Paragraph, Chip, Searchbar } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { icons } from 'lucide-react-native';
+import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService } from '../services/courseService';
 import { bookService } from '../services/bookService';
