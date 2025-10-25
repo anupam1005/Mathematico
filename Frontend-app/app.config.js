@@ -8,7 +8,6 @@ export default {
     orientation: 'portrait',
     owner: 'anupam08',
     icon: './assets/icon.png',
-    sdkVersion: '54.0.0',
     web: {
       favicon: './assets/favicon.png'
     },
@@ -24,8 +23,7 @@ export default {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      permissions: [],
-      gradleVersion: "8.2.1"
+      permissions: []
     },
     plugins: IS_DEV ? [
       'expo-secure-store',
@@ -34,14 +32,6 @@ export default {
     ] : [
       'expo-secure-store',
       'expo-font'
-    ],
-    // Add platform-specific configurations
-    platforms: ['ios', 'android', 'web'],
-    // Ensure proper module resolution
-    resolver: {
-      alias: {
-        'react-native/Libraries/Utilities/PlatformConstants': './src/utils/PlatformConstantsPolyfill.js'
-      }
-    }
+    ]
   }
 };
