@@ -22,7 +22,12 @@ try {
 } catch (error) {
   console.warn('⚠️ AuthController not available, using fallback handlers:', error.message);
   console.error('AuthController error details:', error);
-  // Fallback auth handlers for serverless
+  // Force use of fallback handlers for serverless compatibility
+  authController = null;
+}
+
+// Always use fallback auth handlers for serverless compatibility
+if (!authController) {
   authController = {
     login: async (req, res) => {
       try {
@@ -98,11 +103,10 @@ try {
           message: "Login successful",
           data: {
             user: publicUser,
-            tokens: {
-              accessToken,
-              refreshToken,
-              expiresIn: 3600,
-            },
+            accessToken,
+            refreshToken,
+            tokenType: 'Bearer',
+            expiresIn: 3600,
           },
         });
       } catch (err) {
@@ -156,11 +160,10 @@ try {
           message: "Registration successful",
           data: {
             user: publicUser,
-            tokens: {
-              accessToken,
-              refreshToken,
-              expiresIn: 3600,
-            },
+            accessToken,
+            refreshToken,
+            tokenType: 'Bearer',
+            expiresIn: 3600,
           },
         });
       } catch (err) {
@@ -268,6 +271,7 @@ try {
 
 // Root auth endpoint
 router.get('/', (req, res) => {
+  console.log('🔐 Auth root endpoint accessed');
   res.json({
     success: true,
     message: 'Auth API is working ✅',
@@ -279,6 +283,7 @@ router.get('/', (req, res) => {
       test: '/test',
       health: '/health'
     },
+    authController: authController ? 'loaded' : 'fallback',
     timestamp: new Date().toISOString()
   });
 });
