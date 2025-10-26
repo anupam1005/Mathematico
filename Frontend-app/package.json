@@ -83,7 +83,7 @@
     "@types/yargs": "^17.0.33",
     "babel-jest": "^29.7.0",
     "react-native-worklets": "^0.5.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0",
