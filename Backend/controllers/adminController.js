@@ -77,6 +77,20 @@ const getDashboard = async (req, res) => {
       LiveClassModel ? LiveClassModel.countDocuments({ status: 'completed' }) : 0
     ]);
 
+    // Fetch recent users and courses
+    const [recentUsers, recentCourses] = await Promise.all([
+      UserModel ? UserModel.find({})
+        .select('name email createdAt role')
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean() : [],
+      CourseModel ? CourseModel.find({})
+        .select('title category status createdAt')
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean() : []
+    ]);
+
     const dashboardData = {
       totalUsers,
       totalBooks,
@@ -93,9 +107,8 @@ const getDashboard = async (req, res) => {
         upcoming: upcomingClasses, 
         completed: completedClasses 
       },
-      // Recent activity data (empty for now - can be populated from actual database queries)
-      recentUsers: [],
-      recentCourses: []
+      recentUsers: recentUsers || [],
+      recentCourses: recentCourses || []
     };
 
     res.json({
@@ -106,23 +119,11 @@ const getDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error('Dashboard error:', error);
-    
-    // Fallback to zero data if database fails
-    const fallbackData = {
-      totalUsers: 0,
-      totalBooks: 0,
-      totalCourses: 0,
-      totalLiveClasses: 0,
-      totalRevenue: 0,
-      courseStats: { total: 0, published: 0, draft: 0 },
-      liveClassStats: { total: 0, upcoming: 0, completed: 0 }
-    };
-
-    res.json({
-      success: true,
-      data: fallbackData,
-      timestamp: new Date().toISOString(),
-      message: 'Dashboard data retrieved with fallback values'
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard data',
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 };
@@ -417,7 +418,7 @@ const createBook = async (req, res) => {
       subject: subject || 'General',
       grade: grade || 'All Levels',
       pages: pages ? Math.max(1, parseInt(pages)) : 1, // Ensure at least 1 page
-      price: price ? parseFloat(price) : 0,
+      price: price ? parseFloat(price) : undefined,
       currency,
       isFree: isFree === 'true' || isFree === true,
       isbn,
@@ -743,6 +744,13 @@ const createCourse = async (req, res) => {
       status: 'draft'
     };
 
+    // Handle instructor data
+    if (req.body.instructorName) {
+      courseData.instructor = {
+        name: req.body.instructorName
+      };
+    }
+
     // Handle file upload if present
     if (req.files && req.files.image && req.files.image[0]) {
       try {
@@ -766,6 +774,9 @@ const createCourse = async (req, res) => {
       } catch (uploadError) {
         console.error('File upload error:', uploadError);
       }
+    } else if (req.body.thumbnail) {
+      // Handle thumbnail URL if provided directly
+      courseData.thumbnail = req.body.thumbnail;
     }
 
     const course = await CourseModel.create(courseData);
@@ -1379,8 +1390,33 @@ module.exports = {
   getLiveClassStats: (req, res) => res.json({ success: true, data: { total: 0, upcoming: 0, completed: 0 } }),
   
   // Settings
-  getSettings: (req, res) => res.json({ success: true, data: {} }),
-  updateSettings: (req, res) => res.json({ success: true, message: 'Settings updated' }),
+  getSettings: (req, res) => {
+    res.json({
+      success: true,
+      data: {
+        pushNotifications: true,
+        emailNotifications: true,
+        courseUpdates: true,
+        liveClassReminders: true,
+        darkMode: false,
+        autoPlayVideos: true,
+        downloadQuality: 'High',
+        language: 'en',
+        timezone: 'UTC',
+        theme: 'light'
+      },
+      message: 'Settings retrieved successfully (mock data)'
+    });
+  },
+  updateSettings: (req, res) => {
+    const settings = req.body;
+    console.log('📱 Settings update request:', settings);
+    res.json({
+      success: true,
+      message: 'Settings updated successfully (mock response)',
+      data: settings
+    });
+  },
   
   // Admin Info
   getAdminInfo

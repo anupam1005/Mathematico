@@ -1,4 +1,8 @@
 import { API_CONFIG } from '../config';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
+
+// Create a service error handler for pdfService
+const errorHandler = createServiceErrorHandler('pdfService');
 
 export interface SecurePdfViewerResponse {
   success: boolean;
@@ -58,7 +62,7 @@ class PdfService {
 
       return data;
     } catch (error) {
-      console.error('Error fetching secure PDF viewer:', error);
+      errorHandler.handleError('Error fetching secure PDF viewer:', error);
       throw new Error(
         error instanceof Error 
           ? error.message 
@@ -87,7 +91,7 @@ class PdfService {
 
       return data;
     } catch (error) {
-      console.error('Error fetching book details:', error);
+      errorHandler.handleError('Error fetching book details:', error);
       throw new Error(
         error instanceof Error 
           ? error.message 
@@ -104,7 +108,7 @@ class PdfService {
       const response = await this.getSecurePdfViewer(bookId);
       return response.success && !!response.data.viewerUrl;
     } catch (error) {
-      console.error('Error checking PDF availability:', error);
+      errorHandler.handleError('Error checking PDF availability:', error);
       return false;
     }
   }
@@ -117,7 +121,7 @@ class PdfService {
       const response = await this.getSecurePdfViewer(bookId);
       return response.success ? response.data.restrictions : null;
     } catch (error) {
-      console.error('Error fetching PDF restrictions:', error);
+      errorHandler.handleError('Error fetching PDF restrictions:', error);
       return null;
     }
   }

@@ -2,32 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 
-// Import student controller with fallback
-let studentController;
-try {
-  studentController = require('../controllers/studentController');
-  console.log('✅ StudentController loaded successfully');
-} catch (error) {
-  console.warn('⚠️ StudentController not available, using fallback handlers');
-  studentController = {
-    getCourses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getCourseById: (req, res) => res.status(404).json({ success: false, message: 'Course not found (fallback)' }),
-    enrollInCourse: (req, res) => res.status(503).json({ success: false, message: 'Enroll unavailable (fallback)' }),
-    getBooks: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getBookById: (req, res) => res.status(404).json({ success: false, message: 'Book not found (fallback)' }),
-    purchaseBook: (req, res) => res.status(503).json({ success: false, message: 'Purchase unavailable (fallback)' }),
-    getLiveClasses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getLiveClassById: (req, res) => res.status(404).json({ success: false, message: 'Live class not found (fallback)' }),
-    enrollInLiveClass: (req, res) => res.status(503).json({ success: false, message: 'Enroll unavailable (fallback)' }),
-    getCourseProgress: (req, res) => res.json({ success: true, data: { progress: 0 }, source: 'fallback' }),
-    updateCourseProgress: (req, res) => res.json({ success: true, message: 'Progress updated (fallback)' }),
-    getNotifications: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    markNotificationAsRead: (req, res) => res.json({ success: true })
-  };
-}
+// Import student controller
+const studentController = require('../controllers/studentController');
+console.log('✅ StudentController loaded successfully');
 
 // Apply auth middleware to all student routes
 router.use(authenticateToken);
+
+// Student dashboard route
+router.get('/dashboard', studentController.getDashboard);
 
 // Student course routes
 router.get('/courses', studentController.getCourses);

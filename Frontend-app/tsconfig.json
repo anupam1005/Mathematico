@@ -33,8 +33,7 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    "types.d.ts",
-    "react-types.d.ts"
+    "types.d.ts"
   ],
   "exclude": [
     "node_modules",

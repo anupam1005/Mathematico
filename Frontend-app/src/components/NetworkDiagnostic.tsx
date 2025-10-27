@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 import { testNetworkConnectivity, testBackendEndpoints } from '../utils/networkTest';
 import { API_CONFIG } from '../config';
+import { Logger } from '../utils/errorHandler';
 
 export const NetworkDiagnostic: React.FC = () => {
   const [testResults, setTestResults] = useState<any>(null);
@@ -29,7 +30,7 @@ export const NetworkDiagnostic: React.FC = () => {
       setTestResults(results);
       console.log('🔍 Diagnostics completed:', results);
     } catch (error) {
-      console.error('🔍 Diagnostics failed:', error);
+      Logger.error('🔍 Diagnostics failed:', error);
       setTestResults({
         error: error,
         timestamp: new Date().toISOString()

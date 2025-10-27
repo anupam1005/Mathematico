@@ -1,6 +1,10 @@
 import axios from 'axios';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { API_CONFIG } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Create a service error handler for mobileService
+const errorHandler = createServiceErrorHandler('mobileService');
 
 // Create axios instance for mobile endpoints
 const mobileApi = axios.create({
@@ -63,7 +67,7 @@ class MobileService {
       const response = await mobileApi.get(`/books?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching books:', error);
+      errorHandler.handleError('Error fetching books:', error);
       return {
         success: true,
         data: [],
@@ -78,7 +82,7 @@ class MobileService {
       const response = await mobileApi.get(`/courses?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      errorHandler.handleError('Error fetching courses:', error);
       return {
         success: true,
         data: [],
@@ -93,7 +97,7 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching live classes:', error);
+      errorHandler.handleError('Error fetching live classes:', error);
       return {
         success: true,
         data: [],
@@ -112,7 +116,7 @@ class MobileService {
       const response = await mobileApi.get('/featured');
       return response.data;
     } catch (error) {
-      console.error('Error fetching featured content:', error);
+      errorHandler.handleError('Error fetching featured content:', error);
       return {
         success: true,
         data: {
@@ -130,7 +134,7 @@ class MobileService {
       const response = await mobileApi.get('/categories');
       return response.data;
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      errorHandler.handleError('Error fetching categories:', error);
       return {
         success: true,
         data: {
@@ -151,7 +155,7 @@ class MobileService {
       const response = await mobileApi.get(`/search?${params.toString()}`);
       return response.data;
     } catch (error) {
-      console.error('Error searching content:', error);
+      errorHandler.handleError('Error searching content:', error);
       return {
         success: true,
         data: [],
@@ -165,7 +169,7 @@ class MobileService {
       const response = await mobileApi.get(`/books/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching book:', error);
+      errorHandler.handleError('Error fetching book:', error);
       throw error;
     }
   }
@@ -175,7 +179,7 @@ class MobileService {
       const response = await mobileApi.get(`/courses/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching course:', error);
+      errorHandler.handleError('Error fetching course:', error);
       throw error;
     }
   }
@@ -185,7 +189,7 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching live class:', error);
+      errorHandler.handleError('Error fetching live class:', error);
       throw error;
     }
   }
@@ -207,7 +211,7 @@ class MobileService {
       const response = await mobileApi.get('/info');
       return response.data;
     } catch (error) {
-      console.error('Error fetching mobile info:', error);
+      errorHandler.handleError('Error fetching mobile info:', error);
       return {
         success: true,
         data: {

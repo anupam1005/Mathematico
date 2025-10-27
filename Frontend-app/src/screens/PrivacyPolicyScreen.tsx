@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Card, Title, Paragraph, List } from 'react-native-paper';

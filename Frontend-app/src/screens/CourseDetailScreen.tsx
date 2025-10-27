@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,6 +20,9 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { designSystem } from '../styles/designSystem';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Logger } from '../utils/errorHandler';
 
 export default function CourseDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -46,7 +48,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
         navigation.goBack();
       }
     } catch (error) {
-      console.error('Error loading course:', error);
+      Logger.error('Error loading course:', error);
       Alert.alert('Error', 'Failed to load course');
       navigation.goBack();
     } finally {

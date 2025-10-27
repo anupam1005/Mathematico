@@ -41,27 +41,7 @@ If you need to use local backend:
     );
   }
 
-  // Test API connection
-  static async testAPIConnection(apiUrl: string): Promise<boolean> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(`${apiUrl}/api/v1/mobile/test`, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      clearTimeout(timeoutId);
-      return response.ok;
-    } catch (error) {
-      console.warn('API connection test failed:', error);
-      return false;
-    }
-  }
 
   // Get common IP addresses to try
   static getCommonIPs(): string[] {

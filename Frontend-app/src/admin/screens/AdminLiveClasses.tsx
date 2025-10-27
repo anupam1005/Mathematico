@@ -25,6 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 interface LiveClass {
   id?: string;
@@ -79,7 +80,7 @@ export default function AdminLiveClasses({ navigation }: any) {
         setLiveClasses([]);
       }
     } catch (error) {
-      console.error('Error loading live classes:', error);
+      Logger.error('Error loading live classes:', error);
       setLiveClasses([]);
     } finally {
       setIsLoading(false);
@@ -121,7 +122,7 @@ export default function AdminLiveClasses({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete live class');
               }
             } catch (error) {
-              console.error('AdminLiveClasses: Error deleting live class:', error);
+              Logger.error('AdminLiveClasses: Error deleting live class:', error);
               Alert.alert('Error', 'Failed to delete live class');
             }
           },
@@ -153,7 +154,7 @@ export default function AdminLiveClasses({ navigation }: any) {
       await loadLiveClasses();
       Alert.alert('Success', newStatus === 'scheduled' ? 'Live class published successfully' : 'Live class unpublished');
     } catch (error) {
-      console.error('Error updating live class status:', error);
+      Logger.error('Error updating live class status:', error);
       Alert.alert('Error', 'Failed to update live class status');
     }
   };

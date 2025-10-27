@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -22,6 +21,7 @@ import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
+import { Logger } from '../utils/errorHandler';
 
 interface AdminSettings {
   site_name: string;
@@ -63,7 +63,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         setSettings(prev => ({ ...prev, ...response.data }));
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
+      Logger.error('Error loading settings:', error);
       // Use default settings if API fails
     } finally {
       setIsLoading(false);
@@ -86,7 +86,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         Alert.alert('Error', 'Failed to save settings');
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
+      Logger.error('Error saving settings:', error);
       Alert.alert('Error', 'Failed to save settings');
     } finally {
       setIsSaving(false);

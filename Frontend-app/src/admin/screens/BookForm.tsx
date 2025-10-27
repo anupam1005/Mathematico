@@ -8,6 +8,7 @@ import authService from "../../services/authService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
 import { API_CONFIG } from "../../config";
+import { Logger } from '../utils/errorHandler';
 
 interface BookFormProps {
   bookId?: string;
@@ -61,10 +62,10 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
             });
           }
         }).catch((error) => {
-          console.error('Error loading book:', error);
+          Logger.error('Error loading book:', error);
         }).finally(() => setLoading(false));
       } catch (error) {
-        console.error('Error in useEffect:', error);
+        Logger.error('Error in useEffect:', error);
         setLoading(false);
       }
     }
@@ -87,17 +88,12 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
     console.log('📚 BookForm: Form data:', formData);
     
     // Enhanced validation
-    const requiredFields = ['title', 'author', 'price', 'category', 'subject', 'grade'];
+    const requiredFields = ['title', 'author', 'category', 'subject', 'grade'];
     const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
     
     if (missingFields.length > 0) {
       console.log('📚 BookForm: Validation failed - missing required fields:', missingFields);
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
-    }
-    
-    // Validate price is a number
-    if (isNaN(Number(formData.price)) || Number(formData.price) < 0) {
-      return Alert.alert("Error", "Price must be a valid number");
     }
     
     // Validate pages is a number if provided
@@ -115,7 +111,7 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
       const data = new FormData();
       
       // Prepare the data object with proper formatting
-      const processedData = {
+      const processedData: any = {
         title: formData.title.trim(),
         author: formData.author.trim(),
         description: formData.description?.trim() || "",
@@ -123,18 +119,22 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
         subject: formData.subject?.trim() || "Mathematics",
         grade: formData.grade?.trim() || "Class 9",
         pages: formData.pages ? Number(formData.pages) : 1,
-        isbn: formData.isbn?.trim() || "",
         status: formData.status || "draft",
         level: formData.level || "Foundation",
-        price: Number(formData.price),
         isAvailable: true
       };
+      
+      // Only include ISBN if it has a value (avoid duplicate key error with empty strings)
+      const trimmedIsbn = formData.isbn?.trim() || "";
+      if (trimmedIsbn) {
+        processedData.isbn = trimmedIsbn;
+      }
       
       console.log('📚 BookForm: Processed data:', processedData);
       
       // Add all fields to FormData
       Object.entries(processedData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && value !== '') {
           data.append(key, value.toString());
         }
       });
@@ -177,7 +177,7 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
       
       onSuccess?.();
     } catch (err: any) {
-      console.error('📚 BookForm: Error during submission:', err);
+      Logger.error('📚 BookForm: Error during submission:', err);
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
       setLoading(false);

@@ -1,9 +1,13 @@
 // src/services/adminService.ts
 import axios from "axios";
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import authService from "./authService";
 import { API_CONFIG } from "../config";
 import { Storage } from "../utils/storage";
+
+// Create a service error handler for adminService
+const errorHandler = createServiceErrorHandler('adminService');
 
 // Generic API response type
 interface ApiResponse<T = any> {
@@ -66,12 +70,12 @@ adminApi.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('AdminService: Error getting token:', error);
+      errorHandler.handleError('AdminService: Error getting token:', error);
     }
     return config;
   },
   (error) => {
-    console.error('AdminService: Request interceptor error:', error);
+    errorHandler.handleError('AdminService: Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -96,7 +100,7 @@ adminApi.interceptors.response.use(
           await Storage.deleteItem('refreshToken');
         }
       } catch (refreshError) {
-        console.error('AdminService: Token refresh error:', refreshError);
+        errorHandler.handleError('AdminService: Token refresh error:', refreshError);
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
       }
@@ -125,7 +129,7 @@ class AdminService {
         }
       };
     } catch (error) {
-      console.error('Error fetching dashboard:', error);
+      errorHandler.handleError('Error fetching dashboard:', error);
       return {
         success: false,
         error: 'Failed to fetch dashboard data',
@@ -157,7 +161,7 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching users:', error);
+      errorHandler.handleError('Error fetching users:', error);
       return {
         success: false,
         error: 'Failed to fetch users',
@@ -172,7 +176,7 @@ class AdminService {
       const response = await adminApi.get(`/users/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching user:', error);
+      errorHandler.handleError('Error fetching user:', error);
       return { success: false, error: 'Failed to fetch user' };
     }
   }
@@ -203,7 +207,7 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching books:', error);
+      errorHandler.handleError('Error fetching books:', error);
       return {
         success: false,
         error: 'Failed to fetch books',
@@ -218,14 +222,14 @@ class AdminService {
       const response = await adminApi.get(`/books/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching book:', error);
+      errorHandler.handleError('Error fetching book:', error);
       return { success: false, error: 'Failed to fetch book' };
     }
   }
 
   async createBook(bookData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Creating book with data:', bookData);
+      errorHandler.logInfo('AdminService: Creating book with data:', bookData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -259,21 +263,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Book created successfully:', result);
+        errorHandler.logInfo('AdminService: Book created successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Book creation failed:', result);
+        errorHandler.handleError('AdminService: Book creation failed:', result);
         return { success: false, error: result.message || 'Failed to create book' };
       }
     } catch (error: any) {
-      console.error('AdminService: Book creation error:', error);
+      errorHandler.handleError('AdminService: Book creation error:', error);
       return { success: false, error: error.message || 'Failed to create book' };
     }
   }
 
   async updateBook(id: string, bookData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating book with ID:', id, 'data:', bookData);
+      errorHandler.logInfo('AdminService: Updating book with ID:', id, 'data:', bookData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -307,21 +311,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Book updated successfully:', result);
+        errorHandler.logInfo('AdminService: Book updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Book update failed:', result);
+        errorHandler.handleError('AdminService: Book update failed:', result);
         return { success: false, error: result.message || 'Failed to update book' };
       }
     } catch (error: any) {
-      console.error('AdminService: Book update error:', error);
+      errorHandler.handleError('AdminService: Book update error:', error);
       return { success: false, error: error.message || 'Failed to update book' };
     }
   }
 
   async updateBookStatus(id: string, status: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating book status for ID:', id, 'status:', status);
+      errorHandler.logInfo('AdminService: Updating book status for ID:', id, 'status:', status);
       
       const token = await authService.getToken();
       if (!token) {
@@ -340,21 +344,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Book status updated successfully:', result);
+        errorHandler.logInfo('AdminService: Book status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Book status update failed:', result);
+        errorHandler.handleError('AdminService: Book status update failed:', result);
         return { success: false, error: result.message || 'Failed to update book status' };
       }
     } catch (error: any) {
-      console.error('AdminService: Book status update error:', error);
+      errorHandler.handleError('AdminService: Book status update error:', error);
       return { success: false, error: error.message || 'Failed to update book status' };
     }
   }
 
   async deleteBook(id: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Deleting book with ID:', id);
+      errorHandler.logInfo('AdminService: Deleting book with ID:', id);
       
       const token = await authService.getToken();
       if (!token) {
@@ -371,14 +375,14 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Book deleted successfully:', result);
+        errorHandler.logInfo('AdminService: Book deleted successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Book deletion failed:', result);
+        errorHandler.handleError('AdminService: Book deletion failed:', result);
         return { success: false, error: result.message || 'Failed to delete book' };
       }
     } catch (error: any) {
-      console.error('AdminService: Book deletion error:', error);
+      errorHandler.handleError('AdminService: Book deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete book' };
     }
   }
@@ -393,7 +397,7 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      errorHandler.handleError('Error fetching courses:', error);
       return {
         success: false,
         error: 'Failed to fetch courses',
@@ -408,14 +412,14 @@ class AdminService {
       const response = await adminApi.get(`/courses/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching course:', error);
+      errorHandler.handleError('Error fetching course:', error);
       return { success: false, error: 'Failed to fetch course' };
     }
   }
 
   async createCourse(courseData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Creating course with data:', courseData);
+      errorHandler.logInfo('AdminService: Creating course with data:', courseData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -440,30 +444,46 @@ class AdminService {
         body = JSON.stringify(courseData);
       }
 
+      errorHandler.logInfo('AdminService: Making request to:', `${API_CONFIG.admin}/courses`);
+      errorHandler.logInfo('AdminService: Request headers:', headers);
+      errorHandler.logInfo('AdminService: Request body type:', typeof body);
+      
       const response = await fetch(`${API_CONFIG.admin}/courses`, {
         method: 'POST',
         headers,
         body
       });
+      
+      errorHandler.logInfo('AdminService: Response status:', response.status);
+      errorHandler.logInfo('AdminService: Response ok:', response.ok);
 
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Course created successfully:', result);
+        errorHandler.logInfo('AdminService: Course created successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Course creation failed:', result);
+        errorHandler.handleError('AdminService: Course creation failed:', result);
         return { success: false, error: result.message || 'Failed to create course' };
       }
     } catch (error: any) {
-      console.error('AdminService: Course creation error:', error);
+      errorHandler.handleError('AdminService: Course creation error:', error);
+      
+      // Handle specific network errors
+      if (error.message === 'Network request failed') {
+        return { 
+          success: false, 
+          error: 'Network connection failed. Please check if the backend server is running and accessible.' 
+        };
+      }
+      
       return { success: false, error: error.message || 'Failed to create course' };
     }
   }
 
   async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating course with ID:', id, 'data:', courseData);
+      errorHandler.logInfo('AdminService: Updating course with ID:', id, 'data:', courseData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -497,21 +517,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Course updated successfully:', result);
+        errorHandler.logInfo('AdminService: Course updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Course update failed:', result);
+        errorHandler.handleError('AdminService: Course update failed:', result);
         return { success: false, error: result.message || 'Failed to update course' };
       }
     } catch (error: any) {
-      console.error('AdminService: Course update error:', error);
+      errorHandler.handleError('AdminService: Course update error:', error);
       return { success: false, error: error.message || 'Failed to update course' };
     }
   }
 
   async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating course status for ID:', id, 'status:', status);
+      errorHandler.logInfo('AdminService: Updating course status for ID:', id, 'status:', status);
       
       const token = await authService.getToken();
       if (!token) {
@@ -530,21 +550,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Course status updated successfully:', result);
+        errorHandler.logInfo('AdminService: Course status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Course status update failed:', result);
+        errorHandler.handleError('AdminService: Course status update failed:', result);
         return { success: false, error: result.message || 'Failed to update course status' };
       }
     } catch (error: any) {
-      console.error('AdminService: Course status update error:', error);
+      errorHandler.handleError('AdminService: Course status update error:', error);
       return { success: false, error: error.message || 'Failed to update course status' };
     }
   }
 
   async deleteCourse(id: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Deleting course with ID:', id);
+      errorHandler.logInfo('AdminService: Deleting course with ID:', id);
       
       const token = await authService.getToken();
       if (!token) {
@@ -561,14 +581,14 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Course deleted successfully:', result);
+        errorHandler.logInfo('AdminService: Course deleted successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Course deletion failed:', result);
+        errorHandler.handleError('AdminService: Course deletion failed:', result);
         return { success: false, error: result.message || 'Failed to delete course' };
       }
     } catch (error: any) {
-      console.error('AdminService: Course deletion error:', error);
+      errorHandler.handleError('AdminService: Course deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete course' };
     }
   }
@@ -583,7 +603,7 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching live classes:', error);
+      errorHandler.handleError('Error fetching live classes:', error);
       return {
         success: false,
         error: 'Failed to fetch live classes',
@@ -598,14 +618,14 @@ class AdminService {
       const response = await adminApi.get(`/live-classes/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching live class:', error);
+      errorHandler.handleError('Error fetching live class:', error);
       return { success: false, error: 'Failed to fetch live class' };
     }
   }
 
   async createLiveClass(liveClassData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Creating live class with data:', liveClassData);
+      errorHandler.logInfo('AdminService: Creating live class with data:', liveClassData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -639,21 +659,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Live class created successfully:', result);
+        errorHandler.logInfo('AdminService: Live class created successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Live class creation failed:', result);
+        errorHandler.handleError('AdminService: Live class creation failed:', result);
         return { success: false, error: result.message || 'Failed to create live class' };
       }
     } catch (error: any) {
-      console.error('AdminService: Live class creation error:', error);
+      errorHandler.handleError('AdminService: Live class creation error:', error);
       return { success: false, error: error.message || 'Failed to create live class' };
     }
   }
 
   async updateLiveClass(id: string, liveClassData: any): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating live class with ID:', id, 'data:', liveClassData);
+      errorHandler.logInfo('AdminService: Updating live class with ID:', id, 'data:', liveClassData);
       
       const token = await authService.getToken();
       if (!token) {
@@ -687,21 +707,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Live class updated successfully:', result);
+        errorHandler.logInfo('AdminService: Live class updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Live class update failed:', result);
+        errorHandler.handleError('AdminService: Live class update failed:', result);
         return { success: false, error: result.message || 'Failed to update live class' };
       }
     } catch (error: any) {
-      console.error('AdminService: Live class update error:', error);
+      errorHandler.handleError('AdminService: Live class update error:', error);
       return { success: false, error: error.message || 'Failed to update live class' };
     }
   }
 
   async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Updating live class status for ID:', id, 'status:', status);
+      errorHandler.logInfo('AdminService: Updating live class status for ID:', id, 'status:', status);
       
       const token = await authService.getToken();
       if (!token) {
@@ -720,21 +740,21 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Live class status updated successfully:', result);
+        errorHandler.logInfo('AdminService: Live class status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Live class status update failed:', result);
+        errorHandler.handleError('AdminService: Live class status update failed:', result);
         return { success: false, error: result.message || 'Failed to update live class status' };
       }
     } catch (error: any) {
-      console.error('AdminService: Live class status update error:', error);
+      errorHandler.handleError('AdminService: Live class status update error:', error);
       return { success: false, error: error.message || 'Failed to update live class status' };
     }
   }
 
   async deleteLiveClass(id: string): Promise<ApiResponse<any>> {
     try {
-      console.log('AdminService: Deleting live class with ID:', id);
+      errorHandler.logInfo('AdminService: Deleting live class with ID:', id);
       
       const token = await authService.getToken();
       if (!token) {
@@ -751,14 +771,14 @@ class AdminService {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('AdminService: Live class deleted successfully:', result);
+        errorHandler.logInfo('AdminService: Live class deleted successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Live class deletion failed:', result);
+        errorHandler.handleError('AdminService: Live class deletion failed:', result);
         return { success: false, error: result.message || 'Failed to delete live class' };
       }
     } catch (error: any) {
-      console.error('AdminService: Live class deletion error:', error);
+      errorHandler.handleError('AdminService: Live class deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete live class' };
     }
   }
@@ -773,7 +793,7 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      errorHandler.handleError('Error fetching payments:', error);
       return {
         success: false,
         error: 'Failed to fetch payments',
@@ -788,7 +808,7 @@ class AdminService {
       const response = await adminApi.get(`/payments/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching payment:', error);
+      errorHandler.handleError('Error fetching payment:', error);
       return { success: false, error: 'Failed to fetch payment' };
     }
   }
@@ -799,7 +819,7 @@ class AdminService {
       const response = await adminApi.get('/info');
       return { success: true, data: response.data.data };
     } catch (error) {
-      console.error('Error fetching admin info:', error);
+      errorHandler.handleError('Error fetching admin info:', error);
       return {
         success: true,
         data: {

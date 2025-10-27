@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,6 +13,7 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book, BookFilters } from '../services/bookService';
 import { theme } from '../styles/theme';
+import { Logger } from '../utils/errorHandler';
 
 export default function BooksScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -58,7 +58,7 @@ export default function BooksScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      console.error('Error loading books:', error);
+      Logger.error('Error loading books:', error);
     } finally {
       setLoading(false);
     }

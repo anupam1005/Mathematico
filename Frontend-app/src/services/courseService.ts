@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Create a service error handler for courseService
+const errorHandler = createServiceErrorHandler('courseService');
 
 export type CourseLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
 export type CourseStatus = 'draft' | 'published' | 'archived';
@@ -87,7 +91,7 @@ courseApi.interceptors.response.use(
           await AsyncStorage.removeItem('refreshToken');
         }
       } catch (refreshError) {
-        console.error('CourseService: Token refresh error:', refreshError);
+        errorHandler.handleError('CourseService: Token refresh error:', refreshError);
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
@@ -144,7 +148,7 @@ class CourseService {
         meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      errorHandler.handleError('Error fetching courses:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -157,7 +161,7 @@ class CourseService {
       const response = await this.makeRequest(`/courses/${id}`);
       return response;
     } catch (error) {
-      console.error('Error fetching course:', error);
+      errorHandler.handleError('Error fetching course:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -167,7 +171,7 @@ class CourseService {
       const response = await this.makeRequest('/featured');
       return response.data?.courses || [];
     } catch (error) {
-      console.error('Error fetching featured courses:', error);
+      errorHandler.handleError('Error fetching featured courses:', error);
       return [];
     }
   }
@@ -183,13 +187,19 @@ class CourseService {
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-      // Since database is disabled, always return empty data
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 }
+        };
+      }
+      
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error searching courses:', error);
+      errorHandler.handleError('Error searching courses:', error);
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -202,7 +212,7 @@ class CourseService {
       const response = await this.getCourses(page, limit, { category });
       return response;
     } catch (error) {
-      console.error('Error fetching courses by category:', error);
+      errorHandler.handleError('Error fetching courses by category:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -215,7 +225,7 @@ class CourseService {
       const response = await this.getCourses(page, limit, { level });
       return response;
     } catch (error) {
-      console.error('Error fetching courses by level:', error);
+      errorHandler.handleError('Error fetching courses by level:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -223,25 +233,88 @@ class CourseService {
     }
   }
 
-  // Admin methods (will return errors since database is disabled)
+  // Admin methods
   async createCourse(courseData: CreateCourseData): Promise<any> {
-    throw new Error('Course creation is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest('/courses', {
+        method: 'POST',
+        data: courseData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error creating course:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async updateCourse(id: string, courseData: UpdateCourseData): Promise<any> {
-    throw new Error('Course update is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest(`/courses/${id}`, {
+        method: 'PUT',
+        data: courseData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error updating course:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async deleteCourse(id: string): Promise<void> {
-    throw new Error('Course deletion is not available. Database functionality has been removed.');
+    try {
+      await this.makeRequest(`/courses/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      errorHandler.handleError('Error deleting course:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async uploadCourseThumbnail(courseId: string, imageUri: string): Promise<string> {
-    throw new Error('Course thumbnail upload is not available. Database functionality has been removed.');
+    try {
+      const formData = new FormData();
+      formData.append('thumbnail', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'thumbnail.jpg',
+      } as any);
+
+      const response = await this.makeRequest(`/courses/${courseId}/thumbnail`, {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.thumbnailUrl;
+    } catch (error) {
+      errorHandler.handleError('Error uploading course thumbnail:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async uploadCourseVideo(courseId: string, videoUri: string): Promise<string> {
-    throw new Error('Course video upload is not available. Database functionality has been removed.');
+    try {
+      const formData = new FormData();
+      formData.append('video', {
+        uri: videoUri,
+        type: 'video/mp4',
+        name: 'course-video.mp4',
+      } as any);
+
+      const response = await this.makeRequest(`/courses/${courseId}/video`, {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.videoUrl;
+    } catch (error) {
+      errorHandler.handleError('Error uploading course video:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async enrollInCourse(courseId: string): Promise<any> {
@@ -251,7 +324,7 @@ class CourseService {
       });
       return response;
     } catch (error) {
-      console.error('Error enrolling in course:', error);
+      errorHandler.handleError('Error enrolling in course:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }

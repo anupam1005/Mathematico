@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,6 +13,9 @@ import { icons } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course, CourseFilters } from '../services/courseService';
 import { theme } from '../styles/theme';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Logger } from '../utils/errorHandler';
 
 export default function CoursesScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -65,7 +67,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      console.error('Error loading courses:', error);
+      Logger.error('Error loading courses:', error);
     } finally {
       setLoading(false);
     }

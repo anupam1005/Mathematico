@@ -25,6 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 interface Course {
   id?: string;
@@ -78,7 +79,7 @@ export default function AdminCourses({ navigation }: any) {
         setCourses([]);
       }
     } catch (error) {
-      console.error('Error loading courses:', error);
+      Logger.error('Error loading courses:', error);
       setCourses([]);
     } finally {
       setIsLoading(false);
@@ -120,7 +121,7 @@ export default function AdminCourses({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete course');
               }
             } catch (error) {
-              console.error('AdminCourses: Error deleting course:', error);
+              Logger.error('AdminCourses: Error deleting course:', error);
               Alert.alert('Error', 'Failed to delete course');
             }
           },
@@ -149,7 +150,7 @@ export default function AdminCourses({ navigation }: any) {
       await loadCourses();
       Alert.alert('Success', newStatus === 'published' ? 'Course published successfully' : 'Course unpublished');
     } catch (error) {
-      console.error('Error updating course status:', error);
+      Logger.error('Error updating course status:', error);
       Alert.alert('Error', 'Failed to update course status');
     }
   };

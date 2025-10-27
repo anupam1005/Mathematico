@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -24,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 interface Payment {
   id: string;
@@ -71,7 +71,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
       // Load payments from API
       setPayments([]);
     } catch (error) {
-      console.error('Error loading payments:', error);
+      Logger.error('Error loading payments:', error);
       Alert.alert('Error', 'Failed to load payments. Please try again.');
     } finally {
       setIsLoading(false);

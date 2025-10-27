@@ -1,5 +1,6 @@
 // Razorpay Payment Service
 import { API_CONFIG } from '../config';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
 
 // Safe import of RazorpayCheckout
@@ -8,7 +9,7 @@ try {
   RazorpayCheckout = require('react-native-razorpay');
   console.log('✅ RazorpayCheckout loaded successfully');
 } catch (error: any) {
-  console.warn('⚠️ RazorpayCheckout not available:', error?.message || 'Unknown error');
+  errorHandler.logWarning('⚠️ RazorpayCheckout not available:', error?.message || 'Unknown error');
   RazorpayCheckout = null;
 }
 
@@ -48,7 +49,7 @@ class RazorpayService {
    */
   async createOrder(paymentOptions: PaymentOptions): Promise<RazorpayPaymentResponse> {
     try {
-      console.log('RazorpayService: Creating order with options:', paymentOptions);
+      errorHandler.logInfo('RazorpayService: Creating order with options:', paymentOptions);
       
       const response = await fetch(`${this.baseUrl}/mobile/payments/create-order`, {
         method: 'POST',
@@ -60,7 +61,7 @@ class RazorpayService {
       });
 
       const data = await response.json();
-      console.log('RazorpayService: Order creation response:', data);
+      errorHandler.logInfo('RazorpayService: Order creation response:', data);
 
       if (data.success) {
         return {
@@ -76,7 +77,7 @@ class RazorpayService {
         };
       }
     } catch (error) {
-      console.error('RazorpayService: Error creating order:', error);
+      errorHandler.handleError('RazorpayService: Error creating order:', error);
       return {
         success: false,
         error: 'Network error occurred',
@@ -90,7 +91,7 @@ class RazorpayService {
    */
   async verifyPayment(paymentData: any): Promise<RazorpayPaymentResponse> {
     try {
-      console.log('RazorpayService: Verifying payment:', paymentData);
+      errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
       
       const response = await fetch(`${this.baseUrl}/mobile/payments/verify`, {
         method: 'POST',
@@ -102,7 +103,7 @@ class RazorpayService {
       });
 
       const data = await response.json();
-      console.log('RazorpayService: Payment verification response:', data);
+      errorHandler.logInfo('RazorpayService: Payment verification response:', data);
 
       if (data.success) {
         return {
@@ -118,7 +119,7 @@ class RazorpayService {
         };
       }
     } catch (error) {
-      console.error('RazorpayService: Error verifying payment:', error);
+      errorHandler.handleError('RazorpayService: Error verifying payment:', error);
       return {
         success: false,
         error: 'Network error occurred',
@@ -143,7 +144,7 @@ class RazorpayService {
       });
 
       const data = await response.json();
-      console.log('RazorpayService: Payment history response:', data);
+      errorHandler.logInfo('RazorpayService: Payment history response:', data);
 
       if (data.success) {
         return {
@@ -159,7 +160,7 @@ class RazorpayService {
         };
       }
     } catch (error) {
-      console.error('RazorpayService: Error fetching payment history:', error);
+      errorHandler.handleError('RazorpayService: Error fetching payment history:', error);
       return {
         success: false,
         error: 'Network error occurred',
@@ -196,7 +197,7 @@ class RazorpayService {
         throw new Error(data.message || 'Failed to load configuration');
       }
     } catch (error) {
-      console.error('RazorpayService: Error loading configuration:', error);
+      errorHandler.handleError('RazorpayService: Error loading configuration:', error);
       // Fallback to default config
       this.config = {
         keyId: 'rzp_test_your_key_id_here',
@@ -215,10 +216,13 @@ class RazorpayService {
   private async getAuthToken(): Promise<string> {
     try {
       const { Storage } = await import('../utils/storage');
+
+// Create a service error handler for razorpayService
+const errorHandler = createServiceErrorHandler('razorpayService');
       const token = await Storage.getItem('authToken');
       return token || '';
     } catch (error) {
-      console.error('RazorpayService: Error getting auth token:', error);
+      errorHandler.handleError('RazorpayService: Error getting auth token:', error);
       return '';
     }
   }
@@ -242,7 +246,7 @@ class RazorpayService {
    */
   async openCheckout(options: any): Promise<RazorpayPaymentResponse> {
     try {
-      console.log('RazorpayService: Opening Razorpay checkout with options:', options);
+      errorHandler.logInfo('RazorpayService: Opening Razorpay checkout with options:', options);
       
       // Check if running on web platform
       if (Platform.OS === 'web') {
@@ -293,7 +297,7 @@ class RazorpayService {
 
       const data = await RazorpayCheckout.open(razorpayOptions);
       
-      console.log('RazorpayService: Payment successful:', data);
+      errorHandler.logInfo('RazorpayService: Payment successful:', data);
       
       return {
         success: true,
@@ -301,7 +305,7 @@ class RazorpayService {
         message: 'Payment completed successfully',
       };
     } catch (error: any) {
-      console.error('RazorpayService: Payment failed:', error);
+      errorHandler.handleError('RazorpayService: Payment failed:', error);
       
       // Handle native module not available
       if (error.message && error.message.includes('_nativeModule')) {

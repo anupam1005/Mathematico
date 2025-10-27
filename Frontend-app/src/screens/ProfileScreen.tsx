@@ -26,6 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CustomTextInput } from '../components/CustomTextInput';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
+import { Logger } from '../utils/errorHandler';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -52,7 +53,7 @@ export default function ProfileScreen({ navigation }: any) {
               await logout();
               console.log('ProfileScreen: Logout completed successfully');
             } catch (error) {
-              console.error('ProfileScreen: Logout error:', error);
+              Logger.error('ProfileScreen: Logout error:', error);
             }
           }
         },

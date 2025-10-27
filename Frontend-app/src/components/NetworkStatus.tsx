@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Button, Chip, ActivityIndicator } from 'react-native-paper';
@@ -6,6 +5,7 @@ import { Icon } from './Icon';
 import { NetworkUtils } from '../utils/networkUtils';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
+import { Logger } from '../utils/errorHandler';
 
 interface NetworkStatusProps {
   onConnectionChange?: (isConnected: boolean) => void;
@@ -32,7 +32,7 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
       });
       onConnectionChange?.(result.success);
     } catch (error) {
-      console.error('Connection test failed:', error);
+      Logger.error('Connection test failed:', error);
       setIsConnected(false);
     } finally {
       setIsTesting(false);

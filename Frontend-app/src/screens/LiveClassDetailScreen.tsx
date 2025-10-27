@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,6 +19,9 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Logger } from '../utils/errorHandler';
 
 export default function LiveClassDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -66,12 +68,12 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         
         setLiveClass(safeLiveClassData);
       } else {
-        console.error('Failed to load live class:', response.message);
+        Logger.error('Failed to load live class:', response.message);
         Alert.alert('Error', response.message || 'Failed to load live class');
         navigation.goBack();
       }
     } catch (error) {
-      console.error('Error loading live class:', error);
+      Logger.error('Error loading live class:', error);
       Alert.alert('Error', 'Failed to load live class');
       navigation.goBack();
     } finally {
@@ -119,7 +121,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         Alert.alert('Error', response.message || 'Failed to start live class');
       }
     } catch (error) {
-      console.error('Error starting live class:', error);
+      Logger.error('Error starting live class:', error);
       Alert.alert('Error', 'Failed to start live class');
     }
   };
@@ -137,8 +139,35 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         Alert.alert('Error', response.message || 'Failed to end live class');
       }
     } catch (error) {
-      console.error('Error ending live class:', error);
+      Logger.error('Error ending live class:', error);
       Alert.alert('Error', 'Failed to end live class');
+    }
+  };
+
+  const handleJoinLiveClass = async () => {
+    if (!liveClass) return;
+
+    try {
+      // In a real implementation, this would get the join link from the backend
+      const joinLink = liveClass.joinLink || 'https://meet.google.com/sample-link';
+      
+      Alert.alert(
+        'Join Live Class',
+        `You are about to join "${liveClass.title}". You will be redirected to the class meeting.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Join Now', 
+            onPress: () => {
+              // In a real app, this would open the meeting link
+              Alert.alert('Joining Class', `Opening meeting link: ${joinLink}`);
+            }
+          },
+        ]
+      );
+    } catch (error) {
+      Logger.error('Error joining live class:', error);
+      Alert.alert('Error', 'Failed to join live class');
     }
   };
 
@@ -185,7 +214,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (isNaN(date.getTime())) return 'Invalid Date';
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
-      console.error('Error formatting date:', error);
+      Logger.error('Error formatting date:', error);
       return 'Invalid Date';
     }
   };
@@ -197,7 +226,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (isNaN(date.getTime())) return false;
       return date > new Date();
     } catch (error) {
-      console.error('Error checking if date is upcoming:', error);
+      Logger.error('Error checking if date is upcoming:', error);
       return false;
     }
   };
@@ -384,63 +413,79 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionContainer}>
-        {/* Start Live Class Button */}
-        {liveClass.status === 'scheduled' && (
-          <Button
-            mode="contained"
-            onPress={handleStartLiveClass}
-            style={styles.startButton}
-            contentStyle={styles.startButtonContent}
-            icon="play-circle"
-          >
-            Start Live Class
-          </Button>
+        {/* Admin Controls - Only show for admin users */}
+        {user?.isAdmin && (
+          <>
+            {/* Start Live Class Button */}
+            {liveClass.status === 'scheduled' && (
+              <Button
+                mode="contained"
+                onPress={handleStartLiveClass}
+                style={styles.startButton}
+                contentStyle={styles.startButtonContent}
+                icon="play-circle"
+              >
+                Start Live Class
+              </Button>
+            )}
+            
+            {/* End Live Class Button */}
+            {liveClass.status === 'live' && (
+              <Button
+                mode="contained"
+                onPress={handleEndLiveClass}
+                style={styles.endButton}
+                contentStyle={styles.endButtonContent}
+                icon="stop-circle"
+              >
+                End Live Class
+              </Button>
+            )}
+          </>
         )}
         
-        {/* End Live Class Button */}
-        {liveClass.status === 'live' && (
-          <Button
-            mode="contained"
-            onPress={handleEndLiveClass}
-            style={styles.endButton}
-            contentStyle={styles.endButtonContent}
-            icon="stop-circle"
-          >
-            End Live Class
-          </Button>
-        )}
-        
-        
-        {/* Join Live Class Button */}
-        {isLive(liveClass.status) && (
-          <Button
-            mode="contained"
-            onPress={() => Alert.alert('Info', 'Join live class functionality would be implemented here')}
-            style={styles.joinButton}
-            contentStyle={styles.joinButtonContent}
-            icon="videocam"
-          >
-            Join Live Class
-          </Button>
-        )}
-        
-        {/* View Recording Button */}
-        {isCompleted(liveClass.status) && (
-          <Button
-            mode="outlined"
-            onPress={() => Alert.alert('Info', 'View recording functionality would be implemented here')}
-            style={styles.recordingButton}
-            contentStyle={styles.recordingButtonContent}
-            icon="play-circle"
-          >
-            View Recording
-          </Button>
+        {/* Student Controls - Only show Join button for students */}
+        {!user?.isAdmin && (
+          <>
+            {/* Join Live Class Button - Only show when class is live */}
+            {isLive(liveClass.status) && (
+              <Button
+                mode="contained"
+                onPress={() => handleJoinLiveClass()}
+                style={styles.joinButton}
+                contentStyle={styles.joinButtonContent}
+                icon="videocam"
+              >
+                Join Live Class
+              </Button>
+            )}
+            
+            {/* Show message for scheduled classes */}
+            {liveClass.status === 'scheduled' && (
+              <View style={styles.messageContainer}>
+                <Icon name="schedule" size={24} color={designSystem.colors.info} />
+                <Text style={styles.messageText}>
+                  Class will start at {liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}
+                </Text>
+              </View>
+            )}
+            
+            {/* Show message for completed classes */}
+            {isCompleted(liveClass.status) && (
+              <View style={styles.messageContainer}>
+                <Icon name="check-circle" size={24} color={designSystem.colors.success} />
+                <Text style={styles.messageText}>
+                  This class has been completed
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
     </ScrollView>
     );
   } catch (error) {
-    console.error('Error rendering LiveClassDetailScreen:', error);
+    Logger.error('Error rendering LiveClassDetailScreen:', error);
     return (
       <View style={styles.errorContainer}>
         <Icon name="error" size={64} color={designSystem.colors.error} />

@@ -458,6 +458,11 @@ courseSchema.virtual('completionRate').get(function() {
   return (this.completions / this.enrolledStudents.length) * 100;
 });
 
+// Virtual for thumbnail URL (frontend expects snake_case)
+courseSchema.virtual('thumbnail_url').get(function() {
+  return this.thumbnail || '';
+});
+
 // Instance method to enroll student
 courseSchema.methods.enrollStudent = function(studentId) {
   // Check if student is already enrolled

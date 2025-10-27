@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Create a service error handler for bookService
+const errorHandler = createServiceErrorHandler('bookService');
 
 export type BookLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
 export type BookStatus = 'draft' | 'active' | 'archived';
@@ -89,7 +93,7 @@ bookApi.interceptors.response.use(
           await AsyncStorage.removeItem('refreshToken');
         }
       } catch (refreshError) {
-        console.error('BookService: Token refresh error:', refreshError);
+        errorHandler.handleError('BookService: Token refresh error:', refreshError);
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
@@ -148,7 +152,7 @@ class BookService {
         meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching books:', error);
+      errorHandler.handleError('Error fetching books:', error);
       // Return empty data when API fails
       return {
         data: [],
@@ -162,7 +166,7 @@ class BookService {
       const response = await this.makeRequest(`/books/${id}`);
       return response;
     } catch (error) {
-      console.error('Error fetching book:', error);
+      errorHandler.handleError('Error fetching book:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -172,7 +176,7 @@ class BookService {
       const response = await this.makeRequest('/featured');
       return response.data?.books || [];
     } catch (error) {
-      console.error('Error fetching featured books:', error);
+      errorHandler.handleError('Error fetching featured books:', error);
       return [];
     }
   }
@@ -194,7 +198,7 @@ class BookService {
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error searching books:', error);
+      errorHandler.handleError('Error searching books:', error);
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -207,7 +211,7 @@ class BookService {
       const response = await this.getBooks(page, limit, { category });
       return response;
     } catch (error) {
-      console.error('Error fetching books by category:', error);
+      errorHandler.handleError('Error fetching books by category:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -220,7 +224,7 @@ class BookService {
       const response = await this.getBooks(page, limit, { level });
       return response;
     } catch (error) {
-      console.error('Error fetching books by level:', error);
+      errorHandler.handleError('Error fetching books by level:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -228,25 +232,88 @@ class BookService {
     }
   }
 
-  // Admin methods (will return errors since database is disabled)
+  // Admin methods
   async createBook(bookData: CreateBookData): Promise<any> {
-    throw new Error('Book creation is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest('/books', {
+        method: 'POST',
+        data: bookData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error creating book:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async updateBook(id: string, bookData: UpdateBookData): Promise<any> {
-    throw new Error('Book update is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest(`/books/${id}`, {
+        method: 'PUT',
+        data: bookData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error updating book:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async deleteBook(id: string): Promise<void> {
-    throw new Error('Book deletion is not available. Database functionality has been removed.');
+    try {
+      await this.makeRequest(`/books/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      errorHandler.handleError('Error deleting book:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async uploadBookCover(bookId: string, imageUri: string): Promise<string> {
-    throw new Error('Book cover upload is not available. Database functionality has been removed.');
+    try {
+      const formData = new FormData();
+      formData.append('cover', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'cover.jpg',
+      } as any);
+
+      const response = await this.makeRequest(`/books/${bookId}/cover`, {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.coverImageUrl;
+    } catch (error) {
+      errorHandler.handleError('Error uploading book cover:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async uploadBookPdf(bookId: string, pdfUri: string): Promise<string> {
-    throw new Error('Book PDF upload is not available. Database functionality has been removed.');
+    try {
+      const formData = new FormData();
+      formData.append('pdf', {
+        uri: pdfUri,
+        type: 'application/pdf',
+        name: 'book.pdf',
+      } as any);
+
+      const response = await this.makeRequest(`/books/${bookId}/pdf`, {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.pdfUrl;
+    } catch (error) {
+      errorHandler.handleError('Error uploading book PDF:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async downloadBook(bookId: string): Promise<any> {
@@ -256,7 +323,7 @@ class BookService {
       });
       return response;
     } catch (error) {
-      console.error('Error downloading book:', error);
+      errorHandler.handleError('Error downloading book:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }

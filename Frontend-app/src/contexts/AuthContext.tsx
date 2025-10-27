@@ -145,11 +145,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(name, email, password);
       
       if (response.success && response.data) {
-        const { user: userData, token, tokens } = response.data;
+        console.log('AuthContext: Registration response data:', response.data);
+        const { user: userData, token, refreshToken } = response.data;
         
         // Extract the access token from the response
-        const accessToken = token || tokens?.accessToken;
-        const refreshToken = tokens?.refreshToken;
+        const accessToken = token;
+        console.log('AuthContext: Extracted access token:', accessToken ? accessToken.substring(0, 20) + '...' : 'null');
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
@@ -178,7 +179,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // Store user data in SecureStore
+        console.log('AuthContext: Storing user data:', user);
         await Storage.setItem('user', JSON.stringify(user));
+        
+        // Verify user data was stored
+        const storedUser = await Storage.getItem('user');
+        console.log('AuthContext: Verification - stored user:', storedUser ? 'YES' : 'NO');
         
         setUser(user);
         setIsAuthenticated(true);

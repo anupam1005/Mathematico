@@ -1,6 +1,6 @@
 // src/admin/screens/LiveClassForm.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { adminService } from "../../services/adminService";
@@ -22,7 +22,7 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     duration: "",
     maxStudents: "",
     startTime: new Date(),
-    endTime: new Date(),
+    endTime: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
     scheduledAt: new Date(),
     status: "scheduled",
     meetingLink: "",
@@ -30,7 +30,35 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
   });
 
   const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [showScheduledPicker, setShowScheduledPicker] = useState(false);
+
+  // Function to safely close pickers
+  const closeAllPickers = () => {
+    setShowStartTimePicker(false);
+    setShowEndTimePicker(false);
+    setShowScheduledPicker(false);
+  };
+
+  // Function to safely open picker with timeout
+  const openPicker = (pickerType: 'start' | 'end' | 'scheduled') => {
+    closeAllPickers(); // Close any open pickers first
+    
+    setTimeout(() => {
+      switch (pickerType) {
+        case 'start':
+          setShowStartTimePicker(true);
+          break;
+        case 'end':
+          setShowEndTimePicker(true);
+          break;
+        case 'scheduled':
+          setShowScheduledPicker(true);
+          break;
+      }
+    }, 100);
+  };
 
   useEffect(() => {
     if (liveClassId) {
@@ -50,14 +78,82 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     }
   }, [liveClassId]);
 
+  // Cleanup effect to close any open pickers
+  useEffect(() => {
+    return () => {
+      closeAllPickers();
+    };
+  }, []);
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (!result.canceled) setFormData({ ...formData, image: result.assets[0] });
   };
 
-  const handleDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(false);
-    if (date) setFormData({ ...formData, scheduledAt: date });
+  const handleStartTimeChange = (event: any, date?: Date) => {
+    try {
+      setShowStartTimePicker(false);
+      
+      if (event.type === 'dismissed' || event.type === 'cancel') {
+        return;
+      }
+      
+      if (date) {
+        const newFormData = { ...formData, startTime: date };
+        // Calculate end time based on start time + duration
+        if (formData.duration) {
+          const endTime = new Date(date.getTime() + (Number(formData.duration) * 60000));
+          newFormData.endTime = endTime;
+        }
+        setFormData(newFormData);
+      }
+    } catch (error) {
+      console.error('Error in handleStartTimeChange:', error);
+      setShowStartTimePicker(false);
+    }
+  };
+
+  const handleEndTimeChange = (event: any, date?: Date) => {
+    try {
+      setShowEndTimePicker(false);
+      
+      if (event.type === 'dismissed' || event.type === 'cancel') {
+        return;
+      }
+      
+      if (date) {
+        setFormData({ ...formData, endTime: date });
+      }
+    } catch (error) {
+      console.error('Error in handleEndTimeChange:', error);
+      setShowEndTimePicker(false);
+    }
+  };
+
+  const handleScheduledChange = (event: any, date?: Date) => {
+    try {
+      setShowScheduledPicker(false);
+      
+      if (event.type === 'dismissed' || event.type === 'cancel') {
+        return;
+      }
+      
+      if (date) {
+        setFormData({ ...formData, scheduledAt: date });
+      }
+    } catch (error) {
+      console.error('Error in handleScheduledChange:', error);
+      setShowScheduledPicker(false);
+    }
+  };
+
+  const handleDurationChange = (duration: string) => {
+    setFormData({ ...formData, duration });
+    // Recalculate end time when duration changes
+    if (formData.startTime && duration) {
+      const endTime = new Date(formData.startTime.getTime() + (Number(duration) * 60000));
+      setFormData((prev: typeof formData) => ({ ...prev, duration, endTime }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -73,13 +169,35 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
     }
     
+    // Validate enum values
+    const validCategories = ['mathematics', 'physics'];
+    const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
+    const validStatuses = ['scheduled', 'live', 'completed', 'cancelled', 'postponed'];
+    
+    if (!validCategories.includes(formData.category)) {
+      return Alert.alert("Error", "Please select a valid category from the dropdown");
+    }
+    
+    if (!validLevels.includes(formData.level)) {
+      return Alert.alert("Error", "Please select a valid level from the dropdown");
+    }
+    
+    if (formData.status && !validStatuses.includes(formData.status)) {
+      return Alert.alert("Error", "Please select a valid status from the dropdown");
+    }
+    
     // Validate duration and maxStudents are numbers
-    if (isNaN(Number(formData.duration)) || Number(formData.duration) <= 0) {
-      return Alert.alert("Error", "Duration must be a positive number");
+    if (isNaN(Number(formData.duration)) || Number(formData.duration) < 15 || Number(formData.duration) > 480) {
+      return Alert.alert("Error", "Duration must be between 15 and 480 minutes");
     }
     
     if (isNaN(Number(formData.maxStudents)) || Number(formData.maxStudents) <= 0) {
       return Alert.alert("Error", "Max Students must be a positive number");
+    }
+
+    // Validate start and end times
+    if (formData.endTime <= formData.startTime) {
+      return Alert.alert("Error", "End time must be after start time");
     }
 
     setLoading(true);
@@ -97,8 +215,9 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         level: formData.level,
         duration: Number(formData.duration),
         maxStudents: Number(formData.maxStudents),
-        startTime: formData.scheduledAt.toISOString(),
-        endTime: new Date(formData.scheduledAt.getTime() + (Number(formData.duration) * 60000)).toISOString(),
+        startTime: formData.startTime.toISOString(),
+        endTime: formData.endTime.toISOString(),
+        scheduledAt: formData.scheduledAt.toISOString(),
         meetingLink: formData.meetingLink.trim(),
         status: formData.status || 'scheduled',
         isAvailable: true
@@ -172,14 +291,28 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         leftIcon="description"
       />
 
-      <CustomTextInput
-        label="Category"
-        value={formData.category}
-        onChangeText={t => setFormData({ ...formData, category: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="folder"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Category</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Category',
+                'Choose the live class category',
+                [
+                  { text: 'Mathematics', onPress: () => setFormData({ ...formData, category: 'mathematics' }) },
+                  { text: 'Physics', onPress: () => setFormData({ ...formData, category: 'physics' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.category || 'Select Category'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Subject"
@@ -199,19 +332,35 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         leftIcon="grade"
       />
 
-      <CustomTextInput
-        label="Level"
-        value={formData.level}
-        onChangeText={t => setFormData({ ...formData, level: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="grade"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Level</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Level',
+                'Choose the live class level',
+                [
+                  { text: 'Beginner', onPress: () => setFormData({ ...formData, level: 'beginner' }) },
+                  { text: 'Intermediate', onPress: () => setFormData({ ...formData, level: 'intermediate' }) },
+                  { text: 'Advanced', onPress: () => setFormData({ ...formData, level: 'advanced' }) },
+                  { text: 'Expert', onPress: () => setFormData({ ...formData, level: 'expert' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.level || 'Select Level'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Duration (minutes)"
         value={formData.duration}
-        onChangeText={t => setFormData({ ...formData, duration: t })}
+        onChangeText={handleDurationChange}
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
@@ -219,14 +368,36 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
       />
 
       <Text style={styles.label}>Start Time</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-        <Text>{formData.startTime.toLocaleString()}</Text>
+      <TouchableOpacity onPress={() => openPicker('start')} style={styles.input}>
+        <Text style={styles.dateText}>
+          {formData.startTime ? formData.startTime.toLocaleString() : 'Select Start Time'}
+        </Text>
       </TouchableOpacity>
+      {showStartTimePicker && (
+        <DateTimePicker 
+          value={formData.startTime || new Date()} 
+          mode="datetime" 
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+          onChange={handleStartTimeChange}
+          minimumDate={new Date()}
+        />
+      )}
 
       <Text style={styles.label}>End Time</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-        <Text>{formData.endTime.toLocaleString()}</Text>
+      <TouchableOpacity onPress={() => openPicker('end')} style={styles.input}>
+        <Text style={styles.dateText}>
+          {formData.endTime ? formData.endTime.toLocaleString() : 'Select End Time'}
+        </Text>
       </TouchableOpacity>
+      {showEndTimePicker && (
+        <DateTimePicker 
+          value={formData.endTime || new Date()} 
+          mode="datetime" 
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+          onChange={handleEndTimeChange}
+          minimumDate={formData.startTime || new Date()}
+        />
+      )}
 
       <CustomTextInput
         label="Max Students"
@@ -239,10 +410,20 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
       />
 
       <Text style={styles.label}>Scheduled At</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-        <Text>{formData.scheduledAt.toLocaleString()}</Text>
+      <TouchableOpacity onPress={() => openPicker('scheduled')} style={styles.input}>
+        <Text style={styles.dateText}>
+          {formData.scheduledAt ? formData.scheduledAt.toLocaleString() : 'Select Scheduled Time'}
+        </Text>
       </TouchableOpacity>
-      {showDatePicker && <DateTimePicker value={formData.scheduledAt} mode="datetime" display="default" onChange={handleDateChange} />}
+      {showScheduledPicker && (
+        <DateTimePicker 
+          value={formData.scheduledAt || new Date()} 
+          mode="datetime" 
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+          onChange={handleScheduledChange}
+          minimumDate={new Date()}
+        />
+      )}
 
       <CustomTextInput
         label="Meeting Link"
@@ -253,14 +434,31 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         leftIcon="link"
       />
 
-      <CustomTextInput
-        label="Status"
-        value={formData.status}
-        onChangeText={t => setFormData({ ...formData, status: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="info"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Status</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Status',
+                'Choose the live class status',
+                [
+                  { text: 'Scheduled', onPress: () => setFormData({ ...formData, status: 'scheduled' }) },
+                  { text: 'Live', onPress: () => setFormData({ ...formData, status: 'live' }) },
+                  { text: 'Completed', onPress: () => setFormData({ ...formData, status: 'completed' }) },
+                  { text: 'Cancelled', onPress: () => setFormData({ ...formData, status: 'cancelled' }) },
+                  { text: 'Postponed', onPress: () => setFormData({ ...formData, status: 'postponed' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.status || 'Select Status'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
@@ -281,4 +479,11 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff" },
   submitButton: { backgroundColor: "green", padding: 15, marginTop: 20, borderRadius: 5, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "bold" },
+  pickerContainer: { marginTop: 10 },
+  pickerLabel: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
+  pickerWrapper: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#f9f9f9" },
+  pickerButton: { padding: 15, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  pickerText: { fontSize: 16, color: "#333" },
+  pickerArrow: { fontSize: 12, color: "#666" },
+  dateText: { fontSize: 16, color: "#333", paddingVertical: 5 },
 });

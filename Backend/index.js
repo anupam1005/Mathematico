@@ -163,6 +163,14 @@ const corsOptions = {
       'http://localhost:19004',
       'http://localhost:19005',
       'http://localhost:19006',
+      'http://10.148.37.132:8081',
+      'http://10.148.37.132:8082',
+      'http://10.148.37.132:8083',
+      'http://10.148.37.132:19006',
+      'http://10.148.37.132:3000',
+      'http://10.148.37.132:5000',
+      'http://10.148.37.132:5001',
+      'http://10.148.37.132:5002',
       'http://10.152.98.132:8081',
       'http://10.152.98.132:8082',
       'http://10.152.98.132:8083',
@@ -572,10 +580,10 @@ if (require.main === module) {
         console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
         console.log(`🌐 Server running on port ${PORT}`);
         console.log(`📊 Health check: http://localhost:${PORT}/health`);
-        console.log(`📱 Mobile health check: http://10.152.98.132:${PORT}/health`);
+        console.log(`📱 Mobile health check: http://10.148.37.132:${PORT}/health`);
         console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
         console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
-        console.log(`📱 Mobile API root: http://10.152.98.132:${PORT}/api/v1`);
+        console.log(`📱 Mobile API root: http://10.148.37.132:${PORT}/api/v1`);
         console.log(`🗄️  Database: MongoDB Connected`);
         console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);

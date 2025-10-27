@@ -1,25 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-// Import mobile controller (fallback to no-op handlers if missing)
-let mobileController;
-try {
-  mobileController = require('../controllers/mobileController');
-  console.log('✅ MobileController loaded successfully');
-} catch (error) {
-  console.warn('⚠️ MobileController not available, using fallback handlers');
-  mobileController = {
-    getAllBooks: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getBookById: (req, res) => res.status(404).json({ success: false, message: 'Book not found (fallback)' }),
-    getAllCourses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getCourseById: (req, res) => res.status(404).json({ success: false, message: 'Course not found (fallback)' }),
-    getAllLiveClasses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getLiveClassById: (req, res) => res.status(404).json({ success: false, message: 'Live class not found (fallback)' }),
-    search: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
-    getFeaturedContent: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
-    getAppInfo: (req, res) => res.json({ success: true, data: { version: 'fallback', status: 'ok' } })
-  };
-}
+// Import mobile controller
+const mobileController = require('../controllers/mobileController');
+console.log('✅ MobileController loaded successfully');
 
 // ============= ROUTE DEFINITIONS =============
 
@@ -47,6 +31,18 @@ router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
 router.put('/live-classes/:id/start', mobileController.startLiveClass);
 router.put('/live-classes/:id/end', mobileController.endLiveClass);
+router.post('/live-classes/:id/join', (req, res) => {
+  const { id } = req.params;
+  console.log('📱 Student joining live class:', id);
+  res.json({
+    success: true,
+    data: {
+      joinLink: 'https://meet.google.com/sample-meeting-link',
+      message: 'Join link generated successfully'
+    },
+    message: 'Ready to join live class'
+  });
+});
 
 // Search routes
 router.get('/search', mobileController.search);
@@ -56,6 +52,36 @@ router.get('/featured', mobileController.getFeaturedContent);
 
 // App info
 router.get('/app-info', mobileController.getAppInfo);
+
+// Settings routes
+router.get('/settings', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      pushNotifications: true,
+      emailNotifications: true,
+      courseUpdates: true,
+      liveClassReminders: true,
+      darkMode: false,
+      autoPlayVideos: true,
+      downloadQuality: 'High',
+      language: 'en',
+      timezone: 'UTC',
+      theme: 'light'
+    },
+    message: 'Settings retrieved successfully (mock data)'
+  });
+});
+
+router.put('/settings', (req, res) => {
+  const settings = req.body;
+  console.log('📱 Mobile settings update:', settings);
+  res.json({
+    success: true,
+    message: 'Settings updated successfully (mock response)',
+    data: settings
+  });
+});
 
 // Payment routes
 router.post('/payments/create-order', async (req, res) => {

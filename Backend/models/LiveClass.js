@@ -496,6 +496,11 @@ liveClassSchema.virtual('currentStatus').get(function() {
   }
 });
 
+// Virtual for thumbnail URL (frontend expects snake_case)
+liveClassSchema.virtual('thumbnail_url').get(function() {
+  return this.thumbnail || '';
+});
+
 // Virtual for time until class starts
 liveClassSchema.virtual('timeUntilStart').get(function() {
   const now = new Date();

@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Create a service error handler for liveClassService
+const errorHandler = createServiceErrorHandler('liveClassService');
 
 export type LiveClassLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
 export type LiveClassStatus = 'scheduled' | 'live' | 'completed' | 'cancelled';
@@ -86,7 +90,7 @@ liveClassApi.interceptors.response.use(
           await AsyncStorage.removeItem('refreshToken');
         }
       } catch (refreshError) {
-        console.error('LiveClassService: Token refresh error:', refreshError);
+        errorHandler.handleError('LiveClassService: Token refresh error:', refreshError);
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
@@ -144,7 +148,7 @@ class LiveClassService {
         meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error fetching live classes:', error);
+      errorHandler.handleError('Error fetching live classes:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -170,7 +174,7 @@ class LiveClassService {
         message: 'Live class not found'
       };
     } catch (error) {
-      console.error('Error fetching live class:', error);
+      errorHandler.handleError('Error fetching live class:', error);
       return {
         success: false,
         data: null,
@@ -184,7 +188,7 @@ class LiveClassService {
       const response = await this.makeRequest('/featured');
       return response.data?.liveClasses || [];
     } catch (error) {
-      console.error('Error fetching featured live classes:', error);
+      errorHandler.handleError('Error fetching featured live classes:', error);
       return [];
     }
   }
@@ -209,7 +213,7 @@ class LiveClassService {
         message: 'Failed to start live class'
       };
     } catch (error) {
-      console.error('Error starting live class:', error);
+      errorHandler.handleError('Error starting live class:', error);
       return {
         success: false,
         data: null,
@@ -238,7 +242,7 @@ class LiveClassService {
         message: 'Failed to end live class'
       };
     } catch (error) {
-      console.error('Error ending live class:', error);
+      errorHandler.handleError('Error ending live class:', error);
       return {
         success: false,
         data: null,
@@ -252,7 +256,7 @@ class LiveClassService {
       const response = await this.getLiveClasses(page, limit, { status: 'scheduled' });
       return response;
     } catch (error) {
-      console.error('Error fetching upcoming live classes:', error);
+      errorHandler.handleError('Error fetching upcoming live classes:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -271,13 +275,19 @@ class LiveClassService {
       
       const response = await this.makeRequest(`/live-classes?${params.toString()}`);
       
-      // Since database is disabled, always return empty data
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 }
+        };
+      }
+      
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
-      console.error('Error searching live classes:', error);
+      errorHandler.handleError('Error searching live classes:', error);
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -290,7 +300,7 @@ class LiveClassService {
       const response = await this.getLiveClasses(page, limit, { category });
       return response;
     } catch (error) {
-      console.error('Error fetching live classes by category:', error);
+      errorHandler.handleError('Error fetching live classes by category:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -303,7 +313,7 @@ class LiveClassService {
       const response = await this.getLiveClasses(page, limit, { level });
       return response;
     } catch (error) {
-      console.error('Error fetching live classes by level:', error);
+      errorHandler.handleError('Error fetching live classes by level:', error);
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -311,25 +321,77 @@ class LiveClassService {
     }
   }
 
-  // Admin methods (will return errors since database is disabled)
+  // Admin methods
   async createLiveClass(liveClassData: CreateLiveClassData): Promise<any> {
-    throw new Error('Live class creation is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest('/live-classes', {
+        method: 'POST',
+        data: liveClassData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error creating live class:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async updateLiveClass(id: string, liveClassData: UpdateLiveClassData): Promise<any> {
-    throw new Error('Live class update is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest(`/live-classes/${id}`, {
+        method: 'PUT',
+        data: liveClassData
+      });
+      return response;
+    } catch (error) {
+      errorHandler.handleError('Error updating live class:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async deleteLiveClass(id: string): Promise<void> {
-    throw new Error('Live class deletion is not available. Database functionality has been removed.');
+    try {
+      await this.makeRequest(`/live-classes/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      errorHandler.handleError('Error deleting live class:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async uploadLiveClassThumbnail(liveClassId: string, imageUri: string): Promise<string> {
-    throw new Error('Live class thumbnail upload is not available. Database functionality has been removed.');
+    try {
+      const formData = new FormData();
+      formData.append('thumbnail', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'thumbnail.jpg',
+      } as any);
+
+      const response = await this.makeRequest(`/live-classes/${liveClassId}/thumbnail`, {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.thumbnailUrl;
+    } catch (error) {
+      errorHandler.handleError('Error uploading live class thumbnail:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async joinLiveClass(liveClassId: string): Promise<string> {
-    throw new Error('Live class joining is not available. Database functionality has been removed.');
+    try {
+      const response = await this.makeRequest(`/live-classes/${liveClassId}/join`, {
+        method: 'POST'
+      });
+      return response.data.meetingLink;
+    } catch (error) {
+      errorHandler.handleError('Error joining live class:', error);
+      throw ErrorHandler.handleApiError(error);
+    }
   }
 
   async enrollInLiveClass(liveClassId: string): Promise<any> {
@@ -339,7 +401,7 @@ class LiveClassService {
       });
       return response;
     } catch (error) {
-      console.error('Error enrolling in live class:', error);
+      errorHandler.handleError('Error enrolling in live class:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }

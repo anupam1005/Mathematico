@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,6 +13,7 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass, LiveClassFilters } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
+import { Logger } from '../utils/errorHandler';
 
 export default function LiveClassesScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -61,7 +61,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      console.error('Error loading live classes:', error);
+      Logger.error('Error loading live classes:', error);
     } finally {
       setLoading(false);
     }

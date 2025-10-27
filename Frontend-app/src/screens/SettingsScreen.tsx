@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,6 +19,8 @@ import { Icon } from '../components/Icon';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
 import settingsService from '../services/settingsService';
+import { ErrorHandler } from '../utils/errorHandler';
+import SettingsItem from '../components/SettingsItem';
 
 export default function SettingsScreen({ navigation }: any) {
   // Loading state
@@ -49,16 +50,20 @@ export default function SettingsScreen({ navigation }: any) {
       
       if (response.success && response.data) {
         const settings = response.data;
-        setPushNotifications(settings.pushNotifications);
-        setEmailNotifications(settings.emailNotifications);
-        setCourseUpdates(settings.courseUpdates);
-        setLiveClassReminders(settings.liveClassReminders);
-        setDarkMode(settings.darkMode);
-        setAutoPlayVideos(settings.autoPlayVideos);
-        setDownloadQuality(settings.downloadQuality);
+        setPushNotifications(settings.pushNotifications ?? true);
+        setEmailNotifications(settings.emailNotifications ?? true);
+        setCourseUpdates(settings.courseUpdates ?? true);
+        setLiveClassReminders(settings.liveClassReminders ?? true);
+        setDarkMode(settings.darkMode ?? false);
+        setAutoPlayVideos(settings.autoPlayVideos ?? true);
+        setDownloadQuality(settings.downloadQuality ?? 'High');
+        console.log('📱 Settings loaded successfully:', settings);
+      } else {
+        console.warn('Failed to load settings:', response.message);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+      Alert.alert('Notice', 'Settings loaded with default values');
     } finally {
       setIsLoading(false);
     }
@@ -67,17 +72,25 @@ export default function SettingsScreen({ navigation }: any) {
   const updateSetting = async (key: string, value: any) => {
     try {
       setIsSaving(true);
+      console.log(`📱 Updating setting: ${key} = ${value}`);
       const response = await settingsService.updateSettings({ [key]: value });
       
-      if (!response.success) {
+      if (response.success) {
+        console.log('📱 Setting updated successfully:', response.message);
+        // Show success feedback briefly
+        setTimeout(() => {
+          // Could show a toast or brief success indicator here
+        }, 100);
+      } else {
         Alert.alert('Error', response.message || 'Failed to update setting');
         // Revert the change if it failed
-        loadSettings();
+        await loadSettings();
       }
     } catch (error) {
       console.error('Error updating setting:', error);
-      Alert.alert('Error', 'Failed to update setting');
-      loadSettings();
+      Alert.alert('Error', 'Failed to update setting. Please try again.');
+      // Revert the change if it failed
+      await loadSettings();
     } finally {
       setIsSaving(false);
     }
@@ -86,15 +99,26 @@ export default function SettingsScreen({ navigation }: any) {
   const handleClearCache = () => {
     Alert.alert(
       'Clear Cache',
-      'Are you sure you want to clear the app cache? This will free up storage space.',
+      'Are you sure you want to clear the app cache? This will reset all settings to default values.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear',
           style: 'destructive',
-          onPress: () => {
-            // Implement cache clearing logic
-            Alert.alert('Success', 'Cache cleared successfully');
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              // Clear settings from storage
+              await settingsService.clearSettings();
+              // Reload settings with defaults
+              await loadSettings();
+              Alert.alert('Success', 'Cache and settings cleared successfully');
+            } catch (error) {
+              console.error('Error clearing cache:', error);
+              Alert.alert('Error', 'Failed to clear cache');
+            } finally {
+              setIsSaving(false);
+            }
           },
         },
       ]
@@ -348,20 +372,17 @@ export default function SettingsScreen({ navigation }: any) {
             />
             <Divider />
 
-            <List.Item
-              title="Terms of Service"
-              left={(props) => <Icon name="description" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+            <SettingsItem
+              title="Terms of Use"
+              icon="description"
               onPress={() => navigation.navigate('TermsOfUse')}
             />
-            <Divider />
-
-            <List.Item
+            <SettingsItem
               title="Privacy Policy"
-              left={(props) => <Icon name="privacy-tip" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+              icon="privacy-tip"
               onPress={() => navigation.navigate('PrivacyPolicy')}
             />
+
           </Card.Content>
         </Card>
       </ScrollView>

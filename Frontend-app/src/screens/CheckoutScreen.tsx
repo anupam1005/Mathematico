@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -25,6 +24,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { razorpayService } from '../services/razorpayService';
 import { CURRENCY_CONFIG } from '../config';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Logger } from '../utils/errorHandler';
 
 export default function CheckoutScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -104,7 +106,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
         setLoading(false);
       }
     } catch (error) {
-      console.error('Payment error:', error);
+      Logger.error('Payment error:', error);
       Alert.alert('Error', 'Payment failed. Please try again.');
       setLoading(false);
     }
@@ -137,7 +139,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
         Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
       }
     } catch (error) {
-      console.error('Payment processing error:', error);
+      Logger.error('Payment processing error:', error);
       Alert.alert('Error', 'Payment processing failed. Please try again.');
     } finally {
       setLoading(false);

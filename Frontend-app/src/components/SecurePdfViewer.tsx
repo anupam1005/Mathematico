@@ -3,6 +3,7 @@ import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
 import { API_CONFIG } from '../config';
+import { Logger } from '../utils/errorHandler';
 
 interface SecurePdfViewerProps {
   bookId: string;
@@ -39,7 +40,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       }
     } catch (err) {
       setError('Network error. Please check your connection.');
-      console.error('Error fetching PDF viewer:', err);
+      Logger.error('Error fetching PDF viewer:', err);
     } finally {
       setLoading(false);
     }

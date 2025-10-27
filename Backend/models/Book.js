@@ -296,12 +296,23 @@ bookSchema.pre('save', function(next) {
 // Virtual for formatted price
 bookSchema.virtual('formattedPrice').get(function() {
   if (this.isFree) return 'Free';
+  if (!this.price && this.price !== 0) return 'Price not set';
   return `${this.currency} ${this.price.toFixed(2)}`;
 });
 
 // Virtual for average rating
 bookSchema.virtual('averageRating').get(function() {
   return this.ratings.average;
+});
+
+// Virtual for cover image URL (frontend expects snake_case)
+bookSchema.virtual('cover_image_url').get(function() {
+  return this.coverImage || '';
+});
+
+// Virtual for PDF file URL (frontend expects snake_case)
+bookSchema.virtual('pdf_file_url').get(function() {
+  return this.pdfFile || '';
 });
 
 // Instance method to add review

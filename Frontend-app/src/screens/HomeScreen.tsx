@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,6 +20,7 @@ import { designSystem, layoutStyles, textStyles } from '../styles/designSystem';
 import { UnifiedCard } from '../components/UnifiedCard';
 import { StatsCard } from '../components/StatsCard';
 import { EmptyState } from '../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +93,7 @@ export default function HomeScreen({ navigation }: any) {
       ]);
       setDataLoaded(true);
     } catch (error) {
-      console.error('Error loading data:', error);
+      Logger.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -114,14 +114,8 @@ export default function HomeScreen({ navigation }: any) {
         totalStudents: 0,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
-      // Set fallback stats when API fails
-      setStats({
-        totalCourses: 0,
-        totalBooks: 0,
-        totalLiveClasses: 0,
-        totalStudents: 0,
-      });
+      Logger.error('Error loading stats:', error);
+      // Don't set empty data on error
     }
   };
 
@@ -134,7 +128,7 @@ export default function HomeScreen({ navigation }: any) {
         setFeaturedCourses([]);
       }
     } catch (error) {
-      console.error('Error loading featured courses:', error);
+      Logger.error('Error loading featured courses:', error);
       setFeaturedCourses([]);
     }
   };
@@ -148,7 +142,7 @@ export default function HomeScreen({ navigation }: any) {
         setFeaturedBooks([]);
       }
     } catch (error) {
-      console.error('Error loading featured books:', error);
+      Logger.error('Error loading featured books:', error);
       setFeaturedBooks([]);
     }
   };
@@ -162,7 +156,7 @@ export default function HomeScreen({ navigation }: any) {
         setUpcomingClasses([]);
       }
     } catch (error) {
-      console.error('Error loading upcoming classes:', error);
+      Logger.error('Error loading upcoming classes:', error);
       setUpcomingClasses([]);
     }
   };

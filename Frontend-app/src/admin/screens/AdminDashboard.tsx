@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,6 +19,7 @@ import { adminService, DashboardStats } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
+import { Logger } from '../utils/errorHandler';
 
 const { width } = Dimensions.get('window');
 
@@ -80,23 +80,10 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       setStats(dashboardData);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      Logger.error('Error loading dashboard data:', error);
       setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
-      
-      // Set empty data when API fails
-      setStats({
-        stats: {
-          totalUsers: 0,
-          totalStudents: 0,
-          totalCourses: 0,
-          totalModules: 0,
-          totalLessons: 0,
-          totalRevenue: 0,
-          activeBatches: 0,
-        },
-        recentUsers: [],
-        recentCourses: [],
-      });
+      // Don't set empty data - let the error message show
+      setStats(null);
     } finally {
       setIsLoading(false);
     }

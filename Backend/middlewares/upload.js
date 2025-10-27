@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
     
     if (file.fieldname === 'pdf' || file.fieldname === 'pdfFile') {
       uploadPath = uploadDirs.pdfs;
-    } else if (file.fieldname === 'coverImage') {
+    } else if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
       uploadPath = uploadDirs.covers;
     }
     
@@ -57,7 +57,7 @@ const fileFilter = (req, file, cb) => {
     } else {
       cb(new Error('Only PDF files are allowed for book content'), false);
     }
-  } else if (file.fieldname === 'coverImage') {
+  } else if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
     // Only allow specific image types with proper validation
     if (allowedImageTypes.includes(file.mimetype) && allowedImageExtensions.includes(fileExtension)) {
       cb(null, true);

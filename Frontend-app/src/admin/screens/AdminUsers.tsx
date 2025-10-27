@@ -28,6 +28,7 @@ import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 interface User {
   id: string;
@@ -79,7 +80,7 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       
       setUsers(users);
     } catch (error) {
-      console.error('Error loading users:', error);
+      Logger.error('Error loading users:', error);
       setUsers([]);
     } finally {
       setIsLoading(false);

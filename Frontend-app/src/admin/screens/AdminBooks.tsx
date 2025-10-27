@@ -28,6 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Logger } from '../utils/errorHandler';
 
 interface Book {
   id: string | number;
@@ -112,7 +113,7 @@ export default function AdminBooks({ navigation }: any) {
         setBooks([]);
       }
     } catch (error) {
-      console.error('📚 AdminBooks: Error loading books:', error);
+      Logger.error('📚 AdminBooks: Error loading books:', error);
       setBooks([]);
     } finally {
       setIsLoading(false);
@@ -152,7 +153,7 @@ export default function AdminBooks({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete book');
               }
             } catch (error) {
-              console.error('AdminBooks: Error deleting book:', error);
+              Logger.error('AdminBooks: Error deleting book:', error);
               Alert.alert('Error', 'Failed to delete book');
             }
           },
@@ -184,7 +185,7 @@ export default function AdminBooks({ navigation }: any) {
       
       Alert.alert('Success', newStatus === 'published' ? 'Book published successfully' : 'Book unpublished');
     } catch (error) {
-      console.error('Error updating book status:', error);
+      Logger.error('Error updating book status:', error);
       Alert.alert('Error', 'Failed to update book status');
     }
   };

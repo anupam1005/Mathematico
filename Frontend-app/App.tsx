@@ -182,7 +182,7 @@ function AppNavigator() {
       />
       <Stack.Screen 
         name="SecurePdf" 
-        component={SecurePdfScreen}
+        component={SecurePdfScreen as any}
         options={{
           headerShown: false,
         }}

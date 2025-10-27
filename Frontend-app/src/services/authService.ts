@@ -205,8 +205,13 @@ const authService = {
         }
         
         // Store access token
+        console.log('AuthService: Storing access token:', actualToken.substring(0, 20) + '...');
         await Storage.setItem('authToken', actualToken);
         console.log('AuthService: Access token stored successfully');
+        
+        // Verify the token was stored correctly
+        const storedToken = await Storage.getItem('authToken');
+        console.log('AuthService: Verification - stored token:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
         
         // Store refresh token if available
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
@@ -288,8 +293,15 @@ const authService = {
         
         // Store tokens if available
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
+          console.log('AuthService: Storing access token:', actualToken.substring(0, 20) + '...');
           await Storage.setItem('authToken', actualToken);
           console.log('AuthService: Access token stored after registration');
+          
+          // Verify the token was stored correctly
+          const storedToken = await Storage.getItem('authToken');
+          console.log('AuthService: Verification - stored token:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
+        } else {
+          console.error('AuthService: No valid access token to store:', actualToken);
         }
         
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
@@ -563,13 +575,7 @@ const authService = {
       console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
       
       if (token && token !== 'null' && token !== 'undefined') {
-        // Basic validation - check if it's not empty and not a dummy token
-        if (token.startsWith('admin-token-') || token.startsWith('user-token-')) {
-          console.error('AuthService: Dummy token detected, removing');
-          await Storage.deleteItem('authToken');
-          return null;
-        }
-        
+        // Basic validation - check if it's not empty
         console.log('AuthService: Valid token found');
         return token;
       }

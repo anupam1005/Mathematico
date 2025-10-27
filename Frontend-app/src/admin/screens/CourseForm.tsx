@@ -6,6 +6,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
+import { Logger } from '../utils/errorHandler';
 
 interface CourseFormProps {
   courseId?: string;
@@ -24,6 +25,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     grade: "",
     status: "draft",
     students: "",
+    duration: "",
+    instructorName: "",
     image: null,
     pdf: null,
   });
@@ -66,7 +69,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     console.log('CourseForm: Form data:', formData);
     
     // Enhanced validation
-    const requiredFields = ['title', 'description', 'price', 'level', 'category', 'subject', 'grade'];
+    const requiredFields = ['title', 'description', 'price', 'level', 'category', 'subject', 'grade', 'duration', 'instructorName'];
     const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
     
     if (missingFields.length > 0) {
@@ -74,14 +77,42 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
     }
     
+    // Validate enum values
+    const validCategories = ['mathematics', 'physics'];
+    const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
+    const validStatuses = ['draft', 'published', 'archived', 'suspended'];
+    
+    if (!validCategories.includes(formData.category)) {
+      return Alert.alert("Error", "Please select a valid category from the dropdown");
+    }
+    
+    if (!validLevels.includes(formData.level)) {
+      return Alert.alert("Error", "Please select a valid level from the dropdown");
+    }
+    
+    if (formData.status && !validStatuses.includes(formData.status)) {
+      return Alert.alert("Error", "Please select a valid status from the dropdown");
+    }
+    
     // Validate price is a number
-    if (isNaN(Number(formData.price)) || Number(formData.price) < 0) {
-      return Alert.alert("Error", "Price must be a valid number");
+    const price = Number(formData.price);
+    if (isNaN(price) || price < 0) {
+      return Alert.alert("Error", "Price must be a valid positive number");
+    }
+    
+    // Validate original price is a number if provided
+    if (formData.originalPrice && (isNaN(Number(formData.originalPrice)) || Number(formData.originalPrice) < 0)) {
+      return Alert.alert("Error", "Original price must be a valid positive number");
     }
     
     // Validate students is a number if provided
     if (formData.students && (isNaN(Number(formData.students)) || Number(formData.students) < 0)) {
       return Alert.alert("Error", "Students count must be a valid number");
+    }
+    
+    // Validate duration is a number
+    if (isNaN(Number(formData.duration)) || Number(formData.duration) < 1) {
+      return Alert.alert("Error", "Duration must be at least 1 hour");
     }
 
     setLoading(true);
@@ -101,6 +132,10 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         grade: formData.grade.trim(),
         status: formData.status || 'draft',
         students: formData.students ? Number(formData.students) : 0,
+        duration: Number(formData.duration),
+        instructor: {
+          name: formData.instructorName.trim()
+        },
         isAvailable: true
       };
       
@@ -109,11 +144,16 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       // Add all fields to FormData
       Object.entries(processedData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
-          data.append(key, value.toString());
+          if (key === 'instructor' && typeof value === 'object') {
+            // Handle instructor object specially
+            data.append('instructorName', value.name);
+          } else {
+            data.append(key, value.toString());
+          }
         }
       });
       
-      // Handle image upload
+      // Handle image upload (as thumbnail)
       if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
         if (formData.image.uri) {
           data.append("image", { uri: formData.image.uri, type: "image/jpeg", name: "course.jpg" } as any);
@@ -150,7 +190,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       }
       onSuccess?.();
     } catch (err: any) {
-      console.error('CourseForm: Error during submission:', err);
+      Logger.error('CourseForm: Error during submission:', err);
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -199,23 +239,53 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         leftIcon="attach-money"
       />
 
-      <CustomTextInput
-        label="Level"
-        value={formData.level}
-        onChangeText={t => setFormData({ ...formData, level: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="grade"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Level</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Level',
+                'Choose the course level',
+                [
+                  { text: 'Beginner', onPress: () => setFormData({ ...formData, level: 'beginner' }) },
+                  { text: 'Intermediate', onPress: () => setFormData({ ...formData, level: 'intermediate' }) },
+                  { text: 'Advanced', onPress: () => setFormData({ ...formData, level: 'advanced' }) },
+                  { text: 'Expert', onPress: () => setFormData({ ...formData, level: 'expert' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.level || 'Select Level'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      <CustomTextInput
-        label="Category"
-        value={formData.category}
-        onChangeText={t => setFormData({ ...formData, category: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="folder"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Category</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Category',
+                'Choose the course category',
+                [
+                  { text: 'Mathematics', onPress: () => setFormData({ ...formData, category: 'mathematics' }) },
+                  { text: 'Physics', onPress: () => setFormData({ ...formData, category: 'physics' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.category || 'Select Category'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Subject"
@@ -236,13 +306,48 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       />
 
       <CustomTextInput
-        label="Status"
-        value={formData.status}
-        onChangeText={t => setFormData({ ...formData, status: t })}
+        label="Duration (hours)"
+        value={formData.duration}
+        onChangeText={t => setFormData({ ...formData, duration: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="info"
+        keyboardType="numeric"
+        leftIcon="schedule"
       />
+
+      <CustomTextInput
+        label="Instructor Name"
+        value={formData.instructorName}
+        onChangeText={t => setFormData({ ...formData, instructorName: t })}
+        style={styles.input}
+        mode="outlined"
+        leftIcon="person"
+      />
+
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Status</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Status',
+                'Choose the course status',
+                [
+                  { text: 'Draft', onPress: () => setFormData({ ...formData, status: 'draft' }) },
+                  { text: 'Published', onPress: () => setFormData({ ...formData, status: 'published' }) },
+                  { text: 'Archived', onPress: () => setFormData({ ...formData, status: 'archived' }) },
+                  { text: 'Suspended', onPress: () => setFormData({ ...formData, status: 'suspended' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.status || 'Select Status'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Students"
@@ -255,7 +360,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       />
 
       <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
+        <Text style={styles.buttonText}>{formData.image ? "Change Thumbnail" : "Upload Thumbnail"}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={pickPDF}>
@@ -277,4 +382,10 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff" },
   submitButton: { backgroundColor: "green", padding: 15, marginTop: 20, borderRadius: 5, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "bold" },
+  pickerContainer: { marginTop: 10 },
+  pickerLabel: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
+  pickerWrapper: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#f9f9f9" },
+  pickerButton: { padding: 15, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  pickerText: { fontSize: 16, color: "#333" },
+  pickerArrow: { fontSize: 12, color: "#666" },
 });
