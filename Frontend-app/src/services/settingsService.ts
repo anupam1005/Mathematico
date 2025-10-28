@@ -5,6 +5,9 @@ import { API_CONFIG } from '../config';
 
 const SETTINGS_STORAGE_KEY = 'mathematico_user_settings';
 
+// Create a service error handler for settingsService
+const errorHandler = createServiceErrorHandler('settingsService');
+
 export interface UserSettings {
   notifications: {
     email: boolean;
@@ -228,9 +231,6 @@ class SettingsService {
 
   async importSettings(userId: string, settingsData: any): Promise<SettingsResponse> {
     throw new Error('Settings import is not available. Database functionality has been removed.');
-
-// Create a service error handler for settingsService
-const errorHandler = createServiceErrorHandler('settingsService');
   }
 
   // Clear all settings from local storage

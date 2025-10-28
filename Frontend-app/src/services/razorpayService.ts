@@ -3,6 +3,9 @@ import { API_CONFIG } from '../config';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
 
+// Create a service error handler for razorpayService
+const errorHandler = createServiceErrorHandler('razorpayService');
+
 // Safe import of RazorpayCheckout
 let RazorpayCheckout: any = null;
 try {
@@ -216,9 +219,6 @@ class RazorpayService {
   private async getAuthToken(): Promise<string> {
     try {
       const { Storage } = await import('../utils/storage');
-
-// Create a service error handler for razorpayService
-const errorHandler = createServiceErrorHandler('razorpayService');
       const token = await Storage.getItem('authToken');
       return token || '';
     } catch (error) {
