@@ -379,72 +379,59 @@ paymentRoutes = safeRequire('./routes/payment', 'payment');
 // Mount routes
 console.log('🔗 Mounting API routes...');
 
-// Mount all routes for serverless deployment (force mount auth routes)
-if (authRoutes) {
+// Force mount all routes for serverless deployment
+try {
+  // Auth routes
+  const authRoutes = require('./routes/auth');
   app.use(`${API_PREFIX}/auth`, authRoutes);
   console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-} else {
-  console.warn('⚠️ Auth routes not loaded, attempting direct require...');
-  try {
-    const directAuthRoutes = require('./routes/auth');
-    app.use(`${API_PREFIX}/auth`, directAuthRoutes);
-    console.log(`✅ Auth routes mounted directly at ${API_PREFIX}/auth`);
-  } catch (directError) {
-    console.error('❌ Failed to mount auth routes directly:', directError.message);
-    // Create minimal auth routes as fallback
-    const express = require('express');
-    const fallbackAuthRouter = express.Router();
-    
-    fallbackAuthRouter.get('/', (req, res) => {
-      res.json({ success: true, message: 'Fallback auth endpoint', timestamp: new Date().toISOString() });
-    });
-    
-    fallbackAuthRouter.post('/login', (req, res) => {
-      res.status(503).json({ success: false, message: 'Auth service temporarily unavailable' });
-    });
-    
-    fallbackAuthRouter.post('/register', (req, res) => {
-      res.status(503).json({ success: false, message: 'Registration service temporarily unavailable' });
-    });
-    
-    app.use(`${API_PREFIX}/auth`, fallbackAuthRouter);
-    console.log(`✅ Fallback auth routes mounted at ${API_PREFIX}/auth`);
-  }
+} catch (error) {
+  console.error('❌ Failed to mount auth routes:', error.message);
 }
 
-if (adminRoutes) {
+try {
+  // Admin routes
+  const adminRoutes = require('./routes/admin');
   app.use(`${API_PREFIX}/admin`, adminRoutes);
   console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-} else {
-  console.warn('⚠️ Admin routes not mounted');
+} catch (error) {
+  console.error('❌ Failed to mount admin routes:', error.message);
 }
 
-if (mobileRoutes) {
+try {
+  // Mobile routes
+  const mobileRoutes = require('./routes/mobile');
   app.use(`${API_PREFIX}/mobile`, mobileRoutes);
   console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-} else {
-  console.warn('⚠️ Mobile routes not mounted');
+} catch (error) {
+  console.error('❌ Failed to mount mobile routes:', error.message);
 }
 
-if (usersRoutes) {
-  app.use(`${API_PREFIX}/users`, usersRoutes);
-  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-} else {
-  console.warn('⚠️ Users routes not mounted');
-}
-
-if (studentRoutes) {
+try {
+  // Student routes
+  const studentRoutes = require('./routes/student');
   app.use(`${API_PREFIX}/student`, studentRoutes);
   console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-} else {
-  console.warn('⚠️ Student routes not mounted');
+} catch (error) {
+  console.error('❌ Failed to mount student routes:', error.message);
 }
 
-if (paymentRoutes) {
+try {
+  // Users routes
+  const usersRoutes = require('./routes/users');
+  app.use(`${API_PREFIX}/users`, usersRoutes);
+  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
+} catch (error) {
+  console.error('❌ Failed to mount users routes:', error.message);
+}
+
+try {
+  // Payment routes
+  const paymentRoutes = require('./routes/payment');
   app.use(`${API_PREFIX}/payments`, paymentRoutes);
   console.log(`✅ Payment routes mounted at ${API_PREFIX}/payments`);
-} else {
-  console.warn('⚠️ Payment routes not mounted');
+} catch (error) {
+  console.error('❌ Failed to mount payment routes:', error.message);
 }
 
 // Root API endpoint
