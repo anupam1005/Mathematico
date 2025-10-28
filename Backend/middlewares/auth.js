@@ -33,6 +33,9 @@ const authenticateToken = async (req, res, next) => {
     // Verify JWT token using the proper utility function
     console.log('🔍 Attempting to verify token...');
     console.log('🔍 Token (first 50 chars):', token.substring(0, 50) + '...');
+    console.log('🔍 Token length:', token.length);
+    console.log('🔍 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    
     const decoded = verifyAccessToken(token);
     console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, role: decoded.role, idType: typeof decoded.id });
     
@@ -70,12 +73,33 @@ const authenticateToken = async (req, res, next) => {
     
   } catch (error) {
     console.error('❌ Token verification failed:', error.message);
+    console.error('❌ Error type:', error.name);
+    console.error('❌ JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    console.error('❌ JWT_REFRESH_SECRET available:', process.env.JWT_REFRESH_SECRET ? 'YES' : 'NO');
+    
+    // Provide more specific error messages
+    let errorMessage = 'Invalid or expired token';
+    if (error.name === 'JsonWebTokenError') {
+      errorMessage = 'Invalid token format';
+    } else if (error.name === 'TokenExpiredError') {
+      errorMessage = 'Token has expired';
+    } else if (error.name === 'NotBeforeError') {
+      errorMessage = 'Token not active yet';
+    } else if (error.message.includes('secret')) {
+      errorMessage = 'Token verification failed - server configuration error';
+    }
+    
     return res.status(401).json({
       success: false,
       error: 'Unauthorized',
-      message: 'Invalid or expired token',
+      message: errorMessage,
       timestamp: new Date().toISOString(),
-      details: error.message
+      details: error.message,
+      debug: {
+        errorType: error.name,
+        jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
+        tokenLength: token ? token.length : 0
+      }
     });
   }
 };

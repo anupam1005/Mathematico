@@ -205,9 +205,11 @@ const authService = {
         // Validate tokens before storing
         if (!actualToken || actualToken === 'null' || actualToken === 'undefined') {
           console.error('AuthService: Login failed - No valid access token received');
+          console.error('AuthService: Response data:', response.data);
+          console.error('AuthService: Access token value:', actualToken);
           return {
             success: false,
-            message: 'Login failed - No valid access token received',
+            message: 'Login failed - No valid access token received. Please check server configuration.',
           };
         }
         

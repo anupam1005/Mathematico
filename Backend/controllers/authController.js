@@ -86,7 +86,12 @@ const login = async (req, res) => {
       await dbAdmin.save();
 
       // Generate tokens with real ObjectId
+      console.log('🔑 Generating tokens for admin user...');
+      console.log('🔑 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+      
       const tokens = generateTokenPair(dbAdmin);
+      console.log('🔑 Tokens generated successfully');
+      console.log('🔑 Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
       console.log('✅ Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
 
@@ -141,7 +146,12 @@ const login = async (req, res) => {
     }
 
     // Generate token pair
+    console.log('🔑 Generating tokens for regular user...');
+    console.log('🔑 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    
     const tokens = generateTokenPair(user);
+    console.log('🔑 Tokens generated successfully');
+    console.log('🔑 Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
     // Store hashed refresh token in database
     const deviceInfo = {
@@ -182,11 +192,25 @@ const login = async (req, res) => {
     
   } catch (error) {
     console.error('Login error:', error);
+    console.error('Error type:', error.name);
+    console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    
+    let errorMessage = 'Login failed';
+    if (error.message.includes('JWT') || error.message.includes('token')) {
+      errorMessage = 'Login failed - Token generation error';
+    } else if (error.message.includes('database') || error.message.includes('connection')) {
+      errorMessage = 'Login failed - Database connection error';
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Login failed',
+      message: errorMessage,
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        errorType: error.name,
+        jwtSecretAvailable: process.env.JWT_SECRET ? true : false
+      }
     });
   }
 };
@@ -276,11 +300,25 @@ const register = async (req, res) => {
     
   } catch (error) {
     console.error('Registration error:', error);
+    console.error('Error type:', error.name);
+    console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    
+    let errorMessage = 'Registration failed';
+    if (error.message.includes('JWT') || error.message.includes('token')) {
+      errorMessage = 'Registration failed - Token generation error';
+    } else if (error.message.includes('database') || error.message.includes('connection')) {
+      errorMessage = 'Registration failed - Database connection error';
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Registration failed',
+      message: errorMessage,
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        errorType: error.name,
+        jwtSecretAvailable: process.env.JWT_SECRET ? true : false
+      }
     });
   }
 };
@@ -526,5 +564,51 @@ module.exports = {
   healthCheck: (req, res) => res.json({ success: true, status: 'healthy', service: 'auth', timestamp: new Date().toISOString() }),
   testDatabase: (req, res) => res.json({ success: true, message: 'Database test endpoint', connected: true }),
   verifyUsersCollection: (req, res) => res.json({ success: true, message: 'Users collection verified', exists: true, count: 0 }),
-  getProfile: (req, res) => res.json({ success: true, data: req.user || {} })
+  getProfile: (req, res) => res.json({ success: true, data: req.user || {} }),
+  
+  // JWT Health Check
+  testJWT: (req, res) => {
+    try {
+      const { generateTokenPair, verifyAccessToken } = require('../utils/jwt');
+      
+      // Test token generation
+      const testUser = {
+        _id: 'test123',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'user'
+      };
+      
+      const tokens = generateTokenPair(testUser);
+      
+      // Test token verification
+      const decoded = verifyAccessToken(tokens.accessToken);
+      
+      res.json({
+        success: true,
+        message: 'JWT functionality working correctly',
+        timestamp: new Date().toISOString(),
+        test: {
+          tokenGenerated: !!tokens.accessToken,
+          tokenLength: tokens.accessToken ? tokens.accessToken.length : 0,
+          tokenVerified: !!decoded,
+          decodedUser: decoded ? { id: decoded.id, email: decoded.email, role: decoded.role } : null,
+          jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
+          jwtRefreshSecretAvailable: process.env.JWT_REFRESH_SECRET ? true : false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'JWT test failed',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        debug: {
+          errorType: error.name,
+          jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
+          jwtRefreshSecretAvailable: process.env.JWT_REFRESH_SECRET ? true : false
+        }
+      });
+    }
+  }
 };

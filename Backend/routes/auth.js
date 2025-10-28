@@ -42,6 +42,9 @@ router.get('/test-database', authController.testDatabase);
 // Users collection verification route
 router.get('/verify-users', authController.verifyUsersCollection);
 
+// JWT test route
+router.get('/test-jwt', authController.testJWT);
+
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);
 
