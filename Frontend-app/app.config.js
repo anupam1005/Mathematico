@@ -4,21 +4,21 @@ export default {
   expo: {
     name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico - Learn Mathematics',
     slug: 'mathematico-app',
-    version: '6.0.0',
+    version: '7.0.0',
     orientation: 'portrait',
-    owner: 'anupam145',
+    owner: 'dascompany',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: 'ffb6268c-e879-47b6-8847-d4f83fb33a98'
+        projectId: '255fef59-0801-4e61-b4e9-063cec864a6d'
       }
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 6,
+      versionCode: 7,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'

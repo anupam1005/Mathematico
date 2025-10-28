@@ -88,3 +88,7 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+# Android keystore files - CRITICAL SECURITY
+*.keystore
+my-upload-key.keystore

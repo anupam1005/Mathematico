@@ -241,6 +241,11 @@ Frontend-app/*.temp
 *.p12
 *.jks
 
+# Android keystore files - CRITICAL SECURITY
+*.keystore
+**/*.keystore
+Frontend-app/my-upload-key.keystore
+
 # Backup files
 *.bak
 *.backup
