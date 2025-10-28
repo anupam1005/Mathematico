@@ -28,10 +28,28 @@ export default {
     plugins: IS_DEV ? [
       'expo-secure-store',
       'expo-dev-client',
-      'expo-font'
+      'expo-font',
+      [
+        'expo-build-properties',
+        {
+          android: {
+            compileSdkVersion: 35,
+            targetSdkVersion: 35
+          }
+        }
+      ]
     ] : [
       'expo-secure-store',
-      'expo-font'
+      'expo-font',
+      [
+        'expo-build-properties',
+        {
+          android: {
+            compileSdkVersion: 35,
+            targetSdkVersion: 35
+          }
+        }
+      ]
     ]
   }
 };
