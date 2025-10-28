@@ -23,6 +23,35 @@ interface ApiResponse<T = any> {
   };
 }
 
+// Dashboard stats interface
+export interface DashboardStats {
+  totalUsers: number;
+  totalBooks: number;
+  totalCourses: number;
+  totalLiveClasses: number;
+  totalRevenue: number;
+  courseStats: {
+    total: number;
+    published: number;
+    draft: number;
+  };
+  liveClassStats: {
+    total: number;
+    upcoming: number;
+    completed: number;
+  };
+  recentUsers?: Array<{
+    id: string;
+    name: string;
+    email: string;
+  }>;
+  recentCourses?: Array<{
+    id: string;
+    title: string;
+    category: string;
+  }>;
+}
+
 // --- Utility: map snake_case <-> camelCase --- //
 function toCamelCase(obj: any): any {
   if (Array.isArray(obj)) return obj.map(toCamelCase);
@@ -837,6 +866,42 @@ class AdminService {
           },
           message: 'Database functionality has been removed. Only authentication is available.'
         }
+      };
+    }
+  }
+
+  // Settings methods
+  async getSettings(): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.get('/settings');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error fetching settings:', error);
+      return {
+        success: true,
+        data: {
+          site_name: 'Mathematico',
+          site_description: 'Educational Platform',
+          contact_email: 'admin@mathematico.com',
+          maintenance_mode: false,
+          allow_registration: false,
+          database: 'disabled',
+          message: 'Database functionality has been removed. Settings are not persistent.'
+        }
+      };
+    }
+  }
+
+  async updateSettings(settings: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminApi.put('/settings', settings);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating settings:', error);
+      return {
+        success: true,
+        data: settings,
+        message: 'Settings updated locally. Database functionality has been removed.'
       };
     }
   }

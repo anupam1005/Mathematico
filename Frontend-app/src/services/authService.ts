@@ -172,18 +172,25 @@ export interface UserResponse {
 const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      console.log('AuthService: Attempting login to:', API_CONFIG.auth);
-      console.log('AuthService: Full login URL:', `${API_CONFIG.auth}/login`);
+      // Get the current backend URL
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      console.log('AuthService: Attempting login to:', authUrl);
+      console.log('AuthService: Full login URL:', `${authUrl}/login`);
+      console.log('AuthService: Backend URL:', backendUrl);
       
       // Use the full URL for the serverless backend
-      const response = await axios.post(`${API_CONFIG.auth}/login`, {
+      const response = await axios.post(`${authUrl}/login`, {
         email,
         password,
       }, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        timeout: 30000 // 30 second timeout
       });
       
       console.log('AuthService: Login response received:', response.data);
@@ -266,12 +273,17 @@ const authService = {
 
   async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     try {
-      console.log('AuthService: Attempting registration to:', API_CONFIG.auth);
-      console.log('AuthService: Full registration URL:', `${API_CONFIG.auth}/register`);
+      // Get the current backend URL
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      console.log('AuthService: Attempting registration to:', authUrl);
+      console.log('AuthService: Full registration URL:', `${authUrl}/register`);
       console.log('AuthService: Registration payload:', { name, email, password: '***' });
       
       // Use the full URL for the serverless backend
-      const response = await axios.post(`${API_CONFIG.auth}/register`, {
+      const response = await axios.post(`${authUrl}/register`, {
         name,
         email,
         password,
@@ -279,7 +291,8 @@ const authService = {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        timeout: 30000 // 30 second timeout
       });
       
       console.log('AuthService: Registration response received:', response.data);

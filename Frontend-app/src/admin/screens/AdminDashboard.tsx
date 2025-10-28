@@ -19,7 +19,7 @@ import { adminService, DashboardStats } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
-import { Logger } from '../utils/errorHandler';
+import { Logger } from '../../utils/errorHandler';
 
 const { width } = Dimensions.get('window');
 
@@ -64,15 +64,13 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       
       // Map backend data to frontend structure
       const dashboardData: DashboardStats = {
-        stats: {
-          totalUsers: data?.totalUsers || 0,
-          totalStudents: data?.totalUsers || 0, // Use totalUsers as students for now
-          totalCourses: data?.totalCourses || 0,
-          totalModules: data?.courseStats?.total || data?.totalCourses || 0,
-          totalLessons: 0, // Not available in backend yet
-          totalRevenue: data?.totalRevenue || 0,
-          activeBatches: data?.liveClassStats?.upcoming || 0,
-        },
+        totalUsers: data?.totalUsers || 0,
+        totalBooks: data?.totalBooks || 0,
+        totalCourses: data?.totalCourses || 0,
+        totalLiveClasses: data?.totalLiveClasses || 0,
+        totalRevenue: data?.totalRevenue || 0,
+        courseStats: data?.courseStats || { total: 0, published: 0, draft: 0 },
+        liveClassStats: data?.liveClassStats || { total: 0, upcoming: 0, completed: 0 },
         recentUsers: Array.isArray(data?.recentUsers) ? data.recentUsers : [],
         recentCourses: Array.isArray(data?.recentCourses) ? data.recentCourses : [],
       };
@@ -197,10 +195,10 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
 
         {/* Error Display */}
         {error && (
-          <UnifiedCard variant="outlined" style={[styles.errorCard, { borderColor: designSystem.colors.error }]}>
+          <UnifiedCard variant="outlined" style={styles.errorCard}>
             <View style={styles.errorContent}>
               <Icon name="error" size={24} color={designSystem.colors.error} />
-              <View style={styles.errorText}>
+              <View style={styles.errorTextContainer}>
                 <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
                   {error}
                 </Text>
@@ -219,31 +217,31 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
         <View style={styles.statsGrid}>
           <StatCard
             title="Total Users"
-            value={(stats.stats.totalUsers ?? 0).toLocaleString()}
+            value={(stats.totalUsers ?? 0).toLocaleString()}
             icon="group"
             color={designSystem.colors.primary}
-            subtitle={`${stats.stats.totalStudents ?? 0} students`}
+            subtitle={`${stats.totalUsers ?? 0} users`}
           />
           <StatCard
             title="Total Courses"
-            value={(stats.stats.totalCourses ?? 0).toString()}
+            value={(stats.totalCourses ?? 0).toString()}
             icon="school"
             color={designSystem.colors.success}
-            subtitle={`${stats.stats.totalModules ?? 0} modules`}
+            subtitle={`${stats.courseStats?.total ?? 0} modules`}
           />
           <StatCard
             title="Total Revenue"
-            value={`₹${(stats.stats.totalRevenue ?? 0).toLocaleString()}`}
+            value={`₹${(stats.totalRevenue ?? 0).toLocaleString()}`}
             icon="attach-money"
             color={designSystem.colors.warning}
             subtitle="This month"
           />
           <StatCard
-            title="Active Batches"
-            value={(stats.stats.activeBatches ?? 0).toString()}
+            title="Live Classes"
+            value={(stats.totalLiveClasses ?? 0).toString()}
             icon="groups"
             color={designSystem.colors.secondary}
-            subtitle="Currently running"
+            subtitle={`${stats.liveClassStats?.upcoming ?? 0} upcoming`}
           />
         </View>
 
@@ -274,7 +272,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <UnifiedCard variant="outlined" style={styles.recentCard}>
             <Text style={textStyles.subheading}>Recent Users</Text>
             {stats.recentUsers && Array.isArray(stats.recentUsers) && stats.recentUsers.length > 0 ? (
-              stats.recentUsers.map((user, index) => (
+              stats.recentUsers.map((user: any, index: number) => (
                 <RecentItem
                   key={user.id || index}
                   title={user.name || 'Unknown User'}
@@ -291,7 +289,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <UnifiedCard variant="outlined" style={styles.recentCard}>
             <Text style={textStyles.subheading}>Recent Courses</Text>
             {stats.recentCourses && Array.isArray(stats.recentCourses) && stats.recentCourses.length > 0 ? (
-              stats.recentCourses.map((course, index) => (
+              stats.recentCourses.map((course: any, index: number) => (
                 <RecentItem
                   key={course.id || index}
                   title={course.title || 'Unknown Course'}
@@ -345,7 +343,6 @@ const styles = StyleSheet.create({
     color: designSystem.colors.error,
     marginTop: designSystem.spacing.md,
     textAlign: 'center',
-    ...textStyles.body,
   },
   retryButton: {
     marginTop: designSystem.spacing.md,
@@ -403,13 +400,14 @@ const styles = StyleSheet.create({
     margin: designSystem.spacing.md,
     marginTop: designSystem.spacing.sm,
     borderWidth: 1,
+    borderColor: designSystem.colors.error,
   },
   errorContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: designSystem.spacing.sm,
   },
-  errorText: {
+  errorTextContainer: {
     flex: 1,
   },
   errorButton: {

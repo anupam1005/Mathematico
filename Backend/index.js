@@ -545,8 +545,12 @@ module.exports = app;
 // Start server for local development
 if (require.main === module) {
   // Connect to database first, then start server
+// Serverless optimization - only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
   const startServer = async () => {
     try {
+      console.log('🔧 Starting server in development mode...');
+      
       // Connect to MongoDB
       await connectDB();
 
@@ -606,4 +610,8 @@ if (require.main === module) {
   };
 
   startServer();
+} else {
+  console.log('☁️ Running in serverless mode (Vercel)');
+  console.log('🔗 API endpoints will be handled by Vercel functions');
+}
 }

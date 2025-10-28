@@ -21,7 +21,7 @@ import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
-import { Logger } from '../utils/errorHandler';
+import { Logger } from '../../utils/errorHandler';
 
 interface AdminSettings {
   site_name: string;

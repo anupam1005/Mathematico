@@ -6,7 +6,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
-import { Logger } from '../utils/errorHandler';
+import { Logger } from '../../utils/errorHandler';
 
 interface CourseFormProps {
   courseId?: string;

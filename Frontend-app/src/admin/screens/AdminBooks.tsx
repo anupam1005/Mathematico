@@ -28,7 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../utils/errorHandler';
+import { Logger } from '../../utils/errorHandler';
 
 interface Book {
   id: string | number;
