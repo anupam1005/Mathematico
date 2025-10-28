@@ -3,6 +3,21 @@ const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { authenticateToken } = require('../middlewares/auth');
 
+// Root endpoint
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Payments API',
+    endpoints: {
+      config: '/config',
+      createOrder: '/create-order',
+      verify: '/verify',
+      history: '/history'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Get Razorpay configuration (public endpoint - no auth required)
 router.get('/config', paymentController.getRazorpayConfig);
 

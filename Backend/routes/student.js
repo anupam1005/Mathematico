@@ -6,7 +6,25 @@ const { authenticateToken } = require('../middlewares/auth');
 const studentController = require('../controllers/studentController');
 console.log('✅ StudentController loaded successfully');
 
-// Apply auth middleware to all student routes
+// Root endpoint (public info)
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Student API',
+    authRequired: true,
+    endpoints: {
+      dashboard: '/dashboard',
+      profile: '/profile',
+      courses: '/courses',
+      books: '/books',
+      liveClasses: '/live-classes',
+      stats: '/stats'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Apply auth middleware to all protected student routes
 router.use(authenticateToken);
 
 // Student dashboard route

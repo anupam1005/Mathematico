@@ -1,7 +1,7 @@
 // Comprehensive API Testing Script for Mathematico
 // This script tests all endpoints to ensure everything works before APK build
 
-const BASE_URL = 'https://mathematico-backend-new.vercel.app'; // Serverless backend
+const BASE_URL = 'https://mathematico-backend-le5dhw66v-anupam-das-projects-db63fa41.vercel.app'; // Serverless backend
 // const BASE_URL = 'http://10.148.37.132:5002'; // Local backend for testing
 
 const API_ENDPOINTS = {

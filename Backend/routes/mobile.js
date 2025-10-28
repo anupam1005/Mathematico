@@ -7,6 +7,23 @@ console.log('✅ MobileController loaded successfully');
 
 // ============= ROUTE DEFINITIONS =============
 
+// Root endpoint
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Mobile API',
+    endpoints: {
+      health: '/health',
+      books: '/books',
+      courses: '/courses',
+      liveClasses: '/live-classes',
+      settings: '/settings',
+      payments: '/payments'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.json({
