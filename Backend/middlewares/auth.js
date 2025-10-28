@@ -39,8 +39,9 @@ const authenticateToken = async (req, res, next) => {
     // Check if it's the admin user (hardcoded email)
     const adminEmail = 'dc2006089@gmail.com';
     if (decoded.email === adminEmail && decoded.role === 'admin') {
+      // Trust the id coming from token (generated from DB user during login)
       req.user = {
-        id: new mongoose.Types.ObjectId(), // Use proper ObjectId instead of number
+        id: decoded.id, // real ObjectId string
         email: adminEmail,
         name: 'Admin User',
         role: 'admin',

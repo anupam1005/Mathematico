@@ -44,55 +44,70 @@ const login = async (req, res) => {
     // Connect to database
     await connectDB();
 
-    // Special handling for admin user
+    // Special handling for admin user (ensure persisted DB user and real ObjectId)
     const ADMIN_EMAIL = 'dc2006089@gmail.com';
     const ADMIN_PASSWORD = 'Myname*321';
     
     if (email.toLowerCase() === ADMIN_EMAIL) {
-      // Admin login - direct password check without database lookup
-      if (password === ADMIN_PASSWORD) {
-        // Create admin user object
-        const adminUser = {
-          _id: 'admin-user-id',
-          name: 'Admin User',
-          email: ADMIN_EMAIL,
-          role: 'admin',
-          isAdmin: true,
-          isActive: true,
-          lastLogin: new Date(),
-          loginCount: 1
-        };
-
-        // Generate token pair for admin
-        const tokens = generateTokenPair(adminUser);
-
-        console.log('✅ Admin login successful:', ADMIN_EMAIL);
-
-        return res.json({
-          success: true,
-          message: 'Admin login successful',
-          data: {
-            user: {
-              id: adminUser._id,
-              name: adminUser.name,
-              email: adminUser.email,
-              role: adminUser.role,
-              isAdmin: true,
-              isActive: true
-            },
-            accessToken: tokens.accessToken,
-            tokenType: 'Bearer',
-            expiresIn: tokens.accessTokenExpiresIn
-          },
-          timestamp: new Date().toISOString()
-        });
-      } else {
+      if (password !== ADMIN_PASSWORD) {
         return res.status(401).json({
           success: false,
           message: 'Invalid admin credentials',
           timestamp: new Date().toISOString()
         });
       }
+
+      // Ensure User model is available
+      if (!UserModel) {
+        return res.status(503).json({ success: false, message: 'User model unavailable' });
+      }
+
+      // Upsert admin user in MongoDB to get a stable ObjectId
+      let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
+      if (!dbAdmin) {
+        dbAdmin = new UserModel({
+          name: 'Admin User',
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASSWORD,
+          role: 'admin',
+          isAdmin: true,
+          isActive: true
+        });
+      } else {
+        // Ensure role flags
+        dbAdmin.role = 'admin';
+        dbAdmin.isAdmin = true;
+        dbAdmin.isActive = true;
+      }
+
+      // Update last login details
+      dbAdmin.lastLogin = new Date();
+      dbAdmin.loginCount = (dbAdmin.loginCount || 0) + 1;
+      await dbAdmin.save();
+
+      // Generate tokens with real ObjectId
+      const tokens = generateTokenPair(dbAdmin);
+
+      console.log('✅ Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
+
+      return res.json({
+        success: true,
+        message: 'Admin login successful',
+        data: {
+          user: {
+            id: dbAdmin._id,
+            name: dbAdmin.name,
+            email: dbAdmin.email,
+            role: dbAdmin.role,
+            isAdmin: true,
+            isActive: true
+          },
+          accessToken: tokens.accessToken,
+          tokenType: 'Bearer',
+          expiresIn: tokens.accessTokenExpiresIn
+        },
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Regular user login - find user in database

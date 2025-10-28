@@ -40,19 +40,17 @@ router.use(authenticateToken);
  */
 const getCurrentUser = async (req, res) => {
   try {
-    // Database connection handled by controllers
+    // Use DB for persistent users (both admin and students)
+    const tokenUser = req.user || {};
+    if (!tokenUser.id) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
 
-    const user = await User.findById(req.user.id) || {
-      _id: req.user.id || 'admin-user-id',
-      name: req.user.name || 'Admin User',
-      email: req.user.email || 'dc2006089@gmail.com',
-      role: req.user.role || 'admin',
-      status: req.user.status || 'active',
-      email_verified: true,
-      is_admin: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const user = await User.findById(tokenUser.id);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -61,7 +59,7 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         id: user._id,
@@ -79,7 +77,7 @@ const getCurrentUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to retrieve user information',
       error: error.message,

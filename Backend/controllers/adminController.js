@@ -132,25 +132,54 @@ const getDashboard = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    console.log('👥 Admin users - database disabled');
-    
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const { role, status, search } = req.query;
+
+    const query = {};
+    if (role) query.role = role;
+    if (status) query.status = status;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const users = await UserModel.find(query)
+      .select('name email role status createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await UserModel.countDocuments(query);
+
     res.json({
       success: true,
-      data: [],
+      data: users,
       pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       },
       timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
+      message: 'Users retrieved successfully'
     });
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch users',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -158,19 +187,22 @@ const getAllUsers = async (req, res) => {
 
 const getUserById = async (req, res) => {
   try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+    await connectDB();
     const { id } = req.params;
-    console.log('👤 Admin user by ID - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'User not found',
-      timestamp: new Date().toISOString()
-    });
+    const user = await UserModel.findById(id).select('name email role status createdAt').lean();
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, data: user, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -1261,25 +1293,45 @@ const deleteLiveClass = async (req, res) => {
 
 const getAllPayments = async (req, res) => {
   try {
-    console.log('💳 Admin payments - database disabled');
-    
+    // If you have a PaymentModel, use it; else return empty but without the removed message
+    let PaymentModel;
+    try { PaymentModel = require('../models/Payment'); } catch (_) {}
+
+    await connectDB();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    if (PaymentModel) {
+      const payments = await PaymentModel.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const total = await PaymentModel.countDocuments({});
+      return res.json({
+        success: true,
+        data: payments,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        timestamp: new Date().toISOString(),
+        message: 'Payments retrieved successfully'
+      });
+    }
+
+    // Graceful fallback if no model
     res.json({
       success: true,
       data: [],
-      pagination: {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        total: 0,
-        totalPages: 0
-      },
+      pagination: { page, limit, total: 0, totalPages: 0 },
       timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
+      message: 'No payments found'
     });
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payments',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -1390,32 +1442,34 @@ module.exports = {
   getLiveClassStats: (req, res) => res.json({ success: true, data: { total: 0, upcoming: 0, completed: 0 } }),
   
   // Settings
-  getSettings: (req, res) => {
-    res.json({
-      success: true,
-      data: {
-        pushNotifications: true,
-        emailNotifications: true,
-        courseUpdates: true,
-        liveClassReminders: true,
-        darkMode: false,
-        autoPlayVideos: true,
-        downloadQuality: 'High',
-        language: 'en',
-        timezone: 'UTC',
-        theme: 'light'
-      },
-      message: 'Settings retrieved successfully (mock data)'
-    });
+  getSettings: async (req, res) => {
+    try {
+      let SettingsModel;
+      try { SettingsModel = require('../models/Settings'); } catch (_) {}
+      await connectDB();
+      if (SettingsModel) {
+        let settings = await SettingsModel.findOne({}) || await SettingsModel.create({});
+        return res.json({ success: true, data: settings, message: 'Settings retrieved successfully' });
+      }
+      return res.json({ success: true, data: {}, message: 'No settings found' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to get settings', error: error.message });
+    }
   },
-  updateSettings: (req, res) => {
-    const settings = req.body;
-    console.log('📱 Settings update request:', settings);
-    res.json({
-      success: true,
-      message: 'Settings updated successfully (mock response)',
-      data: settings
-    });
+  updateSettings: async (req, res) => {
+    try {
+      let SettingsModel;
+      try { SettingsModel = require('../models/Settings'); } catch (_) {}
+      await connectDB();
+      if (SettingsModel) {
+        const update = req.body || {};
+        const settings = await SettingsModel.findOneAndUpdate({}, update, { upsert: true, new: true });
+        return res.json({ success: true, message: 'Settings updated successfully', data: settings });
+      }
+      return res.json({ success: true, message: 'Settings saved (no model configured)', data: req.body });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to update settings', error: error.message });
+    }
   },
   
   // Admin Info
