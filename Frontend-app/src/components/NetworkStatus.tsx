@@ -25,9 +25,13 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
     try {
       const result = await testNetworkConnectivity();
       setIsConnected(result.success);
+      
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      
       setConnectionInfo({
         platform: 'React Native',
-        baseURL: 'https://mathematico-backend-new.vercel.app',
+        baseURL: backendUrl,
         isDev: __DEV__
       });
       onConnectionChange?.(result.success);

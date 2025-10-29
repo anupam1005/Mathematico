@@ -44,8 +44,24 @@ export interface PaymentOptions {
 }
 
 class RazorpayService {
-  private baseUrl = API_CONFIG.baseUrl;
+  private baseUrl = API_CONFIG.baseUrl; // This will be updated dynamically
   private config: any = null;
+
+  constructor() {
+    // Update the base URL dynamically
+    this.updateBaseUrl();
+  }
+
+  private async updateBaseUrl() {
+    try {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      this.baseUrl = `${backendUrl}/api/v1`;
+      console.log('RazorpayService: Base URL updated to:', this.baseUrl);
+    } catch (error) {
+      console.error('RazorpayService: Failed to update base URL:', error);
+    }
+  }
 
   /**
    * Create a Razorpay order
@@ -54,7 +70,11 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Creating order with options:', paymentOptions);
       
-      const response = await fetch(`${this.baseUrl}/mobile/payments/create-order`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      const response = await fetch(`${mobileUrl}/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +116,11 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
       
-      const response = await fetch(`${this.baseUrl}/mobile/payments/verify`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      const response = await fetch(`${mobileUrl}/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +162,11 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching payment history');
       
-      const response = await fetch(`${this.baseUrl}/mobile/payments/history`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      const response = await fetch(`${mobileUrl}/payments/history`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +211,11 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching configuration from backend...');
       
-      const response = await fetch(`${this.baseUrl}/mobile/payments/config`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      const response = await fetch(`${mobileUrl}/payments/config`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

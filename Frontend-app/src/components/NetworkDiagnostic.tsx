@@ -16,12 +16,15 @@ export const NetworkDiagnostic: React.FC = () => {
       const connectivityTest = await testNetworkConnectivity();
       const endpointsTest = await testBackendEndpoints();
       
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      
       const results = {
         timestamp: new Date().toISOString(),
         config: {
-          authUrl: API_CONFIG.auth,
-          baseUrl: API_CONFIG.baseUrl,
-          isDev: API_CONFIG.isDev
+          authUrl: `${backendUrl}/api/v1/auth`,
+          baseUrl: backendUrl,
+          isDev: __DEV__
         },
         connectivity: connectivityTest,
         endpoints: endpointsTest
@@ -46,9 +49,9 @@ export const NetworkDiagnostic: React.FC = () => {
       
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configuration</Text>
-        <Text style={styles.text}>Auth URL: {API_CONFIG.auth}</Text>
-        <Text style={styles.text}>Base URL: {API_CONFIG.baseUrl}</Text>
-        <Text style={styles.text}>Is Dev: {API_CONFIG.isDev ? 'Yes' : 'No'}</Text>
+        <Text style={styles.text}>Auth URL: {testResults?.config?.authUrl || 'Loading...'}</Text>
+        <Text style={styles.text}>Base URL: {testResults?.config?.baseUrl || 'Loading...'}</Text>
+        <Text style={styles.text}>Is Dev: {testResults?.config?.isDev ? 'Yes' : 'No'}</Text>
       </View>
       
       <Button

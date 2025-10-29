@@ -19,6 +19,7 @@ import {
 import { Icon } from '../../components/Icon';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
+import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { Logger } from '../../utils/errorHandler';
@@ -35,6 +36,7 @@ interface AdminSettings {
 }
 
 export default function AdminSettings({ navigation }: { navigation: any }) {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<AdminSettings>({
     site_name: 'Mathematico',
     site_description: 'Learn Mathematics Online',

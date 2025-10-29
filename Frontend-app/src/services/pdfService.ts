@@ -47,7 +47,13 @@ class PdfService {
    */
   async getSecurePdfViewer(bookId: string): Promise<SecurePdfViewerResponse> {
     try {
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      console.log('PdfService: Fetching PDF viewer from:', `${mobileUrl}/books/${bookId}/viewer`);
+      
+      const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +82,13 @@ class PdfService {
    */
   async getBookDetails(bookId: string): Promise<BookDetailsResponse> {
     try {
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      console.log('PdfService: Fetching book details from:', `${mobileUrl}/books/${bookId}`);
+      
+      const response = await fetch(`${mobileUrl}/books/${bookId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

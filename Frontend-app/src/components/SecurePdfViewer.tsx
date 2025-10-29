@@ -24,7 +24,11 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       setLoading(true);
       setError('');
 
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      
+      const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

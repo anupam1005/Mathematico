@@ -9,7 +9,12 @@ export const testNetworkConnectivity = async (): Promise<{
 }> => {
   try {
     console.log('🌐 Testing network connectivity...');
-    console.log('🌐 Backend URL:', API_CONFIG.auth);
+    
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    const authUrl = `${backendUrl}/api/v1/auth`;
+    
+    console.log('🌐 Backend URL:', authUrl);
     
     // First try direct connection test
     console.log('🔍 Running direct connection test...');
@@ -22,7 +27,7 @@ export const testNetworkConnectivity = async (): Promise<{
         message: 'Network connectivity test successful (direct connection)',
         details: {
           directTest: directTest.results,
-          backendUrl: API_CONFIG.auth
+          backendUrl: authUrl
         }
       };
     }
@@ -31,7 +36,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('🔄 Direct test failed, trying axios...');
     
     // Test 1: Basic connectivity
-    const healthResponse = await axios.get(`${API_CONFIG.auth}/health`, {
+    const healthResponse = await axios.get(`${authUrl}/health`, {
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -42,7 +47,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('✅ Health check successful:', healthResponse.data);
     
     // Test 2: Test registration endpoint (without actually registering)
-    const testResponse = await axios.post(`${API_CONFIG.auth}/register`, {
+    const testResponse = await axios.post(`${authUrl}/register`, {
       name: 'Network Test',
       email: 'network-test@example.com',
       password: 'test123'
@@ -63,7 +68,7 @@ export const testNetworkConnectivity = async (): Promise<{
       details: {
         healthStatus: healthResponse.data,
         registrationEndpointStatus: testResponse.status,
-        backendUrl: API_CONFIG.auth,
+        backendUrl: authUrl,
         directTest: directTest.results
       }
     };
@@ -79,26 +84,26 @@ export const testNetworkConnectivity = async (): Promise<{
       errorDetails = {
         code: error.code,
         message: error.message,
-        backendUrl: API_CONFIG.auth
+        backendUrl: authUrl
       };
     } else if (error.response) {
       errorMessage = `Server responded with status ${error.response.status}`;
       errorDetails = {
         status: error.response.status,
         data: error.response.data,
-        backendUrl: API_CONFIG.auth
+        backendUrl: authUrl
       };
     } else if (error.request) {
       errorMessage = 'No response received from server';
       errorDetails = {
         request: error.request,
-        backendUrl: API_CONFIG.auth
+        backendUrl: authUrl
       };
     } else {
       errorMessage = error.message || 'Unknown network error';
       errorDetails = {
         error: error,
-        backendUrl: API_CONFIG.auth
+        backendUrl: authUrl
       };
     }
     
@@ -124,7 +129,7 @@ export const testBackendEndpoints = async (): Promise<{
   try {
     // Test health endpoint
     try {
-      const healthResponse = await axios.get(`${API_CONFIG.auth}/health`, { timeout: 5000 });
+      const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });
       endpoints.health = { success: true, status: healthResponse.status, data: healthResponse.data };
     } catch (error: any) {
       endpoints.health = { success: false, error: error.message };
@@ -132,7 +137,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test register endpoint
     try {
-      const registerResponse = await axios.post(`${API_CONFIG.auth}/register`, {
+      const registerResponse = await axios.post(`${authUrl}/register`, {
         name: 'Test User',
         email: 'test@example.com',
         password: 'password123'
@@ -144,7 +149,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test login endpoint
     try {
-      const loginResponse = await axios.post(`${API_CONFIG.auth}/login`, {
+      const loginResponse = await axios.post(`${authUrl}/login`, {
         email: 'test@example.com',
         password: 'password123'
       }, { timeout: 5000, validateStatus: (status) => status < 500 });

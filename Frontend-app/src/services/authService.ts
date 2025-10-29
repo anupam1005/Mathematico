@@ -95,7 +95,11 @@ api.interceptors.response.use(
         if (refreshToken) {
           console.log('AuthService: Attempting token refresh...');
           
-          const response = await axios.post(`${API_CONFIG.auth}/refresh-token`, {
+          const { getBackendUrl } = await import('../config');
+          const backendUrl = await getBackendUrl();
+          const authUrl = `${backendUrl}/api/v1/auth`;
+          
+          const response = await axios.post(`${authUrl}/refresh-token`, {
             refreshToken,
           });
           
@@ -371,8 +375,12 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('AuthService: Starting logout request to:', `${API_CONFIG.auth}/logout`);
-      const response = await axios.post(`${API_CONFIG.auth}/logout`, {}, {
+      console.log('AuthService: Starting logout request...');
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.post(`${authUrl}/logout`, {}, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -397,7 +405,11 @@ const authService = {
     try {
       // Backend exposes /api/v1/auth/profile
       const token = await this.getToken();
-      const response = await axios.get(`${API_CONFIG.auth}/profile`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.get(`${authUrl}/profile`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -417,12 +429,27 @@ const authService = {
       const token = await this.getToken();
       console.log('AuthService: Using token for profile update:', token ? 'Token present' : 'No token');
       
-      const response = await axios.put(`${API_CONFIG.auth}/profile`, data, {
+      if (!token) {
+        return {
+          success: false,
+          message: 'Access token is required',
+        };
+      }
+      
+      // Get the current backend URL dynamically
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      console.log('AuthService: Profile update URL:', authUrl);
+      
+      const response = await axios.put(`${authUrl}/profile`, data, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        timeout: 30000
       });
       
       console.log('AuthService: Profile update response:', response.data);
@@ -435,9 +462,22 @@ const authService = {
     } catch (error: any) {
       console.error('AuthService: Profile update error:', error);
       console.error('AuthService: Error response:', error.response?.data);
+      
+      // Create a safe error object
+      const safeError = createSafeError(error);
+      
+      let errorMessage = 'Profile update failed';
+      if (safeError.response?.status === 401) {
+        errorMessage = 'Access token is required';
+      } else if (safeError.response?.data?.message) {
+        errorMessage = safeError.response.data.message;
+      } else if (safeError.message) {
+        errorMessage = safeError.message;
+      }
+      
       return {
         success: false,
-        message: error.response?.data?.message || 'Profile update failed',
+        message: errorMessage,
       };
     }
   },
@@ -445,7 +485,11 @@ const authService = {
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
       const token = await this.getToken();
-      const response = await axios.put(`${API_CONFIG.auth}/change-password`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.put(`${authUrl}/change-password`, {
         currentPassword,
         newPassword,
       }, {
@@ -470,7 +514,11 @@ const authService = {
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await axios.post(`${API_CONFIG.auth}/forgot-password`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.post(`${authUrl}/forgot-password`, {
         email,
       }, {
         headers: {
@@ -493,7 +541,11 @@ const authService = {
 
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await axios.post(`${API_CONFIG.auth}/reset-password`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.post(`${authUrl}/reset-password`, {
         token,
         newPassword,
       }, {
@@ -528,7 +580,11 @@ const authService = {
       
       console.log('AuthService: Manual token refresh requested...');
       
-      const response = await axios.post(`${API_CONFIG.auth}/refresh-token`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const authUrl = `${backendUrl}/api/v1/auth`;
+      
+      const response = await axios.post(`${authUrl}/refresh-token`, {
         refreshToken,
       }, {
         headers: {
@@ -589,9 +645,9 @@ const authService = {
       const token = await Storage.getItem('authToken');
       console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
       
-      if (token && token !== 'null' && token !== 'undefined') {
-        // Basic validation - check if it's not empty
-        console.log('AuthService: Valid token found');
+      if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
+        // Basic validation - check if it's not empty and has reasonable length
+        console.log('AuthService: Valid token found, length:', token.length);
         return token;
       }
       

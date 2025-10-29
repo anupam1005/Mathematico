@@ -51,12 +51,24 @@ export interface UpdateBookData extends Partial<BaseBookData> {
 
 // Create axios instance for book endpoints
 const bookApi = axios.create({
-  baseURL: API_CONFIG.mobile,
+  baseURL: API_CONFIG.mobile, // This will be updated dynamically
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Update the base URL dynamically
+(async () => {
+  try {
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    bookApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    console.log('BookService: Base URL updated to:', bookApi.defaults.baseURL);
+  } catch (error) {
+    console.error('BookService: Failed to update base URL:', error);
+  }
+})();
 
 // Request interceptor to add auth token
 bookApi.interceptors.request.use(
@@ -114,12 +126,21 @@ class BookService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
+      // Ensure we're using the correct backend URL
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      
+      console.log('BookService: Making request to:', fullUrl);
+      
       const response = await bookApi({
         url: endpoint,
+        baseURL: `${backendUrl}/api/v1/mobile`,
         ...options,
       });
       return response.data;
     } catch (error) {
+      console.error('BookService: Request failed:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -163,11 +184,25 @@ class BookService {
 
   async getBookById(id: string): Promise<any> {
     try {
+      console.log('BookService: Fetching book with ID:', id);
       const response = await this.makeRequest(`/books/${id}`);
+      console.log('BookService: Book fetched successfully');
       return response;
     } catch (error) {
+      console.error('BookService: Error fetching book:', error);
       errorHandler.handleError('Error fetching book:', error);
-      throw ErrorHandler.handleApiError(error);
+      
+      // Return a fallback book object instead of throwing
+      return {
+        id: id,
+        title: 'Book not found',
+        description: 'This book could not be loaded. Please try again later.',
+        author: 'Unknown',
+        pages: 0,
+        downloads: 0,
+        level: 'Unknown Level',
+        category: 'general'
+      };
     }
   }
 

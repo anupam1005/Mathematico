@@ -8,12 +8,24 @@ const errorHandler = createServiceErrorHandler('mobileService');
 
 // Create axios instance for mobile endpoints
 const mobileApi = axios.create({
-  baseURL: API_CONFIG.mobile,
+  baseURL: API_CONFIG.mobile, // This will be updated dynamically
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Update the base URL dynamically
+(async () => {
+  try {
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    mobileApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    console.log('MobileService: Base URL updated to:', mobileApi.defaults.baseURL);
+  } catch (error) {
+    console.error('MobileService: Failed to update base URL:', error);
+  }
+})();
 
 // Request interceptor to add auth token
 mobileApi.interceptors.request.use(

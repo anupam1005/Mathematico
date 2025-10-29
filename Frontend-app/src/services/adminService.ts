@@ -81,7 +81,7 @@ function toSnakeCase(obj: any): any {
 
 // ----------------- AXIOS INSTANCE -----------------
 const adminApi = axios.create({
-  baseURL: API_CONFIG.admin,
+  baseURL: API_CONFIG.admin, // This will be updated dynamically
   timeout: 30000, // 30 seconds timeout
   validateStatus: (status) => status < 500,
   headers: {
@@ -89,6 +89,18 @@ const adminApi = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Update the base URL dynamically
+(async () => {
+  try {
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    adminApi.defaults.baseURL = `${backendUrl}/api/v1/admin`;
+    console.log('AdminService: Base URL updated to:', adminApi.defaults.baseURL);
+  } catch (error) {
+    console.error('AdminService: Failed to update base URL:', error);
+  }
+})();
 
 // Request interceptor to add auth token
 adminApi.interceptors.request.use(
@@ -283,7 +295,11 @@ class AdminService {
         body = JSON.stringify(bookData);
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/books`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/books`, {
         method: 'POST',
         headers,
         body
@@ -331,7 +347,11 @@ class AdminService {
         body = JSON.stringify(bookData);
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/books/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/books/${id}`, {
         method: 'PUT',
         headers,
         body
@@ -361,7 +381,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/books/${id}/status`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/books/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -394,7 +418,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/books/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/books/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -473,11 +501,15 @@ class AdminService {
         body = JSON.stringify(courseData);
       }
 
-      errorHandler.logInfo('AdminService: Making request to:', `${API_CONFIG.admin}/courses`);
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      errorHandler.logInfo('AdminService: Making request to:', `${adminUrl}/courses`);
       errorHandler.logInfo('AdminService: Request headers:', headers);
       errorHandler.logInfo('AdminService: Request body type:', typeof body);
       
-      const response = await fetch(`${API_CONFIG.admin}/courses`, {
+      const response = await fetch(`${adminUrl}/courses`, {
         method: 'POST',
         headers,
         body
@@ -537,7 +569,11 @@ class AdminService {
         body = JSON.stringify(courseData);
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/courses/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/courses/${id}`, {
         method: 'PUT',
         headers,
         body
@@ -567,7 +603,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/courses/${id}/status`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/courses/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -600,7 +640,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/courses/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/courses/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -679,7 +723,11 @@ class AdminService {
         body = JSON.stringify(liveClassData);
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/live-classes`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/live-classes`, {
         method: 'POST',
         headers,
         body
@@ -727,7 +775,11 @@ class AdminService {
         body = JSON.stringify(liveClassData);
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/live-classes/${id}`, {
         method: 'PUT',
         headers,
         body
@@ -757,7 +809,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}/status`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/live-classes/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -790,7 +846,11 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const response = await fetch(`${API_CONFIG.admin}/live-classes/${id}`, {
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const adminUrl = `${backendUrl}/api/v1/admin`;
+      
+      const response = await fetch(`${adminUrl}/live-classes/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

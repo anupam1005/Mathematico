@@ -7,7 +7,6 @@ import { adminService } from "../../services/adminService";
 import authService from "../../services/authService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
-import { API_CONFIG } from "../../config";
 import { Logger } from '../../utils/errorHandler';
 
 interface BookFormProps {

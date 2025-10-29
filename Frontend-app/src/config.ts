@@ -12,44 +12,68 @@ const USE_LOCAL_BACKEND = process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true';
 
 // Function to determine if running on Play Store release
 const isPlayStoreRelease = () => {
-  return !__DEV__ && Platform.OS === 'android' && !USE_LOCAL_BACKEND;
+  // More robust detection for production builds
+  const isProduction = process.env.NODE_ENV === 'production' || !__DEV__;
+  const isAndroid = Platform.OS === 'android';
+  const isNotLocal = !USE_LOCAL_BACKEND;
+  
+  console.log('🔍 Production detection:', {
+    NODE_ENV: process.env.NODE_ENV,
+    __DEV__: __DEV__,
+    isProduction,
+    isAndroid,
+    isNotLocal,
+    isPlayStoreRelease: isProduction && isAndroid && isNotLocal
+  });
+  
+  return isProduction && isAndroid && isNotLocal;
 };
 
 // Function to get the appropriate backend URL
 export const getBackendUrl = async () => {
   try {
+    console.log('🔍 Determining backend URL...');
+    
     // Check if user has manually set a backend preference
     const userBackendPreference = await AsyncStorage.getItem('userBackendPreference');
     
     if (userBackendPreference) {
+      console.log('🔍 Using user backend preference:', userBackendPreference);
       return userBackendPreference;
     }
     
     // If running on Play Store release, always use production backend
     if (isPlayStoreRelease()) {
+      console.log('🔍 Play Store release detected, using production backend');
       return PROD_BACKEND;
     }
     
     // In development mode, use local backend
     if (__DEV__) {
+      console.log('🔍 Development mode detected');
       // For Android emulator
       if (Platform.OS === 'android' && Platform.constants.uiMode.includes('emulator')) {
+        console.log('🔍 Android emulator detected, using local emulator backend');
         return LOCAL_EMULATOR;
       }
       
       // For physical device testing
       if (Platform.OS === 'android') {
+        console.log('🔍 Android device detected, using local mobile backend');
         return LOCAL_MOBILE;
       }
       
       // Default local development
+      console.log('🔍 Default local development, using local backend');
       return LOCAL_DEV;
     }
     
     // Default to production for any other case
+    console.log('🔍 Default case, using production backend');
     return PROD_BACKEND;
   } catch (error) {
     console.error('Error determining backend URL:', error);
+    console.log('🔍 Error fallback, using production backend');
     return PROD_BACKEND; // Fallback to production
   }
 };

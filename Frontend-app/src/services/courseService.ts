@@ -50,12 +50,24 @@ export interface UpdateCourseData extends Partial<BaseCourseData> {
 
 // Create axios instance for course endpoints
 const courseApi = axios.create({
-  baseURL: API_CONFIG.mobile,
+  baseURL: API_CONFIG.mobile, // This will be updated dynamically
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Update the base URL dynamically
+(async () => {
+  try {
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    courseApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    console.log('CourseService: Base URL updated to:', courseApi.defaults.baseURL);
+  } catch (error) {
+    console.error('CourseService: Failed to update base URL:', error);
+  }
+})();
 
 // Request interceptor to add auth token
 courseApi.interceptors.request.use(
@@ -112,12 +124,21 @@ class CourseService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
+      // Ensure we're using the correct backend URL
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      
+      console.log('CourseService: Making request to:', fullUrl);
+      
       const response = await courseApi({
         url: endpoint,
+        baseURL: `${backendUrl}/api/v1/mobile`,
         ...options,
       });
       return response.data;
     } catch (error) {
+      console.error('CourseService: Request failed:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }

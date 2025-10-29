@@ -49,12 +49,24 @@ export interface UpdateLiveClassData extends Partial<BaseLiveClassData> {
 
 // Create axios instance for live class endpoints
 const liveClassApi = axios.create({
-  baseURL: API_CONFIG.mobile,
+  baseURL: API_CONFIG.mobile, // This will be updated dynamically
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Update the base URL dynamically
+(async () => {
+  try {
+    const { getBackendUrl } = await import('../config');
+    const backendUrl = await getBackendUrl();
+    liveClassApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    console.log('LiveClassService: Base URL updated to:', liveClassApi.defaults.baseURL);
+  } catch (error) {
+    console.error('LiveClassService: Failed to update base URL:', error);
+  }
+})();
 
 // Request interceptor to add auth token
 liveClassApi.interceptors.request.use(
@@ -111,12 +123,21 @@ class LiveClassService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
+      // Ensure we're using the correct backend URL
+      const { getBackendUrl } = await import('../config');
+      const backendUrl = await getBackendUrl();
+      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      
+      console.log('LiveClassService: Making request to:', fullUrl);
+      
       const response = await liveClassApi({
         url: endpoint,
+        baseURL: `${backendUrl}/api/v1/mobile`,
         ...options,
       });
       return response.data;
     } catch (error) {
+      console.error('LiveClassService: Request failed:', error);
       throw ErrorHandler.handleApiError(error);
     }
   }

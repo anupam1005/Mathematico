@@ -26,6 +26,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
+  checkAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,26 +48,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
+      console.log('AuthContext: Checking authentication status...');
       
       // Clear any invalid tokens first
       await authService.clearInvalidTokens();
       
       const token = await authService.getToken();
+      console.log('AuthContext: Token retrieved:', token ? 'YES' : 'NO');
       
-      if (token) {
+      if (token && token.length > 10) {
         // Token is valid, try to get user data from storage
         const storedUser = await Storage.getItem('user');
+        console.log('AuthContext: Stored user data:', storedUser ? 'YES' : 'NO');
+        
         if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setIsAuthenticated(true);
+          try {
+            const userData = JSON.parse(storedUser);
+            console.log('AuthContext: User data parsed successfully');
+            setUser(userData);
+            setIsAuthenticated(true);
+          } catch (parseError) {
+            console.error('AuthContext: Error parsing user data:', parseError);
+            // Clear invalid data and logout
+            await Storage.deleteItem('user');
+            await Storage.deleteItem('authToken');
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         } else {
           // If no user data, clear token and logout
+          console.log('AuthContext: No user data found, clearing tokens');
           await Storage.deleteItem('authToken');
           setUser(null);
           setIsAuthenticated(false);
         }
       } else {
+        console.log('AuthContext: No valid token found');
         setUser(null);
         setIsAuthenticated(false);
       }
@@ -75,6 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear invalid tokens
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
+      await Storage.deleteItem('user');
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -315,6 +333,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshToken,
     updateProfile,
+    checkAuthStatus,
   };
 
   return (

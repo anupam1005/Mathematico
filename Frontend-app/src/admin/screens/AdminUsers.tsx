@@ -25,6 +25,7 @@ import {
 import { Icon } from '../../components/Icon';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
+import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -42,6 +43,7 @@ interface User {
 }
 
 export default function AdminUsers({ navigation }: { navigation: any }) {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setIsLoading] = useState(true);
