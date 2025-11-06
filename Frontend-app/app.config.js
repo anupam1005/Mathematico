@@ -3,7 +3,7 @@ const IS_DEV = process.env.APP_VARIANT === 'development';
 export default {
   expo: {
     name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico',
-    slug: 'mathematico',
+    slug: 'mathematico-app',
     version: '8.0.0',
     orientation: 'portrait',
     owner: 'dascompany',
