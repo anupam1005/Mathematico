@@ -25,25 +25,43 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       setError('');
 
       const { getBackendUrl } = await import('../config');
+      const { Storage } = await import('../utils/storage');
       const backendUrl = await getBackendUrl();
       const mobileUrl = `${backendUrl}/api/v1/mobile`;
       
+      // Get auth token for authenticated requests
+      const token = await Storage.getItem('authToken');
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      // Add authentication header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load PDF viewer' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.data?.viewerUrl) {
         setViewerUrl(data.data.viewerUrl);
       } else {
         setError(data.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
-      setError('Network error. Please check your connection.');
+      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
+      setError(errorMessage);
       Logger.error('Error fetching PDF viewer:', err);
     } finally {
       setLoading(false);
@@ -60,23 +78,38 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
   };
 
   // Custom HTML for secure PDF viewing with restrictions
-  const securePdfHtml = `
+  // This ensures PDF text renders properly in production WebView
+  const securePdfHtml = viewerUrl ? `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <title>Secure PDF Viewer</title>
       <style>
-        body {
+        * {
           margin: 0;
           padding: 0;
-          background: #f5f5f5;
+          box-sizing: border-box;
+        }
+        
+        html, body {
+          width: 100%;
+          height: 100%;
           overflow: hidden;
+          background: #525252;
+          -webkit-text-size-adjust: 100%;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        
+        body {
           user-select: none;
           -webkit-user-select: none;
           -webkit-touch-callout: none;
           -webkit-tap-highlight-color: transparent;
+          touch-action: pan-x pan-y;
         }
         
         .pdf-container {
@@ -86,6 +119,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           display: flex;
           align-items: center;
           justify-content: center;
+          background: #525252;
         }
         
         .pdf-viewer {
@@ -93,17 +127,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           height: 100%;
           border: none;
           pointer-events: auto;
-        }
-        
-        .security-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: transparent;
-          z-index: 10;
-          pointer-events: none;
+          background: white;
         }
         
         .restriction-notice {
@@ -111,23 +135,23 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           top: 10px;
           left: 10px;
           right: 10px;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.85);
           color: white;
-          padding: 8px 12px;
-          border-radius: 4px;
+          padding: 10px 14px;
+          border-radius: 6px;
           font-size: 12px;
           text-align: center;
           z-index: 20;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         
-        /* Disable right-click context menu */
-        * {
-          -webkit-touch-callout: none;
-          -webkit-user-select: none;
-          -khtml-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          user-select: none;
+        /* Ensure PDF text is readable */
+        @media screen {
+          .pdf-viewer {
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+          }
         }
       </style>
     </head>
@@ -138,12 +162,15 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         </div>
         <iframe 
           class="pdf-viewer" 
-          src="${viewerUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
+          src="${viewerUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=page-width"
+          allow="fullscreen"
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           oncontextmenu="return false;"
           onselectstart="return false;"
           ondragstart="return false;"
+          loading="eager"
+          type="application/pdf"
         ></iframe>
-        <div class="security-overlay"></div>
       </div>
       
       <script>
@@ -151,28 +178,29 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         document.addEventListener('contextmenu', function(e) {
           e.preventDefault();
           return false;
-        });
+        }, true);
         
         // Disable text selection
         document.addEventListener('selectstart', function(e) {
           e.preventDefault();
           return false;
-        });
+        }, true);
         
         // Disable drag
         document.addEventListener('dragstart', function(e) {
           e.preventDefault();
           return false;
-        });
+        }, true);
         
         // Disable keyboard shortcuts for save/print
         document.addEventListener('keydown', function(e) {
           // Disable Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools)
           if ((e.ctrlKey && (e.keyCode === 83 || e.keyCode === 80)) || e.keyCode === 123) {
             e.preventDefault();
+            e.stopPropagation();
             return false;
           }
-        });
+        }, true);
         
         // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
         document.addEventListener('keydown', function(e) {
@@ -180,21 +208,24 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
               (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
               (e.ctrlKey && e.keyCode === 85)) {
             e.preventDefault();
+            e.stopPropagation();
             return false;
           }
-        });
+        }, true);
         
-        // Prevent screenshot attempts (basic protection)
-        document.addEventListener('visibilitychange', function() {
-          if (document.hidden) {
-            // Page is being hidden (possibly for screenshot)
-            console.log('Page visibility changed - potential screenshot attempt');
-          }
+        // Handle PDF load errors
+        window.addEventListener('error', function(e) {
+          console.error('PDF load error:', e);
+        }, true);
+        
+        // Ensure PDF loads properly
+        window.addEventListener('load', function() {
+          console.log('PDF viewer loaded');
         });
       </script>
     </body>
     </html>
-  `;
+  ` : '';
 
   if (loading) {
     return (
@@ -219,6 +250,17 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     );
   }
 
+  if (!viewerUrl) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>PDF URL not available</Text>
+        <Button mode="contained" onPress={fetchSecureViewerUrl} style={styles.retryButton}>
+          Retry
+        </Button>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <WebView
@@ -226,21 +268,54 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         style={styles.webView}
         onError={handleWebViewError}
         onLoad={handleWebViewLoad}
+        onLoadEnd={handleWebViewLoad}
         javaScriptEnabled={true}
-        domStorageEnabled={false}
+        domStorageEnabled={true}
         startInLoadingState={true}
         scalesPageToFit={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
+        allowFileAccess={false}
+        allowUniversalAccessFromFileURLs={false}
+        mixedContentMode="always"
+        originWhitelist={['*']}
         onShouldStartLoadWithRequest={(request: any) => {
-          // Only allow the secure PDF URL
-          return request.url.includes('cloudinary.com') || request.url.startsWith('data:');
+          // Allow Cloudinary PDFs and data URLs
+          const url = request.url.toLowerCase();
+          if (url.includes('cloudinary.com') || 
+              url.includes('res.cloudinary.com') ||
+              url.startsWith('data:') ||
+              url.startsWith('about:blank') ||
+              url.startsWith('file://')) {
+            return true;
+          }
+          // Block other URLs for security
+          return false;
         }}
         onMessage={(event: any) => {
           // Handle any messages from the WebView
-          console.log('WebView message:', event.nativeEvent.data);
+          Logger.info('WebView message:', event.nativeEvent.data);
+        }}
+        onHttpError={(syntheticEvent: any) => {
+          const { nativeEvent } = syntheticEvent;
+          Logger.error('WebView HTTP error:', nativeEvent);
+          if (nativeEvent.statusCode >= 400) {
+            setError(`Failed to load PDF (Error ${nativeEvent.statusCode})`);
+          }
+        }}
+        renderError={(errorDomain?: string, errorCode?: number, errorDesc?: string) => {
+          const errorMessage = errorDesc || errorDomain || 'Unknown error';
+          Logger.error('WebView render error:', { errorDomain, errorCode, errorDesc });
+          return (
+            <View style={styles.container}>
+              <Text style={styles.errorText}>Failed to render PDF: {errorMessage}</Text>
+              <Button mode="contained" onPress={fetchSecureViewerUrl} style={styles.retryButton}>
+                Retry
+              </Button>
+            </View>
+          );
         }}
       />
     </View>

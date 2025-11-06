@@ -153,10 +153,18 @@ router.post('/payments/verify', async (req, res) => {
 });
 
 router.get('/payments/config', (req, res) => {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  if (!keyId) {
+    return res.status(500).json({
+      success: false,
+      message: 'Razorpay configuration not found',
+    });
+  }
+  
   res.json({
     success: true,
     data: {
-      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_REPhtJhKrjuo5z',
+      keyId: keyId,
       currency: 'INR',
       name: 'Mathematico',
       description: 'Educational Platform',

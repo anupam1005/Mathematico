@@ -9,9 +9,9 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { icons } from 'lucide-react-native';
+import { Search, X, Users, Clock, GraduationCap } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { courseService, Course, CourseFilters } from '../services/courseService';
+import { courseService, Course } from '../services/courseService';
 import { theme } from '../styles/theme';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -121,8 +121,8 @@ export default function CoursesScreen({ navigation, route }: any) {
       <Card style={styles.card}>
         <Card.Cover
           source={
-            course.thumbnail_url
-              ? { uri: course.thumbnail_url }
+            course.thumbnail_url || course.thumbnailUrl
+              ? { uri: course.thumbnail_url || course.thumbnailUrl }
               : require('../../assets/icon.png')
           }
           style={styles.cardImage}
@@ -138,24 +138,24 @@ export default function CoursesScreen({ navigation, route }: any) {
             <Chip
               mode="outlined"
               compact
-              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
+              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
             >
               {course.level}
             </Chip>
             <View style={styles.priceContainer}>
-              {course.original_price && course.original_price > course.price && (
+              {course.original_price && course.price && course.original_price > course.price && (
                 <Text style={styles.originalPrice}>₹{course.original_price}</Text>
               )}
-              <Text style={styles.price}>₹{course.price}</Text>
+              <Text style={styles.price}>₹{course.price || 0}</Text>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <icons.Users size={16} color={theme.colors.textSecondary} />
+              <Users size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{course.students} students</Text>
             </View>
             <View style={styles.metaItem}>
-              <icons.Clock size={16} color={theme.colors.textSecondary} />
+              <Clock size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{course.duration}</Text>
             </View>
           </View>
@@ -205,8 +205,8 @@ export default function CoursesScreen({ navigation, route }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={theme.colors.textSecondary}
-        icon={() => <icons.Search size={20} color={theme.colors.primary} />}
-        clearIcon={() => <icons.X size={20} color={theme.colors.textSecondary} />}
+        icon={() => <Search size={20} color={theme.colors.primary} />}
+        clearIcon={() => <X size={20} color={theme.colors.textSecondary} />}
       />
 
       {/* Filters */}
@@ -264,7 +264,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <icons.GraduationCap size={48} color={theme.colors.textSecondary} />
+              <GraduationCap size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>No courses found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>

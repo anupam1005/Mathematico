@@ -19,7 +19,7 @@ import {
   Chip,
   Surface,
 } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Lock, GraduationCap, Video, Book, ShoppingCart, Shield, User, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { razorpayService } from '../services/razorpayService';
@@ -75,28 +75,10 @@ export default function CheckoutScreen({ navigation, route }: any) {
         description: `Payment for ${itemData.title}`,
         name: user?.name || 'User',
         email: user?.email || '',
-        contact: user?.phone || '',
+        contact: (user as any)?.phone || '0000000000',
       });
 
       if (paymentResponse.success) {
-        // Check if this is demo mode
-        if (paymentResponse.message && paymentResponse.message.includes('Demo')) {
-          Alert.alert(
-            'Demo Payment Successful! 🎉',
-            `Demo payment completed for "${itemData.title}". In production, this would be a real payment.\n\nYou can now access your ${getItemType().toLowerCase()}.`,
-            [
-              {
-                text: 'Continue Learning',
-                onPress: () => {
-                  navigation.navigate('MainTabs');
-                }
-              }
-            ]
-          );
-          setLoading(false);
-          return;
-        }
-        
         // Verify payment
         await processPayment(orderResponse.data, paymentResponse.data);
       } else {
@@ -162,20 +144,20 @@ export default function CheckoutScreen({ navigation, route }: any) {
   const getItemIcon = () => {
     switch (type) {
       case 'course':
-        return 'school';
+        return GraduationCap;
       case 'liveclass':
-        return 'videocam';
+        return Video;
       case 'book':
-        return 'book';
+        return Book;
       default:
-        return 'shopping-cart';
+        return ShoppingCart;
     }
   };
 
   if (!itemData) {
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error" size={64} color={designSystem.colors.error} />
+        <AlertCircle size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Item not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -190,7 +172,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
       <Surface style={styles.headerSurface} elevation={4}>
         <View style={styles.headerContent}>
           <View style={styles.headerIconContainer}>
-            <Icon name="lock" size={32} color={designSystem.colors.surface} />
+            <Lock size={32} color={designSystem.colors.surface} />
           </View>
           <Title style={styles.headerTitle}>Secure Checkout</Title>
           <Paragraph style={styles.headerSubtitle}>
@@ -204,7 +186,10 @@ export default function CheckoutScreen({ navigation, route }: any) {
         <Card.Content>
           <View style={styles.itemHeader}>
             <View style={styles.itemIconContainer}>
-              <Icon name={getItemIcon()} size={24} color={designSystem.colors.primary} />
+              {(() => {
+                const IconComponent = getItemIcon();
+                return <IconComponent size={24} color={designSystem.colors.primary} />;
+              })()}
             </View>
             <View style={styles.itemInfo}>
               <Title style={styles.itemTitle}>{itemData.title}</Title>
@@ -265,7 +250,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
           
           {paymentMethod === 'razorpay' && (
             <View style={styles.paymentInfo}>
-              <Icon name="security" size={16} color={designSystem.colors.success} />
+              <Shield size={16} color={designSystem.colors.success} />
               <Text style={styles.paymentInfoText}>
                 Secured by Razorpay • 256-bit SSL encryption
               </Text>
@@ -279,7 +264,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
         <Card.Content>
           <Title style={styles.sectionTitle}>Billing Information</Title>
           <View style={styles.userInfo}>
-            <Icon name="person" size={20} color={designSystem.colors.primary} />
+            <User size={20} color={designSystem.colors.primary} />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>{user?.name || 'User'}</Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
@@ -306,7 +291,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
         </Button>
         
         <View style={styles.securityInfo}>
-          <Icon name="lock" size={16} color={designSystem.colors.textSecondary} />
+          <Lock size={16} color={designSystem.colors.textSecondary} />
           <Text style={styles.securityText}>
             Your payment information is secure and encrypted
           </Text>

@@ -30,8 +30,8 @@
     "CLOUDINARY_CLOUD_NAME": "duxjf7v40",
     "CLOUDINARY_API_KEY": "691967822927518",
     "CLOUDINARY_API_SECRET": "M5LspD_XGt5DtI_0XPQ5DKz3awA",
-    "RAZORPAY_KEY_ID": "rzp_test_REPhtJhKrjuo5z",
-    "RAZORPAY_KEY_SECRET": "t1raXTc3z6pRiesvTnNnQCaF"
+    "RAZORPAY_KEY_ID": "rzp_live_RcZCOqG3pkAZTc",
+    "RAZORPAY_KEY_SECRET": "rrcyfLdCKBo1vvqbJgIvgnv2"
   },
   "regions": ["iad1"]
 }

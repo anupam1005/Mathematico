@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Calendar, Users, Tag, GraduationCap, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { designSystem } from '../styles/designSystem';
@@ -97,7 +97,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   if (!course) {
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error" size={64} color={designSystem.colors.error} />
+        <AlertCircle size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Course not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -123,7 +123,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           <View style={styles.metaContainer}>
             <Chip
               mode="flat"
-              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
+              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
               {course.level}
@@ -133,10 +133,10 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             </Chip>
           </View>
           <View style={styles.priceContainer}>
-            {course.original_price && course.original_price > course.price && (
+            {course.original_price && course.price && course.original_price > course.price && (
               <Text style={styles.originalPrice}>₹{course.original_price}</Text>
             )}
-            <Text style={styles.price}>₹{course.price}</Text>
+            <Text style={styles.price}>₹{course.price || 0}</Text>
           </View>
         </Card.Content>
       </Card>
@@ -155,22 +155,22 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Course Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-              <Icon name="schedule" size={20} color={designSystem.colors.primary} />
+              <Calendar size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Duration:</Text>
               <Text style={styles.detailValue}>{course.duration}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="group" size={20} color={designSystem.colors.primary} />
+              <Users size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Students:</Text>
               <Text style={styles.detailValue}>{course.students}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="category" size={20} color={designSystem.colors.primary} />
+              <Tag size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{course.subject}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="school" size={20} color={designSystem.colors.primary} />
+              <GraduationCap size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{course.class}</Text>
             </View>
@@ -185,7 +185,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>What You Will Learn</Title>
             {course.what_you_will_learn.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-                <Icon name="check-circle" size={16} color={designSystem.colors.success} />
+                <CheckCircle size={16} color={designSystem.colors.success} />
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}
@@ -200,7 +200,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>Who Is This For</Title>
             {course.who_is_this_for.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-                <Icon name="person" size={16} color={designSystem.colors.primary} />
+                <Users size={16} color={designSystem.colors.primary} />
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}
@@ -242,7 +242,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           style={styles.enrollButton}
           contentStyle={styles.enrollButtonContent}
         >
-          {`Enroll Now - ₹${course.price}`}
+          {`Enroll Now - ₹${course.price || 0}`}
         </Button>
       </View>
     </ScrollView>

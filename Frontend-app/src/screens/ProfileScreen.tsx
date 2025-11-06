@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,13 @@ export default function ProfileScreen({ navigation }: any) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Sync editName with user name when user changes
+  useEffect(() => {
+    if (user?.name) {
+      setEditName(user.name);
+    }
+  }, [user?.name]);
+
   const handleLogout = () => {
     console.log('ProfileScreen: Logout button pressed');
     Alert.alert(
@@ -67,12 +74,16 @@ export default function ProfileScreen({ navigation }: any) {
       return;
     }
 
-    const success = await updateProfile({ name: editName.trim() });
+    const trimmedName = editName.trim();
+    const success = await updateProfile({ name: trimmedName });
     if (success) {
-      // Update the local editName state to reflect the change immediately
-      setEditName(editName.trim());
+      // The user state will be updated by AuthContext, which will trigger the useEffect
+      // to update editName automatically
       setShowEditDialog(false);
       Alert.alert('Success', 'Profile updated successfully');
+    } else {
+      // If update failed, reset editName to current user name
+      setEditName(user?.name || '');
     }
   };
 

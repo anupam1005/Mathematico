@@ -9,9 +9,9 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Search, X, Book as BookIcon, Download, Tag } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { bookService, Book, BookFilters } from '../services/bookService';
+import { bookService, Book } from '../services/bookService';
 import { theme } from '../styles/theme';
 import { Logger } from '../utils/errorHandler';
 
@@ -129,24 +129,24 @@ export default function BooksScreen({ navigation }: any) {
             <Chip
               mode="outlined"
               compact
-              style={[styles.levelChip, { backgroundColor: getLevelColor(book.level) }]}
+              style={[styles.levelChip, { backgroundColor: getLevelColor(book.level || '') }]}
             >
               {book.level || 'Unknown Level'}
             </Chip>
             <View style={styles.bookMeta}>
               <View style={styles.metaItem}>
-                <Icon name="book" size={16} color={theme.colors.textSecondary} />
+                <BookIcon size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.metaText}>{book.pages || 0} pages</Text>
               </View>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Icon name="download" size={16} color={theme.colors.textSecondary} />
+              <Download size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{book.downloads || book.downloadCount || 0} downloads</Text>
             </View>
             <View style={styles.metaItem}>
-              <Icon name="category" size={16} color={theme.colors.textSecondary} />
+              <Tag size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{book.category || 'Uncategorized'}</Text>
             </View>
           </View>
@@ -196,8 +196,8 @@ export default function BooksScreen({ navigation }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={theme.colors.textSecondary}
-        icon={() => <Icon name="search" size={24} color={theme.colors.primary} />}
-        clearIcon={() => <Icon name="close" size={24} color={theme.colors.textSecondary} />}
+        icon={() => <Search size={24} color={theme.colors.primary} />}
+        clearIcon={() => <X size={24} color={theme.colors.textSecondary} />}
       />
 
       {/* Filters */}
@@ -255,7 +255,7 @@ export default function BooksScreen({ navigation }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <Icon name="book" size={64} color={theme.colors.textSecondary} />
+              <BookIcon size={64} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>No books found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>

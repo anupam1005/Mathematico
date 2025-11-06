@@ -95,9 +95,8 @@ api.interceptors.response.use(
         if (refreshToken) {
           console.log('AuthService: Attempting token refresh...');
           
-          const { getBackendUrl } = await import('../config');
-          const backendUrl = await getBackendUrl();
-          const authUrl = `${backendUrl}/api/v1/auth`;
+          const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+          const authUrl = API_CONFIG.auth;
           
           const response = await axios.post(`${authUrl}/refresh-token`, {
             refreshToken,
@@ -177,9 +176,8 @@ const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       // Get the current backend URL
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       console.log('AuthService: Attempting login to:', authUrl);
       console.log('AuthService: Full login URL:', `${authUrl}/login`);
@@ -280,9 +278,8 @@ const authService = {
   async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     try {
       // Get the current backend URL
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       console.log('AuthService: Attempting registration to:', authUrl);
       console.log('AuthService: Full registration URL:', `${authUrl}/register`);
@@ -376,9 +373,8 @@ const authService = {
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
       console.log('AuthService: Starting logout request...');
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.post(`${authUrl}/logout`, {}, {
         headers: {
@@ -405,9 +401,8 @@ const authService = {
     try {
       // Backend exposes /api/v1/auth/profile
       const token = await this.getToken();
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.get(`${authUrl}/profile`, {
         headers: {
@@ -437,9 +432,8 @@ const authService = {
       }
       
       // Get the current backend URL dynamically
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       console.log('AuthService: Profile update URL:', authUrl);
       
@@ -485,9 +479,8 @@ const authService = {
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
       const token = await this.getToken();
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.put(`${authUrl}/change-password`, {
         currentPassword,
@@ -514,9 +507,8 @@ const authService = {
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.post(`${authUrl}/forgot-password`, {
         email,
@@ -541,9 +533,8 @@ const authService = {
 
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.post(`${authUrl}/reset-password`, {
         token,
@@ -580,9 +571,7 @@ const authService = {
       
       console.log('AuthService: Manual token refresh requested...');
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const authUrl = `${backendUrl}/api/v1/auth`;
+      const authUrl = API_CONFIG.auth;
       
       const response = await axios.post(`${authUrl}/refresh-token`, {
         refreshToken,

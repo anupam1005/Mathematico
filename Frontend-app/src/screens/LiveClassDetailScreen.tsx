@@ -15,7 +15,7 @@ import {
   Chip,
   ActivityIndicator,
 } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Calendar, Clock, Users, Tag, GraduationCap, PlayCircle, Square, Video, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
@@ -149,7 +149,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
     try {
       // In a real implementation, this would get the join link from the backend
-      const joinLink = liveClass.joinLink || 'https://meet.google.com/sample-link';
+      const joinLink = (liveClass as any).joinLink || 'https://meet.google.com/sample-link';
       
       Alert.alert(
         'Join Live Class',
@@ -251,7 +251,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
   if (!liveClass || typeof liveClass !== 'object') {
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error" size={64} color={designSystem.colors.error} />
+        <AlertCircle size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Live class not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -278,7 +278,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
             <Title style={styles.title}>{liveClass.title || 'Untitled Live Class'}</Title>
             <Chip
               mode="flat"
-              style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status) }]}
+              style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status || '') }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
               {(liveClass.status || 'unknown').toUpperCase()}
@@ -287,7 +287,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           <View style={styles.metaContainer}>
             <Chip
               mode="flat"
-              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
+              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
               {liveClass.level || 'All Levels'}
@@ -320,27 +320,27 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Class Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-              <Icon name="schedule" size={20} color={designSystem.colors.primary} />
+              <Calendar size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Scheduled:</Text>
               <Text style={styles.detailValue}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="access-time" size={20} color={designSystem.colors.primary} />
+              <Clock size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Duration:</Text>
               <Text style={styles.detailValue}>{liveClass.duration || 0} minutes</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="group" size={20} color={designSystem.colors.primary} />
+              <Users size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Enrolled:</Text>
               <Text style={styles.detailValue}>{liveClass.enrolled_students || 0}/{liveClass.max_students || 0}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="category" size={20} color={designSystem.colors.primary} />
+              <Tag size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{liveClass.subject || 'General'}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="school" size={20} color={designSystem.colors.primary} />
+              <GraduationCap size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{liveClass.class || 'All Classes'}</Text>
             </View>
@@ -395,7 +395,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Recording */}
-      {isCompleted(liveClass.status) && liveClass.recording_url && (
+      {isCompleted(liveClass.status || '') && liveClass.recording_url && (
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Class Recording</Title>
@@ -423,7 +423,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
                 onPress={handleStartLiveClass}
                 style={styles.startButton}
                 contentStyle={styles.startButtonContent}
-                icon="play-circle"
+                icon={() => <PlayCircle size={20} color={designSystem.colors.surface} />}
               >
                 Start Live Class
               </Button>
@@ -436,7 +436,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
                 onPress={handleEndLiveClass}
                 style={styles.endButton}
                 contentStyle={styles.endButtonContent}
-                icon="stop-circle"
+                icon={() => <Square size={20} color={designSystem.colors.surface} />}
               >
                 End Live Class
               </Button>
@@ -448,13 +448,13 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         {!user?.isAdmin && (
           <>
             {/* Join Live Class Button - Only show when class is live */}
-            {isLive(liveClass.status) && (
+            {isLive(liveClass.status || '') && (
               <Button
                 mode="contained"
                 onPress={() => handleJoinLiveClass()}
                 style={styles.joinButton}
                 contentStyle={styles.joinButtonContent}
-                icon="videocam"
+                icon={() => <Video size={20} color={designSystem.colors.surface} />}
               >
                 Join Live Class
               </Button>
@@ -463,7 +463,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
             {/* Show message for scheduled classes */}
             {liveClass.status === 'scheduled' && (
               <View style={styles.messageContainer}>
-                <Icon name="schedule" size={24} color={designSystem.colors.info} />
+                <Calendar size={24} color={designSystem.colors.info} />
                 <Text style={styles.messageText}>
                   Class will start at {liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}
                 </Text>
@@ -471,9 +471,9 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
             )}
             
             {/* Show message for completed classes */}
-            {isCompleted(liveClass.status) && (
+            {isCompleted(liveClass.status || '') && (
               <View style={styles.messageContainer}>
-                <Icon name="check-circle" size={24} color={designSystem.colors.success} />
+                <CheckCircle size={24} color={designSystem.colors.success} />
                 <Text style={styles.messageText}>
                   This class has been completed
                 </Text>
@@ -488,7 +488,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     Logger.error('Error rendering LiveClassDetailScreen:', error);
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error" size={64} color={designSystem.colors.error} />
+        <AlertCircle size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Error loading live class details</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -681,5 +681,20 @@ const styles = StyleSheet.create({
   },
   recordingButtonContent: {
     paddingVertical: designSystem.spacing.md,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: designSystem.spacing.md,
+    backgroundColor: designSystem.colors.surface,
+    borderRadius: designSystem.borderRadius.md,
+    marginTop: designSystem.spacing.sm,
+  },
+  messageText: {
+    ...designSystem.typography.body,
+    color: designSystem.colors.textPrimary,
+    marginLeft: designSystem.spacing.sm,
+    textAlign: 'center',
   },
 });

@@ -55,13 +55,7 @@ class SettingsService {
       }
 
       // If no local settings, try API
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
-      
-      console.log('SettingsService: Fetching settings from:', `${mobileUrl}/settings`);
-      
-      const response = await fetch(`${mobileUrl}/settings`);
+      const response = await fetch(`${API_CONFIG.mobile}/api/v1/mobile/settings`);
       const data = await response.json();
       
       if (data.success) {
@@ -125,13 +119,7 @@ class SettingsService {
 
       // Try to sync with API (but don't fail if it doesn't work)
       try {
-        const { getBackendUrl } = await import('../config');
-        const backendUrl = await getBackendUrl();
-        const mobileUrl = `${backendUrl}/api/v1/mobile`;
-        
-        console.log('SettingsService: Syncing settings to:', `${mobileUrl}/settings`);
-        
-        const response = await fetch(`${mobileUrl}/settings`, {
+        const response = await fetch(`${API_CONFIG.mobile}/api/v1/mobile/settings`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

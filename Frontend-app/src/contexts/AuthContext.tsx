@@ -293,17 +293,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.updateProfile(data);
       console.log('AuthContext: Profile update response:', response);
       
-      if (response.success && response.data) {
+      if (response.success) {
+        // Merge the update data with current user and response data
+        // This ensures that even if backend doesn't return all fields, we preserve them
         const updatedUser = {
           ...user,
           ...response.data,
-          isAdmin: response.data.isAdmin || response.data.role === 'admin',
-          is_admin: response.data.isAdmin || response.data.role === 'admin',
+          // Explicitly include the data we sent (in case backend doesn't return it)
+          ...data,
+          // Ensure admin flags are set correctly
+          isAdmin: response.data?.isAdmin || response.data?.role === 'admin' || user?.isAdmin || false,
+          is_admin: response.data?.isAdmin || response.data?.role === 'admin' || user?.is_admin || false,
         };
         
         console.log('AuthContext: Updated user object:', updatedUser);
         
-        // Update state
+        // Update state immediately
         setUser(updatedUser);
         console.log('AuthContext: User state updated');
         

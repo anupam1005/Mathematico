@@ -30,34 +30,21 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
   });
 
   const [loading, setLoading] = useState(false);
+  const [showScheduledDatePicker, setShowScheduledDatePicker] = useState(false);
+  const [showScheduledTimePicker, setShowScheduledTimePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [showScheduledPicker, setShowScheduledPicker] = useState(false);
 
-  // Function to safely close pickers
+  // Function to safely close all pickers
   const closeAllPickers = () => {
+    setShowScheduledDatePicker(false);
+    setShowScheduledTimePicker(false);
+    setShowStartDatePicker(false);
     setShowStartTimePicker(false);
+    setShowEndDatePicker(false);
     setShowEndTimePicker(false);
-    setShowScheduledPicker(false);
-  };
-
-  // Function to safely open picker with timeout
-  const openPicker = (pickerType: 'start' | 'end' | 'scheduled') => {
-    closeAllPickers(); // Close any open pickers first
-    
-    setTimeout(() => {
-      switch (pickerType) {
-        case 'start':
-          setShowStartTimePicker(true);
-          break;
-        case 'end':
-          setShowEndTimePicker(true);
-          break;
-        case 'scheduled':
-          setShowScheduledPicker(true);
-          break;
-      }
-    }, 100);
   };
 
   useEffect(() => {
@@ -90,60 +77,140 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     if (!result.canceled) setFormData({ ...formData, image: result.assets[0] });
   };
 
-  const handleStartTimeChange = (event: any, date?: Date) => {
-    try {
-      setShowStartTimePicker(false);
+  // Helper function to combine date and time
+  const combineDateAndTime = (date: Date, time: Date): Date => {
+    const combined = new Date(date);
+    combined.setHours(time.getHours());
+    combined.setMinutes(time.getMinutes());
+    combined.setSeconds(0);
+    combined.setMilliseconds(0);
+    return combined;
+  };
+
+  // Scheduled Date and Time handlers
+  const handleScheduledDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowScheduledDatePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedDate) {
+      if (Platform.OS === 'android') return;
+    }
+    
+    if (selectedDate) {
+      const currentTime = formData.scheduledAt || new Date();
+      const combined = combineDateAndTime(selectedDate, currentTime);
+      setFormData({ ...formData, scheduledAt: combined });
       
-      if (event.type === 'dismissed' || event.type === 'cancel') {
-        return;
+      if (Platform.OS === 'ios') {
+        setShowScheduledTimePicker(true);
       }
-      
-      if (date) {
-        const newFormData = { ...formData, startTime: date };
-        // Calculate end time based on start time + duration
-        if (formData.duration) {
-          const endTime = new Date(date.getTime() + (Number(formData.duration) * 60000));
-          newFormData.endTime = endTime;
-        }
-        setFormData(newFormData);
-      }
-    } catch (error) {
-      console.error('Error in handleStartTimeChange:', error);
-      setShowStartTimePicker(false);
     }
   };
 
-  const handleEndTimeChange = (event: any, date?: Date) => {
-    try {
-      setShowEndTimePicker(false);
-      
-      if (event.type === 'dismissed' || event.type === 'cancel') {
-        return;
-      }
-      
-      if (date) {
-        setFormData({ ...formData, endTime: date });
-      }
-    } catch (error) {
-      console.error('Error in handleEndTimeChange:', error);
-      setShowEndTimePicker(false);
+  const handleScheduledTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowScheduledTimePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedTime) {
+      return;
+    }
+    
+    if (selectedTime) {
+      const currentDate = formData.scheduledAt || new Date();
+      const combined = combineDateAndTime(currentDate, selectedTime);
+      setFormData({ ...formData, scheduledAt: combined });
     }
   };
 
-  const handleScheduledChange = (event: any, date?: Date) => {
-    try {
-      setShowScheduledPicker(false);
+  // Start Date and Time handlers
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedDate) {
+      if (Platform.OS === 'android') return;
+    }
+    
+    if (selectedDate) {
+      const currentTime = formData.startTime || new Date();
+      const combined = combineDateAndTime(selectedDate, currentTime);
+      const newFormData = { ...formData, startTime: combined };
       
-      if (event.type === 'dismissed' || event.type === 'cancel') {
-        return;
+      // Calculate end time based on start time + duration
+      if (formData.duration) {
+        const endTime = new Date(combined.getTime() + (Number(formData.duration) * 60000));
+        newFormData.endTime = endTime;
       }
       
-      if (date) {
-        setFormData({ ...formData, scheduledAt: date });
+      setFormData(newFormData);
+      
+      if (Platform.OS === 'ios') {
+        setShowStartTimePicker(true);
       }
-    } catch (error) {
-      console.error('Error in handleScheduledChange:', error);
-      setShowScheduledPicker(false);
+    }
+  };
+
+  const handleStartTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedTime) {
+      return;
+    }
+    
+    if (selectedTime) {
+      const currentDate = formData.startTime || new Date();
+      const combined = combineDateAndTime(currentDate, selectedTime);
+      const newFormData = { ...formData, startTime: combined };
+      
+      // Calculate end time based on start time + duration
+      if (formData.duration) {
+        const endTime = new Date(combined.getTime() + (Number(formData.duration) * 60000));
+        newFormData.endTime = endTime;
+      }
+      
+      setFormData(newFormData);
+    }
+  };
+
+  // End Date and Time handlers
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedDate) {
+      if (Platform.OS === 'android') return;
+    }
+    
+    if (selectedDate) {
+      const currentTime = formData.endTime || new Date();
+      const combined = combineDateAndTime(selectedDate, currentTime);
+      setFormData({ ...formData, endTime: combined });
+      
+      if (Platform.OS === 'ios') {
+        setShowEndTimePicker(true);
+      }
+    }
+  };
+
+  const handleEndTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndTimePicker(false);
+    }
+    
+    if (event.type === 'dismissed' || event.type === 'cancel' || !selectedTime) {
+      return;
+    }
+    
+    if (selectedTime) {
+      const currentDate = formData.endTime || new Date();
+      const combined = combineDateAndTime(currentDate, selectedTime);
+      setFormData({ ...formData, endTime: combined });
     }
   };
 
@@ -152,7 +219,7 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
     // Recalculate end time when duration changes
     if (formData.startTime && duration) {
       const endTime = new Date(formData.startTime.getTime() + (Number(duration) * 60000));
-      setFormData((prev: typeof formData) => ({ ...prev, duration, endTime }));
+      setFormData((prev: any) => ({ ...prev, duration, endTime }));
     }
   };
 
@@ -367,37 +434,167 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         leftIcon="access-time"
       />
 
-      <Text style={styles.label}>Start Time</Text>
-      <TouchableOpacity onPress={() => openPicker('start')} style={styles.input}>
-        <Text style={styles.dateText}>
-          {formData.startTime ? formData.startTime.toLocaleString() : 'Select Start Time'}
-        </Text>
-      </TouchableOpacity>
-      {showStartTimePicker && (
-        <DateTimePicker 
-          value={formData.startTime || new Date()} 
-          mode="datetime" 
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
-          onChange={handleStartTimeChange}
-          minimumDate={new Date()}
-        />
-      )}
+      {/* Scheduled Date and Time - Separate Sections */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Scheduled Date & Time</Text>
+        
+        <View style={styles.dateTimeRow}>
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Date</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowScheduledDatePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.scheduledAt ? formData.scheduledAt.toLocaleDateString() : 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+            {showScheduledDatePicker && (
+              <DateTimePicker 
+                value={formData.scheduledAt || new Date()} 
+                mode="date" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleScheduledDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+          </View>
 
-      <Text style={styles.label}>End Time</Text>
-      <TouchableOpacity onPress={() => openPicker('end')} style={styles.input}>
-        <Text style={styles.dateText}>
-          {formData.endTime ? formData.endTime.toLocaleString() : 'Select End Time'}
-        </Text>
-      </TouchableOpacity>
-      {showEndTimePicker && (
-        <DateTimePicker 
-          value={formData.endTime || new Date()} 
-          mode="datetime" 
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
-          onChange={handleEndTimeChange}
-          minimumDate={formData.startTime || new Date()}
-        />
-      )}
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Time</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowScheduledTimePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.scheduledAt ? formData.scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+              </Text>
+            </TouchableOpacity>
+            {showScheduledTimePicker && (
+              <DateTimePicker 
+                value={formData.scheduledAt || new Date()} 
+                mode="time" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleScheduledTimeChange}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Start Date and Time - Separate Sections */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Start Date & Time</Text>
+        
+        <View style={styles.dateTimeRow}>
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Date</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowStartDatePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.startTime ? formData.startTime.toLocaleDateString() : 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <DateTimePicker 
+                value={formData.startTime || new Date()} 
+                mode="date" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleStartDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Time</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowStartTimePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.startTime ? formData.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+              </Text>
+            </TouchableOpacity>
+            {showStartTimePicker && (
+              <DateTimePicker 
+                value={formData.startTime || new Date()} 
+                mode="time" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleStartTimeChange}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* End Date and Time - Separate Sections */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>End Date & Time</Text>
+        
+        <View style={styles.dateTimeRow}>
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Date</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowEndDatePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.endTime ? formData.endTime.toLocaleDateString() : 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <DateTimePicker 
+                value={formData.endTime || new Date()} 
+                mode="date" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleEndDateChange}
+                minimumDate={formData.startTime || new Date()}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateTimeColumn}>
+            <Text style={styles.label}>Time</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                closeAllPickers();
+                setShowEndTimePicker(true);
+              }} 
+              style={styles.dateTimeButton}
+            >
+              <Text style={styles.dateText}>
+                {formData.endTime ? formData.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+              </Text>
+            </TouchableOpacity>
+            {showEndTimePicker && (
+              <DateTimePicker 
+                value={formData.endTime || new Date()} 
+                mode="time" 
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
+                onChange={handleEndTimeChange}
+              />
+            )}
+          </View>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Max Students"
@@ -408,22 +605,6 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
         keyboardType="numeric"
         leftIcon="people"
       />
-
-      <Text style={styles.label}>Scheduled At</Text>
-      <TouchableOpacity onPress={() => openPicker('scheduled')} style={styles.input}>
-        <Text style={styles.dateText}>
-          {formData.scheduledAt ? formData.scheduledAt.toLocaleString() : 'Select Scheduled Time'}
-        </Text>
-      </TouchableOpacity>
-      {showScheduledPicker && (
-        <DateTimePicker 
-          value={formData.scheduledAt || new Date()} 
-          mode="datetime" 
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'} 
-          onChange={handleScheduledChange}
-          minimumDate={new Date()}
-        />
-      )}
 
       <CustomTextInput
         label="Meeting Link"
@@ -473,7 +654,7 @@ export default function LiveClassForm({ liveClassId, onSuccess }: LiveClassFormP
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", padding: 20 },
-  label: { fontSize: 16, fontWeight: "bold", marginTop: 10 },
+  label: { fontSize: 16, fontWeight: "bold", marginTop: 10, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginTop: 5 },
   button: { backgroundColor: "#007bff", padding: 10, marginTop: 15, borderRadius: 5, alignItems: "center" },
   buttonText: { color: "#fff" },
@@ -486,4 +667,36 @@ const styles = StyleSheet.create({
   pickerText: { fontSize: 16, color: "#333" },
   pickerArrow: { fontSize: 12, color: "#666" },
   dateText: { fontSize: 16, color: "#333", paddingVertical: 5 },
+  sectionContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+    padding: 15,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#333",
+  },
+  dateTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  dateTimeColumn: {
+    flex: 1,
+  },
+  dateTimeButton: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 12,
+    borderRadius: 5,
+    backgroundColor: "#fff",
+    minHeight: 45,
+    justifyContent: "center",
+  },
 });

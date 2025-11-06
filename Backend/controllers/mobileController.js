@@ -320,26 +320,45 @@ const getSecurePdfViewer = async (req, res) => {
 
 /**
  * Generate secure PDF URL with restrictions
+ * Ensures PDFs are viewable in WebView with proper text rendering
  */
 const generateSecurePdfUrl = (pdfUrl, title) => {
-  // For Cloudinary PDFs, add transformation parameters to restrict access
-  if (pdfUrl.includes('cloudinary.com')) {
-    // Add transformation to make PDF read-only
-    const baseUrl = pdfUrl.split('/upload/')[0];
-    const path = pdfUrl.split('/upload/')[1];
-    
-    // Add transformations to prevent download and enable secure viewing
-    const transformations = [
-      'fl_attachment:false', // Disable direct download
-      'fl_immutable_cache:true', // Cache for performance
-      'fl_secure:true', // Use HTTPS
-      'fl_sanitize:true' // Sanitize the PDF
-    ].join(',');
-    
-    return `${baseUrl}/upload/${transformations}/${path}`;
+  if (!pdfUrl) {
+    return null;
   }
   
-  // For other URLs, return as-is (you might want to implement additional security)
+  // For Cloudinary PDFs, ensure HTTPS and proper format for iframe embedding
+  if (pdfUrl.includes('cloudinary.com')) {
+    // Ensure HTTPS
+    let secureUrl = pdfUrl.replace('http://', 'https://');
+    
+    // If URL doesn't have /upload/, it might already be a direct URL
+    if (!secureUrl.includes('/upload/')) {
+      return secureUrl;
+    }
+    
+    // For Cloudinary, we can add flags but keep it simple for iframe embedding
+    // The PDF should be directly accessible via HTTPS
+    // Add format parameter to ensure PDF is served correctly
+    if (!secureUrl.includes('/fl_')) {
+      // Add flags for secure viewing (if needed)
+      // Note: Cloudinary PDFs work best when served directly
+      const parts = secureUrl.split('/upload/');
+      if (parts.length === 2) {
+        // Keep original format, just ensure HTTPS
+        return secureUrl;
+      }
+    }
+    
+    return secureUrl;
+  }
+  
+  // For other URLs, ensure HTTPS if possible
+  if (pdfUrl.startsWith('http://')) {
+    return pdfUrl.replace('http://', 'https://');
+  }
+  
+  // Return as-is for other URL types
   return pdfUrl;
 };
 

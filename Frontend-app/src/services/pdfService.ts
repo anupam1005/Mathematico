@@ -47,23 +47,38 @@ class PdfService {
    */
   async getSecurePdfViewer(bookId: string): Promise<SecurePdfViewerResponse> {
     try {
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
+      
+      // Get auth token for authenticated requests
+      const { Storage } = await import('../utils/storage');
+      const token = await Storage.getItem('authToken');
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      // Add authentication header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       console.log('PdfService: Fetching PDF viewer from:', `${mobileUrl}/books/${bookId}/viewer`);
       
       const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to load PDF viewer' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to load PDF viewer');
       }
 
       return data;
@@ -82,9 +97,7 @@ class PdfService {
    */
   async getBookDetails(bookId: string): Promise<BookDetailsResponse> {
     try {
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
       
       console.log('PdfService: Fetching book details from:', `${mobileUrl}/books/${bookId}`);
       

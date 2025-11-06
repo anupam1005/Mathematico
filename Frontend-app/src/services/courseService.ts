@@ -60,9 +60,7 @@ const courseApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
-    courseApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    courseApi.defaults.baseURL = `${API_CONFIG.mobile}/api/v1/mobile`;
     console.log('CourseService: Base URL updated to:', courseApi.defaults.baseURL);
   } catch (error) {
     console.error('CourseService: Failed to update base URL:', error);
@@ -124,16 +122,14 @@ class CourseService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      // Ensure we're using the correct backend URL
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      // Use API_CONFIG directly
+      const fullUrl = `${API_CONFIG.mobile}${endpoint}`;
       
       console.log('CourseService: Making request to:', fullUrl);
       
       const response = await courseApi({
         url: endpoint,
-        baseURL: `${backendUrl}/api/v1/mobile`,
+        baseURL: API_CONFIG.mobile,
         ...options,
       });
       return response.data;

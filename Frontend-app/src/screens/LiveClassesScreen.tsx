@@ -9,9 +9,9 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Search, X, Calendar, Clock, Users, Tag, PlayCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { liveClassService, LiveClass, LiveClassFilters } from '../services/liveClassService';
+import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
 import { Logger } from '../utils/errorHandler';
 
@@ -126,8 +126,10 @@ export default function LiveClassesScreen({ navigation }: any) {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
     return (
       date.toLocaleDateString() +
       ' ' +
@@ -161,8 +163,8 @@ export default function LiveClassesScreen({ navigation }: any) {
               style={[
                 styles.statusChip, 
                 { 
-                  backgroundColor: getStatusColor(liveClass.status),
-                  borderColor: getStatusColor(liveClass.status),
+                  backgroundColor: getStatusColor(liveClass.status || ''),
+                  borderColor: getStatusColor(liveClass.status || ''),
                 }
               ]}
               textStyle={{ 
@@ -171,17 +173,17 @@ export default function LiveClassesScreen({ navigation }: any) {
                 fontSize: 12,
               }}
             >
-              {liveClass.status.toUpperCase()}
+              {(liveClass.status || 'unknown').toUpperCase()}
             </Chip>
           </View>
-          <Paragraph numberOfLines={3} style={styles.cardDescription} as any>
-            {liveClass.description}
+          <Paragraph numberOfLines={3} style={styles.cardDescription}>
+            {liveClass.description || ''}
           </Paragraph>
           <View style={styles.cardFooter}>
             <Chip
               mode="outlined"
               compact
-              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
+              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
             >
               {liveClass.level}
             </Chip>
@@ -189,24 +191,24 @@ export default function LiveClassesScreen({ navigation }: any) {
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Icon name="schedule" size={16} color={designSystem.colors.textSecondary} />
-              <Text style={styles.metaText}>{formatDate(liveClass.scheduled_at)}</Text>
+              <Calendar size={16} color={designSystem.colors.textSecondary} />
+              <Text style={styles.metaText}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Icon name="access-time" size={16} color={designSystem.colors.textSecondary} />
+              <Clock size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>{liveClass.duration} min</Text>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Icon name="group" size={16} color={designSystem.colors.textSecondary} />
+              <Users size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>
                 {liveClass.enrolled_students}/{liveClass.max_students} enrolled
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Icon name="category" size={16} color={designSystem.colors.textSecondary} />
-              <Text style={styles.metaText}>{liveClass.category}</Text>
+              <Tag size={16} color={designSystem.colors.textSecondary} />
+              <Text style={styles.metaText}>{liveClass.category || 'General'}</Text>
             </View>
           </View>
         </Card.Content>
@@ -255,8 +257,8 @@ export default function LiveClassesScreen({ navigation }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={designSystem.colors.textSecondary}
-        icon={() => <Icon name="search" size={24} color={designSystem.colors.primary} />}
-        clearIcon={() => <Icon name="close" size={24} color={designSystem.colors.textSecondary} />}
+        icon={() => <Search size={24} color={designSystem.colors.primary} />}
+        clearIcon={() => <X size={24} color={designSystem.colors.textSecondary} />}
       />
 
       {/* Filters */}
@@ -333,7 +335,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <Icon name="play-circle" size={64} color={designSystem.colors.textSecondary} />
+              <PlayCircle size={64} color={designSystem.colors.textSecondary} />
               <Text style={styles.emptyText}>No live classes found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>

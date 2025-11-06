@@ -54,9 +54,7 @@ class RazorpayService {
 
   private async updateBaseUrl() {
     try {
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      this.baseUrl = `${backendUrl}/api/v1`;
+      this.baseUrl = `${API_CONFIG.mobile}/api/v1`;
       console.log('RazorpayService: Base URL updated to:', this.baseUrl);
     } catch (error) {
       console.error('RazorpayService: Failed to update base URL:', error);
@@ -70,9 +68,7 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Creating order with options:', paymentOptions);
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
       
       const response = await fetch(`${mobileUrl}/payments/create-order`, {
         method: 'POST',
@@ -116,9 +112,7 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
       
       const response = await fetch(`${mobileUrl}/payments/verify`, {
         method: 'POST',
@@ -162,9 +156,7 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching payment history');
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
       
       const response = await fetch(`${mobileUrl}/payments/history`, {
         method: 'GET',
@@ -211,9 +203,7 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching configuration from backend...');
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
+      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
       
       const response = await fetch(`${mobileUrl}/payments/config`, {
         method: 'GET',
@@ -233,15 +223,15 @@ class RazorpayService {
       }
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error loading configuration:', error);
-      // Fallback to default config
-      this.config = {
-        keyId: 'rzp_test_your_key_id_here',
+      // Return error response instead of throwing
+      console.error('RazorpayService: Failed to load configuration from backend');
+      return {
+        keyId: '',
         currency: 'INR',
         name: 'Mathematico',
         description: 'Educational Platform',
         theme: { color: '#3399cc' }
       };
-      return this.config;
     }
   }
 
@@ -292,22 +282,24 @@ class RazorpayService {
       
       // Check if RazorpayCheckout is available
       if (!RazorpayCheckout || !RazorpayCheckout.open) {
-        console.warn('RazorpayService: RazorpayCheckout not available, using demo mode');
-        
-        // Demo mode - simulate successful payment
+        console.error('RazorpayService: RazorpayCheckout not available');
         return {
-          success: true,
-          data: {
-            razorpay_payment_id: `pay_demo_${Date.now()}`,
-            razorpay_order_id: options.order_id,
-            razorpay_signature: `demo_signature_${Date.now()}`
-          },
-          message: 'Demo payment completed successfully',
+          success: false,
+          error: 'Razorpay SDK not available',
+          message: 'Payment service is not available. Please ensure the app is properly installed.',
         };
       }
       
       // Get secure configuration from backend
       const config = await this.getConfig();
+      
+      if (!config.keyId) {
+        return {
+          success: false,
+          error: 'Configuration error',
+          message: 'Razorpay configuration is not available. Please contact support.',
+        };
+      }
       
       const razorpayOptions = {
         description: options.description || 'Payment for Mathematico',
@@ -341,15 +333,11 @@ class RazorpayService {
       
       // Handle native module not available
       if (error.message && error.message.includes('_nativeModule')) {
-        console.warn('RazorpayService: Native module not available, using demo mode');
+        console.error('RazorpayService: Native module not available');
         return {
-          success: true,
-          data: {
-            razorpay_payment_id: `pay_demo_${Date.now()}`,
-            razorpay_order_id: options.order_id,
-            razorpay_signature: `demo_signature_${Date.now()}`
-          },
-          message: 'Demo payment completed successfully (native module not available)',
+          success: false,
+          error: 'Payment service unavailable',
+          message: 'Payment service is not available. Please ensure the app is properly installed and try again.',
         };
       }
       

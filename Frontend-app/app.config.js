@@ -2,9 +2,9 @@ const IS_DEV = process.env.APP_VARIANT === 'development';
 
 export default {
   expo: {
-    name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico - Learn Mathematics',
-    slug: 'mathematico-app',
-    version: '7.0.0',
+    name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico',
+    slug: 'mathematico',
+    version: '8.0.0',
     orientation: 'portrait',
     owner: 'dascompany',
     icon: './assets/icon.png',
@@ -18,7 +18,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 7,
+      versionCode: 8,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'

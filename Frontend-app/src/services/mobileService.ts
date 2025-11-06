@@ -18,8 +18,7 @@ const mobileApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
+    const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
     mobileApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
     console.log('MobileService: Base URL updated to:', mobileApi.defaults.baseURL);
   } catch (error) {

@@ -6,7 +6,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StatusBar } from 'expo-status-bar';
 
 
 import { Icon } from './src/components/Icon';
@@ -183,7 +182,7 @@ function AppNavigator() {
       />
       <Stack.Screen 
         name="SecurePdf" 
-        component={SecurePdfScreen as any}
+        component={SecurePdfScreen}
         options={{
           headerShown: false,
         }}
@@ -270,11 +269,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <>
-      <StatusBar style="auto" translucent={true} />
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AppContent />
-      </GestureHandlerRootView>
-    </>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppContent />
+    </GestureHandlerRootView>
   );
 }

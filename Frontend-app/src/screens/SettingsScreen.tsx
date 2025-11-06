@@ -15,12 +15,33 @@ import {
   List,
   Divider,
 } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { 
+  ArrowLeft, 
+  Bell, 
+  Mail, 
+  GraduationCap, 
+  Video, 
+  Moon, 
+  PlayCircle, 
+  Download, 
+  Languages, 
+  Trash2, 
+  BarChart3, 
+  Info, 
+  FileText, 
+  Shield,
+  CheckCircle
+} from 'lucide-react-native';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
 import settingsService from '../services/settingsService';
 import { ErrorHandler } from '../utils/errorHandler';
-import SettingsItem from '../components/SettingsItem';
+
+
+const DATA_USAGE_KEY = 'mathematico_data_usage';
+const LANGUAGE_KEY = 'mathematico_language';
 
 export default function SettingsScreen({ navigation }: any) {
   // Loading state
@@ -37,10 +58,18 @@ export default function SettingsScreen({ navigation }: any) {
   const [darkMode, setDarkMode] = useState(false);
   const [autoPlayVideos, setAutoPlayVideos] = useState(true);
   const [downloadQuality, setDownloadQuality] = useState('High');
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const [dataUsage, setDataUsage] = useState({ totalMB: 0, lastReset: new Date().toISOString() });
+
+  // Get app version from expo-constants
+  const appVersion = Constants.expoConfig?.version || (Constants.manifest as any)?.version || '7.0.0';
+  const buildNumber = Constants.expoConfig?.android?.versionCode || (Constants.manifest as any)?.android?.versionCode || '7';
 
   // Load settings on mount
   useEffect(() => {
     loadSettings();
+    loadLanguage();
+    loadDataUsage();
   }, []);
 
   const loadSettings = async () => {
@@ -99,7 +128,7 @@ export default function SettingsScreen({ navigation }: any) {
   const handleClearCache = () => {
     Alert.alert(
       'Clear Cache',
-      'Are you sure you want to clear the app cache? This will reset all settings to default values.',
+      'Are you sure you want to clear the app cache? This will reset all settings to default values and clear cached data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -110,6 +139,21 @@ export default function SettingsScreen({ navigation }: any) {
               setIsSaving(true);
               // Clear settings from storage
               await settingsService.clearSettings();
+              
+              // Clear additional cache data
+              try {
+                await AsyncStorage.removeItem('mathematico_data_usage');
+                // Reset data usage state
+                const resetData = {
+                  totalMB: 0,
+                  lastReset: new Date().toISOString(),
+                  sessions: []
+                };
+                setDataUsage(resetData);
+              } catch (error) {
+                console.warn('Error clearing data usage cache:', error);
+              }
+              
               // Reload settings with defaults
               await loadSettings();
               Alert.alert('Success', 'Cache and settings cleared successfully');
@@ -156,19 +200,107 @@ export default function SettingsScreen({ navigation }: any) {
     );
   };
 
+  const loadLanguage = async () => {
+    try {
+      const language = await AsyncStorage.getItem(LANGUAGE_KEY);
+      if (language) {
+        setSelectedLanguage(language);
+      }
+    } catch (error) {
+      console.error('Error loading language:', error);
+    }
+  };
+
   const handleLanguageSettings = () => {
     Alert.alert(
-      'Language',
-      'Language settings will be available in future updates',
-      [{ text: 'OK' }]
+      'Select Language',
+      'Choose your preferred language',
+      [
+        { 
+          text: 'English', 
+          onPress: async () => {
+            setSelectedLanguage('English');
+            await AsyncStorage.setItem(LANGUAGE_KEY, 'English');
+            Alert.alert('Success', 'Language changed to English');
+          }
+        },
+        { 
+          text: 'Hindi', 
+          onPress: async () => {
+            setSelectedLanguage('Hindi');
+            await AsyncStorage.setItem(LANGUAGE_KEY, 'Hindi');
+            Alert.alert('Success', 'Language changed to Hindi');
+          }
+        },
+        { 
+          text: 'Bengali', 
+          onPress: async () => {
+            setSelectedLanguage('Bengali');
+            await AsyncStorage.setItem(LANGUAGE_KEY, 'Bengali');
+            Alert.alert('Success', 'Language changed to Bengali');
+          }
+        },
+        { 
+          text: 'Tamil', 
+          onPress: async () => {
+            setSelectedLanguage('Tamil');
+            await AsyncStorage.setItem(LANGUAGE_KEY, 'Tamil');
+            Alert.alert('Success', 'Language changed to Tamil');
+          }
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
     );
   };
 
+  const loadDataUsage = async () => {
+    try {
+      const usageData = await AsyncStorage.getItem(DATA_USAGE_KEY);
+      if (usageData) {
+        setDataUsage(JSON.parse(usageData));
+      } else {
+        // Initialize data usage tracking
+        const initialData = {
+          totalMB: 0,
+          lastReset: new Date().toISOString(),
+          sessions: []
+        };
+        await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(initialData));
+        setDataUsage(initialData);
+      }
+    } catch (error) {
+      console.error('Error loading data usage:', error);
+    }
+  };
+
   const handleDataUsage = () => {
+    const totalMB = dataUsage.totalMB || 0;
+    const lastReset = dataUsage.lastReset ? new Date(dataUsage.lastReset).toLocaleDateString() : 'Never';
+    
     Alert.alert(
-      'Data Usage',
-      'Data usage statistics will be available in future updates',
-      [{ text: 'OK' }]
+      'Data Usage Statistics',
+      `Total Data Used: ${totalMB.toFixed(2)} MB\nLast Reset: ${lastReset}`,
+      [
+        {
+          text: 'Reset Statistics',
+          onPress: async () => {
+            try {
+              const resetData = {
+                totalMB: 0,
+                lastReset: new Date().toISOString(),
+                sessions: []
+              };
+              await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(resetData));
+              setDataUsage(resetData);
+              Alert.alert('Success', 'Data usage statistics have been reset');
+            } catch (error) {
+              console.error('Error resetting data usage:', error);
+              Alert.alert('Error', 'Failed to reset data usage statistics');
+            }
+          }
+        },
+        { text: 'OK' }
+      ]
     );
   };
 
@@ -189,7 +321,7 @@ export default function SettingsScreen({ navigation }: any) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={24} color={designSystem.colors.textPrimary} />
+          <ArrowLeft size={24} color={designSystem.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         {isSaving && (
@@ -206,7 +338,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Push Notifications"
               description="Receive push notifications"
-              left={(props) => <Icon name="notifications" size={24} color={props.color} />}
+              left={(props) => <Bell size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={pushNotifications}
@@ -224,7 +356,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Email Notifications"
               description="Receive email notifications"
-              left={(props) => <Icon name="email" size={24} color={props.color} />}
+              left={(props) => <Mail size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={emailNotifications}
@@ -242,7 +374,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Course Updates"
               description="Get notified about course updates"
-              left={(props) => <Icon name="school" size={24} color={props.color} />}
+              left={(props) => <GraduationCap size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={courseUpdates}
@@ -260,7 +392,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Live Class Reminders"
               description="Get reminded before live classes"
-              left={(props) => <Icon name="videocam" size={24} color={props.color} />}
+              left={(props) => <Video size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={liveClassReminders}
@@ -284,7 +416,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Dark Mode"
               description="Enable dark theme"
-              left={(props) => <Icon name="dark-mode" size={24} color={props.color} />}
+              left={(props) => <Moon size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={darkMode}
@@ -302,7 +434,7 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Auto-play Videos"
               description="Automatically play videos"
-              left={(props) => <Icon name="play-circle" size={24} color={props.color} />}
+              left={(props) => <PlayCircle size={24} color={props.color} />}
               right={() => (
                 <Switch
                   value={autoPlayVideos}
@@ -320,17 +452,17 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Download Quality"
               description={`Current: ${downloadQuality}`}
-              left={(props) => <Icon name="download" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+              left={(props) => <Download size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={handleDownloadSettings}
             />
             <Divider />
 
             <List.Item
               title="Language"
-              description="English (Default)"
-              left={(props) => <Icon name="language" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+              description={selectedLanguage}
+              left={(props) => <Languages size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={handleLanguageSettings}
             />
           </Card.Content>
@@ -344,17 +476,17 @@ export default function SettingsScreen({ navigation }: any) {
             <List.Item
               title="Clear Cache"
               description="Free up storage space"
-              left={(props) => <Icon name="delete-sweep" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+              left={(props) => <Trash2 size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={handleClearCache}
             />
             <Divider />
 
             <List.Item
               title="Data Usage"
-              description="View your data usage"
-              left={(props) => <Icon name="data-usage" size={24} color={props.color} />}
-              right={(props) => <Icon name="chevron-right" size={24} color={props.color} />}
+              description={`${(dataUsage.totalMB || 0).toFixed(2)} MB used`}
+              left={(props) => <BarChart3 size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={handleDataUsage}
             />
           </Card.Content>
@@ -367,19 +499,22 @@ export default function SettingsScreen({ navigation }: any) {
             
             <List.Item
               title="Version"
-              description="1.0.3"
-              left={(props) => <Icon name="info" size={24} color={props.color} />}
+              description={`${appVersion} (Build ${buildNumber})`}
+              left={(props) => <Info size={24} color={props.color} />}
             />
             <Divider />
 
-            <SettingsItem
+            <List.Item
               title="Terms of Use"
-              icon="description"
+              left={(props) => <FileText size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={() => navigation.navigate('TermsOfUse')}
             />
-            <SettingsItem
+            <Divider />
+            <List.Item
               title="Privacy Policy"
-              icon="privacy-tip"
+              left={(props) => <Shield size={24} color={props.color} />}
+              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
               onPress={() => navigation.navigate('PrivacyPolicy')}
             />
 

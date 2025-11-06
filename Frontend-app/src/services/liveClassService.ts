@@ -59,8 +59,7 @@ const liveClassApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
+    const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
     liveClassApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
     console.log('LiveClassService: Base URL updated to:', liveClassApi.defaults.baseURL);
   } catch (error) {
@@ -124,8 +123,7 @@ class LiveClassService {
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
       // Ensure we're using the correct backend URL
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
+      const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
       const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
       
       console.log('LiveClassService: Making request to:', fullUrl);

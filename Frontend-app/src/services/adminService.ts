@@ -93,12 +93,13 @@ const adminApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
-    adminApi.defaults.baseURL = `${backendUrl}/api/v1/admin`;
+    adminApi.defaults.baseURL = API_CONFIG.admin;
     console.log('AdminService: Base URL updated to:', adminApi.defaults.baseURL);
   } catch (error) {
     console.error('AdminService: Failed to update base URL:', error);
+    // Fallback to API_CONFIG.admin if getBackendUrl fails
+    adminApi.defaults.baseURL = API_CONFIG.admin;
+    console.log('AdminService: Using fallback base URL:', adminApi.defaults.baseURL);
   }
 })();
 
@@ -295,9 +296,8 @@ class AdminService {
         body = JSON.stringify(bookData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/books`, {
         method: 'POST',
@@ -347,9 +347,8 @@ class AdminService {
         body = JSON.stringify(bookData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/books/${id}`, {
         method: 'PUT',
@@ -381,9 +380,8 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/books/${id}/status`, {
         method: 'PUT',
@@ -418,9 +416,8 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/books/${id}`, {
         method: 'DELETE',
@@ -501,9 +498,8 @@ class AdminService {
         body = JSON.stringify(courseData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       errorHandler.logInfo('AdminService: Making request to:', `${adminUrl}/courses`);
       errorHandler.logInfo('AdminService: Request headers:', headers);
@@ -569,9 +565,8 @@ class AdminService {
         body = JSON.stringify(courseData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/courses/${id}`, {
         method: 'PUT',
@@ -603,9 +598,8 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/courses/${id}/status`, {
         method: 'PUT',
@@ -640,9 +634,8 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/courses/${id}`, {
         method: 'DELETE',
@@ -723,9 +716,7 @@ class AdminService {
         body = JSON.stringify(liveClassData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/live-classes`, {
         method: 'POST',
@@ -775,9 +766,7 @@ class AdminService {
         body = JSON.stringify(liveClassData);
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/live-classes/${id}`, {
         method: 'PUT',
@@ -809,9 +798,7 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/live-classes/${id}/status`, {
         method: 'PUT',
@@ -846,9 +833,7 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const adminUrl = `${backendUrl}/api/v1/admin`;
+      const adminUrl = API_CONFIG.admin;
       
       const response = await fetch(`${adminUrl}/live-classes/${id}`, {
         method: 'DELETE',

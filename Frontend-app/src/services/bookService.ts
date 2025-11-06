@@ -61,9 +61,7 @@ const bookApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
-    bookApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    bookApi.defaults.baseURL = `${API_CONFIG.mobile}/api/v1/mobile`;
     console.log('BookService: Base URL updated to:', bookApi.defaults.baseURL);
   } catch (error) {
     console.error('BookService: Failed to update base URL:', error);
@@ -126,16 +124,14 @@ class BookService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      // Ensure we're using the correct backend URL
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      // Use API_CONFIG directly
+      const fullUrl = `${API_CONFIG.mobile}${endpoint}`;
       
       console.log('BookService: Making request to:', fullUrl);
       
       const response = await bookApi({
         url: endpoint,
-        baseURL: `${backendUrl}/api/v1/mobile`,
+        baseURL: API_CONFIG.mobile,
         ...options,
       });
       return response.data;

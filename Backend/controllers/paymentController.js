@@ -242,12 +242,22 @@ const getPaymentHistory = async (req, res) => {
  */
 const getRazorpayConfig = async (req, res) => {
   try {
+    const keyId = process.env.RAZORPAY_KEY_ID || process.env.REACT_NATIVE_RAZORPAY_KEY_ID;
+    
+    if (!keyId) {
+      return res.status(500).json({
+        success: false,
+        message: 'Razorpay configuration not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Only return the public key ID, never the secret
     res.json({
       success: true,
       message: 'Razorpay configuration retrieved successfully',
       data: {
-        keyId: process.env.RAZORPAY_KEY_ID || process.env.REACT_NATIVE_RAZORPAY_KEY_ID,
+        keyId: keyId,
         currency: 'INR',
         name: 'Mathematico',
         description: 'Educational Platform',

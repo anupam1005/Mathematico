@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Title, Paragraph, Chip, Searchbar } from 'react-native-paper';
-import { Icon } from '../components/Icon';
+import { Search, X, UserCircle, BookOpen, Calendar, Clock, PlayCircle, GraduationCap, Book as BookIcon, Video, Users } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService } from '../services/courseService';
 import { bookService } from '../services/bookService';
@@ -135,7 +135,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadFeaturedBooks = async () => {
     try {
-      const response = await bookService.getBooks(1, 4, { status: 'published' });
+      const response = await bookService.getBooks(1, 4);
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedBooks(response.data);
       } else {
@@ -176,7 +176,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={course.id || index}
       variant="elevated"
-      onPress={() => navigation.navigate('CourseDetail', { courseId: course._id || course.id })}
+      onPress={() => navigation.navigate('CourseDetail', { courseId: course.id || (course as any)._id })}
       style={styles.cardContainer}
     >
       <View style={styles.cardImageContainer}>
@@ -220,7 +220,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={book.id || index}
       variant="elevated"
-      onPress={() => navigation.navigate('BookDetail', { bookId: book._id || book.id })}
+      onPress={() => navigation.navigate('BookDetail', { bookId: book.id || (book as any)._id })}
       style={styles.cardContainer}
     >
       <View style={styles.cardImageContainer}>
@@ -256,7 +256,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={liveClass.id || index}
       variant="elevated"
-      onPress={() => navigation.navigate('LiveClassDetail', { liveClassId: liveClass._id || liveClass.id })}
+      onPress={() => navigation.navigate('LiveClassDetail', { liveClassId: liveClass.id || (liveClass as any)._id })}
       style={styles.liveClassCard}
     >
       <View style={styles.cardImageContainer}>
@@ -274,18 +274,18 @@ export default function HomeScreen({ navigation }: any) {
         <Text numberOfLines={2} style={textStyles.subheading}>
           {liveClass.title}
         </Text>
-        <View style={styles.liveClassInfo}>
-          <View style={styles.liveClassMeta}>
-            <Icon name="schedule" size={16} color={designSystem.colors.textSecondary} />
-            <Text style={textStyles.caption}>
-              {new Date(liveClass.scheduled_at).toLocaleDateString()}
-            </Text>
+          <View style={styles.liveClassInfo}>
+            <View style={styles.liveClassMeta}>
+              <Calendar size={16} color={designSystem.colors.textSecondary} />
+              <Text style={textStyles.caption}>
+                {new Date(liveClass.scheduled_at).toLocaleDateString()}
+              </Text>
+            </View>
+            <View style={styles.liveClassMeta}>
+              <Clock size={16} color={designSystem.colors.textSecondary} />
+              <Text style={textStyles.caption}>{liveClass.duration} min</Text>
+            </View>
           </View>
-          <View style={styles.liveClassMeta}>
-            <Icon name="access-time" size={16} color={designSystem.colors.textSecondary} />
-            <Text style={textStyles.caption}>{liveClass.duration} min</Text>
-          </View>
-        </View>
         <View style={styles.cardFooter}>
           <Chip
             mode="outlined"
@@ -340,7 +340,7 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Profile')}
           style={styles.avatarContainer}
         >
-          <Icon name="account-circle" size={40} color={designSystem.colors.primary} />
+          <UserCircle size={40} color={designSystem.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -351,8 +351,8 @@ export default function HomeScreen({ navigation }: any) {
         value={searchQuery}
         onSubmitEditing={handleSearch}
         style={styles.searchBar}
-        icon={() => <Icon name="search" size={24} color={designSystem.colors.textSecondary} />}
-        clearIcon={() => <Icon name="close" size={24} color={designSystem.colors.textSecondary} />}
+        icon={() => <Search size={24} color={designSystem.colors.textSecondary} />}
+        clearIcon={() => <X size={24} color={designSystem.colors.textSecondary} />}
       />
 
       {/* Statistics Section */}
@@ -396,7 +396,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.featuresContainer}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.primary + '20' }]}>
-              <Icon name="menu-book" size={24} color={designSystem.colors.primary} />
+              <BookOpen size={24} color={designSystem.colors.primary} />
             </View>
             <Text style={textStyles.subheading}>Comprehensive Courses</Text>
             <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
@@ -405,7 +405,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.secondary + '20' }]}>
-              <Icon name="schedule" size={24} color={designSystem.colors.secondary} />
+              <Calendar size={24} color={designSystem.colors.secondary} />
             </View>
             <Text style={textStyles.subheading}>Live Interactive Classes</Text>
             <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
@@ -414,7 +414,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.accent + '20' }]}>
-              <Icon name="school" size={24} color={designSystem.colors.accent} />
+              <GraduationCap size={24} color={designSystem.colors.accent} />
             </View>
             <Text style={textStyles.subheading}>Expert Educators</Text>
             <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
@@ -439,7 +439,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             featuredCourses.map((course, index) => (
-              <View key={course.id || course._id || index}>
+              <View key={course.id || index}>
                 {renderCourseCard(course, index)}
               </View>
             ))
@@ -462,7 +462,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             featuredBooks.map((book, index) => (
-              <View key={book.id || book._id || index}>
+              <View key={book.id || index}>
                 {renderBookCard(book, index)}
               </View>
             ))
@@ -485,7 +485,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             upcomingClasses.map((liveClass, index) => (
-              <View key={liveClass.id || liveClass._id || index}>
+              <View key={liveClass.id || index}>
                 {renderLiveClassCard(liveClass, index)}
               </View>
             ))
@@ -501,21 +501,21 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Courses')}
           >
-            <Icon name="school" size={24} color={designSystem.colors.primary} />
+            <GraduationCap size={24} color={designSystem.colors.primary} />
             <Text style={styles.quickActionText}>Browse Courses</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Books')}
           >
-            <Icon name="book" size={24} color={designSystem.colors.primary} />
+            <BookIcon size={24} color={designSystem.colors.primary} />
             <Text style={styles.quickActionText}>Browse Books</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('LiveClasses')}
             >
-              <Icon name="play-circle" size={24} color={designSystem.colors.primary} />
+              <PlayCircle size={24} color={designSystem.colors.primary} />
               <Text style={styles.quickActionText}>Live Classes</Text>
           </TouchableOpacity>
         </View>
