@@ -1,5 +1,5 @@
 {
-  "extends": "./node_modules/expo-modules-core/tsconfig.base.json",
+  "extends": "./node_modules/expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
