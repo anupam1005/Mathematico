@@ -6,14 +6,14 @@ export default {
     slug: 'mathematico-app',
     version: '8.1.0',
     orientation: 'portrait',
-    owner: 'anupam_dev',
+    owner: 'anupam-dev',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: 'dca54a1e-e6a7-4be5-897d-49e52257cd0e'
+        projectId: 'f7a70815-47dc-4d9f-a832-8ee98ea1ab55'
       }
     },
     android: {
