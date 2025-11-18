@@ -35,10 +35,12 @@ export default {
           android: {
             compileSdkVersion: 35,
             targetSdkVersion: 35,
-            // Enable 16 KB native library alignment for Android 15+
             minSdkVersion: 24,
-            // NDK r27b will be used automatically by Expo SDK 52
-            // This ensures proper 16 KB page size support
+            packagingOptions: {
+              jniLibs: {
+                useLegacyPackaging: false
+              }
+            }
           }
         }
       ]
@@ -51,10 +53,12 @@ export default {
           android: {
             compileSdkVersion: 35,
             targetSdkVersion: 35,
-            // Enable 16 KB native library alignment for Android 15+
             minSdkVersion: 24,
-            // NDK r27b will be used automatically by Expo SDK 52
-            // This ensures proper 16 KB page size support
+            packagingOptions: {
+              jniLibs: {
+                useLegacyPackaging: false
+              }
+            }
           }
         }
       ]
