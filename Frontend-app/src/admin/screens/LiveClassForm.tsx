@@ -14,13 +14,12 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import { DateTimePicker as DTPicker } from '../../components/DateTimePicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { adminService } from '../../services/adminService';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { Button } from 'react-native-paper';
 import { colors } from '../../styles/colors';
 import { formatDateTime, validateTimeRange } from '../../utils/dateTimeUtils';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 // Form validation types
 interface FormErrors {
@@ -78,6 +77,13 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(!!liveClassId);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showScheduledDatePicker, setShowScheduledDatePicker] = useState(false);
+  const [showScheduledTimePicker, setShowScheduledTimePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   
   // Refs
   const scrollViewRef = useRef<ScrollView>(null);
@@ -253,12 +259,16 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       const endTime = new Date(date.getTime() + duration * 60000);
       handleChange('endTime', endTime);
     }
-    // If duration changes, update end time
-    else if (field === 'duration') {
-      const duration = Number(value) || 60;
-      const endTime = new Date(formData.startTime.getTime() + duration * 60000);
-      handleChange('endTime', endTime);
-    }
+  };
+
+  // Helper function to close all date/time pickers
+  const closeAllPickers = () => {
+    setShowScheduledDatePicker(false);
+    setShowScheduledTimePicker(false);
+    setShowStartDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndDatePicker(false);
+    setShowEndTimePicker(false);
   };
 
   // Handle image picker
@@ -286,85 +296,139 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
 
   // Handle form submission
   const handleSubmit = async () => {
+    console.log('LiveClassForm: Submit button clicked');
+    console.log('LiveClassForm: Form data:', formData);
+    
     // Dismiss keyboard if open
     Keyboard.dismiss();
     
-    if (!validateForm()) {
-      // Scroll to the first error
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      return;
+    // Enhanced validation
+    const requiredFields = ['title', 'description', 'category', 'subject', 'grade', 'level', 'duration', 'maxStudents', 'meetingLink'];
+    const missingFields = requiredFields.filter(field => {
+      const value = formData[field as keyof typeof formData];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+    
+    if (missingFields.length > 0) {
+      console.log('LiveClassForm: Validation failed - missing required fields:', missingFields);
+      return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
+    }
+    
+    // Validate enum values
+    const validCategories = ['mathematics', 'physics'];
+    const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
+    const validStatuses = ['scheduled', 'live', 'completed', 'cancelled', 'postponed'];
+    
+    if (!validCategories.includes(formData.category)) {
+      return Alert.alert("Error", "Please select a valid category from the dropdown");
+    }
+    
+    if (!validLevels.includes(formData.level)) {
+      return Alert.alert("Error", "Please select a valid level from the dropdown");
+    }
+    
+    if (formData.status && !validStatuses.includes(formData.status)) {
+      return Alert.alert("Error", "Please select a valid status from the dropdown");
+    }
+    
+    // Validate duration and maxStudents are numbers
+    if (isNaN(Number(formData.duration)) || Number(formData.duration) < 15 || Number(formData.duration) > 480) {
+      return Alert.alert("Error", "Duration must be between 15 and 480 minutes");
+    }
+    
+    if (isNaN(Number(formData.maxStudents)) || Number(formData.maxStudents) <= 0) {
+      return Alert.alert("Error", "Max Students must be a positive number");
     }
 
+    // Compute an effective end time based on duration if necessary
+    const start = formData.startTime;
+    const effectiveEnd = (formData.endTime && formData.endTime.getTime() > start.getTime())
+      ? formData.endTime
+      : (formData.duration ? new Date(start.getTime() + Number(formData.duration) * 60000) : formData.endTime);
+    if (!effectiveEnd || effectiveEnd.getTime() <= start.getTime()) {
+      return Alert.alert("Error", "End time must be after start time");
+    }
+
+    setLoading(true);
     try {
-      setIsSubmitting(true);
-      
-      // Prepare form data
+      console.log('LiveClassForm: Creating FormData...');
       const formDataToSend = new FormData();
       
-      // Add all fields to form data
-      Object.entries(formData).forEach(([key, value]) => {
+      // Prepare the data object with proper formatting
+      const processedData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.category,
+        subject: formData.subject.trim(),
+        grade: formData.grade.trim(),
+        level: formData.level,
+        duration: Number(formData.duration),
+        maxStudents: Number(formData.maxStudents),
+        startTime: formData.startTime.toISOString(),
+        endTime: effectiveEnd.toISOString(),
+        scheduledAt: formData.scheduledAt.toISOString(),
+        meetingLink: formData.meetingLink.trim(),
+        status: formData.status || 'scheduled',
+        isAvailable: true
+      };
+      
+      console.log('LiveClassForm: Processed data:', processedData);
+      
+      // Add all fields to FormData with proper formatting
+      Object.entries(processedData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
-          // Handle Date objects
-          if (value instanceof Date) {
-            formDataToSend.append(key, value.toISOString());
-          } 
-          // Handle files
-          else if (key === 'image' && value) {
-            formDataToSend.append('image', value);
-          }
-          // Handle other values
-          else {
-            formDataToSend.append(key, value.toString());
-          }
+          formDataToSend.append(key, String(value));
         }
       });
+      
+      // Handle image upload
+      if (formData.image) {
+        // If it's a new image (has uri)
+        if (typeof formData.image === 'object' && 'uri' in formData.image && formData.image.uri) {
+          // Extract filename and type from URI if available
+          const uriParts = formData.image.uri.split('.');
+          const fileType = uriParts[uriParts.length - 1];
+          
+          formDataToSend.append('image', {
+            uri: formData.image.uri,
+            name: `liveclass_${Date.now()}.${fileType}`,
+            type: `image/${fileType}`
+          } as any);
+        } 
+        // If it's an existing image URL (string)
+        else if (typeof formData.image === 'string') {
+          formDataToSend.append('image', formData.image);
+        }
+      }
 
-      let response;
+      console.log('LiveClassForm: FormData created, submitting...');
       
       if (liveClassId) {
-        // Update existing live class
-        response = await adminService.updateLiveClass(liveClassId, formDataToSend);
+        console.log('LiveClassForm: Updating live class with ID:', liveClassId);
+        const result = await adminService.updateLiveClass(liveClassId, formDataToSend);
+        console.log('LiveClassForm: Update result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Live class updated successfully");
+          onSuccess?.();
+        } else {
+          Alert.alert("Error", result.error || "Failed to update live class");
+        }
       } else {
-        // Create new live class
-        response = await adminService.createLiveClass(formDataToSend);
+        console.log('LiveClassForm: Creating new live class...');
+        const result = await adminService.createLiveClass(formDataToSend);
+        console.log('LiveClassForm: Create result:', result);
+        if (result.success) {
+          Alert.alert("Success", "Live class created successfully");
+          onSuccess?.();
+        } else {
+          Alert.alert("Error", result.error || "Failed to create live class");
+        }
       }
-
-      if (response.success) {
-        Alert.alert(
-          'Success', 
-          liveClassId ? 'Live class updated successfully!' : 'Live class created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (onSuccess) {
-                  onSuccess();
-                } else if (navigation) {
-                  navigation.goBack();
-                }
-              },
-            },
-          ]
-        );
-      } else {
-        throw new Error(response.error || 'Failed to save live class');
-      }
-    } catch (error) {
-      console.error('Error saving live class:', error);
-      
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Error', errorMessage);
+    } catch (err: any) {
+      console.error('LiveClassForm: Error during submission:', err);
+      Alert.alert("Error", err.message || "Something went wrong while processing your request");
     } finally {
-      if (isMounted.current) {
-        setIsSubmitting(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -521,142 +585,6 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     if (formData.startTime && duration) {
       const endTime = new Date(formData.startTime.getTime() + (Number(duration) * 60000));
       setFormData((prev: any) => ({ ...prev, duration, endTime }));
-    }
-  };
-
-  const handleSubmit = async () => {
-    console.log('LiveClassForm: Submit button clicked');
-    console.log('LiveClassForm: Form data:', formData);
-    
-    // Enhanced validation
-    const requiredFields = ['title', 'description', 'category', 'subject', 'grade', 'level', 'duration', 'maxStudents', 'meetingLink'];
-    const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
-    
-    if (missingFields.length > 0) {
-      console.log('LiveClassForm: Validation failed - missing required fields:', missingFields);
-      return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
-    }
-    
-    // Validate enum values
-    const validCategories = ['mathematics', 'physics'];
-    const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
-    const validStatuses = ['scheduled', 'live', 'completed', 'cancelled', 'postponed'];
-    
-    if (!validCategories.includes(formData.category)) {
-      return Alert.alert("Error", "Please select a valid category from the dropdown");
-    }
-    
-    if (!validLevels.includes(formData.level)) {
-      return Alert.alert("Error", "Please select a valid level from the dropdown");
-    }
-    
-    if (formData.status && !validStatuses.includes(formData.status)) {
-      return Alert.alert("Error", "Please select a valid status from the dropdown");
-    }
-    
-    // Validate duration and maxStudents are numbers
-    if (isNaN(Number(formData.duration)) || Number(formData.duration) < 15 || Number(formData.duration) > 480) {
-      return Alert.alert("Error", "Duration must be between 15 and 480 minutes");
-    }
-    
-    if (isNaN(Number(formData.maxStudents)) || Number(formData.maxStudents) <= 0) {
-      return Alert.alert("Error", "Max Students must be a positive number");
-    }
-
-    // Compute an effective end time based on duration if necessary
-    const start = formData.startTime;
-    const effectiveEnd = (formData.endTime && formData.endTime > start)
-      ? formData.endTime
-      : (formData.duration ? new Date(start.getTime() + Number(formData.duration) * 60000) : formData.endTime);
-    if (!effectiveEnd || effectiveEnd <= start) {
-      return Alert.alert("Error", "End time must be after start time");
-    }
-
-    setLoading(true);
-    try {
-      console.log('LiveClassForm: Creating FormData...');
-      const formDataToSend = new FormData();
-      
-      // Prepare the data object with proper formatting
-      const processedData = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        category: formData.category,
-        subject: formData.subject.trim(),
-        grade: formData.grade.trim(),
-        level: formData.level,
-        duration: Number(formData.duration),
-        maxStudents: Number(formData.maxStudents),
-        startTime: formData.startTime.toISOString(),
-        endTime: effectiveEnd.toISOString(),
-        scheduledAt: formData.scheduledAt.toISOString(),
-        meetingLink: formData.meetingLink.trim(),
-        status: formData.status || 'scheduled',
-        isAvailable: true
-      };
-      
-      console.log('LiveClassForm: Processed data:', processedData);
-      
-      // Add all fields to FormData with proper formatting
-      Object.entries(processedData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          // For date fields, ensure they're properly formatted as ISO strings
-          if (value instanceof Date) {
-            formDataToSend.append(key, value.toISOString());
-          } else {
-            formDataToSend.append(key, String(value));
-          }
-        }
-      });
-      
-      // Handle image upload
-      if (formData.image) {
-        // If it's a new image (has uri)
-        if (typeof formData.image === 'object' && 'uri' in formData.image && formData.image.uri) {
-          // Extract filename and type from URI if available
-          const uriParts = formData.image.uri.split('.');
-          const fileType = uriParts[uriParts.length - 1];
-          
-          formDataToSend.append('image', {
-            uri: formData.image.uri,
-            name: `liveclass_${Date.now()}.${fileType}`,
-            type: `image/${fileType}`
-          } as any);
-        } 
-        // If it's an existing image URL (string)
-        else if (typeof formData.image === 'string') {
-          formDataToSend.append('image', formData.image);
-        }
-      }
-
-      console.log('LiveClassForm: FormData created, submitting...');
-      
-      if (liveClassId) {
-        console.log('LiveClassForm: Updating live class with ID:', liveClassId);
-        const result = await adminService.updateLiveClass(liveClassId, formDataToSend);
-        console.log('LiveClassForm: Update result:', result);
-        if (result.success) {
-          Alert.alert("Success", "Live class updated successfully");
-          onSuccess?.();
-        } else {
-          Alert.alert("Error", result.error || "Failed to update live class");
-        }
-      } else {
-        console.log('LiveClassForm: Creating new live class...');
-        const result = await adminService.createLiveClass(formDataToSend);
-        console.log('LiveClassForm: Create result:', result);
-        if (result.success) {
-          Alert.alert("Success", "Live class created successfully");
-          onSuccess?.();
-        } else {
-          Alert.alert("Error", result.error || "Failed to create live class");
-        }
-      }
-    } catch (err: any) {
-      console.error('LiveClassForm: Error during submission:', err);
-      Alert.alert("Error", err.message || "Something went wrong while processing your request");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -1069,4 +997,17 @@ const styles = StyleSheet.create({
     minHeight: 45,
     justifyContent: "center",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
 });
+
+export default LiveClassForm;
