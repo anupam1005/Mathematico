@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-// Import mobile controller
+// Import controllers
 const mobileController = require('../controllers/mobileController');
+const paymentController = require('../controllers/paymentController');
 console.log('✅ MobileController loaded successfully');
 
 // ============= ROUTE DEFINITIONS =============
@@ -67,8 +68,28 @@ router.get('/search', mobileController.search);
 // Featured content
 router.get('/featured', mobileController.getFeaturedContent);
 
+// Categories
+router.get('/categories', mobileController.getCategories);
+
 // App info
 router.get('/app-info', mobileController.getAppInfo);
+router.get('/info', mobileController.getAppInfo);
+
+// Statistics
+router.get('/stats', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      totalBooks: 0,
+      totalCourses: 0,
+      totalLiveClasses: 0,
+      totalStudents: 0,
+      activeUsers: 0
+    },
+    message: 'Statistics retrieved successfully',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Settings routes
 router.get('/settings', (req, res) => {
@@ -101,85 +122,11 @@ router.put('/settings', (req, res) => {
 });
 
 // Payment routes
-router.post('/payments/create-order', async (req, res) => {
-  try {
-    const { amount, currency, receipt, notes } = req.body;
-    
-    // Simple order creation for demo
-    const order = {
-      id: `order_${Date.now()}`,
-      amount: amount * 100, // Convert to paise
-      currency: currency || 'INR',
-      receipt: receipt || `receipt_${Date.now()}`,
-      status: 'created',
-      notes: notes || {}
-    };
-    
-    res.json({
-      success: true,
-      data: order,
-      message: 'Order created successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create order',
-      error: error.message
-    });
-  }
-});
+router.post('/payments/create-order', paymentController.createOrder);
+router.post('/payments/verify', paymentController.verifyPayment);
+router.get('/payments/config', paymentController.getRazorpayConfig);
 
-router.post('/payments/verify', async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    
-    // Simple verification for demo (in production, verify signature)
-    res.json({
-      success: true,
-      data: {
-        order_id: razorpay_order_id,
-        payment_id: razorpay_payment_id,
-        verified: true
-      },
-      message: 'Payment verified successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Payment verification failed',
-      error: error.message
-    });
-  }
-});
-
-router.get('/payments/config', (req, res) => {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  if (!keyId) {
-    return res.status(500).json({
-      success: false,
-      message: 'Razorpay configuration not found',
-    });
-  }
-  
-  res.json({
-    success: true,
-    data: {
-      keyId: keyId,
-      currency: 'INR',
-      name: 'Mathematico',
-      description: 'Educational Platform',
-      theme: { color: '#3399cc' }
-    },
-    message: 'Configuration retrieved successfully'
-  });
-});
-
-router.get('/payments/history', (req, res) => {
-  res.json({
-    success: true,
-    data: [],
-    message: 'Payment history retrieved successfully'
-  });
-});
+// Payment history
+router.get('/payments/history', paymentController.getPaymentHistory);
 
 module.exports = router;

@@ -266,4 +266,6 @@ Thumbs.db
 
 .vercel
 
-.vercel
+# Vercel configuration with secrets (if accidentally created)
+vercel.json.backup
+vercel.*.json

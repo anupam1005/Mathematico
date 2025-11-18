@@ -1,8 +1,9 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer, ParamListBase } from '@react-navigation/native';
+import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { RouteProp } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -44,7 +45,24 @@ import { theme } from './src/styles/theme';
 // Import Auth Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
-const Stack = createStackNavigator();
+// Define the param list for the root stack
+type RootStackParamList = {
+  MainTabs: undefined;
+  BookDetail: { bookId: string };
+  CourseDetail: { courseId: string };
+  LiveClassDetail: { classId: string };
+  Checkout: { item: any; type: 'book' | 'course' | 'liveClass' };
+  SecurePdf: { bookId: string; bookTitle?: string };
+  About: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfUse: undefined;
+  Settings: undefined;
+  Login: undefined;
+  Register: undefined;
+  Admin: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
@@ -182,7 +200,7 @@ function AppNavigator() {
       />
       <Stack.Screen 
         name="SecurePdf" 
-        component={SecurePdfScreen}
+        component={SecurePdfScreen as React.ComponentType<any>}
         options={{
           headerShown: false,
         }}

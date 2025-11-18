@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  ScrollView,
+  Image,
+  Platform,
 } from 'react-native';
 import {
   Button,
@@ -476,11 +479,12 @@ export default function AdminLiveClasses({ navigation }: any) {
   );
 }
 
+// Using StyleSheet.create for proper type checking
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     backgroundColor: designSystem.colors.background,
     padding: designSystem.spacing.xl,
   },
@@ -591,5 +595,5 @@ const styles = StyleSheet.create({
     backgroundColor: designSystem.colors.primary,
     borderRadius: designSystem.borderRadius.full,
     ...designSystem.shadows.lg,
-  },
+  }
 });

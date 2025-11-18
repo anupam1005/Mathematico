@@ -91,4 +91,37 @@ yarn-error.*
 
 # Android keystore files - CRITICAL SECURITY
 *.keystore
+*.jks
 my-upload-key.keystore
+@anupam145__mathematico-app.bak.jks
+upload_cert.pem
+
+# Google Play Service Account
+google-play-service-account.json
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+
+# Sensitive configuration
+*-service-account.json
+service-account*.json
+
+# Test files and folders (removed from production)
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+jest.config.js
+jest.setup.js
+jest-preset.js
+coverage/
+*.test.js
+*.spec.js
+
+# Test reports
+*TEST*.md
+*test*.md

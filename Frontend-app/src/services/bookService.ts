@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
@@ -61,7 +61,7 @@ const bookApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    bookApi.defaults.baseURL = `${API_CONFIG.mobile}/api/v1/mobile`;
+    bookApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('BookService: Base URL updated to:', bookApi.defaults.baseURL);
   } catch (error) {
     console.error('BookService: Failed to update base URL:', error);
@@ -70,23 +70,23 @@ const bookApi = axios.create({
 
 // Request interceptor to add auth token
 bookApi.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     const token = await authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle token refresh
 bookApi.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

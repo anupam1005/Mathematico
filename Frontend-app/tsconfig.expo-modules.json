@@ -1,0 +1,20 @@
+{
+  "extends": "./node_modules/expo-modules-core/tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@expo/config-plugins": ["./node_modules/@expo/config-plugins"],
+      "@expo/config-types": ["./node_modules/@expo/config-types"],
+      "expo-modules-core": ["./node_modules/expo-modules-core"]
+    }
+  },
+  "include": [
+    "node_modules/expo-modules-core/**/*.ts",
+    "node_modules/expo-modules-core/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules/expo-modules-core/**/__tests__",
+    "node_modules/expo-modules-core/**/__mocks__"
+  ]
+}

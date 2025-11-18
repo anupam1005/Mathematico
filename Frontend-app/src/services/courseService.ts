@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
@@ -60,7 +60,7 @@ const courseApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    courseApi.defaults.baseURL = `${API_CONFIG.mobile}/api/v1/mobile`;
+    courseApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('CourseService: Base URL updated to:', courseApi.defaults.baseURL);
   } catch (error) {
     console.error('CourseService: Failed to update base URL:', error);
@@ -69,23 +69,23 @@ const courseApi = axios.create({
 
 // Request interceptor to add auth token
 courseApi.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     const token = await authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle token refresh
 courseApi.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

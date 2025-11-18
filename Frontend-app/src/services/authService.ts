@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
@@ -40,14 +40,14 @@ const api = axios.create({
     'Accept': 'application/json'
   },
   // Add request/response interceptors for debugging
-  validateStatus: function (status) {
+  validateStatus: function (status: number) {
     return status >= 200 && status < 300; // default
   },
 });
 
 // Request interceptor to add auth token and debug
 api.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     console.log('AuthService: Making request to:', config.url);
     console.log('AuthService: Full URL:', `${config.baseURL}${config.url}`);
     console.log('AuthService: Method:', config.method);
@@ -59,7 +59,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     console.error('AuthService: Request interceptor error:', error);
     return Promise.reject(error);
   }
@@ -67,12 +67,12 @@ api.interceptors.request.use(
 
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     console.log('AuthService: Response received:', response.status, response.statusText);
     console.log('AuthService: Response data:', response.data);
     return response;
   },
-  async (error) => {
+  async (error: AxiosError) => {
     // Create a completely safe error object to prevent NONE property assignment issues
     const safeError = createSafeError(error);
     
@@ -82,7 +82,7 @@ api.interceptors.response.use(
     console.error('AuthService: Error status:', safeError.response?.status);
     
     // Create a new request object to avoid modifying the original
-    const originalRequest = safeError.config ? {
+    const originalRequest: (InternalAxiosRequestConfig & { _retry?: boolean }) | null = safeError.config ? {
       ...safeError.config,
       headers: { ...safeError.config.headers }
     } : null;
@@ -98,9 +98,9 @@ api.interceptors.response.use(
           const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
           const authUrl = API_CONFIG.auth;
           
-          const response = await axios.post(`${authUrl}/refresh-token`, {
-            refreshToken,
-          });
+      const response: AxiosResponse<any> = await axios.post(`${authUrl}/refresh-token`, {
+        refreshToken,
+      });
           
           if (response.data.success && response.data.data) {
             const { accessToken, tokenType, expiresIn } = response.data.data;
@@ -121,7 +121,7 @@ api.interceptors.response.use(
             }
             
             // Retry original request with new token
-            const retryRequest = {
+            const retryRequest: AxiosRequestConfig & { _retry?: boolean } = {
               ...originalRequest,
               headers: {
                 ...originalRequest.headers,

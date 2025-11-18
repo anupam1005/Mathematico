@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { API_CONFIG } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,22 +28,22 @@ const mobileApi = axios.create({
 
 // Request interceptor to add auth token
 mobileApi.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle errors
 mobileApi.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Clear invalid tokens
       await AsyncStorage.removeItem('authToken');
@@ -238,6 +238,133 @@ class MobileService {
           },
           message: 'Database functionality has been removed. Only admin authentication is available.'
         },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async getStats(): Promise<MobileApiResponse<{
+    totalBooks: number;
+    totalCourses: number;
+    totalLiveClasses: number;
+    totalStudents: number;
+    activeUsers: number;
+  }>> {
+    try {
+      const response = await mobileApi.get('/stats');
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error fetching stats:', error);
+      return {
+        success: true,
+        data: {
+          totalBooks: 0,
+          totalCourses: 0,
+          totalLiveClasses: 0,
+          totalStudents: 0,
+          activeUsers: 0
+        },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async getSettings(): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.get('/settings');
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error fetching settings:', error);
+      return {
+        success: true,
+        data: {
+          pushNotifications: true,
+          emailNotifications: true,
+          courseUpdates: true,
+          liveClassReminders: true,
+          darkMode: false,
+          autoPlayVideos: true,
+          downloadQuality: 'High',
+          language: 'en',
+          timezone: 'UTC',
+          theme: 'light'
+        },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async updateSettings(settings: any): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.put('/settings', settings);
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error updating settings:', error);
+      throw error;
+    }
+  }
+
+  async getSecurePdfViewer(bookId: string): Promise<MobileApiResponse<{
+    viewerUrl: string;
+    title: string;
+    restrictions: {
+      download: boolean;
+      print: boolean;
+      copy: boolean;
+      screenshot: boolean;
+    };
+  }>> {
+    try {
+      const response = await mobileApi.get(`/books/${bookId}/viewer`);
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error fetching PDF viewer:', error);
+      throw error;
+    }
+  }
+
+  async joinLiveClass(classId: string): Promise<MobileApiResponse<{
+    joinLink: string;
+    message: string;
+  }>> {
+    try {
+      const response = await mobileApi.post(`/live-classes/${classId}/join`);
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error joining live class:', error);
+      throw error;
+    }
+  }
+
+  async startLiveClass(classId: string): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.put(`/live-classes/${classId}/start`);
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error starting live class:', error);
+      throw error;
+    }
+  }
+
+  async endLiveClass(classId: string): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.put(`/live-classes/${classId}/end`);
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error ending live class:', error);
+      throw error;
+    }
+  }
+
+  async checkHealth(): Promise<MobileApiResponse<any>> {
+    try {
+      const response = await mobileApi.get('/health');
+      return response.data;
+    } catch (error) {
+      errorHandler.handleError('Error checking health:', error);
+      return {
+        success: false,
+        data: null,
         timestamp: new Date().toISOString()
       };
     }

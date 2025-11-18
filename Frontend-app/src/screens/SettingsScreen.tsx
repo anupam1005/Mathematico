@@ -1,526 +1,963 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Alert,
-  TouchableOpacity,
-  Switch,
+  Switch as RNSwitch,
   ActivityIndicator,
+  TouchableOpacity,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import {
   Card,
   Title,
   List,
   Divider,
+  Button,
+  useTheme,
+  Portal,
+  Dialog,
+  TextInput,
+  HelperText,
+  Snackbar,
+  Switch,
 } from 'react-native-paper';
-import { 
-  ArrowLeft, 
-  Bell, 
-  Mail, 
-  GraduationCap, 
-  Video, 
-  Moon, 
-  PlayCircle, 
-  Download, 
-  Languages, 
-  Trash2, 
-  BarChart3, 
-  Info, 
-  FileText, 
+import {
+  Bell,
+  Mail,
+  GraduationCap,
+  Video,
+  Moon,
+  PlayCircle,
+  Download,
+  Languages,
+  Trash2,
+  BarChart3,
+  Info,
+  FileText,
   Shield,
-  CheckCircle
+  CheckCircle,
+  ArrowLeft,
+  WifiOff,
+  Wifi,
+  CloudUpload,
+  Clock,
+  AlertCircle,
+  X,
+  Check,
+  RotateCw,
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import * as Updates from 'expo-updates';
+import { debounce } from 'lodash';
+import SettingsService, { Settings, PendingSetting, UserSettings } from '../services/settingsService';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
-import settingsService from '../services/settingsService';
-import { ErrorHandler } from '../utils/errorHandler';
-
+import { formatBytes, formatDate } from '../utils/formatters';
 
 const DATA_USAGE_KEY = 'mathematico_data_usage';
 const LANGUAGE_KEY = 'mathematico_language';
+const PENDING_SETTINGS_KEY = 'pending_settings';
 
-export default function SettingsScreen({ navigation }: any) {
-  // Loading state
+interface DataUsage {
+  totalMB: number;
+  lastReset: string;
+  sessions: Array<{
+    date: string;
+    dataUsed: number;
+    type: 'video' | 'document' | 'other';
+  }>;
+}
+
+interface LanguageOption {
+  code: string;
+  name: string;
+  nativeName: string;
+}
+
+const SUPPORTED_LANGUAGES: LanguageOption[] = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
+  { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
+  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
+  { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' },
+  { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
+  { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം' },
+];
+
+export default function SettingsScreen({ navigation }: { navigation: any }) {
+  const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [showLanguageDialog, setShowLanguageDialog] = useState(false);
+  const [showQualityDialog, setShowQualityDialog] = useState(false);
+  const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
+  const [showDataUsageDialog, setShowDataUsageDialog] = useState(false);
+  const [showOfflineSnackbar, setShowOfflineSnackbar] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<PendingSetting[]>([]);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState<'success' | 'error' | 'info'>('info');
+  const [dataUsage, setDataUsage] = useState<DataUsage>({
+    totalMB: 0,
+    lastReset: new Date().toISOString(),
+    sessions: [],
+  });
 
-  // Notification settings
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [courseUpdates, setCourseUpdates] = useState(true);
-  const [liveClassReminders, setLiveClassReminders] = useState(true);
+  const settingsRef = useRef<Settings>({
+    notifications: {
+      push: true,
+      email: true,
+      sms: false,
+    },
+    privacy: {
+      profileVisibility: 'public',
+      showEmail: true,
+      showPhone: false,
+    },
+    preferences: {
+      theme: 'light',
+      language: 'en',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+    learning: {
+      autoPlayVideos: true,
+      downloadOverWifi: true,
+    },
+  });
 
-  // App settings
-  const [darkMode, setDarkMode] = useState(false);
-  const [autoPlayVideos, setAutoPlayVideos] = useState(true);
-  const [downloadQuality, setDownloadQuality] = useState('High');
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
-  const [dataUsage, setDataUsage] = useState({ totalMB: 0, lastReset: new Date().toISOString() });
+  const [settings, setSettings] = useState<Settings>(settingsRef.current);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Get app version from expo-constants
-  const appVersion = Constants.expoConfig?.version || (Constants.manifest as any)?.version || '7.0.0';
-  const buildNumber = Constants.expoConfig?.android?.versionCode || (Constants.manifest as any)?.android?.versionCode || '7';
+  const appVersion = Constants.expoConfig?.version || '7.0.0';
+  const buildNumber = Constants.expoConfig?.ios?.buildNumber || 
+                     Constants.expoConfig?.android?.versionCode?.toString() || '7';
 
-  // Load settings on mount
-  useEffect(() => {
-    loadSettings();
-    loadLanguage();
-    loadDataUsage();
+  // Show snackbar message
+  const showSnackbar = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setSnackbarMessage(message);
+    setSnackbarType(type);
+    // Auto-hide after 3 seconds
+    setTimeout(() => setSnackbarMessage(''), 3000);
   }, []);
 
-  const loadSettings = async () => {
+  // Debounced save function
+  const debouncedSave = useCallback(
+    debounce(async (newSettings: Settings) => {
+      try {
+        await SettingsService.updateSettings(newSettings);
+        setHasChanges(false);
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        showSnackbar('Failed to save settings', 'error');
+      }
+    }, 1000),
+    []
+  );
+
+  // Load settings
+  const loadSettings = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const response = await settingsService.getSettings();
-      
+      const response = await SettingsService.getSettings();
       if (response.success && response.data) {
-        const settings = response.data;
-        setPushNotifications(settings.pushNotifications ?? true);
-        setEmailNotifications(settings.emailNotifications ?? true);
-        setCourseUpdates(settings.courseUpdates ?? true);
-        setLiveClassReminders(settings.liveClassReminders ?? true);
-        setDarkMode(settings.darkMode ?? false);
-        setAutoPlayVideos(settings.autoPlayVideos ?? true);
-        setDownloadQuality(settings.downloadQuality ?? 'High');
-        console.log('📱 Settings loaded successfully:', settings);
-      } else {
-        console.warn('Failed to load settings:', response.message);
+        const loadedSettings = response.data;
+        settingsRef.current = loadedSettings;
+        setSettings(loadedSettings);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-      Alert.alert('Notice', 'Settings loaded with default values');
-    } finally {
-      setIsLoading(false);
+      showSnackbar('Failed to load settings', 'error');
     }
-  };
+  }, [showSnackbar]);
 
-  const updateSetting = async (key: string, value: any) => {
+  // Load pending settings
+  const loadPendingSettings = useCallback(async () => {
     try {
-      setIsSaving(true);
-      console.log(`📱 Updating setting: ${key} = ${value}`);
-      const response = await settingsService.updateSettings({ [key]: value });
-      
-      if (response.success) {
-        console.log('📱 Setting updated successfully:', response.message);
-        // Show success feedback briefly
-        setTimeout(() => {
-          // Could show a toast or brief success indicator here
-        }, 100);
-      } else {
-        Alert.alert('Error', response.message || 'Failed to update setting');
-        // Revert the change if it failed
-        await loadSettings();
+      // syncPendingSettings returns a boolean indicating success/failure
+      const success = await SettingsService.syncPendingSettings();
+      if (success) {
+        // If sync was successful, clear pending changes
+        setPendingChanges([]);
       }
     } catch (error) {
-      console.error('Error updating setting:', error);
-      Alert.alert('Error', 'Failed to update setting. Please try again.');
-      // Revert the change if it failed
-      await loadSettings();
-    } finally {
-      setIsSaving(false);
+      console.error('Error syncing pending settings:', error);
+      // If there was an error, we'll keep the existing pending changes
     }
-  };
+  }, []);
 
-  const handleClearCache = () => {
-    Alert.alert(
-      'Clear Cache',
-      'Are you sure you want to clear the app cache? This will reset all settings to default values and clear cached data.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsSaving(true);
-              // Clear settings from storage
-              await settingsService.clearSettings();
-              
-              // Clear additional cache data
-              try {
-                await AsyncStorage.removeItem('mathematico_data_usage');
-                // Reset data usage state
-                const resetData = {
-                  totalMB: 0,
-                  lastReset: new Date().toISOString(),
-                  sessions: []
-                };
-                setDataUsage(resetData);
-              } catch (error) {
-                console.warn('Error clearing data usage cache:', error);
-              }
-              
-              // Reload settings with defaults
-              await loadSettings();
-              Alert.alert('Success', 'Cache and settings cleared successfully');
-            } catch (error) {
-              console.error('Error clearing cache:', error);
-              Alert.alert('Error', 'Failed to clear cache');
-            } finally {
-              setIsSaving(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDownloadSettings = () => {
-    Alert.alert(
-      'Download Quality',
-      'Choose your preferred download quality',
-      [
-        { 
-          text: 'Low', 
-          onPress: () => {
-            setDownloadQuality('Low');
-            updateSetting('downloadQuality', 'Low');
-          }
-        },
-        { 
-          text: 'Medium', 
-          onPress: () => {
-            setDownloadQuality('Medium');
-            updateSetting('downloadQuality', 'Medium');
-          }
-        },
-        { 
-          text: 'High', 
-          onPress: () => {
-            setDownloadQuality('High');
-            updateSetting('downloadQuality', 'High');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const loadLanguage = async () => {
+  // Load data usage
+  const loadDataUsage = useCallback(async () => {
     try {
-      const language = await AsyncStorage.getItem(LANGUAGE_KEY);
-      if (language) {
-        setSelectedLanguage(language);
+      const usage = await AsyncStorage.getItem(DATA_USAGE_KEY);
+      if (usage) {
+        setDataUsage(JSON.parse(usage));
+        return;
       }
-    } catch (error) {
-      console.error('Error loading language:', error);
-    }
-  };
-
-  const handleLanguageSettings = () => {
-    Alert.alert(
-      'Select Language',
-      'Choose your preferred language',
-      [
-        { 
-          text: 'English', 
-          onPress: async () => {
-            setSelectedLanguage('English');
-            await AsyncStorage.setItem(LANGUAGE_KEY, 'English');
-            Alert.alert('Success', 'Language changed to English');
-          }
-        },
-        { 
-          text: 'Hindi', 
-          onPress: async () => {
-            setSelectedLanguage('Hindi');
-            await AsyncStorage.setItem(LANGUAGE_KEY, 'Hindi');
-            Alert.alert('Success', 'Language changed to Hindi');
-          }
-        },
-        { 
-          text: 'Bengali', 
-          onPress: async () => {
-            setSelectedLanguage('Bengali');
-            await AsyncStorage.setItem(LANGUAGE_KEY, 'Bengali');
-            Alert.alert('Success', 'Language changed to Bengali');
-          }
-        },
-        { 
-          text: 'Tamil', 
-          onPress: async () => {
-            setSelectedLanguage('Tamil');
-            await AsyncStorage.setItem(LANGUAGE_KEY, 'Tamil');
-            Alert.alert('Success', 'Language changed to Tamil');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const loadDataUsage = async () => {
-    try {
-      const usageData = await AsyncStorage.getItem(DATA_USAGE_KEY);
-      if (usageData) {
-        setDataUsage(JSON.parse(usageData));
-      } else {
-        // Initialize data usage tracking
-        const initialData = {
-          totalMB: 0,
-          lastReset: new Date().toISOString(),
-          sessions: []
-        };
-        await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(initialData));
-        setDataUsage(initialData);
-      }
+      // Initialize data usage if not exists
+      const initialData: DataUsage = {
+        totalMB: 0,
+        lastReset: new Date().toISOString(),
+        sessions: [],
+      };
+      await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(initialData));
+      setDataUsage(initialData);
     } catch (error) {
       console.error('Error loading data usage:', error);
     }
-  };
+  }, []);
 
-  const handleDataUsage = () => {
-    const totalMB = dataUsage.totalMB || 0;
-    const lastReset = dataUsage.lastReset ? new Date(dataUsage.lastReset).toLocaleDateString() : 'Never';
-    
-    Alert.alert(
-      'Data Usage Statistics',
-      `Total Data Used: ${totalMB.toFixed(2)} MB\nLast Reset: ${lastReset}`,
-      [
-        {
-          text: 'Reset Statistics',
-          onPress: async () => {
-            try {
-              const resetData = {
-                totalMB: 0,
-                lastReset: new Date().toISOString(),
-                sessions: []
-              };
-              await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(resetData));
-              setDataUsage(resetData);
-              Alert.alert('Success', 'Data usage statistics have been reset');
-            } catch (error) {
-              console.error('Error resetting data usage:', error);
-              Alert.alert('Error', 'Failed to reset data usage statistics');
-            }
-          }
+  // Handle setting changes
+  const handleSettingChange = useCallback(
+    <T extends keyof UserSettings, K extends keyof UserSettings[T]>(
+      section: T,
+      key: K,
+      value: UserSettings[T][K]
+    ) => {
+      setSettings(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [key]: value,
         },
-        { text: 'OK' }
-      ]
-    );
-  };
+      }));
+      
+      // Update ref for debounced save
+      settingsRef.current = {
+        ...settingsRef.current,
+        [section]: {
+          ...settingsRef.current[section],
+          [key]: value,
+        },
+      };
+      
+      setHasChanges(true);
+      debouncedSave(settingsRef.current);
+    },
+    [debouncedSave]
+  );
 
+  // Save settings
+  const handleSaveSettings = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      await SettingsService.updateSettings(settingsRef.current);
+      setHasChanges(false);
+      showSnackbar('Settings saved successfully', 'success');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      showSnackbar('Failed to save settings', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [showSnackbar]);
+
+  // Reset settings to default
+  const handleResetSettings = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      
+      // Clear all cached data
+      await Promise.all([
+        AsyncStorage.clear(),
+        SettingsService.clearSettings(),
+      ]);
+
+      // Reset to default settings
+      const defaultSettings: UserSettings = {
+        notifications: {
+          push: true,
+          email: true,
+          sms: false,
+        },
+        privacy: {
+          profileVisibility: 'public',
+          showEmail: true,
+          showPhone: false,
+        },
+        preferences: {
+          theme: 'light',
+          language: 'en',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        learning: {
+          autoPlayVideos: true,
+          downloadOverWifi: true,
+        },
+      };
+
+      // Update state with default settings
+      settingsRef.current = defaultSettings;
+      setSettings(defaultSettings);
+      setHasChanges(false);
+      
+      showSnackbar('Settings reset to default', 'success');
+    } catch (error) {
+      console.error('Error resetting settings:', error);
+      showSnackbar('Failed to reset settings', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [showSnackbar]);
+
+  // Clear cache
+  const handleClearCache = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      await AsyncStorage.clear();
+      await loadDataUsage();
+      showSnackbar('Cache cleared successfully', 'success');
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      showSnackbar('Failed to clear cache', 'error');
+    } finally {
+      setIsSaving(false);
+      setShowClearCacheDialog(false);
+    }
+  }, [loadDataUsage, showSnackbar]);
+
+  // Network change handler
+  const handleNetworkChange = useCallback((state: NetInfoState) => {
+    const isNowOnline = state.isConnected ?? false;
+    setIsOnline(isNowOnline);
+    
+    if (!isNowOnline) {
+      setShowOfflineSnackbar(true);
+    } else if (hasChanges) {
+      handleSaveSettings();
+    }
+  }, [hasChanges, handleSaveSettings]);
+
+  // Load initial data
+  useEffect(() => {
+    let isMounted = true;
+    let netInfoUnsubscribe: (() => void) | null = null;
+
+    const loadInitialData = async () => {
+      try {
+        if (!isMounted) return;
+
+        // Check network status first
+        const netInfoState = await NetInfo.fetch();
+        const online = netInfoState.isConnected ?? false;
+        if (isMounted) {
+          setIsOnline(online);
+        }
+
+        // Load data in parallel
+        await Promise.all([
+          loadSettings(),
+          loadDataUsage(),
+          loadPendingSettings(),
+        ]);
+
+        // Set up network listener
+        netInfoUnsubscribe = NetInfo.addEventListener(handleNetworkChange);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+        showSnackbar('Failed to load settings', 'error');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+
+    // Cleanup
+    return () => {
+      isMounted = false;
+      if (netInfoUnsubscribe) {
+        netInfoUnsubscribe();
+      }
+    };
+  }, [handleNetworkChange, loadDataUsage, loadPendingSettings, loadSettings, showSnackbar]);
+
+  // Handle back button on Android
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showLanguageDialog || showQualityDialog || showClearCacheDialog || showDataUsageDialog) {
+        setShowLanguageDialog(false);
+        setShowQualityDialog(false);
+        setShowClearCacheDialog(false);
+        setShowDataUsageDialog(false);
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [showLanguageDialog, showQualityDialog, showClearCacheDialog, showDataUsageDialog]);
+
+  // Render loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={designSystem.colors.primary} />
-        <Text style={styles.loadingText}>Loading settings...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
+          Loading your settings...
+        </Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+  // Render switch component with consistent styling
+  const renderSwitch = (value: boolean, onValueChange: (value: boolean) => void) => (
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      color={colors.primary}
+    />
+  );
+
+  // Render notification settings
+  const renderNotificationSettings = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="Notifications"
+        left={(props) => <Bell {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Push Notifications"
+          description="Receive push notifications"
+          left={props => <List.Icon {...props} icon="bell" />}
+          right={props => renderSwitch(
+            settings.notifications.push, 
+            (value) => handleSettingChange('notifications', 'push', value)
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Email Notifications"
+          description="Receive email notifications"
+          left={props => <List.Icon {...props} icon="email" />}
+          right={props => renderSwitch(
+            settings.notifications.email, 
+            (value) => handleSettingChange('notifications', 'email', value)
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="SMS Notifications"
+          description="Receive SMS notifications"
+          left={props => <List.Icon {...props} icon="message-text" />}
+          right={props => renderSwitch(
+            settings.notifications.sms, 
+            (value) => handleSettingChange('notifications', 'sms', value)
+          )}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render privacy settings
+  const renderPrivacySettings = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="Privacy"
+        left={(props) => <Shield {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Profile Visibility"
+          description="Who can see your profile"
+          left={props => <List.Icon {...props} icon="account-eye" />}
+          right={props => (
+            <View style={styles.settingValueContainer}>
+              <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
+                {settings.privacy.profileVisibility === 'public' ? 'Public' : 'Private'}
+              </Text>
+              <List.Icon {...props} icon="chevron-right" />
+            </View>
+          )}
+          onPress={() => {
+            const newVisibility = settings.privacy.profileVisibility === 'public' ? 'private' : 'public';
+            handleSettingChange('privacy', 'profileVisibility', newVisibility);
+          }}
+        />
+        <Divider />
+        <List.Item
+          title="Show Email"
+          description="Display your email on your profile"
+          left={props => <List.Icon {...props} icon="email-outline" />}
+          right={props => renderSwitch(
+            settings.privacy.showEmail,
+            (value) => handleSettingChange('privacy', 'showEmail', value)
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Show Phone Number"
+          description="Display your phone number on your profile"
+          left={props => <List.Icon {...props} icon="phone" />}
+          right={props => renderSwitch(
+            settings.privacy.showPhone,
+            (value) => handleSettingChange('privacy', 'showPhone', value)
+          )}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render app preferences
+  const renderPreferenceSettings = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="App Preferences"
+        left={(props) => <Moon {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Theme"
+          description="Change the app's color scheme"
+          left={props => <Moon size={24} color={colors.onSurface} />}
+          onPress={() => {
+            const newTheme = settings.preferences.theme === 'light' ? 'dark' : 'light';
+            handleSettingChange('preferences', 'theme', newTheme);
+          }}
+          right={props => (
+            <View style={styles.settingValueContainer}>
+              <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
+                {settings.preferences.theme === 'light' ? 'Light' : 'Dark'}
+              </Text>
+              <List.Icon {...props} icon="chevron-right" />
+            </View>
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Language"
+          description="Change the app's language"
+          left={props => <Languages size={24} color={colors.onSurface} />}
+          onPress={() => setShowLanguageDialog(true)}
+          right={props => (
+            <View style={styles.settingValueContainer}>
+              <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
+                {SUPPORTED_LANGUAGES.find(lang => lang.code === settings.preferences.language)?.name || 'English'}
+              </Text>
+              <List.Icon {...props} icon="chevron-right" />
+            </View>
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Time Zone"
+          description={settings.preferences.timezone}
+          left={props => <Clock size={24} color={colors.onSurface} />}
+          right={props => (
+            <View style={styles.settingValueContainer}>
+              <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
+                {settings.preferences.timezone}
+              </Text>
+            </View>
+          )}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render learning preferences
+  const renderLearningSettings = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="Learning Preferences"
+        left={(props) => <GraduationCap {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Auto-play Videos"
+          description="Automatically play video lessons"
+          left={props => <PlayCircle size={24} color={colors.onSurface} />}
+          right={props => renderSwitch(
+            settings.learning.autoPlayVideos,
+            (value) => handleSettingChange('learning', 'autoPlayVideos', value)
+          )}
+        />
+        <Divider />
+        <List.Item
+          title="Download Over Wi-Fi Only"
+          description="Only download content when connected to Wi-Fi"
+          left={props => <Wifi size={24} color={colors.onSurface} />}
+          right={props => renderSwitch(
+            settings.learning.downloadOverWifi,
+            (value) => handleSettingChange('learning', 'downloadOverWifi', value)
+          )}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render data usage
+  const renderDataUsage = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="Data Usage"
+        left={(props) => <BarChart3 {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Data Usage"
+          description={`${formatBytes(dataUsage.totalMB * 1024 * 1024)} used this month`}
+          left={props => <List.Icon {...props} icon="chart-bar" />}
+          right={props => (
+            <View style={styles.settingValueContainer}>
+              <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
+                {formatBytes(dataUsage.totalMB * 1024 * 1024, true, 1)}
+              </Text>
+              <List.Icon {...props} icon="chevron-right" />
+            </View>
+          )}
+          onPress={() => setShowDataUsageDialog(true)}
+        />
+        <Divider />
+        <List.Item
+          title="Clear Cache"
+          description="Free up storage space"
+          left={props => <Trash2 size={24} color={colors.onSurface} />}
+          onPress={() => setShowClearCacheDialog(true)}
+          right={props => <List.Icon {...props} icon="chevron-right" />}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render about section
+  const renderAboutSection = () => (
+    <Card style={styles.card}>
+      <Card.Title
+        title="About"
+        left={(props) => <Info {...props} color={colors.primary} />}
+      />
+      <Card.Content>
+        <List.Item
+          title="Version"
+          description={`${appVersion} (${buildNumber})`}
+          left={props => <List.Icon {...props} icon="information" />}
+        />
+        <Divider />
+        <List.Item
+          title="Terms of Service"
+          left={props => <FileText size={24} color={colors.onSurface} />}
+          onPress={() => navigation.navigate('TermsOfService')}
+          right={props => <List.Icon {...props} icon="chevron-right" />}
+        />
+        <Divider />
+        <List.Item
+          title="Privacy Policy"
+          left={props => <Shield size={24} color={colors.onSurface} />}
+          onPress={() => navigation.navigate('PrivacyPolicy')}
+          right={props => <List.Icon {...props} icon="chevron-right" />}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  // Render sync status indicator
+  const renderSyncStatus = () => {
+    if (!isOnline) {
+      return (
+        <View style={[styles.offlineIndicator, { backgroundColor: colors.errorContainer }]}>
+          <WifiOff size={16} color={colors.onErrorContainer} />
+          <Text style={[styles.offlineText, { color: colors.onErrorContainer }]}>
+            Offline - Changes will sync when online
+          </Text>
+        </View>
+      );
+    }
+
+    if (pendingChanges.length > 0) {
+      return (
+        <View style={[styles.pendingChanges, { backgroundColor: colors.primaryContainer }]}>
+          <CloudUpload size={16} color={colors.onPrimaryContainer} />
+          <Text style={[styles.pendingText, { color: colors.onPrimaryContainer }]}>
+            Syncing {pendingChanges.length} change{pendingChanges.length > 1 ? 's' : ''}...
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  // Render language dialog
+  const renderLanguageDialog = () => (
+    <Dialog visible={showLanguageDialog} onDismiss={() => setShowLanguageDialog(false)}>
+      <Dialog.Title>Select Language</Dialog.Title>
+      <Dialog.ScrollArea style={styles.dialogScrollView}>
+        <ScrollView>
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <React.Fragment key={lang.code}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleSettingChange('preferences', 'language', lang.code);
+                  setShowLanguageDialog(false);
+                }}
+                style={styles.languageItem}
+              >
+                <Text style={[styles.languageName, { color: colors.onSurface }]}>
+                  {lang.nativeName} ({lang.name})
+                </Text>
+                {settings.preferences.language === lang.code && (
+                  <Check size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </ScrollView>
+      </Dialog.ScrollArea>
+      <Dialog.Actions>
+        <Button onPress={() => setShowLanguageDialog(false)}>Cancel</Button>
+      </Dialog.Actions>
+    </Dialog>
+  );
+
+  // Render clear cache dialog
+  const renderClearCacheDialog = () => (
+    <Dialog visible={showClearCacheDialog} onDismiss={() => setShowClearCacheDialog(false)}>
+      <Dialog.Title>Clear Cache</Dialog.Title>
+      <Dialog.Content>
+        <Text style={{ color: colors.onSurfaceVariant }}>
+          This will clear all cached data, including offline content and temporary files. 
+          Your settings and progress will not be affected.
+        </Text>
+      </Dialog.Content>
+      <Dialog.Actions>
+        <Button onPress={() => setShowClearCacheDialog(false)}>Cancel</Button>
+        <Button 
+          onPress={handleClearCache}
+          loading={isSaving}
+          disabled={isSaving}
         >
-          <ArrowLeft size={24} color={designSystem.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        {isSaving && (
-          <ActivityIndicator size="small" color={designSystem.colors.primary} style={styles.savingIndicator} />
-        )}
-      </View>
+          Clear Cache
+        </Button>
+      </Dialog.Actions>
+    </Dialog>
+  );
 
-      <ScrollView style={styles.scrollView}>
-        {/* Notifications Section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Notifications</Title>
-            
-            <List.Item
-              title="Push Notifications"
-              description="Receive push notifications"
-              left={(props) => <Bell size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={pushNotifications}
-                  onValueChange={(value) => {
-                    setPushNotifications(value);
-                    updateSetting('pushNotifications', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={pushNotifications ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-            <Divider />
+  // Render data usage dialog
+  const renderDataUsageDialog = () => (
+    <Dialog 
+      visible={showDataUsageDialog} 
+      onDismiss={() => setShowDataUsageDialog(false)}
+      style={styles.dialog}
+    >
+      <Dialog.Title>Data Usage</Dialog.Title>
+      <Dialog.ScrollArea style={styles.dialogScrollView}>
+        <View style={styles.dataUsageContainer}>
+          <View style={styles.dataUsageRow}>
+            <Text style={[styles.dataUsageLabel, { color: colors.onSurfaceVariant }]}>
+              Total Data Used:
+            </Text>
+            <Text style={[styles.dataUsageValue, { color: colors.onSurface }]}>
+              {formatBytes(dataUsage.totalMB * 1024 * 1024, true, 1)}
+            </Text>
+          </View>
+          <View style={styles.dataUsageRow}>
+            <Text style={[styles.dataUsageLabel, { color: colors.onSurfaceVariant }]}>
+              Last Reset:
+            </Text>
+            <Text style={[styles.dataUsageValue, { color: colors.onSurface }]}>
+              {formatDate(dataUsage.lastReset, 'MMM D, YYYY')}
+            </Text>
+          </View>
+          <Divider style={styles.divider} />
+          <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+            Usage by Session
+          </Text>
+          {dataUsage.sessions.length > 0 ? (
+            dataUsage.sessions.map((session, index) => (
+              <View key={index} style={styles.sessionItem}>
+                <View style={styles.sessionInfo}>
+                  <Text style={[styles.sessionDate, { color: colors.onSurface }]}>
+                    {formatDate(session.date, 'MMM D, h:mm A')}
+                  </Text>
+                  <Text style={[styles.sessionType, { color: colors.onSurfaceVariant }]}>
+                    {session.type.charAt(0).toUpperCase() + session.type.slice(1)}
+                  </Text>
+                </View>
+                <Text style={[styles.sessionData, { color: colors.primary }]}>
+                  {formatBytes(session.dataUsed * 1024 * 1024, true, 1)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.noDataText, { color: colors.onSurfaceVariant }]}>
+              No session data available
+            </Text>
+          )}
+        </View>
+      </Dialog.ScrollArea>
+      <Dialog.Actions>
+        <Button 
+          onPress={() => {
+            // Reset data usage
+            const resetData: DataUsage = {
+              totalMB: 0,
+              lastReset: new Date().toISOString(),
+              sessions: [],
+            };
+            setDataUsage(resetData);
+            AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(resetData));
+            setShowDataUsageDialog(false);
+            showSnackbar('Data usage reset', 'success');
+          }}
+        >
+          Reset
+        </Button>
+        <Button onPress={() => setShowDataUsageDialog(false)}>Close</Button>
+      </Dialog.Actions>
+    </Dialog>
+  );
 
-            <List.Item
-              title="Email Notifications"
-              description="Receive email notifications"
-              left={(props) => <Mail size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={emailNotifications}
-                  onValueChange={(value) => {
-                    setEmailNotifications(value);
-                    updateSetting('emailNotifications', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={emailNotifications ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-            <Divider />
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+      >
+        {renderSyncStatus()}
+        
+        {renderNotificationSettings()}
+        {renderPrivacySettings()}
+        {renderPreferenceSettings()}
+        {renderLearningSettings()}
+        {renderDataUsage()}
+        {renderAboutSection()}
 
-            <List.Item
-              title="Course Updates"
-              description="Get notified about course updates"
-              left={(props) => <GraduationCap size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={courseUpdates}
-                  onValueChange={(value) => {
-                    setCourseUpdates(value);
-                    updateSetting('courseUpdates', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={courseUpdates ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-            <Divider />
+        <View style={styles.actionsContainer}>
+          <Button
+            mode="contained"
+            onPress={handleResetSettings}
+            style={[styles.resetButton, { backgroundColor: colors.errorContainer }]}
+            labelStyle={{ color: colors.onErrorContainer }}
+            icon={({ size, color }) => <RotateCw size={size} color={color} />}
+            loading={isSaving}
+            disabled={isSaving}
+          >
+            Reset to Defaults
+          </Button>
+        </View>
 
-            <List.Item
-              title="Live Class Reminders"
-              description="Get reminded before live classes"
-              left={(props) => <Video size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={liveClassReminders}
-                  onValueChange={(value) => {
-                    setLiveClassReminders(value);
-                    updateSetting('liveClassReminders', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={liveClassReminders ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-          </Card.Content>
-        </Card>
-
-        {/* App Preferences Section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>App Preferences</Title>
-            
-            <List.Item
-              title="Dark Mode"
-              description="Enable dark theme"
-              left={(props) => <Moon size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={darkMode}
-                  onValueChange={(value) => {
-                    setDarkMode(value);
-                    updateSetting('darkMode', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={darkMode ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-            <Divider />
-
-            <List.Item
-              title="Auto-play Videos"
-              description="Automatically play videos"
-              left={(props) => <PlayCircle size={24} color={props.color} />}
-              right={() => (
-                <Switch
-                  value={autoPlayVideos}
-                  onValueChange={(value) => {
-                    setAutoPlayVideos(value);
-                    updateSetting('autoPlayVideos', value);
-                  }}
-                  trackColor={{ false: '#767577', true: designSystem.colors.primary }}
-                  thumbColor={autoPlayVideos ? designSystem.colors.surface : '#f4f3f4'}
-                />
-              )}
-            />
-            <Divider />
-
-            <List.Item
-              title="Download Quality"
-              description={`Current: ${downloadQuality}`}
-              left={(props) => <Download size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={handleDownloadSettings}
-            />
-            <Divider />
-
-            <List.Item
-              title="Language"
-              description={selectedLanguage}
-              left={(props) => <Languages size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={handleLanguageSettings}
-            />
-          </Card.Content>
-        </Card>
-
-        {/* Storage & Data Section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Storage & Data</Title>
-            
-            <List.Item
-              title="Clear Cache"
-              description="Free up storage space"
-              left={(props) => <Trash2 size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={handleClearCache}
-            />
-            <Divider />
-
-            <List.Item
-              title="Data Usage"
-              description={`${(dataUsage.totalMB || 0).toFixed(2)} MB used`}
-              left={(props) => <BarChart3 size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={handleDataUsage}
-            />
-          </Card.Content>
-        </Card>
-
-        {/* About Section */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>About</Title>
-            
-            <List.Item
-              title="Version"
-              description={`${appVersion} (Build ${buildNumber})`}
-              left={(props) => <Info size={24} color={props.color} />}
-            />
-            <Divider />
-
-            <List.Item
-              title="Terms of Use"
-              left={(props) => <FileText size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={() => navigation.navigate('TermsOfUse')}
-            />
-            <Divider />
-            <List.Item
-              title="Privacy Policy"
-              left={(props) => <Shield size={24} color={props.color} />}
-              right={() => <CheckCircle size={20} color={designSystem.colors.primary} />}
-              onPress={() => navigation.navigate('PrivacyPolicy')}
-            />
-
-          </Card.Content>
-        </Card>
+        <View style={styles.versionContainer}>
+          <Text style={[styles.versionText, { color: colors.onSurfaceVariant }]}>
+            Mathematico v{appVersion} (Build {buildNumber})
+          </Text>
+          <Text style={[styles.copyrightText, { color: colors.onSurfaceVariant }]}>
+            © {new Date().getFullYear()} Mathematico. All rights reserved.
+          </Text>
+        </View>
       </ScrollView>
+
+      {/* Dialogs */}
+      <Portal>
+        {renderLanguageDialog()}
+        {renderClearCacheDialog()}
+        {renderDataUsageDialog()}
+      </Portal>
+
+      {/* Snackbar for offline status */}
+      <Snackbar
+        visible={showOfflineSnackbar}
+        onDismiss={() => setShowOfflineSnackbar(false)}
+        duration={3000}
+        style={[
+          styles.snackbar,
+          { 
+            backgroundColor: colors.errorContainer,
+            borderLeftColor: colors.error,
+          }
+        ]}
+        theme={{
+          colors: {
+            surface: colors.errorContainer,
+            onSurface: colors.onErrorContainer,
+          },
+        }}
+      >
+        <View style={styles.snackbarContent}>
+          <WifiOff size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
+          <Text style={[styles.snackbarText, { color: colors.onErrorContainer }]}>
+            You are currently offline. Some features may be limited.
+          </Text>
+        </View>
+      </Snackbar>
+
+      {/* Snackbar for messages */}
+      <Snackbar
+        visible={!!snackbarMessage}
+        onDismiss={() => setSnackbarMessage('')}
+        duration={3000}
+        style={[
+          styles.snackbar,
+          { 
+            backgroundColor: 
+              snackbarType === 'error' 
+                ? colors.errorContainer 
+                : snackbarType === 'success'
+                ? colors.primaryContainer
+                : colors.surfaceVariant,
+            borderLeftColor: 
+              snackbarType === 'error' 
+                ? colors.error 
+                : snackbarType === 'success'
+                ? colors.primary
+                : colors.onSurfaceVariant,
+          }
+        ]}
+        theme={{
+          colors: {
+            surface: 
+              snackbarType === 'error' 
+                ? colors.errorContainer 
+                : snackbarType === 'success'
+                ? colors.primaryContainer
+                : colors.surfaceVariant,
+            onSurface: 
+              snackbarType === 'error' 
+                ? colors.onErrorContainer 
+                : snackbarType === 'success'
+                ? colors.onPrimaryContainer
+                : colors.onSurfaceVariant,
+          },
+        }}
+      >
+        <View style={styles.snackbarContent}>
+          {snackbarType === 'error' && (
+            <AlertCircle size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
+          )}
+          {snackbarType === 'success' && (
+            <CheckCircle size={20} color={colors.onPrimaryContainer} style={styles.snackbarIcon} />
+          )}
+          {snackbarType === 'info' && (
+            <Info size={20} color={colors.onSurfaceVariant} style={styles.snackbarIcon} />
+          )}
+          <Text 
+            style={[
+              styles.snackbarText, 
+              { 
+                color: 
+                  snackbarType === 'error' 
+                    ? colors.onErrorContainer 
+                    : snackbarType === 'success'
+                    ? colors.onPrimaryContainer
+                    : colors.onSurfaceVariant,
+              }
+            ]}
+          >
+            {snackbarMessage}
+          </Text>
+        </View>
+      </Snackbar>
     </View>
   );
 }
@@ -528,52 +965,160 @@ export default function SettingsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: designSystem.colors.background,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...designSystem.typography.body,
-    color: designSystem.colors.textSecondary,
-    marginTop: designSystem.spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: designSystem.spacing.md,
-    backgroundColor: designSystem.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: designSystem.colors.border,
-  },
-  backButton: {
-    padding: designSystem.spacing.xs,
-    marginRight: designSystem.spacing.md,
-  },
-  headerTitle: {
-    ...designSystem.typography.h2,
-    color: designSystem.colors.textPrimary,
-    fontWeight: '600',
-    flex: 1,
-  },
-  savingIndicator: {
-    marginLeft: designSystem.spacing.sm,
   },
   scrollView: {
     flex: 1,
   },
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
   card: {
-    margin: designSystem.spacing.md,
-    marginBottom: 0,
-    ...designSystem.shadows.md,
-    borderRadius: designSystem.borderRadius.lg,
+    marginBottom: 16,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  settingValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingValue: {
+    marginRight: 8,
+    fontSize: 14,
+  },
+  actionsContainer: {
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  resetButton: {
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  versionContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  versionText: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  copyrightText: {
+    fontSize: 12,
+  },
+  offlineIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  pendingChanges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  offlineText: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  pendingText: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  dialog: {
+    borderRadius: 12,
+  },
+  dialogScrollView: {
+    maxHeight: 400,
+    paddingHorizontal: 0,
+  },
+  languageItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  languageName: {
+    fontSize: 16,
+  },
+  dataUsageContainer: {
+    padding: 16,
+  },
+  dataUsageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dataUsageLabel: {
+    fontSize: 14,
+  },
+  dataUsageValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  divider: {
+    marginVertical: 16,
   },
   sectionTitle: {
-    ...designSystem.typography.h3,
-    color: designSystem.colors.textPrimary,
-    marginBottom: designSystem.spacing.sm,
+    fontSize: 16,
     fontWeight: '600',
+    marginBottom: 12,
+  },
+  sessionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  sessionInfo: {
+    flex: 1,
+  },
+  sessionDate: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  sessionType: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  sessionData: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 16,
+  },
+  noDataText: {
+    textAlign: 'center',
+    marginVertical: 16,
+    fontStyle: 'italic',
+  },
+  snackbar: {
+    margin: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    elevation: 4,
+  },
+  snackbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  snackbarIcon: {
+    marginRight: 8,
+  },
+  snackbarText: {
+    flex: 1,
+    fontSize: 14,
   },
 });
-

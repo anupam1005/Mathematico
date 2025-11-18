@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_CONFIG } from '../config';
@@ -59,8 +59,7 @@ const liveClassApi = axios.create({
 // Update the base URL dynamically
 (async () => {
   try {
-    const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
-    liveClassApi.defaults.baseURL = `${backendUrl}/api/v1/mobile`;
+    liveClassApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('LiveClassService: Base URL updated to:', liveClassApi.defaults.baseURL);
   } catch (error) {
     console.error('LiveClassService: Failed to update base URL:', error);
@@ -69,23 +68,23 @@ const liveClassApi = axios.create({
 
 // Request interceptor to add auth token
 liveClassApi.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     const token = await authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle token refresh
 liveClassApi.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -124,13 +123,13 @@ class LiveClassService {
     try {
       // Ensure we're using the correct backend URL
       const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
-      const fullUrl = `${backendUrl}/api/v1/mobile${endpoint}`;
+      const fullUrl = `${backendUrl}${endpoint}`;
       
       console.log('LiveClassService: Making request to:', fullUrl);
       
       const response = await liveClassApi({
         url: endpoint,
-        baseURL: `${backendUrl}/api/v1/mobile`,
+        baseURL: backendUrl,
         ...options,
       });
       return response.data;

@@ -4,7 +4,7 @@ export default {
   expo: {
     name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico',
     slug: 'mathematico-app',
-    version: '8.0.0',
+    version: '8.1.0',
     orientation: 'portrait',
     owner: 'dipanjan9',
     icon: './assets/icon.png',
@@ -18,7 +18,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 8,
+      versionCode: 9,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'

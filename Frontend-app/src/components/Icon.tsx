@@ -14,15 +14,22 @@ interface IconProps {
 export const Icon = ({ name, size = 24, color = '#000', style, ...props }: IconProps) => {
   try {
     const IconComponent = getLucideIcon(name);
-    
-    return (
-      <IconComponent
-        size={size}
-        color={color}
-        style={style}
-        {...props}
-      />
-    );
+    if (!IconComponent) {
+      return (
+        <FallbackIcon
+          name={name}
+          size={size}
+          color={color}
+          style={style}
+        />
+      );
+    }
+    return React.createElement(IconComponent, {
+      size,
+      color,
+      style,
+      ...props
+    });
   } catch (error) {
     Logger.warn(`Icon '${name}' failed to render, using fallback:`, error);
     // Use fallback icon when Lucide fails

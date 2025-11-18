@@ -1,12 +1,102 @@
-// Settings Service - Handles user settings and preferences (No Database Version)
+// settingsService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import { Platform } from 'react-native';
 import { API_CONFIG } from '../config';
 
-const SETTINGS_STORAGE_KEY = 'mathematico_user_settings';
+export interface PendingSetting {
+  id: string;
+  settings: Partial<UserSettings>;
+  timestamp: number;
+  retryCount: number;
+}
 
-// Create a service error handler for settingsService
-const errorHandler = createServiceErrorHandler('settingsService');
+export interface Settings extends UserSettings {}
+
+export const getLocalSettings = async (): Promise<UserSettings> => {
+  try {
+    const settings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+    return settings ? JSON.parse(settings) : { ...DEFAULT_SETTINGS };
+  } catch (error) {
+    console.error('Error getting local settings:', error);
+    return { ...DEFAULT_SETTINGS };
+  }
+};
+
+export const getServerSettings = async (): Promise<UserSettings> => {
+  try {
+    const response = await fetchWithRetry(
+      `${API_CONFIG.baseUrl}/api/settings`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+      }
+    );
+    const data = await response.json();
+    return data.data || { ...DEFAULT_SETTINGS };
+  } catch (error) {
+    console.error('Error getting server settings:', error);
+    throw error;
+  }
+};
+
+export const getPendingSettings = async (): Promise<PendingSetting[]> => {
+  try {
+    const pending = await AsyncStorage.getItem(PENDING_SETTINGS_KEY);
+    return pending ? JSON.parse(pending) : [];
+  } catch (error) {
+    console.error('Error getting pending settings:', error);
+    return [];
+  }
+};
+
+export const addPendingSettings = async (settings: Partial<UserSettings>): Promise<PendingSetting[]> => {
+  try {
+    const pending = await getPendingSettings();
+    const newPending: PendingSetting = {
+      id: Date.now().toString(),
+      settings,
+      timestamp: Date.now(),
+      retryCount: 0,
+    };
+    
+    const updatedPending = [...pending, newPending];
+    await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(updatedPending));
+    return updatedPending;
+  } catch (error) {
+    console.error('Error adding pending settings:', error);
+    throw error;
+  }
+};
+
+export const clearPendingSettings = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
+  } catch (error) {
+    console.error('Error clearing pending settings:', error);
+    throw error;
+  }
+};
+
+export const clearLocalSettings = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
+  } catch (error) {
+    console.error('Error clearing local settings:', error);
+    throw error;
+  }
+};
+
+export interface SettingsResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+  silent?: boolean;
+  isOffline?: boolean;
+}
 
 export interface UserSettings {
   notifications: {
@@ -15,267 +105,267 @@ export interface UserSettings {
     sms: boolean;
   };
   privacy: {
-    profileVisibility: 'public' | 'private' | 'friends';
+    profileVisibility: string;
     showEmail: boolean;
     showPhone: boolean;
   };
   preferences: {
     language: string;
     timezone: string;
-    theme: 'light' | 'dark' | 'auto';
+    theme: string;
   };
   learning: {
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
-    subjects: string[];
-    studyReminders: boolean;
+    autoPlayVideos: boolean;
+    downloadOverWifi: boolean;
   };
 }
 
-export interface SettingsResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  message?: string;
-}
+const SETTINGS_STORAGE_KEY = 'mathematico_user_settings';
+const PENDING_SETTINGS_KEY = 'pending_settings';
+const LANGUAGE_PREFERENCE_KEY = 'mathematico_language_preference';
 
-class SettingsService {
-  // Legacy method for backward compatibility
-  async getSettings(): Promise<SettingsResponse> {
+const DEFAULT_SETTINGS: UserSettings = {
+  notifications: {
+    email: true,
+    push: true,
+    sms: false,
+  },
+  privacy: {
+    profileVisibility: 'public',
+    showEmail: true,
+    showPhone: false,
+  },
+  preferences: {
+    language: 'en',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    theme: 'system',
+  },
+  learning: {
+    autoPlayVideos: true,
+    downloadOverWifi: true,
+  },
+};
+
+const handleError = (error: any, defaultMessage: string) => {
+  console.error('Settings Service Error:', error);
+  return {
+    success: false,
+    message: error.response?.data?.message || error.message || defaultMessage,
+    silent: error.silent || false,
+    isOffline: !navigator.onLine,
+  };
+};
+
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  retries = 3,
+  timeout = 10000
+): Promise<Response> => {
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(id);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response;
+  } catch (error) {
+    if (retries <= 0) throw error;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return fetchWithRetry(url, options, retries - 1, timeout);
+  }
+};
+
+export const SettingsService = {
+  getSettings: async (): Promise<SettingsResponse> => {
     try {
-      // First try to get from local storage
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isConnected = netInfo.isConnected ?? false;
+
+      // Try to get settings from server if online
+      if (isConnected) {
+        try {
+          const response = await fetchWithRetry(
+            `${API_CONFIG.baseUrl}/api/settings`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache',
+              },
+            }
+          );
+
+          const data = await response.json();
+          
+          if (data.success && data.data) {
+            // Save to local storage
+            await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.data));
+            return {
+              success: true,
+              message: 'Settings loaded successfully',
+              data: data.data,
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to fetch settings from server, using local copy', error);
+        }
+      }
+
+      // Fall back to local storage
       const localSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (localSettings) {
-        const parsedSettings = JSON.parse(localSettings);
-        errorHandler.logInfo('📱 Loaded settings from local storage:', parsedSettings);
         return {
           success: true,
-          data: parsedSettings,
-          message: 'Settings loaded from local storage'
+          message: 'Settings loaded from local storage',
+          data: JSON.parse(localSettings),
+          isOffline: !isConnected,
         };
       }
 
-      // If no local settings, try API
-      const response = await fetch(`${API_CONFIG.mobile}/api/v1/mobile/settings`);
-      const data = await response.json();
-      
-      if (data.success) {
-        // Save to local storage for future use
-        await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.data));
+      // Return default settings if nothing is found
+      return {
+        success: true,
+        message: 'Using default settings',
+        data: DEFAULT_SETTINGS,
+        isOffline: !isConnected,
+      };
+    } catch (error) {
+      return handleError(error, 'Failed to load settings');
+    }
+  },
+
+  updateSettings: async (newSettings: Partial<UserSettings>): Promise<SettingsResponse> => {
+    try {
+      const currentSettings = await SettingsService.getSettings();
+      if (!currentSettings.success) {
+        throw new Error('Failed to get current settings');
+      }
+
+      const updatedSettings = {
+        ...(currentSettings.data || DEFAULT_SETTINGS),
+        ...newSettings,
+      };
+
+      // Save to local storage immediately for offline support
+      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
+
+      // Check network status
+      const netInfo = await NetInfo.fetch();
+      const isConnected = netInfo.isConnected ?? false;
+
+      if (!isConnected) {
+        // Queue for sync when back online
+        await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(newSettings));
         return {
           success: true,
-          data: data.data,
-          message: data.message
+          message: 'Settings saved locally and will sync when online',
+          data: updatedSettings,
+          isOffline: true,
         };
-      } else {
-        throw new Error(data.message || 'Failed to fetch settings');
+      }
+
+      // Try to sync with server
+      try {
+        const response = await fetchWithRetry(
+          `${API_CONFIG.baseUrl}/api/settings`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newSettings),
+          }
+        );
+
+        const data = await response.json();
+        
+        if (data.success) {
+          // Clear any pending settings
+          await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
+          return {
+            success: true,
+            message: 'Settings updated successfully',
+            data: updatedSettings,
+          };
+        } else {
+          throw new Error(data.message || 'Failed to update settings');
+        }
+      } catch (error) {
+        // If server update fails but we have local changes, queue for sync
+        await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(newSettings));
+        return {
+          success: true,
+          message: 'Settings saved locally but failed to sync with server. Will retry later.',
+          data: updatedSettings,
+          isOffline: true,
+        };
       }
     } catch (error) {
-      errorHandler.logWarning('Settings API error:', error);
-      const fallbackSettings = {
-        pushNotifications: true,
-        emailNotifications: true,
-        courseUpdates: true,
-        liveClassReminders: true,
-        darkMode: false,
-        autoPlayVideos: true,
-        downloadQuality: 'High'
-      };
-      
-      // Save fallback settings to local storage
-      try {
-        await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(fallbackSettings));
-      } catch (storageError) {
-        errorHandler.logWarning('Failed to save fallback settings to storage:', storageError);
-      }
+      return handleError(error, 'Failed to update settings');
+    }
+  },
+
+  clearSettings: async (): Promise<SettingsResponse> => {
+    try {
+      await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
+      await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
       
       return {
         success: true,
-        data: fallbackSettings,
-        message: 'Using fallback settings data'
+        message: 'Settings cleared successfully',
       };
+    } catch (error) {
+      return handleError(error, 'Failed to clear settings');
     }
-  }
+  },
 
-  // Legacy method for backward compatibility
-  async updateSettings(settings: any): Promise<SettingsResponse> {
+  syncPendingSettings: async (): Promise<boolean> => {
     try {
-      // First get current settings from local storage
-      let currentSettings = {};
-      try {
-        const localSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
-        if (localSettings) {
-          currentSettings = JSON.parse(localSettings);
-        }
-      } catch (storageError) {
-        errorHandler.logWarning('Failed to read current settings from storage:', storageError);
-      }
+      const pendingSettings = await AsyncStorage.getItem(PENDING_SETTINGS_KEY);
+      if (!pendingSettings) return true;
 
-      // Merge with new settings
-      const updatedSettings = { ...currentSettings, ...settings };
-      
-      // Save to local storage immediately
-      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
-      errorHandler.logInfo('📱 Settings saved to local storage:', updatedSettings);
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) return false;
 
-      // Try to sync with API (but don't fail if it doesn't work)
-      try {
-        const response = await fetch(`${API_CONFIG.mobile}/api/v1/mobile/settings`, {
+      const response = await fetchWithRetry(
+        `${API_CONFIG.baseUrl}/api/settings`,
+        {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(updatedSettings)
-        });
-        
-        const data = await response.json();
-        errorHandler.logInfo('📱 Settings synced with API:', data);
-      } catch (apiError) {
-        errorHandler.logWarning('Settings API sync failed (continuing with local storage):', apiError);
+          body: pendingSettings,
+        }
+      );
+
+      if (response.ok) {
+        await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
+        return true;
       }
-      
-      return {
-        success: true,
-        message: 'Settings updated successfully',
-        data: updatedSettings
-      };
+      return false;
     } catch (error) {
-      errorHandler.handleError('Settings update failed:', error);
-      return {
-        success: false,
-        message: 'Failed to update settings: ' + (error instanceof Error ? error.message : String(error))
-      };
+      console.error('Failed to sync pending settings:', error);
+      return false;
     }
-  }
+  },
+};
 
-  async getUserSettings(userId?: string): Promise<SettingsResponse> {
-    return {
-      success: true,
-      data: {
-        notifications: {
-          email: true,
-          push: true,
-          sms: false
-        },
-        privacy: {
-          profileVisibility: 'public',
-          showEmail: false,
-          showPhone: false
-        },
-        preferences: {
-          language: 'en',
-          timezone: 'UTC',
-          theme: 'light'
-        },
-        learning: {
-          difficulty: 'beginner',
-          subjects: [],
-          studyReminders: true
-        }
-      },
-      message: 'Database functionality has been removed'
-    };
+// Initialize network listener for syncing pending settings
+NetInfo.addEventListener((state: NetInfoState) => {
+  if (state.isConnected) {
+    SettingsService.syncPendingSettings();
   }
+});
 
-  async updateUserSettings(userId: string, settings: Partial<UserSettings>): Promise<SettingsResponse> {
-    throw new Error('Settings update is not available. Database functionality has been removed.');
-  }
-
-  async updateNotificationSettings(userId: string, notifications: Partial<UserSettings['notifications']>): Promise<SettingsResponse> {
-    throw new Error('Notification settings update is not available. Database functionality has been removed.');
-  }
-
-  async updatePrivacySettings(userId: string, privacy: Partial<UserSettings['privacy']>): Promise<SettingsResponse> {
-    throw new Error('Privacy settings update is not available. Database functionality has been removed.');
-  }
-
-  async updatePreferences(userId: string, preferences: Partial<UserSettings['preferences']>): Promise<SettingsResponse> {
-    throw new Error('Preferences update is not available. Database functionality has been removed.');
-  }
-
-  async updateLearningSettings(userId: string, learning: Partial<UserSettings['learning']>): Promise<SettingsResponse> {
-    throw new Error('Learning settings update is not available. Database functionality has been removed.');
-  }
-
-  async resetSettings(userId: string): Promise<SettingsResponse> {
-    throw new Error('Settings reset is not available. Database functionality has been removed.');
-  }
-
-  async exportSettings(userId: string): Promise<SettingsResponse> {
-    return {
-      success: true,
-      data: {
-        notifications: {
-          email: true,
-          push: true,
-          sms: false
-        },
-        privacy: {
-          profileVisibility: 'public',
-          showEmail: false,
-          showPhone: false
-        },
-        preferences: {
-          language: 'en',
-          timezone: 'UTC',
-          theme: 'light'
-        },
-        learning: {
-          difficulty: 'beginner',
-          subjects: [],
-          studyReminders: true
-        }
-      },
-      message: 'Database functionality has been removed'
-    };
-  }
-
-  async importSettings(userId: string, settingsData: any): Promise<SettingsResponse> {
-    throw new Error('Settings import is not available. Database functionality has been removed.');
-  }
-
-  // Clear all settings from local storage
-  async clearSettings(): Promise<SettingsResponse> {
-    try {
-      await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
-      return {
-        success: true,
-        message: 'Settings cleared successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to clear settings: ' + (error instanceof Error ? error.message : String(error))
-      };
-    }
-  }
-
-  // App-specific settings
-  async getAppSettings(): Promise<SettingsResponse> {
-    return {
-      success: true,
-      data: {
-        version: '2.0.0',
-        database: 'disabled',
-        features: {
-          userRegistration: false,
-          userProfiles: false,
-          courseEnrollment: false,
-          bookDownloads: false,
-          liveClasses: false,
-          payments: false,
-          notifications: false
-        },
-        maintenance: false,
-        message: 'Database functionality has been removed. Only admin authentication is available.'
-      },
-      message: 'Database functionality has been removed'
-    };
-  }
-
-  async updateAppSettings(settings: any): Promise<SettingsResponse> {
-    throw new Error('App settings update is not available. Database functionality has been removed.');
-  }
-}
-
-export const settingsService = new SettingsService();
-export default settingsService;
+export default SettingsService;

@@ -48,14 +48,15 @@ export const FallbackIcon = ({
   );
 };
 
-const styles = StyleSheet.create({
+// Use a simple object instead of StyleSheet.create for better test compatibility
+const styles = {
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
   icon: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
-});
+};
 
 export default FallbackIcon;

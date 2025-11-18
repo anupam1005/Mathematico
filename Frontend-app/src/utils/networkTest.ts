@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config';
+const AUTH_URL = API_CONFIG.auth;
 import { testDirectConnection } from './networkDebug';
 
 export const testNetworkConnectivity = async (): Promise<{
@@ -10,9 +11,7 @@ export const testNetworkConnectivity = async (): Promise<{
   try {
     console.log('🌐 Testing network connectivity...');
     
-    const { getBackendUrl } = await import('../config');
-    const backendUrl = await getBackendUrl();
-    const authUrl = `${backendUrl}/api/v1/auth`;
+    const authUrl = AUTH_URL;
     
     console.log('🌐 Backend URL:', authUrl);
     
@@ -84,26 +83,26 @@ export const testNetworkConnectivity = async (): Promise<{
       errorDetails = {
         code: error.code,
         message: error.message,
-        backendUrl: authUrl
+        backendUrl: AUTH_URL
       };
     } else if (error.response) {
       errorMessage = `Server responded with status ${error.response.status}`;
       errorDetails = {
         status: error.response.status,
         data: error.response.data,
-        backendUrl: authUrl
+        backendUrl: AUTH_URL
       };
     } else if (error.request) {
       errorMessage = 'No response received from server';
       errorDetails = {
         request: error.request,
-        backendUrl: authUrl
+        backendUrl: AUTH_URL
       };
     } else {
       errorMessage = error.message || 'Unknown network error';
       errorDetails = {
         error: error,
-        backendUrl: authUrl
+        backendUrl: AUTH_URL
       };
     }
     
@@ -127,6 +126,7 @@ export const testBackendEndpoints = async (): Promise<{
   };
   
   try {
+    const authUrl = AUTH_URL;
     // Test health endpoint
     try {
       const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });

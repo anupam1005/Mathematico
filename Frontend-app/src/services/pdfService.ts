@@ -47,7 +47,8 @@ class PdfService {
    */
   async getSecurePdfViewer(bookId: string): Promise<SecurePdfViewerResponse> {
     try {
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
+      // Use the base URL from API_CONFIG.mobile without appending /api/v1/mobile again
+      const baseUrl = API_CONFIG.mobile.replace(/\/$/, ''); // Remove trailing slash if exists
       
       // Get auth token for authenticated requests
       const { Storage } = await import('../utils/storage');
@@ -63,9 +64,10 @@ class PdfService {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      console.log('PdfService: Fetching PDF viewer from:', `${mobileUrl}/books/${bookId}/viewer`);
+      const requestUrl = `${baseUrl}/books/${bookId}/viewer`;
+      console.log('PdfService: Fetching PDF viewer from:', requestUrl);
       
-      const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
+      const response = await fetch(requestUrl, {
         method: 'GET',
         headers,
       });

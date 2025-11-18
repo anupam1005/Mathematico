@@ -1,6 +1,7 @@
 {
+  "extends": "./tsconfig.expo-modules.json",
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2017",
     "module": "esnext",
     "lib": [
       "esnext",
@@ -13,12 +14,16 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "baseUrl": "./src",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "paths": {
       "*": [
         "*",
@@ -26,18 +31,18 @@
         "services/*",
         "config/*"
       ]
-    }
+    },
+    "types": ["node"],
+    "declaration": true,
+    "composite": true
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "**/*.js",
-    "**/*.jsx",
     "types.d.ts"
   ],
   "exclude": [
     "node_modules",
-    "**/__tests__/*"
-  ],
-  "extends": "expo/tsconfig.base"
+    "node_modules/expo-modules-core/node_modules"
+  ]
 }

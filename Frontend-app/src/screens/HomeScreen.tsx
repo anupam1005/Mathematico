@@ -345,15 +345,26 @@ export default function HomeScreen({ navigation }: any) {
       </View>
 
       {/* Search Bar */}
-      <Searchbar
-        placeholder="Search courses, books, or classes..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        onSubmitEditing={handleSearch}
-        style={styles.searchBar}
-        icon={() => <Search size={24} color={designSystem.colors.textSecondary} />}
-        clearIcon={() => <X size={24} color={designSystem.colors.textSecondary} />}
-      />
+      <View style={styles.searchBarContainer}>
+        <Searchbar
+          placeholder="Search courses, books, or classes..."
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          onSubmitEditing={handleSearch}
+          style={styles.searchBar}
+          icon={() => <Search size={24} color={designSystem.colors.textSecondary} />}
+          clearIcon={searchQuery ? () => <X size={24} color={designSystem.colors.textSecondary} /> : undefined}
+          onClearIconPress={() => setSearchQuery('')}
+        />
+        {searchQuery ? (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <X size={24} color={designSystem.colors.textSecondary} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       {/* Statistics Section */}
       <StatsCard
@@ -525,6 +536,18 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  searchBarContainer: {
+    position: 'relative',
+    marginHorizontal: designSystem.spacing.md,
+    marginBottom: designSystem.spacing.md,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    zIndex: 10,
+    padding: 8,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
