@@ -99,11 +99,9 @@ class PdfService {
    */
   async getBookDetails(bookId: string): Promise<BookDetailsResponse> {
     try {
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
+      console.log('PdfService: Fetching book details from:', `${API_CONFIG.mobile}/books/${bookId}`);
       
-      console.log('PdfService: Fetching book details from:', `${mobileUrl}/books/${bookId}`);
-      
-      const response = await fetch(`${mobileUrl}/books/${bookId}`, {
+      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

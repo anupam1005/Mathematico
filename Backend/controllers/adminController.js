@@ -1081,10 +1081,30 @@ const createLiveClass = async (req, res) => {
 
     await connectDB();
 
+    // Get user information for instructor field
+    const user = await UserModel.findById(req.user.id).select('name email');
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const liveClassData = {
       ...req.body,
       createdBy: req.user.id,
-      status: 'scheduled'
+      status: 'scheduled',
+      // Add required instructor field
+      instructor: {
+        name: user.name || 'Admin',
+        instructorId: req.user.id,
+        bio: req.body.instructorBio || '',
+        qualifications: req.body.instructorQualifications || [],
+        experience: req.body.instructorExperience || ''
+      },
+      // Add timezone if not provided
+      timezone: req.body.timezone || 'Asia/Kolkata'
     };
 
     // Handle file upload if present
@@ -1110,6 +1130,11 @@ const createLiveClass = async (req, res) => {
       } catch (uploadError) {
         console.error('File upload error:', uploadError);
       }
+    }
+
+    // If no thumbnail provided, use a default placeholder
+    if (!liveClassData.thumbnail) {
+      liveClassData.thumbnail = 'https://res.cloudinary.com/dqy2ts9h6/image/upload/v1732276800/mathematico/default-liveclass-thumbnail.jpg';
     }
 
     const liveClass = await LiveClassModel.create(liveClassData);
@@ -1144,6 +1169,31 @@ const updateLiveClass = async (req, res) => {
     delete updateData._id;
     delete updateData.createdBy;
     delete updateData.createdAt;
+
+    // Handle file upload if present
+    if (req.file) {
+      try {
+        const imageResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+              resource_type: 'image', 
+              folder: 'mathematico/liveclasses/thumbnails',
+              public_id: `liveclass_${Date.now()}`,
+              format: 'jpg',
+              quality: 'auto'
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+        updateData.thumbnail = imageResult.secure_url;
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    }
 
     const liveClass = await LiveClassModel.findByIdAndUpdate(
       id,

@@ -24,10 +24,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       setLoading(true);
       setError('');
 
-      const { getBackendUrl } = await import('../config');
       const { Storage } = await import('../utils/storage');
-      const backendUrl = await getBackendUrl();
-      const mobileUrl = `${backendUrl}/api/v1/mobile`;
       
       // Get auth token for authenticated requests
       const token = await Storage.getItem('authToken');
@@ -42,7 +39,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch(`${mobileUrl}/books/${bookId}/viewer`, {
+      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
         method: 'GET',
         headers,
       });

@@ -26,7 +26,7 @@ export const getLocalSettings = async (): Promise<UserSettings> => {
 export const getServerSettings = async (): Promise<UserSettings> => {
   try {
     const response = await fetchWithRetry(
-      `${API_CONFIG.baseUrl}/api/settings`,
+      `${API_CONFIG.mobile}/settings`,
       {
         method: 'GET',
         headers: {
@@ -196,7 +196,7 @@ export const SettingsService = {
       if (isConnected) {
         try {
           const response = await fetchWithRetry(
-            `${API_CONFIG.baseUrl}/api/settings`,
+            `${API_CONFIG.mobile}/settings`,
             {
               method: 'GET',
               headers: {
@@ -278,7 +278,7 @@ export const SettingsService = {
       // Try to sync with server
       try {
         const response = await fetchWithRetry(
-          `${API_CONFIG.baseUrl}/api/settings`,
+          `${API_CONFIG.mobile}/settings`,
           {
             method: 'PUT',
             headers: {
@@ -339,7 +339,7 @@ export const SettingsService = {
       if (!netInfo.isConnected) return false;
 
       const response = await fetchWithRetry(
-        `${API_CONFIG.baseUrl}/api/settings`,
+        `${API_CONFIG.mobile}/settings`,
         {
           method: 'PUT',
           headers: {

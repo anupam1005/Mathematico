@@ -1,6 +1,6 @@
 // src/admin/screens/BookForm.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { adminService } from "../../services/adminService";
@@ -270,20 +270,51 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
         leftIcon="info"
       />
 
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text style={styles.buttonText}>{formData.coverImage ? "Change Cover Image" : "Upload Cover Image"}</Text>
-      </TouchableOpacity>
+      <View style={styles.imageSection}>
+        <Text style={styles.sectionLabel}>Cover Image</Text>
+        <TouchableOpacity style={styles.button} onPress={pickImage}>
+          <Text style={styles.buttonText}>{formData.coverImage ? "Change Cover Image" : "Upload Cover Image"}</Text>
+        </TouchableOpacity>
+        
+        {formData.coverImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Text style={styles.imagePreviewLabel}>Preview:</Text>
+            <Image 
+              source={{ uri: typeof formData.coverImage === 'string' ? formData.coverImage : formData.coverImage.uri }} 
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setFormData({ ...formData, coverImage: null })}
+            >
+              <Text style={styles.removeImageText}>Remove Image</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={pickPDF}>
-        <Text style={styles.buttonText}>{formData.pdfFile ? "Change PDF File" : "Upload PDF File"}</Text>
-      </TouchableOpacity>
-      
-      {formData.pdfFile && (
-        <Text style={[styles.label, { marginTop: 5, fontSize: 12, color: designSystem.colors.textSecondary }]}>
-          PDF File: {formData.pdfFile.name || 'book.pdf'} 
-          {formData.pdfFile.size && ` (${(formData.pdfFile.size / (1024 * 1024)).toFixed(1)} MB)`}
-        </Text>
-      )}
+      <View style={styles.pdfSection}>
+        <Text style={styles.sectionLabel}>Book PDF</Text>
+        <TouchableOpacity style={styles.button} onPress={pickPDF}>
+          <Text style={styles.buttonText}>{formData.pdfFile ? "Change PDF File" : "Upload PDF File"}</Text>
+        </TouchableOpacity>
+        
+        {formData.pdfFile && (
+          <View style={styles.pdfInfoContainer}>
+            <Text style={styles.pdfInfoText}>
+              ✓ PDF File: {formData.pdfFile.name || 'book.pdf'}
+              {formData.pdfFile.size && ` (${(formData.pdfFile.size / (1024 * 1024)).toFixed(1)} MB)`}
+            </Text>
+            <TouchableOpacity 
+              style={styles.removePdfButton}
+              onPress={() => setFormData({ ...formData, pdfFile: null })}
+            >
+              <Text style={styles.removePdfText}>Remove PDF</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
         {loading ? (
@@ -336,5 +367,75 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textInverse,
     ...designSystem.typography.label,
     fontWeight: "bold",
+  },
+  imageSection: {
+    marginTop: designSystem.spacing.lg,
+    marginBottom: designSystem.spacing.sm,
+  },
+  pdfSection: {
+    marginTop: designSystem.spacing.lg,
+    marginBottom: designSystem.spacing.sm,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: designSystem.spacing.xs,
+    color: designSystem.colors.textPrimary,
+  },
+  imagePreviewContainer: {
+    marginTop: designSystem.spacing.md,
+    padding: designSystem.spacing.sm,
+    backgroundColor: '#f5f5f5',
+    borderRadius: designSystem.borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  imagePreviewLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: designSystem.spacing.sm,
+    color: '#333',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: designSystem.borderRadius.md,
+    backgroundColor: '#e0e0e0',
+  },
+  removeImageButton: {
+    marginTop: designSystem.spacing.sm,
+    backgroundColor: designSystem.colors.error,
+    padding: designSystem.spacing.sm,
+    borderRadius: designSystem.borderRadius.sm,
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: designSystem.colors.textInverse,
+    fontWeight: 'bold',
+  },
+  pdfInfoContainer: {
+    marginTop: designSystem.spacing.sm,
+    padding: designSystem.spacing.sm,
+    backgroundColor: '#e8f5e9',
+    borderRadius: designSystem.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  pdfInfoText: {
+    fontSize: 14,
+    color: '#2e7d32',
+    marginBottom: designSystem.spacing.xs,
+  },
+  removePdfButton: {
+    marginTop: designSystem.spacing.xs,
+    backgroundColor: designSystem.colors.error,
+    padding: designSystem.spacing.xs,
+    borderRadius: designSystem.borderRadius.sm,
+    alignItems: 'center',
+  },
+  removePdfText: {
+    color: designSystem.colors.textInverse,
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 });

@@ -54,7 +54,7 @@ class RazorpayService {
 
   private async updateBaseUrl() {
     try {
-      this.baseUrl = `${API_CONFIG.mobile}/api/v1`;
+      this.baseUrl = API_CONFIG.mobile;
       console.log('RazorpayService: Base URL updated to:', this.baseUrl);
     } catch (error) {
       console.error('RazorpayService: Failed to update base URL:', error);
@@ -68,9 +68,7 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Creating order with options:', paymentOptions);
       
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
-      
-      const response = await fetch(`${mobileUrl}/payments/create-order`, {
+      const response = await fetch(`${API_CONFIG.mobile}/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,9 +110,7 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
       
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
-      
-      const response = await fetch(`${mobileUrl}/payments/verify`, {
+      const response = await fetch(`${API_CONFIG.mobile}/payments/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,9 +152,7 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching payment history');
       
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
-      
-      const response = await fetch(`${mobileUrl}/payments/history`, {
+      const response = await fetch(`${API_CONFIG.mobile}/payments/history`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -203,9 +197,7 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching configuration from backend...');
       
-      const mobileUrl = `${API_CONFIG.mobile}/api/v1/mobile`;
-      
-      const response = await fetch(`${mobileUrl}/payments/config`, {
+      const response = await fetch(`${API_CONFIG.mobile}/payments/config`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

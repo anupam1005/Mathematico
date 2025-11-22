@@ -1,6 +1,6 @@
 // src/admin/screens/CourseForm.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
@@ -359,13 +359,47 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         leftIcon="people"
       />
 
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text style={styles.buttonText}>{formData.image ? "Change Thumbnail" : "Upload Thumbnail"}</Text>
-      </TouchableOpacity>
+      <View style={styles.imageSection}>
+        <Text style={styles.pickerLabel}>Thumbnail Image</Text>
+        <TouchableOpacity style={styles.button} onPress={pickImage}>
+          <Text style={styles.buttonText}>{formData.image ? "Change Thumbnail" : "Upload Thumbnail"}</Text>
+        </TouchableOpacity>
+        
+        {formData.image && (
+          <View style={styles.imagePreviewContainer}>
+            <Text style={styles.imagePreviewLabel}>Preview:</Text>
+            <Image 
+              source={{ uri: typeof formData.image === 'string' ? formData.image : formData.image.uri }} 
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setFormData({ ...formData, image: null })}
+            >
+              <Text style={styles.removeImageText}>Remove Image</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={pickPDF}>
-        <Text style={styles.buttonText}>{formData.pdf ? "Change PDF" : "Upload PDF"}</Text>
-      </TouchableOpacity>
+      <View style={styles.pdfSection}>
+        <Text style={styles.pickerLabel}>Course PDF</Text>
+        <TouchableOpacity style={styles.button} onPress={pickPDF}>
+          <Text style={styles.buttonText}>{formData.pdf ? "Change PDF" : "Upload PDF"}</Text>
+        </TouchableOpacity>
+        {formData.pdf && (
+          <View style={styles.pdfInfoContainer}>
+            <Text style={styles.pdfInfoText}>✓ PDF Selected: {typeof formData.pdf === 'object' && 'name' in formData.pdf ? formData.pdf.name : 'course.pdf'}</Text>
+            <TouchableOpacity 
+              style={styles.removePdfButton}
+              onPress={() => setFormData({ ...formData, pdf: null })}
+            >
+              <Text style={styles.removePdfText}>Remove PDF</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{courseId ? "Update Course" : "Create Course"}</Text>}
@@ -388,4 +422,67 @@ const styles = StyleSheet.create({
   pickerButton: { padding: 15, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   pickerText: { fontSize: 16, color: "#333" },
   pickerArrow: { fontSize: 12, color: "#666" },
+  imageSection: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  imagePreviewContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  imagePreviewLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+  },
+  removeImageButton: {
+    marginTop: 10,
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  pdfSection: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  pdfInfoContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  pdfInfoText: {
+    fontSize: 14,
+    color: '#2e7d32',
+    marginBottom: 8,
+  },
+  removePdfButton: {
+    backgroundColor: '#dc3545',
+    padding: 8,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  removePdfText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
 });

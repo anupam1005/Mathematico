@@ -10,7 +10,8 @@ import {
   ActivityIndicator, 
   Platform,
   KeyboardAvoidingView,
-  Keyboard
+  Keyboard,
+  Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -315,7 +316,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     }
     
     // Validate enum values
-    const validCategories = ['mathematics', 'physics'];
+    const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'doubt_clearing', 'exam_preparation'];
     const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
     const validStatuses = ['scheduled', 'live', 'completed', 'cancelled', 'postponed'];
     
@@ -622,6 +623,14 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
                 [
                   { text: 'Mathematics', onPress: () => setFormData({ ...formData, category: 'mathematics' }) },
                   { text: 'Physics', onPress: () => setFormData({ ...formData, category: 'physics' }) },
+                  { text: 'Chemistry', onPress: () => setFormData({ ...formData, category: 'chemistry' }) },
+                  { text: 'Biology', onPress: () => setFormData({ ...formData, category: 'biology' }) },
+                  { text: 'Computer Science', onPress: () => setFormData({ ...formData, category: 'computer_science' }) },
+                  { text: 'Engineering', onPress: () => setFormData({ ...formData, category: 'engineering' }) },
+                  { text: 'Science', onPress: () => setFormData({ ...formData, category: 'science' }) },
+                  { text: 'General', onPress: () => setFormData({ ...formData, category: 'general' }) },
+                  { text: 'Doubt Clearing', onPress: () => setFormData({ ...formData, category: 'doubt_clearing' }) },
+                  { text: 'Exam Preparation', onPress: () => setFormData({ ...formData, category: 'exam_preparation' }) },
                   { text: 'Cancel', style: 'cancel' }
                 ]
               );
@@ -893,9 +902,29 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
-      </TouchableOpacity>
+      <View style={styles.imageSection}>
+        <Text style={styles.pickerLabel}>Thumbnail Image</Text>
+        <TouchableOpacity style={styles.button} onPress={pickImage}>
+          <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
+        </TouchableOpacity>
+        
+        {formData.image && (
+          <View style={styles.imagePreviewContainer}>
+            <Text style={styles.imagePreviewLabel}>Preview:</Text>
+            <Image 
+              source={{ uri: typeof formData.image === 'string' ? formData.image : formData.image.uri }} 
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setFormData({ ...formData, image: null })}
+            >
+              <Text style={styles.removeImageText}>Remove Image</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       <View style={styles.buttonRow}>
         {onCancel && (
@@ -1007,6 +1036,41 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666',
+  },
+  imageSection: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  imagePreviewContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  imagePreviewLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+  },
+  removeImageButton: {
+    marginTop: 10,
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
