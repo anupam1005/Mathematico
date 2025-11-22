@@ -36,6 +36,7 @@ export default {
             compileSdkVersion: 35,
             targetSdkVersion: 35,
             minSdkVersion: 24,
+            enable16KbPageSize: true,
             packagingOptions: {
               jniLibs: {
                 useLegacyPackaging: false
@@ -54,6 +55,7 @@ export default {
             compileSdkVersion: 35,
             targetSdkVersion: 35,
             minSdkVersion: 24,
+            enable16KbPageSize: true,
             packagingOptions: {
               jniLibs: {
                 useLegacyPackaging: false
