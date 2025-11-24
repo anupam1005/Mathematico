@@ -29,6 +29,7 @@ export default {
       'expo-secure-store',
       'expo-dev-client',
       'expo-font',
+      './plugins/withRazorpay.js',
       [
         'expo-build-properties',
         {
@@ -48,6 +49,7 @@ export default {
     ] : [
       'expo-secure-store',
       'expo-font',
+      './plugins/withRazorpay.js',
       [
         'expo-build-properties',
         {
