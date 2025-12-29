@@ -382,7 +382,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         }
       });
       
-      // Handle image upload
+      // Handle image upload - backend expects 'image' field name for multer
       if (formData.image) {
         // If it's a new image (has uri)
         if (typeof formData.image === 'object' && 'uri' in formData.image && formData.image.uri) {
@@ -398,9 +398,10 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         } 
         // If it's an existing image URL (string)
         else if (typeof formData.image === 'string') {
-          formDataToSend.append('image', formData.image);
+          formDataToSend.append('thumbnail', formData.image);
         }
       }
+      // Backend will add default thumbnail if no image is provided
 
       console.log('LiveClassForm: FormData created, submitting...');
       

@@ -2,24 +2,51 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
 // Initialize Razorpay with environment variables
+const keyId = process.env.RAZORPAY_KEY_ID || process.env.REACT_NATIVE_RAZORPAY_KEY_ID;
+const keySecret = process.env.RAZORPAY_KEY_SECRET || process.env.REACT_NATIVE_RAZORPAY_KEY_SECRET;
+
+console.log('💳 Initializing Razorpay...');
+console.log('Key ID present:', !!keyId);
+console.log('Key Secret present:', !!keySecret);
+
+if (!keyId || !keySecret) {
+  console.error('❌ CRITICAL: Razorpay credentials not found in environment variables!');
+  console.error('Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env file');
+}
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || process.env.REACT_NATIVE_RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET || process.env.REACT_NATIVE_RAZORPAY_KEY_SECRET,
+  key_id: keyId,
+  key_secret: keySecret,
 });
+
+console.log('✅ Razorpay initialized successfully');
 
 /**
  * Create Razorpay order
  */
 const createOrder = async (req, res) => {
   try {
-    console.log('PaymentController: Creating Razorpay order...');
+    console.log('💳 PaymentController: Creating Razorpay order...');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     const { amount, currency = 'INR', receipt, notes } = req.body;
     
     if (!amount || amount <= 0) {
+      console.error('❌ Invalid amount:', amount);
       return res.status(400).json({
         success: false,
-        message: 'Valid amount is required',
+        message: 'Valid amount is required (must be greater than 0)',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Verify Razorpay is initialized
+    if (!razorpay || !razorpay.orders) {
+      console.error('❌ Razorpay not properly initialized');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not available. Please contact support.',
+        error: 'Razorpay not initialized',
         timestamp: new Date().toISOString()
       });
     }
@@ -39,11 +66,12 @@ const createOrder = async (req, res) => {
       notes: notes || {}
     };
 
-    console.log('PaymentController: Order options:', options);
+    console.log('📝 PaymentController: Order options:', JSON.stringify(options, null, 2));
 
     const order = await razorpay.orders.create(options);
     
-    console.log('PaymentController: Order created successfully:', order.id);
+    console.log('✅ PaymentController: Order created successfully:', order.id);
+    console.log('Order details:', JSON.stringify(order, null, 2));
 
     res.json({
       success: true,
@@ -60,11 +88,17 @@ const createOrder = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('PaymentController: Error creating order:', error);
+    console.error('❌ PaymentController: Error creating order:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
     res.status(500).json({
       success: false,
-      message: 'Failed to create order',
+      message: 'Failed to create order. Please try again or contact support.',
       error: error.message,
+      details: error.response?.data || error.toString(),
       timestamp: new Date().toISOString()
     });
   }
@@ -242,34 +276,44 @@ const getPaymentHistory = async (req, res) => {
  */
 const getRazorpayConfig = async (req, res) => {
   try {
+    console.log('💳 PaymentController: Getting Razorpay configuration...');
+    
     const keyId = process.env.RAZORPAY_KEY_ID || process.env.REACT_NATIVE_RAZORPAY_KEY_ID;
     
+    console.log('Key ID available:', !!keyId);
+    
     if (!keyId) {
+      console.error('❌ PaymentController: Razorpay Key ID not configured');
       return res.status(500).json({
         success: false,
-        message: 'Razorpay configuration not found',
+        message: 'Razorpay configuration not found. Please contact support.',
+        error: 'RAZORPAY_KEY_ID not configured',
         timestamp: new Date().toISOString()
       });
     }
+    
+    const config = {
+      keyId: keyId,
+      currency: 'INR',
+      name: 'Mathematico',
+      description: 'Educational Platform - Course & Book Purchases',
+      theme: {
+        color: '#3399cc'
+      }
+    };
+    
+    console.log('✅ PaymentController: Razorpay config retrieved successfully');
     
     // Only return the public key ID, never the secret
     res.json({
       success: true,
       message: 'Razorpay configuration retrieved successfully',
-      data: {
-        keyId: keyId,
-        currency: 'INR',
-        name: 'Mathematico',
-        description: 'Educational Platform',
-        theme: {
-          color: '#3399cc'
-        }
-      },
+      data: config,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('PaymentController: Error fetching Razorpay config:', error);
+    console.error('❌ PaymentController: Error fetching Razorpay config:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch Razorpay configuration',

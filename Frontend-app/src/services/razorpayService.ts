@@ -66,39 +66,50 @@ class RazorpayService {
    */
   async createOrder(paymentOptions: PaymentOptions): Promise<RazorpayPaymentResponse> {
     try {
-      errorHandler.logInfo('RazorpayService: Creating order with options:', paymentOptions);
+      console.log('💳 RazorpayService: Creating order with options:', paymentOptions);
       
-      const response = await fetch(`${API_CONFIG.mobile}/payments/create-order`, {
+      const authToken = await this.getAuthToken();
+      console.log('Auth token available:', !!authToken);
+      
+      const url = `${API_CONFIG.mobile}/payments/create-order`;
+      console.log('Request URL:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify(paymentOptions),
       });
 
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
-      errorHandler.logInfo('RazorpayService: Order creation response:', data);
+      console.log('Response data:', data);
 
       if (data.success) {
+        console.log('✅ RazorpayService: Order created successfully');
         return {
           success: true,
           data: data.data,
           message: 'Order created successfully',
         };
       } else {
+        console.error('❌ RazorpayService: Order creation failed:', data.message);
         return {
           success: false,
-          error: data.message || 'Failed to create order',
-          message: data.message,
+          error: data.error || data.message || 'Failed to create order',
+          message: data.message || 'Failed to create payment order',
         };
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ RazorpayService: Error creating order:', error);
       errorHandler.handleError('RazorpayService: Error creating order:', error);
       return {
         success: false,
-        error: 'Network error occurred',
-        message: 'Failed to create payment order',
+        error: error.message || 'Network error occurred',
+        message: 'Failed to create payment order. Please check your connection.',
       };
     }
   }
@@ -191,11 +202,13 @@ class RazorpayService {
    */
   private async getConfig(): Promise<any> {
     if (this.config) {
+      console.log('RazorpayService: Using cached configuration');
       return this.config;
     }
 
     try {
       console.log('RazorpayService: Fetching configuration from backend...');
+      console.log('RazorpayService: Config URL:', `${API_CONFIG.mobile}/payments/config`);
       
       const response = await fetch(`${API_CONFIG.mobile}/payments/config`, {
         method: 'GET',
@@ -204,26 +217,25 @@ class RazorpayService {
         },
       });
 
-      const data = await response.json();
+      console.log('RazorpayService: Config response status:', response.status);
       
-      if (data.success) {
+      const data = await response.json();
+      console.log('RazorpayService: Config response data:', data);
+      
+      if (data.success && data.data) {
         this.config = data.data;
-        console.log('RazorpayService: Configuration loaded successfully');
+        console.log('✅ RazorpayService: Configuration loaded successfully');
+        console.log('Key ID available:', !!this.config.keyId);
         return this.config;
       } else {
-        throw new Error(data.message || 'Failed to load configuration');
+        console.error('❌ RazorpayService: Failed to load config:', data.message);
+        throw new Error(data.message || 'Failed to load Razorpay configuration');
       }
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error loading configuration:', error);
-      // Return error response instead of throwing
-      console.error('RazorpayService: Failed to load configuration from backend');
-      return {
-        keyId: '',
-        currency: 'INR',
-        name: 'Mathematico',
-        description: 'Educational Platform',
-        theme: { color: '#3399cc' }
-      };
+      console.error('❌ RazorpayService: Failed to load configuration from backend');
+      // Don't return empty config - throw error so user knows payment won't work
+      throw new Error('Payment service configuration failed. Please contact support.');
     }
   }
 

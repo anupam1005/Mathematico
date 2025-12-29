@@ -1081,6 +1081,9 @@ const createLiveClass = async (req, res) => {
 
     await connectDB();
 
+    console.log('📝 Creating live class with data:', req.body);
+    console.log('📎 File uploaded:', req.file ? 'Yes' : 'No');
+
     // Get user information for instructor field
     const user = await UserModel.findById(req.user.id).select('name email');
     if (!user) {
@@ -1091,10 +1094,26 @@ const createLiveClass = async (req, res) => {
       });
     }
 
+    // Parse numeric fields from FormData (they come as strings)
+    const duration = parseInt(req.body.duration) || 60;
+    const maxStudents = parseInt(req.body.maxStudents) || 50;
+
     const liveClassData = {
-      ...req.body,
+      title: req.body.title,
+      description: req.body.description,
+      category: req.body.category,
+      subject: req.body.subject,
+      grade: req.body.grade,
+      level: req.body.level || 'beginner',
+      duration: duration,
+      maxStudents: maxStudents,
+      startTime: req.body.startTime,
+      endTime: req.body.endTime,
+      scheduledAt: req.body.scheduledAt,
+      meetingLink: req.body.meetingLink,
+      status: req.body.status || 'scheduled',
+      isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true,
       createdBy: req.user.id,
-      status: 'scheduled',
       // Add required instructor field
       instructor: {
         name: user.name || 'Admin',
@@ -1110,6 +1129,7 @@ const createLiveClass = async (req, res) => {
     // Handle file upload if present
     if (req.file) {
       try {
+        console.log('📤 Uploading thumbnail to Cloudinary...');
         const imageResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
@@ -1127,17 +1147,22 @@ const createLiveClass = async (req, res) => {
           uploadStream.end(req.file.buffer);
         });
         liveClassData.thumbnail = imageResult.secure_url;
+        console.log('✅ Thumbnail uploaded:', imageResult.secure_url);
       } catch (uploadError) {
-        console.error('File upload error:', uploadError);
+        console.error('❌ File upload error:', uploadError);
+        // Continue with default thumbnail
       }
     }
 
     // If no thumbnail provided, use a default placeholder
     if (!liveClassData.thumbnail) {
       liveClassData.thumbnail = 'https://res.cloudinary.com/dqy2ts9h6/image/upload/v1732276800/mathematico/default-liveclass-thumbnail.jpg';
+      console.log('📷 Using default thumbnail');
     }
 
+    console.log('💾 Saving live class to database...');
     const liveClass = await LiveClassModel.create(liveClassData);
+    console.log('✅ Live class created successfully:', liveClass._id);
 
     res.status(201).json({
       success: true,
@@ -1146,11 +1171,19 @@ const createLiveClass = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Create live class error:', error);
+    console.error('❌ Create live class error:', error);
+    console.error('Error details:', error.message);
+    if (error.errors) {
+      console.error('Validation errors:', error.errors);
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to create live class',
       error: error.message,
+      validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : undefined,
       timestamp: new Date().toISOString()
     });
   }

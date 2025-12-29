@@ -5,7 +5,7 @@ import { Logger } from './utils/logger';
 // Get environment variables with fallbacks
 const ENV = {
   BACKEND_URL: process.env.REACT_APP_BACKEND_URL || 'https://mathematico-backend-new.vercel.app',
-  ENV: process.env.REACT_APP_ENV || 'development',
+  ENV: process.env.REACT_APP_ENV || 'production',
   LOCAL_BACKEND: process.env.REACT_NATIVE_LOCAL_BACKEND || 'http://10.0.2.2:5002',
   USE_LOCAL_BACKEND: process.env.REACT_NATIVE_USE_LOCAL_BACKEND === 'true',
 };
@@ -16,10 +16,10 @@ const DEVICE_IP = 'http://10.148.37.132:5002';
 const LOCAL_DEV = 'http://localhost:5002';
 const LOCAL_MOBILE = 'http://10.148.37.132:5002';
 
-// Set up environment detection
-const isDev = process.env.NODE_ENV !== 'production' && ENV.ENV !== 'production';
+// Set up environment detection - default to production for mobile apps
+const isDev = (process.env.NODE_ENV === 'development' || ENV.ENV === 'development') && !ENV.USE_LOCAL_BACKEND;
 
-// Set backend URL with HTTPS enforcement in production
+// Set backend URL - use production URL by default, local only if explicitly in dev mode
 let BACKEND = isDev ? LOCAL_DEV : ENV.BACKEND_URL;
 
 // Force HTTPS in production

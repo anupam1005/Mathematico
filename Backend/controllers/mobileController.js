@@ -275,23 +275,57 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     const { id } = req.params;
+    console.log('📖 Fetching PDF viewer for book:', id);
 
-    // Get book with PDF URL
-    const book = await BookModel.findOne({
+    // Get book with PDF URL - check both published and draft for debugging
+    let book = await BookModel.findOne({
       _id: id,
       status: 'published',
       isAvailable: true
-    }).select('title pdfFile');
+    }).select('title pdfFile status isAvailable');
 
-    if (!book || !book.pdfFile) {
+    // If not found in published, try to find the book anyway for better error message
+    if (!book) {
+      book = await BookModel.findById(id).select('title pdfFile status isAvailable');
+      if (book) {
+        console.log('⚠️ Book found but not published:', { status: book.status, isAvailable: book.isAvailable });
+        return res.status(403).json({
+          success: false,
+          message: `Book is not available (status: ${book.status}, available: ${book.isAvailable})`
+        });
+      }
+    }
+
+    if (!book) {
+      console.log('❌ Book not found:', id);
       return res.status(404).json({
         success: false,
-        message: 'Book or PDF not found'
+        message: 'Book not found'
       });
     }
 
+    if (!book.pdfFile) {
+      console.log('❌ PDF file not found for book:', id);
+      return res.status(404).json({
+        success: false,
+        message: 'PDF file not available for this book'
+      });
+    }
+
+    console.log('📄 Book PDF URL:', book.pdfFile);
+
     // Generate secure viewer URL with restrictions
     const secureViewerUrl = generateSecurePdfUrl(book.pdfFile, book.title);
+    
+    if (!secureViewerUrl) {
+      console.log('❌ Failed to generate secure viewer URL');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate PDF viewer URL'
+      });
+    }
+
+    console.log('✅ Secure viewer URL generated:', secureViewerUrl);
 
     res.json({
       success: true,
@@ -308,7 +342,7 @@ const getSecurePdfViewer = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error getting secure PDF viewer:', error);
+    console.error('❌ Error getting secure PDF viewer:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get PDF viewer',
