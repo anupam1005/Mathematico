@@ -54,6 +54,7 @@ export const designSystem = {
     lg: 24,
     xl: 32,
     xxl: 48,
+    xxxl: 64,
   },
   
   borderRadius: {
@@ -146,6 +147,8 @@ export const designSystem = {
     cardPadding: 16,
     sectionSpacing: 24,
     itemSpacing: 12,
+    minTouchTarget: 44,
+    maxContentWidth: 600,
   },
 };
 
@@ -157,6 +160,7 @@ export const cardStyles = {
     padding: designSystem.spacing.md,
     marginVertical: designSystem.spacing.sm,
     ...designSystem.shadows.md,
+    overflow: 'hidden' as const,
   },
   elevated: {
     backgroundColor: designSystem.colors.surface,
@@ -164,6 +168,7 @@ export const cardStyles = {
     padding: designSystem.spacing.md,
     marginVertical: designSystem.spacing.sm,
     ...designSystem.shadows.lg,
+    overflow: 'hidden' as const,
   },
   outlined: {
     backgroundColor: designSystem.colors.surface,
@@ -172,6 +177,15 @@ export const cardStyles = {
     marginVertical: designSystem.spacing.sm,
     borderWidth: 1,
     borderColor: designSystem.colors.border,
+    overflow: 'hidden' as const,
+  },
+  compact: {
+    backgroundColor: designSystem.colors.surface,
+    borderRadius: designSystem.borderRadius.md,
+    padding: designSystem.spacing.sm,
+    marginVertical: designSystem.spacing.xs,
+    ...designSystem.shadows.sm,
+    overflow: 'hidden' as const,
   },
 };
 
@@ -180,16 +194,18 @@ export const buttonStyles = {
   primary: {
     backgroundColor: designSystem.colors.primary,
     borderRadius: designSystem.borderRadius.md,
-    paddingVertical: designSystem.spacing.sm,
-    paddingHorizontal: designSystem.spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    minHeight: 44,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
   secondary: {
     backgroundColor: designSystem.colors.surface,
     borderRadius: designSystem.borderRadius.md,
-    paddingVertical: designSystem.spacing.sm,
-    paddingHorizontal: designSystem.spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    minHeight: 44,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
@@ -198,12 +214,29 @@ export const buttonStyles = {
   outline: {
     backgroundColor: 'transparent',
     borderRadius: designSystem.borderRadius.md,
-    paddingVertical: designSystem.spacing.sm,
-    paddingHorizontal: designSystem.spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    minHeight: 44,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
     borderColor: designSystem.colors.border,
+  },
+  text: {
+    backgroundColor: 'transparent',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minHeight: 36,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  icon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: designSystem.colors.surfaceVariant,
   },
 };
 
