@@ -496,14 +496,18 @@ const getAllLiveClasses = async (req, res) => {
     // Add status filter (default to scheduled/live if not specified)
     if (status) {
       if (status === 'upcoming') {
-        query.status = { $in: ['scheduled', 'live'] };
+        // Show scheduled classes that haven't started yet
+        query.status = 'scheduled';
         query.startTime = { $gte: new Date() };
+      } else if (status === 'all') {
+        // Show all published classes (scheduled, live, completed)
+        query.status = { $in: ['scheduled', 'live', 'completed'] };
       } else {
         query.status = status;
       }
     } else {
+      // Default: show scheduled and live classes (published classes)
       query.status = { $in: ['scheduled', 'live'] };
-      query.startTime = { $gte: new Date() };
     }
     
     // Add category filter

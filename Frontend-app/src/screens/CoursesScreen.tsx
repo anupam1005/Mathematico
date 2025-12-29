@@ -139,6 +139,7 @@ export default function CoursesScreen({ navigation, route }: any) {
               mode="outlined"
               compact
               style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
+              textStyle={styles.levelChipText}
             >
               {course.level}
             </Chip>
@@ -180,12 +181,12 @@ export default function CoursesScreen({ navigation, route }: any) {
           }
         ]}
         textStyle={value ? { 
-          color: theme.colors.surface,
+          color: '#FFFFFF',
           fontWeight: '600',
           fontSize: 14,
         } : { 
           color: theme.colors.primary,
-          fontWeight: '500',
+          fontWeight: '600',
           fontSize: 14,
         }}
       >
@@ -376,6 +377,11 @@ const styles = StyleSheet.create({
   },
   levelChip: {
     height: 28,
+  },
+  levelChipText: {
+    color: theme.colors.surface,
+    fontWeight: '600',
+    fontSize: 12,
   },
   priceContainer: {
     flexDirection: 'row',

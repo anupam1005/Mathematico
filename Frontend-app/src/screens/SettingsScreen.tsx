@@ -54,7 +54,7 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as Updates from 'expo-updates';
-import { debounce } from 'lodash';
+import { debounce } from '../utils/debounce';
 import SettingsService, { Settings, PendingSetting, UserSettings } from '../services/settingsService';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';

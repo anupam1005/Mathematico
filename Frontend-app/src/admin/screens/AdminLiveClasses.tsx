@@ -308,6 +308,8 @@ export default function AdminLiveClasses({ navigation }: any) {
           mode="outlined"
           onPress={() => navigation.navigate('LiveClassForm', { liveClass: item, isEditing: true })}
           style={styles.actionButton}
+          compact={false}
+          labelStyle={styles.buttonLabel}
         >
           Edit
         </Button>
@@ -317,6 +319,8 @@ export default function AdminLiveClasses({ navigation }: any) {
             onPress={() => handleStartLiveClass(item)}
             style={[styles.actionButton, styles.startButton]}
             textColor={designSystem.colors.success}
+            compact={false}
+            labelStyle={styles.buttonLabel}
           >
             Start
           </Button>
@@ -327,6 +331,8 @@ export default function AdminLiveClasses({ navigation }: any) {
             onPress={() => handleEndLiveClass(item)}
             style={[styles.actionButton, styles.endButton]}
             textColor={designSystem.colors.error}
+            compact={false}
+            labelStyle={styles.buttonLabel}
           >
             End
           </Button>
@@ -336,6 +342,8 @@ export default function AdminLiveClasses({ navigation }: any) {
           onPress={() => handleTogglePublish(item)}
           style={styles.actionButton}
           textColor={item.status === 'cancelled' || item.status === 'postponed' ? designSystem.colors.success : designSystem.colors.warning}
+          compact={false}
+          labelStyle={styles.buttonLabel}
         >
           {item.status === 'cancelled' || item.status === 'postponed' ? 'Publish' : 'Unpublish'}
         </Button>
@@ -344,6 +352,8 @@ export default function AdminLiveClasses({ navigation }: any) {
           onPress={() => handleDelete(item)}
           style={[styles.actionButton, styles.deleteButton]}
           textColor={designSystem.colors.error}
+          compact={false}
+          labelStyle={styles.buttonLabel}
         >
           Delete
         </Button>
@@ -564,7 +574,7 @@ const styles = StyleSheet.create({
   },
   liveClassActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     marginTop: designSystem.spacing.md,
     paddingTop: designSystem.spacing.md,
     borderTopWidth: 1,
@@ -572,11 +582,16 @@ const styles = StyleSheet.create({
     gap: designSystem.spacing.sm,
   },
   actionButton: {
-    flex: 1,
+    minWidth: 90,
     borderRadius: designSystem.borderRadius.md,
-    minHeight: 40,
-    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: designSystem.spacing.sm,
+  },
+  buttonLabel: {
+    fontSize: 13,
     fontWeight: '600',
+    marginHorizontal: 8,
+    marginVertical: 8,
   },
   startButton: {
     borderColor: designSystem.colors.success,

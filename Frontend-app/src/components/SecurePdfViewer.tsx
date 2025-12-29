@@ -75,13 +75,13 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
   };
 
   // Custom HTML for secure PDF viewing with restrictions
-  // This ensures PDF text renders properly in production WebView
+  // Uses Google PDF Viewer for better mobile compatibility
   const securePdfHtml = viewerUrl ? `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <title>Secure PDF Viewer</title>
       <style>
@@ -95,7 +95,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background: #525252;
+          background: #f5f5f5;
           -webkit-text-size-adjust: 100%;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
@@ -106,7 +106,6 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           -webkit-user-select: none;
           -webkit-touch-callout: none;
           -webkit-tap-highlight-color: transparent;
-          touch-action: pan-x pan-y;
         }
         
         .pdf-container {
@@ -114,41 +113,36 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           height: 100vh;
           position: relative;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #525252;
-        }
-        
-        .pdf-viewer {
-          width: 100%;
-          height: 100%;
-          border: none;
-          pointer-events: auto;
-          background: white;
+          flex-direction: column;
+          background: #f5f5f5;
         }
         
         .restriction-notice {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          right: 10px;
           background: rgba(0, 0, 0, 0.85);
           color: white;
-          padding: 10px 14px;
-          border-radius: 6px;
-          font-size: 12px;
+          padding: 4px 8px;
+          font-size: 10px;
           text-align: center;
-          z-index: 20;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          flex-shrink: 0;
         }
         
-        /* Ensure PDF text is readable */
-        @media screen {
-          .pdf-viewer {
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-          }
+        .pdf-viewer {
+          flex: 1;
+          width: 100%;
+          border: none;
+          background: white;
+        }
+        
+        .loading {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          text-align: center;
+          color: #666;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
       </style>
     </head>
@@ -157,16 +151,15 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         <div class="restriction-notice">
           📖 Read-only mode • Download and screenshots disabled
         </div>
+        <div class="loading" id="loading">Loading PDF...</div>
         <iframe 
           class="pdf-viewer" 
-          src="${viewerUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=page-width"
-          allow="fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-          oncontextmenu="return false;"
-          onselectstart="return false;"
-          ondragstart="return false;"
-          loading="eager"
-          type="application/pdf"
+          id="pdfFrame"
+          src="https://docs.google.com/viewer?url=${encodeURIComponent(viewerUrl)}&embedded=true"
+          frameborder="0"
+          scrolling="auto"
+          onload="document.getElementById('loading').style.display='none';"
+          onerror="document.getElementById('loading').innerHTML='Failed to load PDF. Please try again.';"
         ></iframe>
       </div>
       
@@ -177,21 +170,16 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           return false;
         }, true);
         
-        // Disable text selection
+        // Disable text selection on the container
         document.addEventListener('selectstart', function(e) {
-          e.preventDefault();
-          return false;
-        }, true);
-        
-        // Disable drag
-        document.addEventListener('dragstart', function(e) {
-          e.preventDefault();
-          return false;
+          if (e.target.id !== 'pdfFrame') {
+            e.preventDefault();
+            return false;
+          }
         }, true);
         
         // Disable keyboard shortcuts for save/print
         document.addEventListener('keydown', function(e) {
-          // Disable Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools)
           if ((e.ctrlKey && (e.keyCode === 83 || e.keyCode === 80)) || e.keyCode === 123) {
             e.preventDefault();
             e.stopPropagation();
@@ -199,26 +187,13 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           }
         }, true);
         
-        // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-        document.addEventListener('keydown', function(e) {
-          if (e.keyCode === 123 || 
-              (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
-              (e.ctrlKey && e.keyCode === 85)) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+        // Hide loading after 5 seconds even if onload doesn't fire
+        setTimeout(function() {
+          var loading = document.getElementById('loading');
+          if (loading) {
+            loading.style.display = 'none';
           }
-        }, true);
-        
-        // Handle PDF load errors
-        window.addEventListener('error', function(e) {
-          console.error('PDF load error:', e);
-        }, true);
-        
-        // Ensure PDF loads properly
-        window.addEventListener('load', function() {
-          console.log('PDF viewer loaded');
-        });
+        }, 5000);
       </script>
     </body>
     </html>

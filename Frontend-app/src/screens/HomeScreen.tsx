@@ -202,6 +202,7 @@ export default function HomeScreen({ navigation }: any) {
             mode="outlined"
             compact
             style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
+            textStyle={styles.levelChipText}
           >
             {course.level}
           </Chip>
@@ -245,6 +246,7 @@ export default function HomeScreen({ navigation }: any) {
           mode="outlined"
           compact
           style={[styles.levelChip, { backgroundColor: getLevelColor(book.level) }]}
+          textStyle={styles.levelChipText}
         >
           {book.level}
         </Chip>
@@ -291,6 +293,7 @@ export default function HomeScreen({ navigation }: any) {
             mode="outlined"
             compact
             style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
+            textStyle={styles.levelChipText}
           >
             {liveClass.level}
           </Chip>
@@ -409,28 +412,34 @@ export default function HomeScreen({ navigation }: any) {
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.primary + '20' }]}>
               <BookOpen size={24} color={designSystem.colors.primary} />
             </View>
-            <Text style={textStyles.subheading}>Comprehensive Courses</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Structured learning paths from basic to advanced mathematics concepts.
-            </Text>
+            <View style={styles.featureTextContainer}>
+              <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Comprehensive Courses</Text>
+              <Text style={textStyles.bodySecondary}>
+                Structured learning paths from basic to advanced mathematics concepts.
+              </Text>
+            </View>
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.secondary + '20' }]}>
               <Calendar size={24} color={designSystem.colors.secondary} />
             </View>
-            <Text style={textStyles.subheading}>Live Interactive Classes</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Real-time classes with expert educators and peer interaction.
-            </Text>
+            <View style={styles.featureTextContainer}>
+              <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Live Interactive Classes</Text>
+              <Text style={textStyles.bodySecondary}>
+                Real-time classes with expert educators and peer interaction.
+              </Text>
+            </View>
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.accent + '20' }]}>
               <GraduationCap size={24} color={designSystem.colors.accent} />
             </View>
-            <Text style={textStyles.subheading}>Expert Educators</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Learn from experienced teachers with proven track records.
-            </Text>
+            <View style={styles.featureTextContainer}>
+              <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Expert Educators</Text>
+              <Text style={textStyles.bodySecondary}>
+                Learn from experienced teachers with proven track records.
+              </Text>
+            </View>
           </View>
         </View>
       </UnifiedCard>
@@ -540,6 +549,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginHorizontal: designSystem.spacing.md,
     marginBottom: designSystem.spacing.md,
+    marginTop: designSystem.spacing.sm,
   },
   clearButton: {
     position: 'absolute',
@@ -575,10 +585,11 @@ const styles = StyleSheet.create({
     padding: designSystem.spacing.sm,
   },
   searchBar: {
-    margin: designSystem.spacing.lg,
-    marginTop: designSystem.spacing.md,
-    ...designSystem.shadows.sm,
+    marginHorizontal: 0,
+    marginVertical: 0,
+    elevation: 2,
     backgroundColor: designSystem.colors.surface,
+    borderRadius: designSystem.borderRadius.md,
   },
   section: {
     marginBottom: designSystem.spacing.xl,
@@ -589,6 +600,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: designSystem.spacing.lg,
     marginBottom: designSystem.spacing.lg,
+    gap: designSystem.spacing.md,
   },
   sectionTitle: {
     ...textStyles.heading,
@@ -633,6 +645,11 @@ const styles = StyleSheet.create({
   levelChip: {
     height: 28,
     borderRadius: designSystem.borderRadius.md,
+  },
+  levelChipText: {
+    color: designSystem.colors.surface,
+    fontWeight: '600',
+    fontSize: 12,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -691,17 +708,18 @@ const styles = StyleSheet.create({
     ...designSystem.shadows.sm,
   },
   featuresContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: designSystem.spacing.md,
+    flexDirection: 'column',
+    gap: designSystem.spacing.lg,
   },
   featureItem: {
-    alignItems: 'center',
-    marginBottom: designSystem.spacing.lg,
-    minWidth: 120,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: designSystem.spacing.md,
+    paddingHorizontal: designSystem.spacing.md,
+  },
+  featureTextContainer: {
     flex: 1,
-    padding: designSystem.spacing.md,
+    marginLeft: designSystem.spacing.md,
   },
   featureIcon: {
     width: 56,

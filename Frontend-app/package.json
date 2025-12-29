@@ -84,11 +84,6 @@
       "reactNativeDirectoryCheck": {
         "enabled": false
       }
-    },
-    "install": {
-      "exclude": [
-        "react-native-razorpay"
-      ]
     }
   }
 }
