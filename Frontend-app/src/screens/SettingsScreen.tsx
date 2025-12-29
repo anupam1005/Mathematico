@@ -345,24 +345,51 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         if (!isMounted) return;
 
         // Check network status first
-        const netInfoState = await NetInfo.fetch();
-        const online = netInfoState.isConnected ?? false;
-        if (isMounted) {
-          setIsOnline(online);
+        try {
+          const netInfoState = await NetInfo.fetch();
+          setIsOnline(netInfoState.isConnected ?? false);
+        } catch (netError) {
+          console.error('Network check failed:', netError);
+          setIsOnline(false);
         }
 
-        // Load data in parallel
-        await Promise.all([
-          loadSettings(),
-          loadDataUsage(),
-          loadPendingSettings(),
-        ]);
+        // Load settings with error handling
+        try {
+          await loadSettings();
+        } catch (settingsError) {
+          console.error('Failed to load settings:', settingsError);
+          // Continue with default settings
+        }
 
-        // Set up network listener
-        netInfoUnsubscribe = NetInfo.addEventListener(handleNetworkChange);
+        // Load data usage with error handling
+        try {
+          await loadDataUsage();
+        } catch (dataError) {
+          console.error('Failed to load data usage:', dataError);
+          // Continue without data usage
+        }
+
+        // Load pending settings if online
+        try {
+          const netInfoState = await NetInfo.fetch();
+          if (netInfoState.isConnected) {
+            await loadPendingSettings();
+          }
+        } catch (pendingError) {
+          console.error('Failed to load pending settings:', pendingError);
+          // Continue without pending settings
+        }
+
+        // Set up network listener with error handling
+        try {
+          netInfoUnsubscribe = NetInfo.addEventListener(handleNetworkChange);
+        } catch (listenerError) {
+          console.error('Failed to set up network listener:', listenerError);
+          // Continue without network listener
+        }
       } catch (error) {
         console.error('Failed to load initial data:', error);
-        showSnackbar('Failed to load settings', 'error');
+        // Don't show snackbar during initial load to avoid crash
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -376,10 +403,14 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     return () => {
       isMounted = false;
       if (netInfoUnsubscribe) {
-        netInfoUnsubscribe();
+        try {
+          netInfoUnsubscribe();
+        } catch (cleanupError) {
+          console.error('Cleanup error:', cleanupError);
+        }
       }
     };
-  }, [handleNetworkChange, loadDataUsage, loadPendingSettings, loadSettings, showSnackbar]);
+  }, [handleNetworkChange, loadDataUsage, loadPendingSettings, loadSettings]);
 
   // Handle back button on Android
   useEffect(() => {
@@ -397,14 +428,36 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     return () => backHandler.remove();
   }, [showLanguageDialog, showQualityDialog, showClearCacheDialog, showDataUsageDialog]);
 
-  // Render loading state
+  // Render loading state with error boundary
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
-          Loading your settings...
+          Loading settings...
         </Text>
+      </View>
+    );
+  }
+
+  // Render error state if settings failed to load
+  if (!settings) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <AlertCircle size={48} color={colors.error} />
+        <Text style={[styles.loadingText, { color: colors.onSurfaceVariant, marginTop: 16 }]}>
+          Failed to load settings
+        </Text>
+        <Button 
+          mode="contained" 
+          onPress={() => {
+            setIsLoading(true);
+            loadSettings().finally(() => setIsLoading(false));
+          }}
+          style={{ marginTop: 16 }}
+        >
+          Retry
+        </Button>
       </View>
     );
   }
