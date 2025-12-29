@@ -21,8 +21,8 @@
       "distribution": "store",
       "node": "20.18.3",
       "android": {
-        "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease",
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
         "env": {
           "GRADLE_VERSION": "8.2.1"
         }
@@ -30,6 +30,14 @@
       "env": {
         "NODE_ENV": "production",
         "GRADLE_OPTS": "-Dorg.gradle.daemon=false"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       }
     }
   },
