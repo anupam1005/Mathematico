@@ -134,11 +134,47 @@ const verifyPayment = async (req, res) => {
     if (isAuthentic) {
       console.log('PaymentController: Payment verified successfully');
       
-      // Here you would typically:
-      // 1. Save payment record to database
-      // 2. Update user enrollment status
-      // 3. Send confirmation email
-      // 4. Update course/book access permissions
+      // Get order details to retrieve notes (courseId, bookId, userId)
+      try {
+        const order = await razorpay.orders.fetch(razorpay_order_id);
+        console.log('Order details:', order);
+        
+        // Extract enrollment information from order notes
+        const { courseId, bookId, liveClassId, userId, itemType } = order.notes || {};
+        
+        // Enroll student based on item type
+        if (courseId && userId) {
+          console.log(`Enrolling user ${userId} in course ${courseId}`);
+          // Import Course model dynamically to avoid circular dependencies
+          const Course = require('../models/Course');
+          const course = await Course.findById(courseId);
+          if (course) {
+            await course.enrollStudent(userId);
+            console.log('✅ Student enrolled in course successfully');
+          }
+        } else if (bookId && userId) {
+          console.log(`Granting access to book ${bookId} for user ${userId}`);
+          // Import Book model dynamically
+          const Book = require('../models/Book');
+          const book = await Book.findById(bookId);
+          if (book && book.purchaseBook) {
+            await book.purchaseBook(userId);
+            console.log('✅ Book access granted successfully');
+          }
+        } else if (liveClassId && userId) {
+          console.log(`Enrolling user ${userId} in live class ${liveClassId}`);
+          // Import LiveClass model dynamically
+          const LiveClass = require('../models/LiveClass');
+          const liveClass = await LiveClass.findById(liveClassId);
+          if (liveClass && liveClass.enrollStudent) {
+            await liveClass.enrollStudent(userId);
+            console.log('✅ Student enrolled in live class successfully');
+          }
+        }
+      } catch (enrollmentError) {
+        console.error('Error during enrollment:', enrollmentError);
+        // Don't fail the payment verification, but log the error
+      }
       
       res.json({
         success: true,

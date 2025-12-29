@@ -39,12 +39,13 @@ export default function LiveClassesScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      const filters = {
-        search: searchQuery || undefined,
-        category: selectedCategory || undefined,
-        level: selectedLevel || undefined,
-        status: selectedStatus || undefined,
-      };
+      const filters: any = {};
+      
+      // Only add filters if they have values
+      if (searchQuery) filters.search = searchQuery;
+      if (selectedCategory) filters.category = selectedCategory;
+      if (selectedLevel) filters.level = selectedLevel;
+      if (selectedStatus) filters.status = selectedStatus;
 
       const response = await liveClassService.getLiveClasses(pageNum, 10, filters);
 

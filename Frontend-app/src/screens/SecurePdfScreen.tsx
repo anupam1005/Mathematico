@@ -58,68 +58,28 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
   const displayTitle = bookDetails?.title || bookTitle || 'PDF Viewer';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6200ea" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
-      {/* Header */}
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={handleClose} color="white" />
-        <Appbar.Content 
-          title={displayTitle} 
-          titleStyle={styles.headerTitle}
-          subtitle="Secure Read-Only Mode"
-          subtitleStyle={styles.headerSubtitle}
-        />
-      </Appbar.Header>
-
-      {/* Security Notice */}
-      <View style={styles.securityNotice}>
-        <Card style={styles.noticeCard}>
-          <Card.Content style={styles.noticeContent}>
-            <View style={styles.noticeHeader}>
-              <Text style={styles.noticeIcon}>🔒</Text>
-              <Text style={styles.noticeTitle}>Secure Reading Mode</Text>
-            </View>
-            <Text style={styles.noticeText}>
-              This PDF is in read-only mode. Download, printing, and screenshots are disabled to protect content.
-            </Text>
-            {restrictions && (
-              <View style={styles.restrictionsContainer}>
-                <Chip 
-                  icon="download-off" 
-                  style={[styles.restrictionChip, !restrictions.download && styles.disabledChip]}
-                >
-                  Download Disabled
-                </Chip>
-                <Chip 
-                  icon="printer-off" 
-                  style={[styles.restrictionChip, !restrictions.print && styles.disabledChip]}
-                >
-                  Print Disabled
-                </Chip>
-                <Chip 
-                  icon="content-copy" 
-                  style={[styles.restrictionChip, !restrictions.copy && styles.disabledChip]}
-                >
-                  Copy Disabled
-                </Chip>
-                <Chip 
-                  icon="camera-off" 
-                  style={[styles.restrictionChip, !restrictions.screenshot && styles.disabledChip]}
-                >
-                  Screenshot Disabled
-                </Chip>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
+      {/* Floating Close Button */}
+      <View style={styles.closeButtonContainer}>
+        <Button
+          mode="contained"
+          onPress={handleClose}
+          style={styles.floatingCloseButton}
+          labelStyle={styles.closeButtonLabel}
+          icon="close"
+          contentStyle={styles.closeButtonContent}
+        >
+          Close
+        </Button>
       </View>
 
       {/* PDF Viewer or Error State */}
       <View style={styles.viewerContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading secure PDF viewer...</Text>
+            <Text style={styles.loadingText}>Loading PDF...</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -157,7 +117,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -166,77 +126,36 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000000',
   },
-  header: {
+  closeButtonContainer: {
+    position: 'absolute',
+    top: 40,
+    right: 16,
+    zIndex: 1000,
+    elevation: 10,
+  },
+  floatingCloseButton: {
     backgroundColor: '#6200ea',
-    elevation: 4,
+    borderRadius: 24,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-  securityNotice: {
-    padding: 8,
-    paddingBottom: 4,
-  },
-  noticeCard: {
-    backgroundColor: '#fff3e0',
-    borderLeftWidth: 3,
-    borderLeftColor: '#ff9800',
-  },
-  noticeContent: {
-    paddingVertical: 6,
+  closeButtonContent: {
     paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  noticeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  noticeIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  noticeTitle: {
-    fontSize: 13,
+  closeButtonLabel: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#e65100',
-  },
-  noticeText: {
-    fontSize: 11,
-    color: '#bf360c',
-    lineHeight: 16,
-    marginBottom: 6,
-  },
-  restrictionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  restrictionChip: {
-    backgroundColor: '#ffebee',
-    borderColor: '#f44336',
-    height: 24,
-  },
-  disabledChip: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4caf50',
-    height: 24,
+    color: 'white',
   },
   viewerContainer: {
     flex: 1,
-    margin: 8,
-    marginTop: 0,
-    borderRadius: 8,
-    overflow: 'hidden',
     backgroundColor: 'white',
-    elevation: 2,
   },
   loadingContainer: {
     flex: 1,

@@ -225,37 +225,16 @@ export default function CheckoutScreen({ navigation, route }: any) {
         </Card.Content>
       </Card>
 
-      {/* Payment Method Selection */}
+      {/* Payment Method - Razorpay Only */}
       <Card style={styles.paymentMethodCard} elevation={2}>
         <Card.Content>
           <Title style={styles.sectionTitle}>Payment Method</Title>
-          <View style={styles.paymentMethodContainer}>
-            <Button
-              mode={paymentMethod === 'razorpay' ? 'contained' : 'outlined'}
-              onPress={() => setPaymentMethod('razorpay')}
-              style={styles.paymentMethodButton}
-              icon="credit-card"
-            >
-              Razorpay
-            </Button>
-            <Button
-              mode={paymentMethod === 'upi' ? 'contained' : 'outlined'}
-              onPress={() => setPaymentMethod('upi')}
-              style={styles.paymentMethodButton}
-              icon="account-balance"
-            >
-              UPI
-            </Button>
+          <View style={styles.paymentInfo}>
+            <Shield size={16} color={designSystem.colors.success} />
+            <Text style={styles.paymentInfoText}>
+              Secured by Razorpay • 256-bit SSL encryption
+            </Text>
           </View>
-          
-          {paymentMethod === 'razorpay' && (
-            <View style={styles.paymentInfo}>
-              <Shield size={16} color={designSystem.colors.success} />
-              <Text style={styles.paymentInfoText}>
-                Secured by Razorpay • 256-bit SSL encryption
-              </Text>
-            </View>
-          )}
         </Card.Content>
       </Card>
 

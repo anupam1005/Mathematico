@@ -320,6 +320,12 @@ class RazorpayService {
         },
         theme: {
           color: config.theme.color
+        },
+        method: {
+          upi: false,  // Disable UPI payment method
+          card: true,
+          netbanking: true,
+          wallet: true
         }
       };
 

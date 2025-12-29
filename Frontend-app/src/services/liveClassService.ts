@@ -144,6 +144,7 @@ class LiveClassService {
     subject?: string;
     level?: string;
     status?: string;
+    search?: string;
   }): Promise<PaginatedResponse<any>> {
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
@@ -151,6 +152,7 @@ class LiveClassService {
       if (filters?.subject) params.append('subject', filters.subject);
       if (filters?.level) params.append('level', filters.level);
       if (filters?.status) params.append('status', filters.status);
+      if (filters?.search) params.append('search', filters.search);
       
       const response = await this.makeRequest(`/live-classes?${params.toString()}`);
       

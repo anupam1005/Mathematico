@@ -74,7 +74,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     setLoading(false);
   };
 
-  // Custom HTML for secure PDF viewing with restrictions
+  // Custom HTML for full-screen PDF viewing
   // Uses Google PDF Viewer for better mobile compatibility
   const securePdfHtml = viewerUrl ? `
     <!DOCTYPE html>
@@ -83,7 +83,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <title>Secure PDF Viewer</title>
+      <title>PDF Viewer</title>
       <style>
         * {
           margin: 0;
@@ -95,7 +95,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background: #f5f5f5;
+          background: white;
           -webkit-text-size-adjust: 100%;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
@@ -112,25 +112,12 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           width: 100vw;
           height: 100vh;
           position: relative;
-          display: flex;
-          flex-direction: column;
-          background: #f5f5f5;
-        }
-        
-        .restriction-notice {
-          background: rgba(0, 0, 0, 0.85);
-          color: white;
-          padding: 4px 8px;
-          font-size: 10px;
-          text-align: center;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-          flex-shrink: 0;
+          background: white;
         }
         
         .pdf-viewer {
-          flex: 1;
           width: 100%;
+          height: 100%;
           border: none;
           background: white;
         }
@@ -148,9 +135,6 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     </head>
     <body>
       <div class="pdf-container">
-        <div class="restriction-notice">
-          📖 Read-only mode • Download and screenshots disabled
-        </div>
         <div class="loading" id="loading">Loading PDF...</div>
         <iframe 
           class="pdf-viewer" 
@@ -168,14 +152,6 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         document.addEventListener('contextmenu', function(e) {
           e.preventDefault();
           return false;
-        }, true);
-        
-        // Disable text selection on the container
-        document.addEventListener('selectstart', function(e) {
-          if (e.target.id !== 'pdfFrame') {
-            e.preventDefault();
-            return false;
-          }
         }, true);
         
         // Disable keyboard shortcuts for save/print
