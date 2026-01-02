@@ -14,7 +14,12 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "NODE_ENV": "production",
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false"
       }
     },
     "production": {
