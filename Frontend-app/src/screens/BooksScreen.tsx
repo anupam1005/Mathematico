@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// @ts-nocheck
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,18 +9,11 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-<<<<<<< HEAD
 import { Search, X, Book as BookIcon, Download, Tag } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { theme } from '../styles/theme';
 import { Logger } from '../utils/errorHandler';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { bookService, Book, BookFilters } from '../services/bookService';
-import { theme } from '../styles/theme';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function BooksScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -69,11 +58,7 @@ export default function BooksScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading books:', error);
-=======
-      console.error('Error loading books:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setLoading(false);
     }
@@ -144,40 +129,24 @@ export default function BooksScreen({ navigation }: any) {
             <Chip
               mode="outlined"
               compact
-<<<<<<< HEAD
               style={[styles.levelChip, { backgroundColor: getLevelColor(book.level || '') }]}
-=======
-              style={[styles.levelChip, { backgroundColor: getLevelColor(book.level) }]}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             >
               {book.level || 'Unknown Level'}
             </Chip>
             <View style={styles.bookMeta}>
               <View style={styles.metaItem}>
-<<<<<<< HEAD
                 <BookIcon size={16} color={theme.colors.textSecondary} />
-=======
-                <Icon name="book" size={16} color={theme.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <Text style={styles.metaText}>{book.pages || 0} pages</Text>
               </View>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-<<<<<<< HEAD
               <Download size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{book.downloads || book.downloadCount || 0} downloads</Text>
             </View>
             <View style={styles.metaItem}>
               <Tag size={16} color={theme.colors.textSecondary} />
-=======
-              <Icon name="download" size={16} color={theme.colors.textSecondary} />
-              <Text style={styles.metaText}>{book.downloads || book.downloadCount || 0} downloads</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Icon name="category" size={16} color={theme.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.metaText}>{book.category || 'Uncategorized'}</Text>
             </View>
           </View>
@@ -227,13 +196,8 @@ export default function BooksScreen({ navigation }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={theme.colors.textSecondary}
-<<<<<<< HEAD
         icon={() => <Search size={24} color={theme.colors.primary} />}
         clearIcon={() => <X size={24} color={theme.colors.textSecondary} />}
-=======
-        icon={() => <Icon name="search" size={24} color={theme.colors.primary} />}
-        clearIcon={() => <Icon name="close" size={24} color={theme.colors.textSecondary} />}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       />
 
       {/* Filters */}
@@ -281,10 +245,7 @@ export default function BooksScreen({ navigation }: any) {
 
       {/* Books List */}
       <FlatList
-<<<<<<< HEAD
         style={styles.list}
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         data={books}
         renderItem={renderBookCard}
         keyExtractor={(item, index) => item.id || item._id || item.Id || `book-${index}`}
@@ -295,11 +256,7 @@ export default function BooksScreen({ navigation }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-<<<<<<< HEAD
               <BookIcon size={64} color={theme.colors.textSecondary} />
-=======
-              <Icon name="book" size={64} color={theme.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.emptyText}>No books found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>
@@ -367,24 +324,17 @@ const styles = StyleSheet.create({
   clearFiltersText: {
     color: theme.colors.primary,
   },
-<<<<<<< HEAD
   list: {
     flex: 1,
   },
   listContainer: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,
-=======
-  listContainer: {
-    padding: theme.spacing.lg,
-    flex: 1,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   cardContainer: {
     marginBottom: theme.spacing.lg,
   },
   card: {
-<<<<<<< HEAD
     elevation: 3,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
@@ -417,36 +367,6 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 12,
     lineHeight: 20,
-=======
-    elevation: 4,
-    borderRadius: theme.roundness,
-    backgroundColor: theme.colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  cardImage: {
-    height: 220,
-    borderTopLeftRadius: theme.roundness,
-    borderTopRightRadius: theme.roundness,
-  },
-  cardContent: {
-    padding: theme.spacing.lg,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    lineHeight: 26,
-  },
-  cardDescription: {
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
-    lineHeight: 22,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     fontWeight: '400',
   },
   cardFooter: {
@@ -459,14 +379,9 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.border,
   },
   levelChip: {
-<<<<<<< HEAD
     height: 28,
     borderRadius: 14,
     paddingHorizontal: 12,
-=======
-    height: 32,
-    borderRadius: theme.roundness,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   bookMeta: {
     flexDirection: 'row',
@@ -481,16 +396,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metaText: {
-<<<<<<< HEAD
     fontSize: 13,
     color: '#666666',
     marginLeft: 6,
     fontWeight: '500',
-=======
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.xs,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   emptyContainer: {
     alignItems: 'center',

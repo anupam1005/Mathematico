@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// @ts-nocheck
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,7 +9,6 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-<<<<<<< HEAD
 import { Search, X, Users, Clock, GraduationCap } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
@@ -21,12 +16,6 @@ import { theme } from '../styles/theme';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Logger } from '../utils/errorHandler';
-=======
-import { icons } from 'lucide-react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { courseService, Course, CourseFilters } from '../services/courseService';
-import { theme } from '../styles/theme';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function CoursesScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -60,11 +49,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         search: searchQuery || undefined,
         category: selectedCategory || undefined,
         level: selectedLevel || undefined,
-<<<<<<< HEAD
         status: 'published',
-=======
-        status: 'active',
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
 
       const response = await courseService.getCourses(pageNum, 10, filters);
@@ -82,11 +67,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading courses:', error);
-=======
-      console.error('Error loading courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setLoading(false);
     }
@@ -140,13 +121,8 @@ export default function CoursesScreen({ navigation, route }: any) {
       <Card style={styles.card}>
         <Card.Cover
           source={
-<<<<<<< HEAD
             course.thumbnail_url || course.thumbnailUrl
               ? { uri: course.thumbnail_url || course.thumbnailUrl }
-=======
-            course.thumbnail_url
-              ? { uri: course.thumbnail_url }
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               : require('../../assets/icon.png')
           }
           style={styles.cardImage}
@@ -162,7 +138,6 @@ export default function CoursesScreen({ navigation, route }: any) {
             <Chip
               mode="outlined"
               compact
-<<<<<<< HEAD
               style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
               textStyle={styles.levelChipText}
             >
@@ -173,34 +148,15 @@ export default function CoursesScreen({ navigation, route }: any) {
                 <Text style={styles.originalPrice}>₹{course.original_price}</Text>
               )}
               <Text style={styles.price}>₹{course.price || 0}</Text>
-=======
-              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
-            >
-              {course.level}
-            </Chip>
-            <View style={styles.priceContainer}>
-              {course.original_price && course.original_price > course.price && (
-                <Text style={styles.originalPrice}>₹{course.original_price}</Text>
-              )}
-              <Text style={styles.price}>₹{course.price}</Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-<<<<<<< HEAD
               <Users size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{course.students} students</Text>
             </View>
             <View style={styles.metaItem}>
               <Clock size={16} color={theme.colors.textSecondary} />
-=======
-              <icons.Users size={16} color={theme.colors.textSecondary} />
-              <Text style={styles.metaText}>{course.students} students</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <icons.Clock size={16} color={theme.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.metaText}>{course.duration}</Text>
             </View>
           </View>
@@ -225,20 +181,12 @@ export default function CoursesScreen({ navigation, route }: any) {
           }
         ]}
         textStyle={value ? { 
-<<<<<<< HEAD
           color: '#FFFFFF',
-=======
-          color: theme.colors.surface,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           fontWeight: '600',
           fontSize: 14,
         } : { 
           color: theme.colors.primary,
-<<<<<<< HEAD
           fontWeight: '600',
-=======
-          fontWeight: '500',
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           fontSize: 14,
         }}
       >
@@ -258,13 +206,8 @@ export default function CoursesScreen({ navigation, route }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={theme.colors.textSecondary}
-<<<<<<< HEAD
         icon={() => <Search size={20} color={theme.colors.primary} />}
         clearIcon={() => <X size={20} color={theme.colors.textSecondary} />}
-=======
-        icon={() => <icons.Search size={20} color={theme.colors.primary} />}
-        clearIcon={() => <icons.X size={20} color={theme.colors.textSecondary} />}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       />
 
       {/* Filters */}
@@ -322,11 +265,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-<<<<<<< HEAD
               <GraduationCap size={48} color={theme.colors.textSecondary} />
-=======
-              <icons.GraduationCap size={48} color={theme.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.emptyText}>No courses found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>
@@ -386,15 +325,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     borderWidth: 1.5,
   },
-<<<<<<< HEAD
   levelChip: {
     height: 28,
     borderRadius: 14,
     paddingHorizontal: 14,
     borderWidth: 0,
   },
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   clearFiltersContainer: {
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -409,7 +345,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   card: {
-<<<<<<< HEAD
     elevation: 3,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
@@ -435,40 +370,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1a1a',
     marginBottom: 6,
-=======
-    elevation: 4,
-    borderRadius: theme.roundness,
-    backgroundColor: theme.colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  cardImage: {
-    height: 200,
-    borderTopLeftRadius: theme.roundness,
-    borderTopRightRadius: theme.roundness,
-  },
-  cardContent: {
-    padding: theme.spacing.md,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     lineHeight: 24,
   },
   cardDescription: {
     fontSize: 14,
-<<<<<<< HEAD
     color: '#666666',
     marginBottom: 12,
-=======
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     lineHeight: 20,
     fontWeight: '400',
   },
@@ -478,15 +385,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-<<<<<<< HEAD
   levelChipText: {
     color: theme.colors.surface,
     fontWeight: '600',
     fontSize: 12,
-=======
-  levelChip: {
-    height: 28,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   priceContainer: {
     flexDirection: 'row',
@@ -500,13 +402,8 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 18,
-<<<<<<< HEAD
     fontWeight: '700',
     color: '#2196F3',
-=======
-    fontWeight: 'bold',
-    color: theme.colors.primary,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   cardMeta: {
     flexDirection: 'row',
@@ -517,16 +414,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metaText: {
-<<<<<<< HEAD
     fontSize: 13,
     color: '#666666',
     marginLeft: 6,
     fontWeight: '500',
-=======
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.xs,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   emptyContainer: {
     alignItems: 'center',

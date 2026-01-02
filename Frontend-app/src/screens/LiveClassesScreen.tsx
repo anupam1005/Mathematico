@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// @ts-nocheck
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,18 +9,11 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-<<<<<<< HEAD
 import { Search, X, Calendar, Clock, Users, Tag, PlayCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
 import { Logger } from '../utils/errorHandler';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { liveClassService, LiveClass, LiveClassFilters } from '../services/liveClassService';
-import { designSystem } from '../styles/designSystem';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function LiveClassesScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -50,7 +39,6 @@ export default function LiveClassesScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-<<<<<<< HEAD
       const filters: any = {};
       
       // Only add filters if they have values
@@ -58,14 +46,6 @@ export default function LiveClassesScreen({ navigation }: any) {
       if (selectedCategory) filters.category = selectedCategory;
       if (selectedLevel) filters.level = selectedLevel;
       if (selectedStatus) filters.status = selectedStatus;
-=======
-      const filters = {
-        search: searchQuery || undefined,
-        category: selectedCategory || undefined,
-        level: selectedLevel || undefined,
-        status: selectedStatus || undefined,
-      };
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
       const response = await liveClassService.getLiveClasses(pageNum, 10, filters);
 
@@ -82,11 +62,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading live classes:', error);
-=======
-      console.error('Error loading live classes:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setLoading(false);
     }
@@ -151,15 +127,10 @@ export default function LiveClassesScreen({ navigation }: any) {
     }
   };
 
-<<<<<<< HEAD
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'TBD';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Invalid Date';
-=======
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return (
       date.toLocaleDateString() +
       ' ' +
@@ -193,13 +164,8 @@ export default function LiveClassesScreen({ navigation }: any) {
               style={[
                 styles.statusChip, 
                 { 
-<<<<<<< HEAD
                   backgroundColor: getStatusColor(liveClass.status || ''),
                   borderColor: getStatusColor(liveClass.status || ''),
-=======
-                  backgroundColor: getStatusColor(liveClass.status),
-                  borderColor: getStatusColor(liveClass.status),
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 }
               ]}
               textStyle={{ 
@@ -208,25 +174,16 @@ export default function LiveClassesScreen({ navigation }: any) {
                 fontSize: 12,
               }}
             >
-<<<<<<< HEAD
               {(liveClass.status || 'unknown').toUpperCase()}
             </Chip>
           </View>
           <Paragraph numberOfLines={3} style={styles.cardDescription}>
             {liveClass.description || ''}
-=======
-              {liveClass.status.toUpperCase()}
-            </Chip>
-          </View>
-          <Paragraph numberOfLines={3} style={styles.cardDescription} as any>
-            {liveClass.description}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           </Paragraph>
           <View style={styles.cardFooter}>
             <Chip
               mode="outlined"
               compact
-<<<<<<< HEAD
               style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
               textStyle={styles.levelChipText}
             >
@@ -241,43 +198,19 @@ export default function LiveClassesScreen({ navigation }: any) {
             </View>
             <View style={styles.metaItem}>
               <Clock size={16} color={designSystem.colors.textSecondary} />
-=======
-              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
-            >
-              {liveClass.level}
-            </Chip>
-            <Text style={styles.price}>₹{liveClass.price}</Text>
-          </View>
-          <View style={styles.cardMeta}>
-            <View style={styles.metaItem}>
-              <Icon name="schedule" size={16} color={designSystem.colors.textSecondary} />
-              <Text style={styles.metaText}>{formatDate(liveClass.scheduled_at)}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Icon name="access-time" size={16} color={designSystem.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.metaText}>{liveClass.duration} min</Text>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-<<<<<<< HEAD
               <Users size={16} color={designSystem.colors.textSecondary} />
-=======
-              <Icon name="group" size={16} color={designSystem.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.metaText}>
                 {liveClass.enrolled_students}/{liveClass.max_students} enrolled
               </Text>
             </View>
             <View style={styles.metaItem}>
-<<<<<<< HEAD
               <Tag size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>{liveClass.category || 'General'}</Text>
-=======
-              <Icon name="category" size={16} color={designSystem.colors.textSecondary} />
-              <Text style={styles.metaText}>{liveClass.category}</Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             </View>
           </View>
         </Card.Content>
@@ -326,13 +259,8 @@ export default function LiveClassesScreen({ navigation }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={designSystem.colors.textSecondary}
-<<<<<<< HEAD
         icon={() => <Search size={24} color={designSystem.colors.primary} />}
         clearIcon={() => <X size={24} color={designSystem.colors.textSecondary} />}
-=======
-        icon={() => <Icon name="search" size={24} color={designSystem.colors.primary} />}
-        clearIcon={() => <Icon name="close" size={24} color={designSystem.colors.textSecondary} />}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       />
 
       {/* Filters */}
@@ -409,11 +337,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-<<<<<<< HEAD
               <PlayCircle size={64} color={designSystem.colors.textSecondary} />
-=======
-              <Icon name="play-circle" size={64} color={designSystem.colors.textSecondary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.emptyText}>No live classes found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>
@@ -470,7 +394,6 @@ const styles = StyleSheet.create({
     borderRadius: designSystem.borderRadius.md,
     borderWidth: 1.5,
   },
-<<<<<<< HEAD
   levelChip: {
     height: 28,
     borderRadius: 14,
@@ -483,8 +406,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.5,
   },
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   clearFiltersContainer: {
     paddingHorizontal: designSystem.spacing.md,
     marginBottom: designSystem.spacing.sm,
@@ -499,7 +420,6 @@ const styles = StyleSheet.create({
     marginBottom: designSystem.spacing.md,
   },
   card: {
-<<<<<<< HEAD
     elevation: 3,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
@@ -519,24 +439,6 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: 16,
     paddingTop: 12,
-=======
-    ...designSystem.shadows.md,
-    borderRadius: designSystem.borderRadius.lg,
-    backgroundColor: designSystem.colors.surface,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  cardImage: {
-    height: 200,
-    borderTopLeftRadius: designSystem.borderRadius.lg,
-    borderTopRightRadius: designSystem.borderRadius.lg,
-  },
-  cardContent: {
-    padding: designSystem.spacing.lg,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   cardHeader: {
     flexDirection: 'row',
@@ -545,7 +447,6 @@ const styles = StyleSheet.create({
     marginBottom: designSystem.spacing.sm,
   },
   cardTitle: {
-<<<<<<< HEAD
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
@@ -557,22 +458,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     marginBottom: 12,
-=======
-    ...designSystem.typography.h3,
-    color: designSystem.colors.textPrimary,
-    flex: 1,
-    marginRight: designSystem.spacing.sm,
-  },
-  statusChip: {
-    height: 28,
-    borderRadius: designSystem.borderRadius.sm,
-    borderWidth: 1,
-  },
-  cardDescription: {
-    ...designSystem.typography.caption,
-    color: designSystem.colors.textSecondary,
-    marginBottom: designSystem.spacing.md,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     lineHeight: 20,
     fontWeight: '400',
   },
@@ -582,29 +467,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: designSystem.spacing.sm,
   },
-<<<<<<< HEAD
   statusChip: {
     height: 26,
     borderRadius: 13,
     paddingHorizontal: 10,
-=======
-  levelChip: {
-    height: 28,
-  },
-  price: {
-    ...designSystem.typography.h3,
-    color: designSystem.colors.primary,
-    fontWeight: 'bold',
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   cardMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-<<<<<<< HEAD
     marginTop: designSystem.spacing.sm,
-=======
-    marginBottom: designSystem.spacing.xs,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   metaItem: {
     flexDirection: 'row',
@@ -612,7 +483,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metaText: {
-<<<<<<< HEAD
     fontSize: 13,
     color: '#666666',
     marginLeft: 6,
@@ -622,11 +492,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#4CAF50',
-=======
-    ...designSystem.typography.caption,
-    color: designSystem.colors.textSecondary,
-    marginLeft: designSystem.spacing.xs,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   emptyContainer: {
     alignItems: 'center',
