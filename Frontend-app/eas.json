@@ -15,10 +15,7 @@
       }
     },
     "production": {
-      "distribution": "store",
-      "android": {
-        "track": "production"
-      }
+      "distribution": "store"
     }
   }
 }
