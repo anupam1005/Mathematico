@@ -84,6 +84,7 @@
     "@types/jest": "^29.5.14",
     "@types/json-schema": "^7.0.15",
     "@types/lodash": "^4.17.20",
+    "@types/node": "^20.19.27",
     "@types/react": "~19.1.10",
     "@types/stack-utils": "^2.0.3",
     "@types/yargs": "^17.0.33",

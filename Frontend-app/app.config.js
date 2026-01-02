@@ -26,27 +26,6 @@ export default {
       permissions: []
     },
     plugins: [
-      [
-        'expo-build-properties',
-        {
-          android: {
-            compileSdkVersion: 34,
-            targetSdkVersion: 34,
-            buildToolsVersion: '34.0.0',
-            minSdkVersion: 24,
-            kotlinVersion: '1.8.0',
-            enable16KbPageSize: true,
-            packagingOptions: {
-              jniLibs: {
-                useLegacyPackaging: false
-              }
-            }
-          },
-          ios: {
-            useFrameworks: 'static'
-          }
-        }
-      ],
       'expo-secure-store',
       'expo-font',
       './plugins/withRazorpay.js',
