@@ -17,7 +17,7 @@
   "env": {
     "NODE_ENV": "production",
     "VERCEL": "1",
-    "BACKEND_URL": "https://mathematico-backend-new.vercel.app",
+    "BACKEND_URL": "https://mathematico-backend.vercel.app",
     "FRONTEND_URL": "https://mathematico-frontend.vercel.app",
     "MONGODB_URI": "mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/",
     "MONGODB_DB": "mathematico"
