@@ -402,12 +402,26 @@ class LiveClassService {
     }
   }
 
-  async joinLiveClass(liveClassId: string): Promise<string> {
+  async joinLiveClass(liveClassId: string): Promise<{ joinLink?: string; meetingLink?: string; message?: string }> {
     try {
       const response = await this.makeRequest(`/live-classes/${liveClassId}/join`, {
         method: 'POST'
       });
-      return response.data.meetingLink;
+      // Backend mobile route currently returns { success, data: { joinLink, message } }
+      // Normalize to an object containing joinLink/meetingLink regardless of structure.
+      if (response?.data) {
+        return {
+          joinLink: response.data.joinLink || response.data.meetingLink,
+          meetingLink: response.data.meetingLink || response.data.joinLink,
+          message: response.data.message || response.message
+        };
+      }
+
+      return {
+        joinLink: response?.joinLink,
+        meetingLink: response?.meetingLink,
+        message: response?.message
+      };
     } catch (error) {
       errorHandler.handleError('Error joining live class:', error);
       throw ErrorHandler.handleApiError(error);

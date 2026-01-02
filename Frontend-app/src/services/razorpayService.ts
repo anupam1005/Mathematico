@@ -2,18 +2,24 @@
 import { API_CONFIG } from '../config';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
+import RazorpayCheckoutNative from 'react-native-razorpay';
 
 // Create a service error handler for razorpayService
 const errorHandler = createServiceErrorHandler('razorpayService');
 
-// Safe import of RazorpayCheckout
-let RazorpayCheckout: any = null;
-try {
-  RazorpayCheckout = require('react-native-razorpay');
+// Ensure Razorpay native module is bundled by importing it directly.
+// Fallback to global reference if running in environments where the module isn't available (e.g., web/tests).
+const RazorpayCheckout =
+  RazorpayCheckoutNative ||
+  // Some builds expose the module on the global scope
+  (typeof globalThis !== 'undefined' ? (globalThis as any).RazorpayCheckout : null);
+
+if (!RazorpayCheckout) {
+  errorHandler.logWarning(
+    '⚠️ RazorpayCheckout not available after import. Payment module may be missing from this build.'
+  );
+} else {
   console.log('✅ RazorpayCheckout loaded successfully');
-} catch (error: any) {
-  errorHandler.logWarning('⚠️ RazorpayCheckout not available:', error?.message || 'Unknown error');
-  RazorpayCheckout = null;
 }
 
 export interface RazorpayOrder {

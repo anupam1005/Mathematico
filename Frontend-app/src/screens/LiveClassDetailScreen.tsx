@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
 import {
   Card,
@@ -148,26 +149,33 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     if (!liveClass) return;
 
     try {
-      // In a real implementation, this would get the join link from the backend
-      const joinLink = (liveClass as any).joinLink || 'https://meet.google.com/sample-link';
-      
+      const response = await liveClassService.joinLiveClass(liveClassId);
+      const joinLink = response?.joinLink || response?.meetingLink;
+
+      if (!joinLink) {
+        Alert.alert('Error', 'Join link is unavailable. Please contact support.');
+        return;
+      }
+
       Alert.alert(
         'Join Live Class',
-        `You are about to join "${liveClass.title}". You will be redirected to the class meeting.`,
+        `You are about to join "${liveClass.title}".`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Join Now', 
+          {
+            text: 'Join Now',
             onPress: () => {
-              // In a real app, this would open the meeting link
-              Alert.alert('Joining Class', `Opening meeting link: ${joinLink}`);
-            }
+              Linking.openURL(joinLink).catch(err => {
+                Logger.error('Failed to open meeting link:', err);
+                Alert.alert('Error', 'Could not open the meeting link.');
+              });
+            },
           },
-        ]
+        ],
       );
     } catch (error) {
       Logger.error('Error joining live class:', error);
-      Alert.alert('Error', 'Failed to join live class');
+      Alert.alert('Error', 'Failed to join live class. Please try again.');
     }
   };
 

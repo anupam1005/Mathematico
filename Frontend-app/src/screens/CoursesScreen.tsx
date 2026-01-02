@@ -141,7 +141,7 @@ export default function CoursesScreen({ navigation, route }: any) {
               style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
               textStyle={styles.levelChipText}
             >
-              {course.level}
+              {(course.level || 'Unknown').toUpperCase()}
             </Chip>
             <View style={styles.priceContainer}>
               {course.original_price && course.price && course.original_price > course.price && (
@@ -328,7 +328,8 @@ const styles = StyleSheet.create({
   levelChip: {
     height: 28,
     borderRadius: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    borderWidth: 0,
   },
   clearFiltersContainer: {
     paddingHorizontal: theme.spacing.md,

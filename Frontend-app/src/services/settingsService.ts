@@ -148,11 +148,16 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 const handleError = (error: any, defaultMessage: string) => {
   console.error('Settings Service Error:', error);
+
+  const hasNavigator = typeof navigator !== 'undefined' && navigator !== null;
+  const isOnlineFlag =
+    hasNavigator && typeof navigator.onLine === 'boolean' ? navigator.onLine : true;
+
   return {
     success: false,
-    message: error.response?.data?.message || error.message || defaultMessage,
-    silent: error.silent || false,
-    isOffline: !navigator.onLine,
+    message: error?.response?.data?.message || error?.message || defaultMessage,
+    silent: error?.silent || false,
+    isOffline: !isOnlineFlag,
   };
 };
 

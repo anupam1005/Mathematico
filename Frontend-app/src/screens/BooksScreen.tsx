@@ -245,6 +245,7 @@ export default function BooksScreen({ navigation }: any) {
 
       {/* Books List */}
       <FlatList
+        style={styles.list}
         data={books}
         renderItem={renderBookCard}
         keyExtractor={(item, index) => item.id || item._id || item.Id || `book-${index}`}
@@ -323,9 +324,12 @@ const styles = StyleSheet.create({
   clearFiltersText: {
     color: theme.colors.primary,
   },
+  list: {
+    flex: 1,
+  },
   listContainer: {
     padding: theme.spacing.lg,
-    flex: 1,
+    paddingBottom: theme.spacing.xl * 2,
   },
   cardContainer: {
     marginBottom: theme.spacing.lg,

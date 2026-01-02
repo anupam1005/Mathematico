@@ -185,8 +185,9 @@ export default function LiveClassesScreen({ navigation }: any) {
               mode="outlined"
               compact
               style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
+              textStyle={styles.levelChipText}
             >
-              {liveClass.level}
+              {(liveClass.level || 'unknown').toUpperCase()}
             </Chip>
             <Text style={styles.price}>FREE</Text>
           </View>
@@ -397,6 +398,13 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     paddingHorizontal: 12,
+    borderWidth: 0,
+  },
+  levelChipText: {
+    color: designSystem.colors.surface,
+    fontWeight: '600',
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   clearFiltersContainer: {
     paddingHorizontal: designSystem.spacing.md,
