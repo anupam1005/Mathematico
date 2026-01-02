@@ -122,5 +122,10 @@
         "react-native-safe-area-context"
       ]
     }
-  }
+  },
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }
