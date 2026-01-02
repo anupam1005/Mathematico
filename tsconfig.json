@@ -1,24 +1,13 @@
-<<<<<<< HEAD
-{ 
-  "compilerOptions": {
-    "target": "es2020",
-    "module": "Node16",
-=======
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "commonjs",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+    "module": "Node16",
     "lib": ["es2020"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-<<<<<<< HEAD
     "moduleResolution": "node16",
-=======
-    "moduleResolution": "node",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noImplicitAny": true,
@@ -27,8 +16,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-<<<<<<< HEAD
-    "types": [],
+    "types": ["node", "jest", "@testing-library/jest-dom"],
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": ".",
@@ -37,14 +25,4 @@
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "**/*.js"]
-=======
-    "types": ["node", "jest", "@testing-library/jest-dom"]
-  },
-  "extends": "./Frontend-app/tsconfig.json",
-  "exclude": [
-    "Backend/**",
-    "node_modules",
-    "**/*.js"
-  ]
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }

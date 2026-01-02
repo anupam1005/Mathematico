@@ -1,37 +1,8 @@
 {
-<<<<<<< HEAD
-  "extends": "./tsconfig.expo-modules.json",
-  "compilerOptions": {
-    "target": "es2017",
-    "module": "esnext",
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "baseUrl": "./src",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
-=======
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "target": "esnext",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
+    "lib": ["dom", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -44,45 +15,11 @@
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
     "baseUrl": "./src",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "paths": {
-      "*": [
-        "*",
-        "admin/*",
-        "services/*",
-        "config/*"
-      ]
+      "*": ["*", "admin/*", "services/*", "config/*"]
     },
-<<<<<<< HEAD
-    "types": ["node"],
-    "declaration": true,
-    "composite": true
-=======
-    "types": [
-      "node",
-      "jest",
-      "@testing-library/jest-dom"
-    ]
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+    "types": ["node", "jest", "@testing-library/jest-dom"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-<<<<<<< HEAD
-    "types.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "node_modules/expo-modules-core/node_modules"
-  ]
-=======
-    "**/*.js",
-    "**/*.jsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/__tests__/*"
-  ],
-  "extends": "expo/tsconfig.base"
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+  "exclude": ["node_modules", "**/__tests__/*"]
 }

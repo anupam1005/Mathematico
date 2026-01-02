@@ -1,28 +1,19 @@
 {
   "name": "mathematico-platform",
   "version": "1.0.0",
-<<<<<<< HEAD
-  "description": "Mathematico Learning Platform - Backend + Frontend (No Workspace)",
-  "private": true,
-  "scripts": {
-    "dev:backend": "cd Backend && npm run dev",
-    "dev:mobile": "cd Frontend-app && npm run dev",
-    "start:backend": "cd Backend && npm start",
-    "start:mobile": "cd Frontend-app && npx expo start --dev-client",
-    "install:backend": "cd Backend && npm install",
-    "install:mobile": "cd Frontend-app && npm install",
-    "install:all": "npm run install:backend && npm run install:mobile",
-    "clean:all": "cd Backend && rm -rf node_modules package-lock.json && cd ../Frontend-app && rm -rf node_modules package-lock.json .expo",
-    "reset:all": "npm run clean:all && npm run install:all"
-  },
-=======
   "description": "Mathematico Learning Platform - Unified Monorepo (Backend + Frontend)",
   "private": true,
   "scripts": {
     "dev": "npm run dev:backend",
-    "dev:backend": "npm run dev --workspace=Backend",
-    "dev:mobile": "npm run start --workspace=Frontend-app",
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:mobile": "cd Frontend-app && npx expo start --dev-client",
+    "start:backend": "cd Backend && npm start",
+    "start:mobile": "cd Frontend-app && npx expo start --dev-client",
+    "install:backend": "cd Backend && npm install",
+    "install:mobile": "cd Frontend-app && npm install",
     "install:all": "npm install --workspaces",
+    "clean:all": "cd Backend && rm -rf node_modules package-lock.json && cd ../Frontend-app && rm -rf node_modules package-lock.json .expo",
+    "reset:all": "npm run clean:all && npm run install:all",
     "build:android": "npm run build:android --workspace=Frontend-app",
     "build:android-preview": "npm run build:android-preview --workspace=Frontend-app",
     "build:ios": "npm run build:ios --workspace=Frontend-app",
@@ -34,13 +25,10 @@
     "Backend",
     "Frontend-app"
   ],
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-<<<<<<< HEAD
-=======
   "overrides": {
     "@rollup/rollup-linux-x64-gnu": "npm:rollup",
     "@rollup/rollup-linux-x64-musl": "npm:rollup",
@@ -57,7 +45,6 @@
     "@types/testing-library__jest-dom": "^5.14.9",
     "typescript": "^5.9.3"
   },
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   "keywords": [
     "mathematico",
     "education",
@@ -65,10 +52,7 @@
     "express",
     "backend",
     "mobile",
-<<<<<<< HEAD
-=======
     "monorepo",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "learning"
   ],
   "author": "Mathematico Team",

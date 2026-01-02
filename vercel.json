@@ -3,7 +3,6 @@
   "name": "mathematico-backend",
   "functions": {
     "Backend/index.js": {
-<<<<<<< HEAD
       "runtime": "@vercel/node@3",
       "maxDuration": 30,
       "memory": 1024
@@ -13,26 +12,15 @@
     { "src": "/api/(.*)", "dest": "/Backend/index.js" },
     { "src": "/health", "dest": "/Backend/index.js" },
     { "src": "/", "dest": "/Backend/index.js" },
-=======
-      "runtime": "@vercel/node",
-      "maxDuration": 30
-    }
-  },
-  "routes": [
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
   "env": {
     "NODE_ENV": "production",
-<<<<<<< HEAD
-    "VERCEL": "1"
-=======
     "VERCEL": "1",
     "BACKEND_URL": "https://mathematico-backend-new.vercel.app",
     "FRONTEND_URL": "https://mathematico-frontend.vercel.app",
     "MONGODB_URI": "mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/",
     "MONGODB_DB": "mathematico"
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   "regions": ["iad1"]
 }

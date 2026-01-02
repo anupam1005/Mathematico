@@ -4,7 +4,6 @@
   "main": "index.ts",
   "private": true,
   "scripts": {
-<<<<<<< HEAD
     "start": "expo start --dev-client",
     "dev": "expo start --dev-client --clear",
     "dev:go": "expo start --clear",
@@ -12,13 +11,6 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:dev": "eas build --platform android --profile development",
-=======
-    "start": "expo start",
-    "dev": "expo start --clear",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "build:android": "eas build --platform android --profile production",
     "build:android-preview": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile production",
@@ -26,11 +18,9 @@
     "submit:ios": "eas submit --platform ios --profile production"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@babel/core": "^7.28.5",
     "@babel/plugin-proposal-class-properties": "^7.18.6",
     "@babel/plugin-proposal-private-methods": "^7.18.6",
-=======
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
@@ -69,72 +59,12 @@
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "@babel/plugin-proposal-private-property-in-object": "^7.21.0-placeholder-for-preset-env.2",
     "@babel/plugin-transform-class-properties": "^7.27.1",
     "@babel/plugin-transform-private-methods": "^7.27.1",
     "@babel/plugin-transform-private-property-in-object": "^7.27.1",
     "@babel/preset-env": "^7.25.0",
     "@babel/runtime": "^7.28.4",
-<<<<<<< HEAD
-    "@react-native-async-storage/async-storage": "^1.17.11",
-    "@react-native-community/datetimepicker": "8.2.0",
-    "@react-native-community/netinfo": "11.4.1",
-    "@react-navigation/bottom-tabs": "^6.6.1",
-    "@react-navigation/native": "^6.1.18",
-    "@react-navigation/native-stack": "^6.11.0",
-    "@react-navigation/stack": "^6.4.1",
-    "@types/moment-timezone": "^0.5.13",
-    "@types/react": "~18.3.12",
-    "axios": "^1.7.7",
-    "babel-preset-expo": "^54.0.7",
-    "expo": "~52.0.0",
-    "expo-build-properties": "^0.12.5",
-    "expo-constants": "~17.0.2",
-    "expo-dev-client": "~5.0.4",
-    "expo-document-picker": "~13.0.3",
-    "expo-file-system": "~18.0.4",
-    "expo-font": "~13.0.1",
-    "expo-image-picker": "~16.0.2",
-    "expo-linear-gradient": "~14.0.1",
-    "expo-secure-store": "~14.0.0",
-    "expo-splash-screen": "~0.29.24",
-    "expo-status-bar": "~2.0.0",
-    "expo-updates": "~0.27.4",
-    "lucide-react-native": "^0.400.0",
-    "moment-timezone": "^0.6.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "react-native": "0.76.9",
-    "react-native-chart-kit": "^6.12.0",
-    "react-native-gesture-handler": "~2.20.2",
-    "react-native-image-picker": "^7.1.2",
-    "react-native-paper": "^5.12.5",
-    "react-native-razorpay": "^2.3.0",
-    "react-native-reanimated": "~3.16.1",
-    "react-native-safe-area-context": "4.12.0",
-    "react-native-screens": "~4.4.0",
-    "react-native-svg": "15.8.0",
-    "react-native-web": "~0.19.12",
-    "react-native-webview": "13.12.5",
-    "react-refresh": "^0.14.2",
-    "typescript": "^5.3.3"
-  },
-  "devDependencies": {
-    "@react-native-community/cli": "^20.0.2",
-    "@react-native/gradle-plugin": "0.76.5",
-    "@types/lodash": "^4.17.20"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "expo": {
-    "doctor": {
-      "reactNativeDirectoryCheck": {
-        "enabled": false
-      }
-=======
     "@react-native-community/cli": "^20.0.2",
     "@react-native/gradle-plugin": "0.76.5",
     "@testing-library/jest-dom": "^6.9.1",
@@ -148,6 +78,7 @@
     "@types/istanbul-reports": "^3.0.4",
     "@types/jest": "^29.5.14",
     "@types/json-schema": "^7.0.15",
+    "@types/lodash": "^4.17.20",
     "@types/react": "~19.1.10",
     "@types/stack-utils": "^2.0.3",
     "@types/yargs": "^17.0.33",
@@ -158,7 +89,8 @@
     "typescript": "~5.9.2"
   },
   "engines": {
-    "node": ">=20.18.0"
+    "node": ">=20.18.0",
+    "npm": ">=8.0.0"
   },
   "overrides": {
     "@rollup/rollup-linux-x64-gnu": "npm:rollup",
@@ -171,6 +103,11 @@
     "@react-native/gradle-plugin": "0.76.5"
   },
   "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "enabled": false
+      }
+    },
     "install": {
       "exclude": [
         "react",
@@ -184,7 +121,6 @@
         "react-native-screens",
         "react-native-safe-area-context"
       ]
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   }
 }
