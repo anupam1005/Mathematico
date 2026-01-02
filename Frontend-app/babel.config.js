@@ -1,6 +1,5 @@
 module.exports = function(api) {
   api.cache(true);
-<<<<<<< HEAD
   return {
     presets: ['babel-preset-expo'],
     plugins: [
@@ -11,18 +10,3 @@ module.exports = function(api) {
     ]
   };
 };
-=======
-  
-  const presets = ['babel-preset-expo'];
-  const plugins = [
-    ['@babel/plugin-transform-private-property-in-object', { loose: true }],
-    ['@babel/plugin-transform-class-properties', { loose: true }],
-    ['@babel/plugin-transform-private-methods', { loose: true }]
-  ];
-
-  return {
-    presets,
-    plugins
-  };
-};
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686

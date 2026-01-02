@@ -2,12 +2,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-<<<<<<< HEAD
 import { Icon } from '../components/Icon';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Import Admin Screens
 import AdminDashboard from './screens/AdminDashboard';
@@ -32,11 +27,6 @@ function AdminTabs() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: string;
-<<<<<<< HEAD
-=======
-          let IconComponent = Icon;
-
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           if (route.name === 'Dashboard') {
             iconName = 'dashboard';
           } else if (route.name === 'Books') {
@@ -55,11 +45,7 @@ function AdminTabs() {
             iconName = 'help';
           }
 
-<<<<<<< HEAD
           return <Icon name={iconName} size={size} color={color} />;
-=======
-          return <IconComponent name={iconName} size={size} color={color} />;
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         },
         tabBarActiveTintColor: '#3b82f6',
         tabBarInactiveTintColor: 'gray',

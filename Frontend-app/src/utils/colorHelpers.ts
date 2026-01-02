@@ -13,10 +13,7 @@ export const getStatusColor = (status: string): string => {
     case 'completed':
       return designSystem.colors.textSecondary;
     case 'cancelled':
-<<<<<<< HEAD
     case 'postponed':
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return designSystem.colors.error;
     case 'scheduled':
       return designSystem.colors.info;

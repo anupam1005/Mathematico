@@ -1,6 +1,5 @@
 // src/admin/screens/CourseForm.tsx
 import React, { useState, useEffect } from "react";
-<<<<<<< HEAD
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -8,13 +7,6 @@ import { adminService } from "../../services/adminService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
 import { Logger } from '../../utils/errorHandler';
-=======
-import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from "expo-document-picker";
-import { adminService } from "../../services/adminService";
-import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface CourseFormProps {
   courseId?: string;
@@ -29,17 +21,12 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     originalPrice: "",
     level: "",
     category: "",
-<<<<<<< HEAD
     subject: "",
     grade: "",
     status: "draft",
     students: "",
     duration: "",
     instructorName: "",
-=======
-    status: "draft",
-    students: "",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     image: null,
     pdf: null,
   });
@@ -78,7 +65,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   };
 
   const handleSubmit = async () => {
-<<<<<<< HEAD
     console.log('CourseForm: Submit button clicked');
     console.log('CourseForm: Form data:', formData);
     
@@ -127,15 +113,10 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     // Validate duration is a number
     if (isNaN(Number(formData.duration)) || Number(formData.duration) < 1) {
       return Alert.alert("Error", "Duration must be at least 1 hour");
-=======
-    if (!formData.title || !formData.price) {
-      return Alert.alert("Error", "Title and Price are required.");
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
 
     setLoading(true);
     try {
-<<<<<<< HEAD
       console.log('CourseForm: Creating FormData...');
       const data = new FormData();
       
@@ -166,21 +147,11 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
           if (key === 'instructor' && typeof value === 'object') {
             // Handle instructor object specially
             data.append('instructorName', value.name);
-=======
-      const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value != null) {
-          if (key === "image" && value && typeof value === 'object' && 'uri' in value) {
-            data.append("image", { uri: value.uri, type: "image/jpeg", name: "course.jpg" } as any);
-          } else if (key === "pdf" && value && typeof value === 'object' && 'uri' in value) {
-            data.append("pdf", { uri: value.uri, type: "application/pdf", name: ('name' in value ? value.name : "course.pdf") || "course.pdf" } as any);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           } else {
             data.append(key, value.toString());
           }
         }
       });
-<<<<<<< HEAD
       
       // Handle image upload (as thumbnail)
       if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
@@ -220,18 +191,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       onSuccess?.();
     } catch (err: any) {
       Logger.error('CourseForm: Error during submission:', err);
-=======
-
-      if (courseId) {
-        await adminService.updateCourse(courseId, data);
-        Alert.alert("Success", "Course updated successfully");
-      } else {
-        await adminService.createCourse(data);
-        Alert.alert("Success", "Course created successfully");
-      }
-      onSuccess?.();
-    } catch (err: any) {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -240,7 +199,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
-<<<<<<< HEAD
       <CustomTextInput
         label="Title"
         value={formData.title}
@@ -442,39 +400,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
           </View>
         )}
       </View>
-=======
-      <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={formData.title} onChangeText={t => setFormData({ ...formData, title: t })} />
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.description} onChangeText={t => setFormData({ ...formData, description: t })} />
-
-      <Text style={styles.label}>Price</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.price} onChangeText={t => setFormData({ ...formData, price: t })} />
-
-      <Text style={styles.label}>Original Price</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.originalPrice} onChangeText={t => setFormData({ ...formData, originalPrice: t })} />
-
-      <Text style={styles.label}>Level</Text>
-      <TextInput style={styles.input} value={formData.level} onChangeText={t => setFormData({ ...formData, level: t })} />
-
-      <Text style={styles.label}>Category</Text>
-      <TextInput style={styles.input} value={formData.category} onChangeText={t => setFormData({ ...formData, category: t })} />
-
-      <Text style={styles.label}>Status</Text>
-      <TextInput style={styles.input} value={formData.status} onChangeText={t => setFormData({ ...formData, status: t })} />
-
-      <Text style={styles.label}>Students</Text>
-      <TextInput style={styles.input} keyboardType="numeric" value={formData.students} onChangeText={t => setFormData({ ...formData, students: t })} />
-
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text style={styles.buttonText}>{formData.image ? "Change Image" : "Upload Image"}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={pickPDF}>
-        <Text style={styles.buttonText}>{formData.pdf ? "Change PDF" : "Upload PDF"}</Text>
-      </TouchableOpacity>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{courseId ? "Update Course" : "Create Course"}</Text>}
@@ -491,7 +416,6 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff" },
   submitButton: { backgroundColor: "green", padding: 15, marginTop: 20, borderRadius: 5, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "bold" },
-<<<<<<< HEAD
   pickerContainer: { marginTop: 10 },
   pickerLabel: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
   pickerWrapper: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#f9f9f9" },
@@ -561,6 +485,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });

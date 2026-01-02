@@ -1,9 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config';
-<<<<<<< HEAD
 const AUTH_URL = API_CONFIG.auth;
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { testDirectConnection } from './networkDebug';
 
 export const testNetworkConnectivity = async (): Promise<{
@@ -13,14 +10,10 @@ export const testNetworkConnectivity = async (): Promise<{
 }> => {
   try {
     console.log('🌐 Testing network connectivity...');
-<<<<<<< HEAD
     
     const authUrl = AUTH_URL;
     
     console.log('🌐 Backend URL:', authUrl);
-=======
-    console.log('🌐 Backend URL:', API_CONFIG.auth);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     
     // First try direct connection test
     console.log('🔍 Running direct connection test...');
@@ -33,11 +26,7 @@ export const testNetworkConnectivity = async (): Promise<{
         message: 'Network connectivity test successful (direct connection)',
         details: {
           directTest: directTest.results,
-<<<<<<< HEAD
           backendUrl: authUrl
-=======
-          backendUrl: API_CONFIG.auth
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         }
       };
     }
@@ -46,11 +35,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('🔄 Direct test failed, trying axios...');
     
     // Test 1: Basic connectivity
-<<<<<<< HEAD
     const healthResponse = await axios.get(`${authUrl}/health`, {
-=======
-    const healthResponse = await axios.get(`${API_CONFIG.auth}/health`, {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -61,11 +46,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('✅ Health check successful:', healthResponse.data);
     
     // Test 2: Test registration endpoint (without actually registering)
-<<<<<<< HEAD
     const testResponse = await axios.post(`${authUrl}/register`, {
-=======
-    const testResponse = await axios.post(`${API_CONFIG.auth}/register`, {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       name: 'Network Test',
       email: 'network-test@example.com',
       password: 'test123'
@@ -86,11 +67,7 @@ export const testNetworkConnectivity = async (): Promise<{
       details: {
         healthStatus: healthResponse.data,
         registrationEndpointStatus: testResponse.status,
-<<<<<<< HEAD
         backendUrl: authUrl,
-=======
-        backendUrl: API_CONFIG.auth,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         directTest: directTest.results
       }
     };
@@ -106,42 +83,26 @@ export const testNetworkConnectivity = async (): Promise<{
       errorDetails = {
         code: error.code,
         message: error.message,
-<<<<<<< HEAD
         backendUrl: AUTH_URL
-=======
-        backendUrl: API_CONFIG.auth
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
     } else if (error.response) {
       errorMessage = `Server responded with status ${error.response.status}`;
       errorDetails = {
         status: error.response.status,
         data: error.response.data,
-<<<<<<< HEAD
         backendUrl: AUTH_URL
-=======
-        backendUrl: API_CONFIG.auth
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
     } else if (error.request) {
       errorMessage = 'No response received from server';
       errorDetails = {
         request: error.request,
-<<<<<<< HEAD
         backendUrl: AUTH_URL
-=======
-        backendUrl: API_CONFIG.auth
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
     } else {
       errorMessage = error.message || 'Unknown network error';
       errorDetails = {
         error: error,
-<<<<<<< HEAD
         backendUrl: AUTH_URL
-=======
-        backendUrl: API_CONFIG.auth
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
     }
     
@@ -165,16 +126,10 @@ export const testBackendEndpoints = async (): Promise<{
   };
   
   try {
-<<<<<<< HEAD
     const authUrl = AUTH_URL;
     // Test health endpoint
     try {
       const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });
-=======
-    // Test health endpoint
-    try {
-      const healthResponse = await axios.get(`${API_CONFIG.auth}/health`, { timeout: 5000 });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       endpoints.health = { success: true, status: healthResponse.status, data: healthResponse.data };
     } catch (error: any) {
       endpoints.health = { success: false, error: error.message };
@@ -182,11 +137,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test register endpoint
     try {
-<<<<<<< HEAD
       const registerResponse = await axios.post(`${authUrl}/register`, {
-=======
-      const registerResponse = await axios.post(`${API_CONFIG.auth}/register`, {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         name: 'Test User',
         email: 'test@example.com',
         password: 'password123'
@@ -198,11 +149,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test login endpoint
     try {
-<<<<<<< HEAD
       const loginResponse = await axios.post(`${authUrl}/login`, {
-=======
-      const loginResponse = await axios.post(`${API_CONFIG.auth}/login`, {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         email: 'test@example.com',
         password: 'password123'
       }, { timeout: 5000, validateStatus: (status) => status < 500 });

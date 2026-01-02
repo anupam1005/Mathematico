@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Button, Chip, ActivityIndicator } from 'react-native-paper';
@@ -7,16 +6,6 @@ import { NetworkUtils } from '../utils/networkUtils';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
 import { Logger } from '../utils/errorHandler';
-=======
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Card, Button, Chip, ActivityIndicator } from 'react-native-paper';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { NetworkUtils } from '../utils/networkUtils';
-import { designSystem } from '../styles/designSystem';
-import { testNetworkConnectivity } from '../utils/networkTest';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface NetworkStatusProps {
   onConnectionChange?: (isConnected: boolean) => void;
@@ -36,7 +25,6 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
     try {
       const result = await testNetworkConnectivity();
       setIsConnected(result.success);
-<<<<<<< HEAD
       
       const { getBackendUrl } = await import('../config');
       const backendUrl = await getBackendUrl();
@@ -44,20 +32,11 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
       setConnectionInfo({
         platform: 'React Native',
         baseURL: backendUrl,
-=======
-      setConnectionInfo({
-        platform: 'React Native',
-        baseURL: 'https://mathematico-backend-new.vercel.app',
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         isDev: __DEV__
       });
       onConnectionChange?.(result.success);
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Connection test failed:', error);
-=======
-      console.error('Connection test failed:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setIsConnected(false);
     } finally {
       setIsTesting(false);

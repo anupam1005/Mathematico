@@ -424,7 +424,6 @@ courseSchema.pre('save', function(next) {
 
 // Pre-save middleware to calculate total lessons
 courseSchema.pre('save', function(next) {
-<<<<<<< HEAD
   if (this.curriculum && Array.isArray(this.curriculum)) {
     this.totalLessons = this.curriculum.reduce((total, module) => {
       return total + (module.lessons && Array.isArray(module.lessons) ? module.lessons.length : 0);
@@ -432,11 +431,6 @@ courseSchema.pre('save', function(next) {
   } else {
     this.totalLessons = 0;
   }
-=======
-  this.totalLessons = this.curriculum.reduce((total, module) => {
-    return total + module.lessons.length;
-  }, 0);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   next();
 });
 
@@ -464,14 +458,11 @@ courseSchema.virtual('completionRate').get(function() {
   return (this.completions / this.enrolledStudents.length) * 100;
 });
 
-<<<<<<< HEAD
 // Virtual for thumbnail URL (frontend expects snake_case)
 courseSchema.virtual('thumbnail_url').get(function() {
   return this.thumbnail || '';
 });
 
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Instance method to enroll student
 courseSchema.methods.enrollStudent = function(studentId) {
   // Check if student is already enrolled

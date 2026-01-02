@@ -1,11 +1,7 @@
 {
   "cli": {
-<<<<<<< HEAD
     "version": ">=16.19.3",
     "appVersionSource": "local"
-=======
-    "version": ">=16.19.3"
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   "build": {
     "development": {
@@ -25,7 +21,6 @@
       "distribution": "store",
       "node": "20.18.3",
       "android": {
-<<<<<<< HEAD
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
         "env": {
@@ -43,22 +38,12 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
-=======
-        "buildType": "app-bundle"
-      },
-      "env": {
-        "NODE_ENV": "production"
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
     }
   },
   "submit": {
     "production": {
       "android": {
-<<<<<<< HEAD
-=======
-        "serviceAccountKeyPath": "./google-play-service-account.json",
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         "track": "production"
       }
     }

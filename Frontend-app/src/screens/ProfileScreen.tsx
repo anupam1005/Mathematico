@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
-=======
-import React, { useState } from 'react';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import {
   View,
   Text,
@@ -21,25 +17,16 @@ import {
   Avatar,
   Dialog,
   Portal,
-<<<<<<< HEAD
 
-=======
-  TextInput,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
 import { icons } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
-<<<<<<< HEAD
 import { CustomTextInput } from '../components/CustomTextInput';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
 import { Logger } from '../utils/errorHandler';
-=======
-import { designSystem } from '../styles/designSystem';
-import { theme } from '../styles/theme';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout, updateProfile, isLoading } = useAuth();
@@ -50,7 +37,6 @@ export default function ProfileScreen({ navigation }: any) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-<<<<<<< HEAD
   // Sync editName with user name when user changes
   useEffect(() => {
     if (user?.name) {
@@ -60,15 +46,11 @@ export default function ProfileScreen({ navigation }: any) {
 
   const handleLogout = () => {
     console.log('ProfileScreen: Logout button pressed');
-=======
-  const handleLogout = () => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-<<<<<<< HEAD
         { 
           text: 'Logout', 
           style: 'destructive', 
@@ -82,9 +64,6 @@ export default function ProfileScreen({ navigation }: any) {
             }
           }
         },
-=======
-        { text: 'Logout', style: 'destructive', onPress: logout },
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       ]
     );
   };
@@ -95,7 +74,6 @@ export default function ProfileScreen({ navigation }: any) {
       return;
     }
 
-<<<<<<< HEAD
     const trimmedName = editName.trim();
     const success = await updateProfile({ name: trimmedName });
     if (success) {
@@ -106,12 +84,6 @@ export default function ProfileScreen({ navigation }: any) {
     } else {
       // If update failed, reset editName to current user name
       setEditName(user?.name || '');
-=======
-    const success = await updateProfile({ name: editName.trim() });
-    if (success) {
-      setShowEditDialog(false);
-      Alert.alert('Success', 'Profile updated successfully');
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   };
 
@@ -287,20 +259,13 @@ export default function ProfileScreen({ navigation }: any) {
         <Dialog visible={showEditDialog} onDismiss={() => setShowEditDialog(false)}>
           <Dialog.Title>Edit Profile</Dialog.Title>
           <Dialog.Content>
-<<<<<<< HEAD
             <CustomTextInput
-=======
-            <TextInput
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="Name"
               value={editName}
               onChangeText={setEditName}
               mode="outlined"
               style={styles.dialogInput}
-<<<<<<< HEAD
               leftIcon="person"
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             />
           </Dialog.Content>
           <Dialog.Actions>
@@ -317,49 +282,32 @@ export default function ProfileScreen({ navigation }: any) {
         <Dialog visible={showPasswordDialog} onDismiss={() => setShowPasswordDialog(false)}>
           <Dialog.Title>Change Password</Dialog.Title>
           <Dialog.Content>
-<<<<<<< HEAD
             <CustomTextInput
-=======
-            <TextInput
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="Current Password"
               value={currentPassword}
               onChangeText={setCurrentPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
-<<<<<<< HEAD
               leftIcon="lock"
             />
             <CustomTextInput
-=======
-            />
-            <TextInput
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="New Password"
               value={newPassword}
               onChangeText={setNewPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
-<<<<<<< HEAD
               leftIcon="lock"
             />
             <CustomTextInput
-=======
-            />
-            <TextInput
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="Confirm New Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               mode="outlined"
               secureTextEntry
               style={styles.dialogInput}
-<<<<<<< HEAD
               leftIcon="lock"
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             />
           </Dialog.Content>
           <Dialog.Actions>

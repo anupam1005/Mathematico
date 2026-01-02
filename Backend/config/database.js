@@ -14,7 +14,6 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     try {
-<<<<<<< HEAD
       // Default connection string (for development)
       const defaultMongoURI = 'mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/mathematico?retryWrites=true&w=majority';
       
@@ -28,11 +27,6 @@ const connectDB = async () => {
           ? `${mongoURI}mathematico?retryWrites=true&w=majority`
           : `${mongoURI}/mathematico?retryWrites=true&w=majority`;
       }
-=======
-      // Use provided cluster; allow dbName override via env
-      const mongoURI = (process.env.MONGODB_URI || 'mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/')
-        .trim();
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
       const options = {
         dbName: process.env.MONGODB_DB || 'mathematico',
@@ -40,24 +34,18 @@ const connectDB = async () => {
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 45000,
         bufferCommands: false,
-<<<<<<< HEAD
         // Removed deprecated options: useNewUrlParser and useUnifiedTopology
         // These are no longer needed in Mongoose 6+ and cause warnings
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {
         const { host, name } = mongooseInstance.connection;
         console.log(`✅ MongoDB Connected: ${host}`);
         console.log(`📊 Database: ${name}`);
-<<<<<<< HEAD
         console.log(`🔗 Connection String: ${mongoURI}`);
         console.log(`📋 Available Collections:`, mongooseInstance.connection.db.listCollections().toArray().then(collections => {
           console.log('Collections:', collections.map(c => c.name));
         }));
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
         // Connection event listeners
         mongoose.connection.on('connected', () => {

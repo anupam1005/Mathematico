@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { API_CONFIG } from '../config';
@@ -10,22 +9,12 @@ const errorHandler = createServiceErrorHandler('mobileService');
 // Create axios instance for mobile endpoints
 const mobileApi = axios.create({
   baseURL: API_CONFIG.mobile, // This will be updated dynamically
-=======
-import axios from 'axios';
-import { API_CONFIG } from '../config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Create axios instance for mobile endpoints
-const mobileApi = axios.create({
-  baseURL: API_CONFIG.mobile,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-<<<<<<< HEAD
 // Update the base URL dynamically
 (async () => {
   try {
@@ -39,35 +28,21 @@ const mobileApi = axios.create({
 // Request interceptor to add auth token
 mobileApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-=======
-// Request interceptor to add auth token
-mobileApi.interceptors.request.use(
-  async (config) => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-<<<<<<< HEAD
   (error: AxiosError) => {
-=======
-  (error) => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle errors
 mobileApi.interceptors.response.use(
-<<<<<<< HEAD
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-=======
-  (response) => response,
-  async (error) => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (error.response?.status === 401) {
       // Clear invalid tokens
       await AsyncStorage.removeItem('authToken');
@@ -102,11 +77,7 @@ class MobileService {
       const response = await mobileApi.get(`/books?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching books:', error);
-=======
-      console.error('Error fetching books:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: [],
@@ -121,11 +92,7 @@ class MobileService {
       const response = await mobileApi.get(`/courses?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching courses:', error);
-=======
-      console.error('Error fetching courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: [],
@@ -140,11 +107,7 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching live classes:', error);
-=======
-      console.error('Error fetching live classes:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: [],
@@ -163,11 +126,7 @@ class MobileService {
       const response = await mobileApi.get('/featured');
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching featured content:', error);
-=======
-      console.error('Error fetching featured content:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: {
@@ -185,11 +144,7 @@ class MobileService {
       const response = await mobileApi.get('/categories');
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching categories:', error);
-=======
-      console.error('Error fetching categories:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: {
@@ -210,11 +165,7 @@ class MobileService {
       const response = await mobileApi.get(`/search?${params.toString()}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error searching content:', error);
-=======
-      console.error('Error searching content:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: [],
@@ -228,11 +179,7 @@ class MobileService {
       const response = await mobileApi.get(`/books/${id}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching book:', error);
-=======
-      console.error('Error fetching book:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw error;
     }
   }
@@ -242,11 +189,7 @@ class MobileService {
       const response = await mobileApi.get(`/courses/${id}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching course:', error);
-=======
-      console.error('Error fetching course:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw error;
     }
   }
@@ -256,11 +199,7 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes/${id}`);
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching live class:', error);
-=======
-      console.error('Error fetching live class:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw error;
     }
   }
@@ -282,11 +221,7 @@ class MobileService {
       const response = await mobileApi.get('/info');
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching mobile info:', error);
-=======
-      console.error('Error fetching mobile info:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: {
@@ -306,7 +241,6 @@ class MobileService {
       };
     }
   }
-<<<<<<< HEAD
 
   async getStats(): Promise<MobileApiResponse<{
     totalBooks: number;
@@ -434,8 +368,6 @@ class MobileService {
       };
     }
   }
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }
 
 export const mobileService = new MobileService();

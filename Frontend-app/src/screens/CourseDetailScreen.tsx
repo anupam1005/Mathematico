@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// @ts-nocheck
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,7 +16,6 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-<<<<<<< HEAD
 import { Calendar, Users, Tag, GraduationCap, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
@@ -28,22 +23,12 @@ import { designSystem } from '../styles/designSystem';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Logger } from '../utils/errorHandler';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { courseService, Course } from '../services/courseService';
-import { designSystem } from '../styles/designSystem';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function CourseDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const { courseId } = route.params;
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-=======
-  const [enrolling, setEnrolling] = useState(false);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
   useEffect(() => {
     loadCourse();
@@ -63,11 +48,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
         navigation.goBack();
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading course:', error);
-=======
-      console.error('Error loading course:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to load course');
       navigation.goBack();
     } finally {
@@ -78,42 +59,12 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   const handleEnroll = async () => {
     if (!course) return;
 
-<<<<<<< HEAD
     // Navigate to checkout screen for payment
     navigation.navigate('Checkout', {
       type: 'course',
       itemId: courseId,
       itemData: course
     });
-=======
-    Alert.alert(
-      'Enroll in Course',
-      `Are you sure you want to enroll in "${course.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Enroll', onPress: enrollInCourse },
-      ]
-    );
-  };
-
-  const enrollInCourse = async () => {
-    try {
-      setEnrolling(true);
-      const response = await courseService.enrollInCourse(courseId);
-      
-      if (response.success) {
-        Alert.alert('Success', 'Successfully enrolled in course!');
-        // You might want to navigate to course content or update UI
-      } else {
-        Alert.alert('Error', response.message || 'Failed to enroll in course');
-      }
-    } catch (error) {
-      console.error('Error enrolling in course:', error);
-      Alert.alert('Error', 'Failed to enroll in course');
-    } finally {
-      setEnrolling(false);
-    }
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   };
 
   const getLevelColor = (level: string) => {
@@ -146,11 +97,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   if (!course) {
     return (
       <View style={styles.errorContainer}>
-<<<<<<< HEAD
         <AlertCircle size={64} color={designSystem.colors.error} />
-=======
-        <Icon name="error" size={64} color={designSystem.colors.error} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Text style={styles.errorText}>Course not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -176,11 +123,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           <View style={styles.metaContainer}>
             <Chip
               mode="flat"
-<<<<<<< HEAD
               style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
-=======
-              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               textStyle={{ color: designSystem.colors.surface }}
             >
               {course.level}
@@ -190,17 +133,10 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             </Chip>
           </View>
           <View style={styles.priceContainer}>
-<<<<<<< HEAD
             {course.original_price && course.price && course.original_price > course.price && (
               <Text style={styles.originalPrice}>₹{course.original_price}</Text>
             )}
             <Text style={styles.price}>₹{course.price || 0}</Text>
-=======
-            {course.original_price && course.original_price > course.price && (
-              <Text style={styles.originalPrice}>₹{course.original_price}</Text>
-            )}
-            <Text style={styles.price}>₹{course.price}</Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           </View>
         </Card.Content>
       </Card>
@@ -219,38 +155,22 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Course Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <Calendar size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="schedule" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Duration:</Text>
               <Text style={styles.detailValue}>{course.duration}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <Users size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="group" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Students:</Text>
               <Text style={styles.detailValue}>{course.students}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <Tag size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="category" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{course.subject}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <GraduationCap size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="school" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{course.class}</Text>
             </View>
@@ -265,11 +185,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>What You Will Learn</Title>
             {course.what_you_will_learn.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-<<<<<<< HEAD
                 <CheckCircle size={16} color={designSystem.colors.success} />
-=======
-                <Icon name="check-circle" size={16} color={designSystem.colors.success} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}
@@ -284,11 +200,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>Who Is This For</Title>
             {course.who_is_this_for.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-<<<<<<< HEAD
                 <Users size={16} color={designSystem.colors.primary} />
-=======
-                <Icon name="person" size={16} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}
@@ -329,18 +241,8 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           onPress={handleEnroll}
           style={styles.enrollButton}
           contentStyle={styles.enrollButtonContent}
-<<<<<<< HEAD
         >
           {`Enroll Now - ₹${course.price || 0}`}
-=======
-          disabled={enrolling}
-        >
-          {enrolling ? (
-            <ActivityIndicator color={designSystem.colors.surface} />
-          ) : (
-            `Enroll Now - ₹${course.price}`
-          )}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </Button>
       </View>
     </ScrollView>

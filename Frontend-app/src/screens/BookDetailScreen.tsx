@@ -16,11 +16,7 @@ import {
   Chip,
   ActivityIndicator,
 } from 'react-native-paper';
-<<<<<<< HEAD
 import { Book as BookIcon, Download, User, Building, Tag, GraduationCap, Barcode, AlertCircle } from 'lucide-react-native';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { designSystem } from '../styles/designSystem';
@@ -30,10 +26,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
   const { bookId } = route.params;
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-=======
-  const [downloading, setDownloading] = useState(false);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
   useEffect(() => {
     loadBook();
@@ -65,41 +57,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
     }
   };
 
-<<<<<<< HEAD
-=======
-  const handleDownload = async () => {
-    if (!book) return;
-
-    Alert.alert(
-      'Download Book',
-      `Are you sure you want to download "${book.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Download', onPress: downloadBook },
-      ]
-    );
-  };
-
-  const downloadBook = async () => {
-    try {
-      setDownloading(true);
-      const response = await bookService.downloadBook(bookId);
-      
-      if (response.success && response.data?.downloadUrl) {
-        Alert.alert('Success', 'Download link generated! Check your downloads.');
-        // In a real app, you would open the download URL or handle the file download
-      } else {
-        Alert.alert('Error', response.message || 'Failed to generate download link');
-      }
-    } catch (error) {
-      console.error('Error downloading book:', error);
-      Alert.alert('Error', 'Failed to download book');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   const getLevelColor = (level: string) => {
     if (!level || typeof level !== 'string') {
       return designSystem.colors.primary;
@@ -130,11 +87,7 @@ export default function BookDetailScreen({ navigation, route }: any) {
   if (!book) {
     return (
       <View style={styles.errorContainer}>
-<<<<<<< HEAD
         <AlertCircle size={64} color={designSystem.colors.error} />
-=======
-        <Icon name="error" size={64} color={designSystem.colors.error} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Text style={styles.errorText}>Book not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -172,19 +125,11 @@ export default function BookDetailScreen({ navigation, route }: any) {
           </View>
           <View style={styles.bookMeta}>
             <View style={styles.metaItem}>
-<<<<<<< HEAD
               <BookIcon size={20} color={designSystem.colors.primary} />
               <Text style={styles.metaText}>{book.pages} pages</Text>
             </View>
             <View style={styles.metaItem}>
               <Download size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="book" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.metaText}>{book.pages} pages</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Icon name="download" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.metaText}>{book.downloads} downloads</Text>
             </View>
           </View>
@@ -205,48 +150,28 @@ export default function BookDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Book Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <User size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="person" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Author:</Text>
               <Text style={styles.detailValue}>{book.author}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <Building size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="business" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Publisher:</Text>
               <Text style={styles.detailValue}>{book.publisher}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <Tag size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="category" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{book.subject}</Text>
             </View>
             <View style={styles.detailItem}>
-<<<<<<< HEAD
               <GraduationCap size={20} color={designSystem.colors.primary} />
-=======
-              <Icon name="school" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{book.class}</Text>
             </View>
             {book.isbn && (
               <View style={styles.detailItem}>
-<<<<<<< HEAD
                 <Barcode size={20} color={designSystem.colors.primary} />
-=======
-                <Icon name="barcode" size={20} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <Text style={styles.detailLabel}>ISBN:</Text>
                 <Text style={styles.detailValue}>{book.isbn}</Text>
               </View>
@@ -291,7 +216,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
         </Card>
       )}
 
-<<<<<<< HEAD
       {/* Read Book Button */}
       <View style={styles.readContainer}>
         <Button
@@ -302,23 +226,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
           icon="book-open"
         >
           Read Book
-=======
-      {/* Download Button */}
-      <View style={styles.downloadContainer}>
-        <Button
-          mode="contained"
-          onPress={handleDownload}
-          style={styles.downloadButton}
-          contentStyle={styles.downloadButtonContent}
-          disabled={downloading}
-          icon="download"
-        >
-          {downloading ? (
-            <ActivityIndicator color={designSystem.colors.surface} />
-          ) : (
-            'Download Book'
-          )}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </Button>
       </View>
     </ScrollView>
@@ -453,7 +360,6 @@ const styles = StyleSheet.create({
     marginRight: designSystem.spacing.sm,
     marginBottom: designSystem.spacing.sm,
   },
-<<<<<<< HEAD
   readContainer: {
     padding: designSystem.spacing.lg,
     paddingBottom: designSystem.spacing.xl,
@@ -463,17 +369,6 @@ const styles = StyleSheet.create({
     ...designSystem.shadows.md,
   },
   readButtonContent: {
-=======
-  downloadContainer: {
-    padding: designSystem.spacing.lg,
-    paddingBottom: designSystem.spacing.xl,
-  },
-  downloadButton: {
-    borderRadius: designSystem.borderRadius.md,
-    ...designSystem.shadows.md,
-  },
-  downloadButtonContent: {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     paddingVertical: designSystem.spacing.md,
   },
 });

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // Profile Controller - Handles user profile operations
 const connectDB = require('../config/database');
 
@@ -9,16 +8,12 @@ try {
 } catch (error) {
   console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
 }
-=======
-// Profile Controller - Handles user profile operations (No Database Version)
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 /**
  * Get user profile
  */
 const getProfile = async (req, res) => {
   try {
-<<<<<<< HEAD
     const userId = req.user.id;
     
     if (!UserModel) {
@@ -54,38 +49,12 @@ const getProfile = async (req, res) => {
       timestamp: new Date().toISOString()
     });
     
-=======
-    console.log('👤 User profile - database disabled');
-    
-    // Return user info from JWT token
-    const user = req.user;
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        user: user
-      },
-      timestamp: new Date().toISOString(),
-      message: 'Database functionality has been removed'
-    });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user profile',
-<<<<<<< HEAD
       error: error.message,
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -95,7 +64,6 @@ const getProfile = async (req, res) => {
  * Update user profile
  */
 const updateProfile = async (req, res) => {
-<<<<<<< HEAD
   try {
     const { name, email } = req.body;
     const userId = req.user.id;
@@ -149,14 +117,6 @@ const updateProfile = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-=======
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Profile update is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 };
 
 /**

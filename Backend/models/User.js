@@ -1,11 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-<<<<<<< HEAD
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 const userSchema = new mongoose.Schema({
   // Basic Information
@@ -23,17 +20,12 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-<<<<<<< HEAD
     validate: [validator.isEmail, 'Please provide a valid email']
-=======
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   password: {
     type: String,
     required: [true, 'Password is required'],
-<<<<<<< HEAD
     minlength: [8, 'Password must be at least 8 characters'],
     select: false, // Don't include password in queries by default
     // Simplified password validation for development
@@ -48,10 +40,6 @@ const userSchema = new mongoose.Schema({
   passwordChangedAt: {
     type: Date,
     select: false
-=======
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't include password in queries by default
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   phone: {
@@ -222,7 +210,6 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-<<<<<<< HEAD
   },
   
   // Account deactivation
@@ -241,18 +228,12 @@ const userSchema = new mongoose.Schema({
   lockUntil: {
     type: Date,
     select: false
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-<<<<<<< HEAD
   toObject: { virtuals: true },
   id: false
-=======
-  toObject: { virtuals: true }
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });
 
 // Indexes for better performance (email index already created by unique: true)
@@ -286,7 +267,6 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-<<<<<<< HEAD
 // Check if password was changed after token was issued
 userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
   if (this.passwordChangedAt) {
@@ -368,8 +348,6 @@ userSchema.methods.resetLoginAttempts = async function() {
   });
 };
 
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Instance method to check password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);

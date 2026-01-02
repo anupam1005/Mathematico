@@ -1,20 +1,13 @@
-<<<<<<< HEAD
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-=======
-import axios from 'axios';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-<<<<<<< HEAD
 // Create a service error handler for courseService
 const errorHandler = createServiceErrorHandler('courseService');
 
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 export type CourseLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 
@@ -57,18 +50,13 @@ export interface UpdateCourseData extends Partial<BaseCourseData> {
 
 // Create axios instance for course endpoints
 const courseApi = axios.create({
-<<<<<<< HEAD
   baseURL: API_CONFIG.mobile, // This will be updated dynamically
-=======
-  baseURL: API_CONFIG.mobile,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-<<<<<<< HEAD
 // Update the base URL dynamically
 (async () => {
   try {
@@ -82,37 +70,22 @@ const courseApi = axios.create({
 // Request interceptor to add auth token
 courseApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-=======
-// Request interceptor to add auth token
-courseApi.interceptors.request.use(
-  async (config) => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const token = await authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-<<<<<<< HEAD
   (error: AxiosError) => {
-=======
-  (error) => {
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle token refresh
 courseApi.interceptors.response.use(
-<<<<<<< HEAD
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
-=======
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -128,11 +101,7 @@ courseApi.interceptors.response.use(
           await AsyncStorage.removeItem('refreshToken');
         }
       } catch (refreshError) {
-<<<<<<< HEAD
         errorHandler.handleError('CourseService: Token refresh error:', refreshError);
-=======
-        console.error('CourseService: Token refresh error:', refreshError);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
@@ -153,7 +122,6 @@ class CourseService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-<<<<<<< HEAD
       // Use API_CONFIG directly
       const fullUrl = `${API_CONFIG.mobile}${endpoint}`;
       
@@ -162,18 +130,11 @@ class CourseService {
       const response = await courseApi({
         url: endpoint,
         baseURL: API_CONFIG.mobile,
-=======
-      const response = await courseApi({
-        url: endpoint,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         ...options,
       });
       return response.data;
     } catch (error) {
-<<<<<<< HEAD
       console.error('CourseService: Request failed:', error);
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -192,7 +153,6 @@ class CourseService {
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-<<<<<<< HEAD
       if (response && response.data) {
         return {
           data: response.data,
@@ -200,19 +160,12 @@ class CourseService {
         };
       }
       
-=======
-      // Since database is disabled, always return empty data
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching courses:', error);
-=======
-      console.error('Error fetching courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -223,15 +176,9 @@ class CourseService {
   async getCourseById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/courses/${id}`);
-<<<<<<< HEAD
       return response;
     } catch (error) {
       errorHandler.handleError('Error fetching course:', error);
-=======
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching course:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -241,11 +188,7 @@ class CourseService {
       const response = await this.makeRequest('/featured');
       return response.data?.courses || [];
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching featured courses:', error);
-=======
-      console.error('Error fetching featured courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return [];
     }
   }
@@ -261,7 +204,6 @@ class CourseService {
       
       const response = await this.makeRequest(`/courses?${params.toString()}`);
       
-<<<<<<< HEAD
       if (response && response.data) {
         return {
           data: response.data,
@@ -269,19 +211,12 @@ class CourseService {
         };
       }
       
-=======
-      // Since database is disabled, always return empty data
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error searching courses:', error);
-=======
-      console.error('Error searching courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -294,11 +229,7 @@ class CourseService {
       const response = await this.getCourses(page, limit, { category });
       return response;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching courses by category:', error);
-=======
-      console.error('Error fetching courses by category:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -311,11 +242,7 @@ class CourseService {
       const response = await this.getCourses(page, limit, { level });
       return response;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching courses by level:', error);
-=======
-      console.error('Error fetching courses by level:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -323,7 +250,6 @@ class CourseService {
     }
   }
 
-<<<<<<< HEAD
   // Admin methods
   async createCourse(courseData: CreateCourseData): Promise<any> {
     try {
@@ -418,32 +344,10 @@ class CourseService {
       errorHandler.handleError('Error enrolling in course:', error);
       throw ErrorHandler.handleApiError(error);
     }
-=======
-  // Admin methods (will return errors since database is disabled)
-  async createCourse(courseData: CreateCourseData): Promise<any> {
-    throw new Error('Course creation is not available. Database functionality has been removed.');
-  }
-
-  async updateCourse(id: string, courseData: UpdateCourseData): Promise<any> {
-    throw new Error('Course update is not available. Database functionality has been removed.');
-  }
-
-  async deleteCourse(id: string): Promise<void> {
-    throw new Error('Course deletion is not available. Database functionality has been removed.');
-  }
-
-  async uploadCourseThumbnail(courseId: string, imageUri: string): Promise<string> {
-    throw new Error('Course thumbnail upload is not available. Database functionality has been removed.');
-  }
-
-  async uploadCourseVideo(courseId: string, videoUri: string): Promise<string> {
-    throw new Error('Course video upload is not available. Database functionality has been removed.');
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 }
 
 export const courseService = new CourseService();
-<<<<<<< HEAD
 export default courseService;
 
 // Export Course type for use in components
@@ -477,6 +381,3 @@ export type Course = BaseCourseData & {
   createdAt?: string;
   updatedAt?: string;
 };
-=======
-export default courseService;
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686

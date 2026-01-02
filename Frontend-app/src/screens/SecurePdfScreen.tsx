@@ -58,7 +58,6 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
   const displayTitle = bookDetails?.title || bookTitle || 'PDF Viewer';
 
   return (
-<<<<<<< HEAD
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
@@ -74,74 +73,13 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
         >
           Close
         </Button>
-=======
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6200ea" />
-      
-      {/* Header */}
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={handleClose} color="white" />
-        <Appbar.Content 
-          title={displayTitle} 
-          titleStyle={styles.headerTitle}
-          subtitle="Secure Read-Only Mode"
-          subtitleStyle={styles.headerSubtitle}
-        />
-      </Appbar.Header>
-
-      {/* Security Notice */}
-      <View style={styles.securityNotice}>
-        <Card style={styles.noticeCard}>
-          <Card.Content style={styles.noticeContent}>
-            <View style={styles.noticeHeader}>
-              <Text style={styles.noticeIcon}>🔒</Text>
-              <Text style={styles.noticeTitle}>Secure Reading Mode</Text>
-            </View>
-            <Text style={styles.noticeText}>
-              This PDF is in read-only mode. Download, printing, and screenshots are disabled to protect content.
-            </Text>
-            {restrictions && (
-              <View style={styles.restrictionsContainer}>
-                <Chip 
-                  icon="download-off" 
-                  style={[styles.restrictionChip, !restrictions.download && styles.disabledChip]}
-                >
-                  Download Disabled
-                </Chip>
-                <Chip 
-                  icon="printer-off" 
-                  style={[styles.restrictionChip, !restrictions.print && styles.disabledChip]}
-                >
-                  Print Disabled
-                </Chip>
-                <Chip 
-                  icon="content-copy" 
-                  style={[styles.restrictionChip, !restrictions.copy && styles.disabledChip]}
-                >
-                  Copy Disabled
-                </Chip>
-                <Chip 
-                  icon="camera-off" 
-                  style={[styles.restrictionChip, !restrictions.screenshot && styles.disabledChip]}
-                >
-                  Screenshot Disabled
-                </Chip>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       </View>
 
       {/* PDF Viewer or Error State */}
       <View style={styles.viewerContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
-<<<<<<< HEAD
             <Text style={styles.loadingText}>Loading PDF...</Text>
-=======
-            <Text style={styles.loadingText}>Loading secure PDF viewer...</Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -179,11 +117,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
           </View>
         )}
       </View>
-<<<<<<< HEAD
     </View>
-=======
-    </SafeAreaView>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   );
 };
 
@@ -192,7 +126,6 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-<<<<<<< HEAD
     backgroundColor: '#000000',
   },
   closeButtonContainer: {
@@ -223,76 +156,6 @@ const styles = StyleSheet.create({
   viewerContainer: {
     flex: 1,
     backgroundColor: 'white',
-=======
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#6200ea',
-    elevation: 4,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-  securityNotice: {
-    padding: 16,
-    paddingBottom: 8,
-  },
-  noticeCard: {
-    backgroundColor: '#fff3e0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#ff9800',
-  },
-  noticeContent: {
-    paddingVertical: 8,
-  },
-  noticeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  noticeIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  noticeTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#e65100',
-  },
-  noticeText: {
-    fontSize: 14,
-    color: '#bf360c',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  restrictionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  restrictionChip: {
-    backgroundColor: '#ffebee',
-    borderColor: '#f44336',
-  },
-  disabledChip: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4caf50',
-  },
-  viewerContainer: {
-    flex: 1,
-    margin: 16,
-    marginTop: 0,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: 'white',
-    elevation: 2,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   loadingContainer: {
     flex: 1,

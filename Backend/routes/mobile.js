@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-<<<<<<< HEAD
 // Import controllers
 const mobileController = require('../controllers/mobileController');
 const paymentController = require('../controllers/paymentController');
@@ -26,30 +25,6 @@ router.get('/', (req, res) => {
   });
 });
 
-=======
-// Import mobile controller (fallback to no-op handlers if missing)
-let mobileController;
-try {
-  mobileController = require('../controllers/mobileController');
-  console.log('✅ MobileController loaded successfully');
-} catch (error) {
-  console.warn('⚠️ MobileController not available, using fallback handlers');
-  mobileController = {
-    getAllBooks: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getBookById: (req, res) => res.status(404).json({ success: false, message: 'Book not found (fallback)' }),
-    getAllCourses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getCourseById: (req, res) => res.status(404).json({ success: false, message: 'Course not found (fallback)' }),
-    getAllLiveClasses: (req, res) => res.json({ success: true, data: [], source: 'fallback' }),
-    getLiveClassById: (req, res) => res.status(404).json({ success: false, message: 'Live class not found (fallback)' }),
-    search: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
-    getFeaturedContent: (req, res) => res.json({ success: true, data: { books: [], courses: [], liveClasses: [] }, source: 'fallback' }),
-    getAppInfo: (req, res) => res.json({ success: true, data: { version: 'fallback', status: 'ok' } })
-  };
-}
-
-// ============= ROUTE DEFINITIONS =============
-
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.json({
@@ -72,7 +47,6 @@ router.get('/courses/:id', mobileController.getCourseById);
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
-<<<<<<< HEAD
 router.put('/live-classes/:id/start', mobileController.startLiveClass);
 router.put('/live-classes/:id/end', mobileController.endLiveClass);
 router.post('/live-classes/:id/join', (req, res) => {
@@ -87,8 +61,6 @@ router.post('/live-classes/:id/join', (req, res) => {
     message: 'Ready to join live class'
   });
 });
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Search routes
 router.get('/search', mobileController.search);
@@ -96,7 +68,6 @@ router.get('/search', mobileController.search);
 // Featured content
 router.get('/featured', mobileController.getFeaturedContent);
 
-<<<<<<< HEAD
 // Categories
 router.get('/categories', mobileController.getCategories);
 
@@ -157,9 +128,5 @@ router.get('/payments/config', paymentController.getRazorpayConfig);
 
 // Payment history
 router.get('/payments/history', paymentController.getPaymentHistory);
-=======
-// App info
-router.get('/app-info', mobileController.getAppInfo);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 module.exports = router;

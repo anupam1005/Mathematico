@@ -1,10 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-<<<<<<< HEAD
 import { Icon } from './Icon';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { UnifiedButton } from './UnifiedButton';
 import { emptyStateStyles, textStyles, designSystem } from '../styles/designSystem';
 

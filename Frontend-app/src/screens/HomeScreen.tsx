@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-// @ts-nocheck
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,12 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Title, Paragraph, Chip, Searchbar } from 'react-native-paper';
-<<<<<<< HEAD
 import { Search, X, UserCircle, BookOpen, Calendar, Clock, PlayCircle, GraduationCap, Book as BookIcon, Video, Users } from 'lucide-react-native';
-=======
-import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { icons } from 'lucide-react-native';
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { useAuth } from '../contexts/AuthContext';
 import { courseService } from '../services/courseService';
 import { bookService } from '../services/bookService';
@@ -29,10 +20,7 @@ import { designSystem, layoutStyles, textStyles } from '../styles/designSystem';
 import { UnifiedCard } from '../components/UnifiedCard';
 import { StatsCard } from '../components/StatsCard';
 import { EmptyState } from '../components/EmptyState';
-<<<<<<< HEAD
 import { Logger } from '../utils/errorHandler';
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 const { width } = Dimensions.get('window');
 
@@ -105,11 +93,7 @@ export default function HomeScreen({ navigation }: any) {
       ]);
       setDataLoaded(true);
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading data:', error);
-=======
-      console.error('Error loading data:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setLoading(false);
     }
@@ -130,84 +114,49 @@ export default function HomeScreen({ navigation }: any) {
         totalStudents: 0,
       });
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading stats:', error);
       // Don't set empty data on error
-=======
-      console.error('Error loading stats:', error);
-      // Set fallback stats when API fails
-      setStats({
-        totalCourses: 0,
-        totalBooks: 0,
-        totalLiveClasses: 0,
-        totalStudents: 0,
-      });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   };
 
   const loadFeaturedCourses = async () => {
     try {
-<<<<<<< HEAD
       const response = await courseService.getCourses(1, 4, { status: 'published' });
-=======
-      const response = await courseService.getCourses(1, 4, { status: 'active' });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedCourses(response.data);
       } else {
         setFeaturedCourses([]);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading featured courses:', error);
-=======
-      console.error('Error loading featured courses:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setFeaturedCourses([]);
     }
   };
 
   const loadFeaturedBooks = async () => {
     try {
-<<<<<<< HEAD
       const response = await bookService.getBooks(1, 4);
-=======
-      const response = await bookService.getBooks(1, 4, { status: 'active' });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedBooks(response.data);
       } else {
         setFeaturedBooks([]);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading featured books:', error);
-=======
-      console.error('Error loading featured books:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setFeaturedBooks([]);
     }
   };
 
   const loadUpcomingClasses = async () => {
     try {
-<<<<<<< HEAD
       const response = await liveClassService.getLiveClasses(1, 3, { status: 'upcoming' });
-=======
-      const response = await liveClassService.getLiveClasses(1, 3, { status: 'scheduled' });
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       if (response && response.data && Array.isArray(response.data)) {
         setUpcomingClasses(response.data);
       } else {
         setUpcomingClasses([]);
       }
     } catch (error) {
-<<<<<<< HEAD
       Logger.error('Error loading upcoming classes:', error);
-=======
-      console.error('Error loading upcoming classes:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setUpcomingClasses([]);
     }
   };
@@ -227,11 +176,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={course.id || index}
       variant="elevated"
-<<<<<<< HEAD
       onPress={() => navigation.navigate('CourseDetail', { courseId: course.id || (course as any)._id })}
-=======
-      onPress={() => navigation.navigate('CourseDetail', { courseId: course._id || course.id })}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       style={styles.cardContainer}
     >
       <View style={styles.cardImageContainer}>
@@ -257,10 +202,7 @@ export default function HomeScreen({ navigation }: any) {
             mode="outlined"
             compact
             style={[styles.levelChip, { backgroundColor: getLevelColor(course.level) }]}
-<<<<<<< HEAD
             textStyle={styles.levelChipText}
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           >
             {course.level}
           </Chip>
@@ -279,11 +221,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={book.id || index}
       variant="elevated"
-<<<<<<< HEAD
       onPress={() => navigation.navigate('BookDetail', { bookId: book.id || (book as any)._id })}
-=======
-      onPress={() => navigation.navigate('BookDetail', { bookId: book._id || book.id })}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       style={styles.cardContainer}
     >
       <View style={styles.cardImageContainer}>
@@ -308,10 +246,7 @@ export default function HomeScreen({ navigation }: any) {
           mode="outlined"
           compact
           style={[styles.levelChip, { backgroundColor: getLevelColor(book.level) }]}
-<<<<<<< HEAD
           textStyle={styles.levelChipText}
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         >
           {book.level}
         </Chip>
@@ -323,11 +258,7 @@ export default function HomeScreen({ navigation }: any) {
     <UnifiedCard
       key={liveClass.id || index}
       variant="elevated"
-<<<<<<< HEAD
       onPress={() => navigation.navigate('LiveClassDetail', { liveClassId: liveClass.id || (liveClass as any)._id })}
-=======
-      onPress={() => navigation.navigate('LiveClassDetail', { liveClassId: liveClass._id || liveClass.id })}
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       style={styles.liveClassCard}
     >
       <View style={styles.cardImageContainer}>
@@ -345,7 +276,6 @@ export default function HomeScreen({ navigation }: any) {
         <Text numberOfLines={2} style={textStyles.subheading}>
           {liveClass.title}
         </Text>
-<<<<<<< HEAD
           <View style={styles.liveClassInfo}>
             <View style={styles.liveClassMeta}>
               <Calendar size={16} color={designSystem.colors.textSecondary} />
@@ -358,37 +288,16 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={textStyles.caption}>{liveClass.duration} min</Text>
             </View>
           </View>
-=======
-        <View style={styles.liveClassInfo}>
-          <View style={styles.liveClassMeta}>
-            <Icon name="schedule" size={16} color={designSystem.colors.textSecondary} />
-            <Text style={textStyles.caption}>
-              {new Date(liveClass.scheduled_at).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.liveClassMeta}>
-            <Icon name="access-time" size={16} color={designSystem.colors.textSecondary} />
-            <Text style={textStyles.caption}>{liveClass.duration} min</Text>
-          </View>
-        </View>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <View style={styles.cardFooter}>
           <Chip
             mode="outlined"
             compact
             style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
-<<<<<<< HEAD
             textStyle={styles.levelChipText}
           >
             {liveClass.level}
           </Chip>
           <Text style={textStyles.body}>FREE</Text>
-=======
-          >
-            {liveClass.level}
-          </Chip>
-          <Text style={textStyles.body}>₹{liveClass.price}</Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </View>
       </View>
     </UnifiedCard>
@@ -434,16 +343,11 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Profile')}
           style={styles.avatarContainer}
         >
-<<<<<<< HEAD
           <UserCircle size={40} color={designSystem.colors.primary} />
-=======
-          <Icon name="account-circle" size={40} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
-<<<<<<< HEAD
       <View style={styles.searchBarContainer}>
         <Searchbar
           placeholder="Search courses, books, or classes..."
@@ -464,17 +368,6 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         ) : null}
       </View>
-=======
-      <Searchbar
-        placeholder="Search courses, books, or classes..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        onSubmitEditing={handleSearch}
-        style={styles.searchBar}
-        icon={() => <Icon name="search" size={24} color={designSystem.colors.textSecondary} />}
-        clearIcon={() => <Icon name="close" size={24} color={designSystem.colors.textSecondary} />}
-      />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
       {/* Statistics Section */}
       <StatsCard
@@ -517,7 +410,6 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.featuresContainer}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.primary + '20' }]}>
-<<<<<<< HEAD
               <BookOpen size={24} color={designSystem.colors.primary} />
             </View>
             <View style={styles.featureTextContainer}>
@@ -548,32 +440,6 @@ export default function HomeScreen({ navigation }: any) {
                 Learn from experienced teachers with proven track records.
               </Text>
             </View>
-=======
-              <Icon name="menu-book" size={24} color={designSystem.colors.primary} />
-            </View>
-            <Text style={textStyles.subheading}>Comprehensive Courses</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Structured learning paths from basic to advanced mathematics concepts.
-            </Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.secondary + '20' }]}>
-              <Icon name="schedule" size={24} color={designSystem.colors.secondary} />
-            </View>
-            <Text style={textStyles.subheading}>Live Interactive Classes</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Real-time classes with expert educators and peer interaction.
-            </Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.accent + '20' }]}>
-              <Icon name="school" size={24} color={designSystem.colors.accent} />
-            </View>
-            <Text style={textStyles.subheading}>Expert Educators</Text>
-            <Text style={[textStyles.bodySecondary, { textAlign: 'center' }]}>
-              Learn from experienced teachers with proven track records.
-            </Text>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           </View>
         </View>
       </UnifiedCard>
@@ -593,11 +459,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             featuredCourses.map((course, index) => (
-<<<<<<< HEAD
               <View key={course.id || index}>
-=======
-              <View key={course.id || course._id || index}>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 {renderCourseCard(course, index)}
               </View>
             ))
@@ -620,11 +482,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             featuredBooks.map((book, index) => (
-<<<<<<< HEAD
               <View key={book.id || index}>
-=======
-              <View key={book.id || book._id || index}>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 {renderBookCard(book, index)}
               </View>
             ))
@@ -647,11 +505,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           ) : (
             upcomingClasses.map((liveClass, index) => (
-<<<<<<< HEAD
               <View key={liveClass.id || index}>
-=======
-              <View key={liveClass.id || liveClass._id || index}>
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 {renderLiveClassCard(liveClass, index)}
               </View>
             ))
@@ -667,33 +521,21 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Courses')}
           >
-<<<<<<< HEAD
             <GraduationCap size={24} color={designSystem.colors.primary} />
-=======
-            <Icon name="school" size={24} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             <Text style={styles.quickActionText}>Browse Courses</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Books')}
           >
-<<<<<<< HEAD
             <BookIcon size={24} color={designSystem.colors.primary} />
-=======
-            <Icon name="book" size={24} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             <Text style={styles.quickActionText}>Browse Books</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('LiveClasses')}
             >
-<<<<<<< HEAD
               <PlayCircle size={24} color={designSystem.colors.primary} />
-=======
-              <Icon name="play-circle" size={24} color={designSystem.colors.primary} />
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               <Text style={styles.quickActionText}>Live Classes</Text>
           </TouchableOpacity>
         </View>
@@ -703,7 +545,6 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
   searchBarContainer: {
     position: 'relative',
     marginHorizontal: designSystem.spacing.md,
@@ -717,8 +558,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     padding: 8,
   },
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -746,18 +585,11 @@ const styles = StyleSheet.create({
     padding: designSystem.spacing.sm,
   },
   searchBar: {
-<<<<<<< HEAD
     marginHorizontal: 0,
     marginVertical: 0,
     elevation: 2,
     backgroundColor: designSystem.colors.surface,
     borderRadius: designSystem.borderRadius.md,
-=======
-    margin: designSystem.spacing.lg,
-    marginTop: designSystem.spacing.md,
-    ...designSystem.shadows.sm,
-    backgroundColor: designSystem.colors.surface,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   section: {
     marginBottom: designSystem.spacing.xl,
@@ -768,10 +600,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: designSystem.spacing.lg,
     marginBottom: designSystem.spacing.lg,
-<<<<<<< HEAD
     gap: designSystem.spacing.md,
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   sectionTitle: {
     ...textStyles.heading,
@@ -817,14 +646,11 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: designSystem.borderRadius.md,
   },
-<<<<<<< HEAD
   levelChipText: {
     color: designSystem.colors.surface,
     fontWeight: '600',
     fontSize: 12,
   },
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -882,7 +708,6 @@ const styles = StyleSheet.create({
     ...designSystem.shadows.sm,
   },
   featuresContainer: {
-<<<<<<< HEAD
     flexDirection: 'column',
     gap: designSystem.spacing.lg,
   },
@@ -895,19 +720,6 @@ const styles = StyleSheet.create({
   featureTextContainer: {
     flex: 1,
     marginLeft: designSystem.spacing.md,
-=======
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: designSystem.spacing.md,
-  },
-  featureItem: {
-    alignItems: 'center',
-    marginBottom: designSystem.spacing.lg,
-    minWidth: 120,
-    flex: 1,
-    padding: designSystem.spacing.md,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   featureIcon: {
     width: 56,

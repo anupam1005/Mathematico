@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import { API_CONFIG } from '../config';
 
-<<<<<<< HEAD
 export const debugNetworkConfiguration = async () => {
   console.log('🔍 Network Configuration Debug:');
   console.log('📱 Platform:', Platform.OS);
@@ -21,22 +20,6 @@ export const debugNetworkConfiguration = async () => {
     `${authUrl}/health`,
     `${authUrl}/register`,
     backendUrl,
-=======
-export const debugNetworkConfiguration = () => {
-  console.log('🔍 Network Configuration Debug:');
-  console.log('📱 Platform:', Platform.OS);
-  console.log('🌐 Auth URL:', API_CONFIG.auth);
-  console.log('🌐 Base URL:', API_CONFIG.baseUrl);
-  console.log('🌐 Is Dev:', API_CONFIG.isDev);
-  console.log('🌐 Backend URL:', API_CONFIG.baseUrl.replace('/api/v1', ''));
-  
-  // Test different URL formats
-  const testUrls = [
-    API_CONFIG.auth,
-    `${API_CONFIG.auth}/health`,
-    `${API_CONFIG.auth}/register`,
-    API_CONFIG.baseUrl,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     'https://mathematico-backend-new.vercel.app',
     'https://mathematico-backend-new.vercel.app/api/v1/auth',
     'https://mathematico-backend-new.vercel.app/api/v1/auth/health'
@@ -49,15 +32,9 @@ export const debugNetworkConfiguration = () => {
   
   return {
     platform: Platform.OS,
-<<<<<<< HEAD
     authUrl: authUrl,
     baseUrl: backendUrl,
     isDev: __DEV__,
-=======
-    authUrl: API_CONFIG.auth,
-    baseUrl: API_CONFIG.baseUrl,
-    isDev: API_CONFIG.isDev,
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     testUrls
   };
 };

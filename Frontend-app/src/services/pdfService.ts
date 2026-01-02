@@ -1,11 +1,8 @@
 import { API_CONFIG } from '../config';
-<<<<<<< HEAD
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 
 // Create a service error handler for pdfService
 const errorHandler = createServiceErrorHandler('pdfService');
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export interface SecurePdfViewerResponse {
   success: boolean;
@@ -50,7 +47,6 @@ class PdfService {
    */
   async getSecurePdfViewer(bookId: string): Promise<SecurePdfViewerResponse> {
     try {
-<<<<<<< HEAD
       // Use the base URL from API_CONFIG.mobile without appending /api/v1/mobile again
       const baseUrl = API_CONFIG.mobile.replace(/\/$/, ''); // Remove trailing slash if exists
       
@@ -85,28 +81,11 @@ class PdfService {
 
       if (!data.success) {
         throw new Error(data.message || 'Failed to load PDF viewer');
-=======
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
 
       return data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching secure PDF viewer:', error);
-=======
-      console.error('Error fetching secure PDF viewer:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw new Error(
         error instanceof Error 
           ? error.message 
@@ -120,11 +99,8 @@ class PdfService {
    */
   async getBookDetails(bookId: string): Promise<BookDetailsResponse> {
     try {
-<<<<<<< HEAD
       console.log('PdfService: Fetching book details from:', `${API_CONFIG.mobile}/books/${bookId}`);
       
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}`, {
         method: 'GET',
         headers: {
@@ -140,11 +116,7 @@ class PdfService {
 
       return data;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching book details:', error);
-=======
-      console.error('Error fetching book details:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw new Error(
         error instanceof Error 
           ? error.message 
@@ -161,11 +133,7 @@ class PdfService {
       const response = await this.getSecurePdfViewer(bookId);
       return response.success && !!response.data.viewerUrl;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error checking PDF availability:', error);
-=======
-      console.error('Error checking PDF availability:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return false;
     }
   }
@@ -178,11 +146,7 @@ class PdfService {
       const response = await this.getSecurePdfViewer(bookId);
       return response.success ? response.data.restrictions : null;
     } catch (error) {
-<<<<<<< HEAD
       errorHandler.handleError('Error fetching PDF restrictions:', error);
-=======
-      console.error('Error fetching PDF restrictions:', error);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return null;
     }
   }

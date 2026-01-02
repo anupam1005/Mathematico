@@ -12,9 +12,7 @@ const path = require("path");
 const fs = require("fs");
 const rateLimit = require("express-rate-limit");
 const os = require("os");
-const jwt = require("jsonwebtoken");
-<<<<<<< HEAD
-const net = require("net");
+const jwt = require("jsonwebtoken");const net = require("net");
 
 // Utility function to check if a port is available
 const isPortAvailable = (port) => {
@@ -32,9 +30,7 @@ const isPortAvailable = (port) => {
       resolve(false);
     });
   });
-};
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+}; 
 
 // Startup environment validation with enhanced security checks
 (function validateEnvironment() {
@@ -47,16 +43,11 @@ const isPortAvailable = (port) => {
       'CLOUDINARY_API_KEY',
       'CLOUDINARY_API_SECRET'
     ];
-<<<<<<< HEAD
+
 
     // Check for required variables
     requiredVars.forEach((key) => {
-=======
-    
-    // Check for required variables
-    requiredVars.forEach((key) => { 
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-      if (!process.env[key]) {
+  if (!process.env[key]) {
         missing.push(key);
       } else if (process.env[key].length < 32) {
         console.warn(`⚠️ ${key} is too short (minimum 32 characters recommended)`);
@@ -67,11 +58,7 @@ const isPortAvailable = (port) => {
     if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 64) {
       console.warn('⚠️ JWT_SECRET should be at least 64 characters for production');
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 8) {
       console.warn('⚠️ ADMIN_PASSWORD should be at least 8 characters');
     }
@@ -90,20 +77,12 @@ const isPortAvailable = (port) => {
         console.warn('⚠️ EMAIL_USER is not a Gmail account. Ensure provider and credentials match.');
       }
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     // CORS security check
     if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN === '*') {
       console.warn('⚠️ CORS_ORIGIN is set to "*" - this allows all origins (security risk)');
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   } catch (e) {
     console.warn('⚠️ Environment validation skipped:', e.message);
   }
@@ -168,9 +147,7 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     console.log('🌐 CORS request from origin:', origin);
-<<<<<<< HEAD
-
-    const allowedOrigins = [
+  const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5000',
       'http://localhost:5001',
@@ -200,21 +177,13 @@ const corsOptions = {
       'http://10.152.98.132:3000',
       'http://10.152.98.132:5000',
       'http://10.152.98.132:5001',
-      'http://10.152.98.132:5002',
-=======
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:19006',
-      'http://localhost:8081',
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+     'http://10.152.98.132:5002',
       'https://mathematico-frontend.vercel.app',
       'https://mathematico-backend-new.vercel.app',
       'https://mathematico-app.vercel.app',
       'exp://192.168.1.100:8081', // Expo development
       'exp://localhost:8081', // Expo development
-<<<<<<< HEAD
-      'exp://localhost:8082', // Expo development
+     'exp://localhost:8082', // Expo development
       'exp://localhost:8083', // Expo development
       'exp://10.0.2.2:8081', // Android emulator
       'exp://10.0.2.2:8082', // Android emulator
@@ -225,11 +194,7 @@ const corsOptions = {
       'exp://127.0.0.1:8081', // Local development
       'exp://127.0.0.1:8082', // Local development
       'exp://127.0.0.1:8083', // Local development
-=======
-      'exp://10.0.2.2:8081', // Android emulator
-      'exp://127.0.0.1:8081', // Local development
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-      'capacitor://localhost', // Capacitor apps
+     'capacitor://localhost', // Capacitor apps
       'ionic://localhost', // Ionic apps
       'http://localhost', // Local development
       'https://localhost', // Local HTTPS
@@ -238,52 +203,32 @@ const corsOptions = {
       'mathematico://', // Custom app scheme
       'com.anonymous.mathematico://' // Android app scheme
     ];
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
       console.log('✅ CORS: Allowing request with no origin (mobile app)');
       return callback(null, true);
-    }
-<<<<<<< HEAD
-
+   }
     // Allow all origins in development mode for easier testing
     if (process.env.NODE_ENV === 'development') {
       console.log('✅ CORS: Development mode - allowing all origins');
       callback(null, true);
       return;
-    }
-
-=======
-    
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+     }
     if (allowedOrigins.indexOf(origin) !== -1) {
       console.log('✅ CORS: Allowing origin:', origin);
       callback(null, true);
     } else {
-<<<<<<< HEAD
-      console.log('⚠️ CORS: Origin not in allowlist, but allowing anyway:', origin);
-      callback(null, true); // Allow all origins for now to fix the issue
-=======
-      console.warn('❌ CORS: Blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+    console.log('⚠️ CORS: Origin not in allowlist, but allowing anyway:', origin);
+    callback(null, true); // Allow all origins for now to fix the issue
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
-<<<<<<< HEAD
-    'Content-Type',
+  'Content-Type',
     'Authorization',
-=======
-    'Content-Type', 
-    'Authorization', 
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-    'X-Requested-With',
+  'X-Requested-With',
     'Accept',
     'Origin',
     'Access-Control-Request-Method',
@@ -335,14 +280,9 @@ app.get('/health', async (req, res) => {
     res.json({
       success: true,
       status: 'healthy',
-<<<<<<< HEAD
-      database: {
-        status: 'connected',
-=======
-      database: { 
-        status: 'connected', 
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-        type: 'mongodb',
+    database: {
+      status: 'connected',   
+       type: 'mongodb',
         host: process.env.MONGODB_URI ? 'connected' : 'not configured'
       },
       system: systemInfo,
@@ -409,11 +349,7 @@ app.get('/', (req, res) => {
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 // Import route handlers (tolerant loading per route for serverless)
-<<<<<<< HEAD
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes, paymentRoutes;
-=======
-let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes;
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+ let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes, paymentRoutes;
 
 const safeRequire = (modulePath, label) => {
   try {
@@ -427,27 +363,19 @@ const safeRequire = (modulePath, label) => {
 };
 
 authRoutes = safeRequire('./routes/auth', 'auth');
-<<<<<<< HEAD
-if (!authRoutes) {
+ if (!authRoutes) {
   console.log('🔄 Attempting to load simple auth routes...');
   authRoutes = safeRequire('./routes/auth-simple', 'auth-simple');
 }
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-adminRoutes = safeRequire('./routes/admin', 'admin');
+ adminRoutes = safeRequire('./routes/admin', 'admin');
 mobileRoutes = safeRequire('./routes/mobile', 'mobile');
 studentRoutes = safeRequire('./routes/student', 'student');
 usersRoutes = safeRequire('./routes/users', 'users');
-<<<<<<< HEAD
-paymentRoutes = safeRequire('./routes/payment', 'payment');
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+ paymentRoutes = safeRequire('./routes/payment', 'payment');
 
 // Mount routes
 console.log('🔗 Mounting API routes...');
-
-<<<<<<< HEAD
-// Force mount all routes for serverless deployment
+ // Force mount all routes for serverless deployment
 try {
   // Auth routes
   const authRoutes = require('./routes/auth');
@@ -499,43 +427,7 @@ try {
   app.use(`${API_PREFIX}/payments`, paymentRoutes);
   console.log(`✅ Payment routes mounted at ${API_PREFIX}/payments`);
 } catch (error) {
-  console.error('❌ Failed to mount payment routes:', error.message);
-=======
-// Mount all routes for serverless deployment (only if loaded)
-if (authRoutes) {
-  app.use(`${API_PREFIX}/auth`, authRoutes);
-  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-} else {
-  console.warn('⚠️ Auth routes not mounted');
-}
-
-if (adminRoutes) {
-  app.use(`${API_PREFIX}/admin`, adminRoutes);
-  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-} else {
-  console.warn('⚠️ Admin routes not mounted');
-}
-
-if (mobileRoutes) {
-  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-} else {
-  console.warn('⚠️ Mobile routes not mounted');
-}
-
-if (usersRoutes) {
-  app.use(`${API_PREFIX}/users`, usersRoutes);
-  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-} else {
-  console.warn('⚠️ Users routes not mounted');
-}
-
-if (studentRoutes) {
-  app.use(`${API_PREFIX}/student`, studentRoutes);
-  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-} else {
-  console.warn('⚠️ Student routes not mounted');
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+ console.error('❌ Failed to mount payment routes:', error.message);
 }
 
 // Root API endpoint
@@ -573,11 +465,7 @@ app.get(`${API_PREFIX}/test`, (req, res) => {
 try {
   const swaggerUi = require('swagger-ui-express');
   const swaggerDocument = require('./docs/swagger.json');
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
   console.log('✅ Swagger documentation available at /api-docs');
 } catch (err) {
@@ -599,17 +487,10 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use((error, req, res, next) => {
   console.error('Global error handler:', error);
-<<<<<<< HEAD
 
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
 
-=======
-  
-  // Don't leak error details in production
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-  
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   res.status(error.status || 500).json({
     success: false,
     message: error.message || 'Internal server error',
@@ -621,11 +502,7 @@ app.use((error, req, res, next) => {
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
   console.log(`🛑 ${signal} received, shutting down gracefully`);
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   try {
     // Close server if running locally
     if (require.main === module && app.server) {
@@ -650,8 +527,7 @@ module.exports = app;
 
 // Start server for local development
 if (require.main === module) {
-<<<<<<< HEAD
-  // Connect to database first, then start server
+   // Connect to database first, then start server
 // Serverless optimization - only start server if not in Vercel environment
 if (process.env.VERCEL !== '1') {
   const startServer = async () => {
@@ -695,29 +571,11 @@ if (process.env.VERCEL !== '1') {
         console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
         console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
         console.log(`📱 Mobile API root: http://10.148.37.132:${PORT}/api/v1`);
-=======
-  const PORT = process.env.PORT || 5000;
-  
-  // Connect to database first, then start server
-  const startServer = async () => {
-    try {
-      // Connect to MongoDB
-      await connectDB();
-      
-      // Start the server
-      app.server = app.listen(PORT, () => {
-        console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
-        console.log(`🌐 Server running on port ${PORT}`);
-        console.log(`📊 Health check: http://localhost:${PORT}/health`);
-        console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-        console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-        console.log(`🗄️  Database: MongoDB Connected`);
+       console.log(`🗄️  Database: MongoDB Connected`);
         console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
         console.log('==========================================\n');
-      });
-<<<<<<< HEAD
+     });
 
       // Handle any server errors
       server.on('error', (err) => {
@@ -727,23 +585,16 @@ if (process.env.VERCEL !== '1') {
 
       // Store server reference for graceful shutdown
       app.server = server;
-
-=======
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
+ 
     } catch (error) {
       console.error('❌ Failed to start server:', error);
       process.exit(1);
     }
   };
-<<<<<<< HEAD
-
+ 
   startServer();
 } else {
   console.log('☁️ Running in serverless mode (Vercel)');
   console.log('🔗 API endpoints will be handled by Vercel functions');
-}
-=======
-  
-  startServer();
->>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
-}
+ }
+ }
