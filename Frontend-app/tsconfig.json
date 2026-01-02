@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "extends": "./tsconfig.expo-modules.json",
   "compilerOptions": {
     "target": "es2017",
@@ -24,6 +25,26 @@
       "./node_modules/@types",
       "./src/types"
     ],
+=======
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx",
+    "baseUrl": "./src",
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     "paths": {
       "*": [
         "*",
@@ -32,17 +53,36 @@
         "config/*"
       ]
     },
+<<<<<<< HEAD
     "types": ["node"],
     "declaration": true,
     "composite": true
+=======
+    "types": [
+      "node",
+      "jest",
+      "@testing-library/jest-dom"
+    ]
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
+<<<<<<< HEAD
     "types.d.ts"
   ],
   "exclude": [
     "node_modules",
     "node_modules/expo-modules-core/node_modules"
   ]
+=======
+    "**/*.js",
+    "**/*.jsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/*"
+  ],
+  "extends": "expo/tsconfig.base"
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }

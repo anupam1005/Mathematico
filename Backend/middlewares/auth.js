@@ -1,5 +1,8 @@
 const { verifyAccessToken } = require('../utils/jwt');
+<<<<<<< HEAD
 const mongoose = require('mongoose');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 /**
  * Middleware to authenticate JWT token (No Database Version)
@@ -33,6 +36,7 @@ const authenticateToken = async (req, res, next) => {
     // Verify JWT token using the proper utility function
     console.log('🔍 Attempting to verify token...');
     console.log('🔍 Token (first 50 chars):', token.substring(0, 50) + '...');
+<<<<<<< HEAD
     console.log('🔍 Token length:', token.length);
     console.log('🔍 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
     
@@ -45,6 +49,16 @@ const authenticateToken = async (req, res, next) => {
       // Trust the id coming from token (generated from DB user during login)
       req.user = {
         id: decoded.id, // real ObjectId string
+=======
+    const decoded = verifyAccessToken(token);
+    console.log('✅ Token verified successfully:', { id: decoded.id, email: decoded.email, role: decoded.role, idType: typeof decoded.id });
+    
+    // Check if it's the admin user from environment variables
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (decoded.email === adminEmail && decoded.role === 'admin') {
+      req.user = {
+        id: 1,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         email: adminEmail,
         name: 'Admin User',
         role: 'admin',
@@ -57,6 +71,7 @@ const authenticateToken = async (req, res, next) => {
       return next();
     }
     
+<<<<<<< HEAD
     // For regular users, allow access with basic user info
     req.user = {
       id: decoded.id,
@@ -100,6 +115,25 @@ const authenticateToken = async (req, res, next) => {
         jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
         tokenLength: token ? token.length : 0
       }
+=======
+    // For any other user, reject (no database to check against)
+    console.log('❌ User not found or not admin:', decoded.email);
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Invalid user. Only admin access is available.',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Token verification failed:', error.message);
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Invalid or expired token',
+      timestamp: new Date().toISOString(),
+      details: error.message
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   }
 };
@@ -160,11 +194,19 @@ const optionalAuth = async (req, res, next) => {
 
   try {
     const decoded = verifyAccessToken(token);
+<<<<<<< HEAD
     const adminEmail = 'dc2006089@gmail.com';
     
     if (decoded.email === adminEmail && decoded.role === 'admin') {
       req.user = {
         id: new mongoose.Types.ObjectId(), // Use proper ObjectId instead of number
+=======
+    const adminEmail = process.env.ADMIN_EMAIL;
+    
+    if (decoded.email === adminEmail && decoded.role === 'admin') {
+      req.user = {
+        id: 1,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         email: adminEmail,
         name: 'Admin User',
         role: 'admin',

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,6 +12,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import {
+<<<<<<< HEAD
+=======
+  TextInput,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   Button,
   Switch,
   ActivityIndicator,
@@ -16,6 +24,7 @@ import {
   Title,
   SegmentedButtons,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
@@ -23,6 +32,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { Logger } from '../../utils/errorHandler';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { adminService } from '../../services/adminService';
+import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
+import { UnifiedCard } from '../../components/UnifiedCard';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface AdminSettings {
   site_name: string;
@@ -36,7 +51,10 @@ interface AdminSettings {
 }
 
 export default function AdminSettings({ navigation }: { navigation: any }) {
+<<<<<<< HEAD
   const { user } = useAuth();
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   const [settings, setSettings] = useState<AdminSettings>({
     site_name: 'Mathematico',
     site_description: 'Learn Mathematics Online',
@@ -65,7 +83,11 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         setSettings(prev => ({ ...prev, ...response.data }));
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading settings:', error);
+=======
+      console.error('Error loading settings:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       // Use default settings if API fails
     } finally {
       setIsLoading(false);
@@ -88,7 +110,11 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         Alert.alert('Error', 'Failed to save settings');
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error saving settings:', error);
+=======
+      console.error('Error saving settings:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to save settings');
     } finally {
       setIsSaving(false);
@@ -127,16 +153,26 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>General Settings</Title>
         
+<<<<<<< HEAD
         <CustomTextInput
+=======
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Site Name"
           value={settings.site_name}
           onChangeText={(text) => handleSettingChange('site_name', text)}
           style={styles.input}
           mode="outlined"
+<<<<<<< HEAD
           leftIcon="home"
         />
         
         <CustomTextInput
+=======
+        />
+        
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Site Description"
           value={settings.site_description}
           onChangeText={(text) => handleSettingChange('site_description', text)}
@@ -144,17 +180,26 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
           mode="outlined"
           multiline
           numberOfLines={3}
+<<<<<<< HEAD
           leftIcon="description"
         />
         
         <CustomTextInput
+=======
+        />
+        
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Contact Email"
           value={settings.contact_email}
           onChangeText={(text) => handleSettingChange('contact_email', text)}
           style={styles.input}
           mode="outlined"
           keyboardType="email-address"
+<<<<<<< HEAD
           leftIcon="email"
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         />
         
         <View style={styles.switchContainer}>
@@ -200,14 +245,21 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>Email Settings</Title>
         
+<<<<<<< HEAD
         <CustomTextInput
+=======
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Contact Email"
           value={settings.contact_email}
           onChangeText={(text) => handleSettingChange('contact_email', text)}
           style={styles.input}
           mode="outlined"
           keyboardType="email-address"
+<<<<<<< HEAD
           leftIcon="email"
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         />
         
         <View style={styles.switchContainer}>
@@ -227,24 +279,37 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
       <UnifiedCard style={styles.card}>
         <Title style={textStyles.subheading}>File Upload Settings</Title>
         
+<<<<<<< HEAD
         <CustomTextInput
+=======
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Maximum File Size (MB)"
           value={settings.max_file_size.toString()}
           onChangeText={(text) => handleSettingChange('max_file_size', parseInt(text) || 10)}
           style={styles.input}
           mode="outlined"
           keyboardType="numeric"
+<<<<<<< HEAD
           leftIcon="folder"
         />
         
         <CustomTextInput
+=======
+        />
+        
+        <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           label="Supported File Types"
           value={settings.supported_file_types}
           onChangeText={(text) => handleSettingChange('supported_file_types', text)}
           style={styles.input}
           mode="outlined"
           placeholder="jpg,jpeg,png,pdf,doc,docx"
+<<<<<<< HEAD
           leftIcon="description"
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         />
         <Text style={textStyles.caption}>
           Comma-separated list of file extensions

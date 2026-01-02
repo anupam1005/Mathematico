@@ -15,6 +15,7 @@ try {
   };
 }
 
+<<<<<<< HEAD
 // Root endpoint (public info)
 router.get('/', (req, res) => {
   res.json({
@@ -31,6 +32,9 @@ router.get('/', (req, res) => {
 });
 
 // Apply authentication middleware to all protected routes
+=======
+// Apply authentication middleware to all routes
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 router.use(authenticateToken);
 
 // ============= USER MANAGEMENT =============
@@ -40,6 +44,7 @@ router.use(authenticateToken);
  */
 const getCurrentUser = async (req, res) => {
   try {
+<<<<<<< HEAD
     // Use DB for persistent users (both admin and students)
     const tokenUser = req.user || {};
     if (!tokenUser.id) {
@@ -51,6 +56,11 @@ const getCurrentUser = async (req, res) => {
     }
 
     const user = await User.findById(tokenUser.id);
+=======
+    // Database connection handled by controllers
+
+    const user = await User.findById(req.user.id);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -59,7 +69,11 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     return res.json({
+=======
+    res.json({
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       success: true,
       data: {
         id: user._id,
@@ -77,7 +91,11 @@ const getCurrentUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Get current user error:', error);
+<<<<<<< HEAD
     return res.status(500).json({
+=======
+    res.status(500).json({
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       success: false,
       message: 'Failed to retrieve user information',
       error: error.message,

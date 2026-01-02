@@ -13,6 +13,7 @@ export interface SafeApiResponse<T> {
   fallbackData?: T;
 }
 
+<<<<<<< HEAD
 // Logger utility
 export const Logger = {
   error: (message: string, ...args: any[]) => {
@@ -32,6 +33,8 @@ export const Logger = {
   }
 };
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 export class ErrorHandler {
   static handleApiError(error: any): ApiError {
     console.error('API Error:', error);
@@ -206,7 +209,11 @@ export class ErrorHandler {
   }
 
   static createFallbackData<T>(type: 'courses' | 'books' | 'liveClasses' | 'users'): T[] {
+<<<<<<< HEAD
     // Return empty arrays - no fallback data needed
+=======
+    // Return empty arrays since database functionality has been removed
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return [] as T[];
   }
 

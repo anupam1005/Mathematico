@@ -44,6 +44,7 @@ const login = async (req, res) => {
     // Connect to database
     await connectDB();
 
+<<<<<<< HEAD
     // Special handling for admin user (ensure persisted DB user and real ObjectId)
     const ADMIN_EMAIL = 'dc2006089@gmail.com';
     const ADMIN_PASSWORD = 'Myname*321';
@@ -116,6 +117,9 @@ const login = async (req, res) => {
     }
 
     // Regular user login - find user in database
+=======
+    // Find user by email (include password for comparison)
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+password');
     
     if (!user) {
@@ -146,12 +150,16 @@ const login = async (req, res) => {
     }
 
     // Generate token pair
+<<<<<<< HEAD
     console.log('🔑 Generating tokens for regular user...');
     console.log('🔑 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
     
     const tokens = generateTokenPair(user);
     console.log('🔑 Tokens generated successfully');
     console.log('🔑 Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
+=======
+    const tokens = generateTokenPair(user);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     // Store hashed refresh token in database
     const deviceInfo = {
@@ -192,6 +200,7 @@ const login = async (req, res) => {
     
   } catch (error) {
     console.error('Login error:', error);
+<<<<<<< HEAD
     console.error('Error type:', error.name);
     console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
     
@@ -211,6 +220,13 @@ const login = async (req, res) => {
         errorType: error.name,
         jwtSecretAvailable: process.env.JWT_SECRET ? true : false
       }
+=======
+    return res.status(500).json({
+      success: false,
+      message: 'Login failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   }
 };
@@ -231,6 +247,7 @@ const register = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Prevent admin email registration
     const ADMIN_EMAIL = 'dc2006089@gmail.com';
     if (email.toLowerCase() === ADMIN_EMAIL) {
@@ -241,6 +258,8 @@ const register = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (!UserModel) {
       return res.status(503).json({ 
         success: false, 
@@ -300,6 +319,7 @@ const register = async (req, res) => {
     
   } catch (error) {
     console.error('Registration error:', error);
+<<<<<<< HEAD
     console.error('Error type:', error.name);
     console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
     
@@ -319,6 +339,13 @@ const register = async (req, res) => {
         errorType: error.name,
         jwtSecretAvailable: process.env.JWT_SECRET ? true : false
       }
+=======
+    return res.status(500).json({
+      success: false,
+      message: 'Registration failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   }
 };
@@ -564,6 +591,7 @@ module.exports = {
   healthCheck: (req, res) => res.json({ success: true, status: 'healthy', service: 'auth', timestamp: new Date().toISOString() }),
   testDatabase: (req, res) => res.json({ success: true, message: 'Database test endpoint', connected: true }),
   verifyUsersCollection: (req, res) => res.json({ success: true, message: 'Users collection verified', exists: true, count: 0 }),
+<<<<<<< HEAD
   getProfile: (req, res) => res.json({ success: true, data: req.user || {} }),
   
   // JWT Health Check
@@ -611,4 +639,7 @@ module.exports = {
       });
     }
   }
+=======
+  getProfile: (req, res) => res.json({ success: true, data: req.user || {} })
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 };

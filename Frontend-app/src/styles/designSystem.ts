@@ -54,7 +54,10 @@ export const designSystem = {
     lg: 24,
     xl: 32,
     xxl: 48,
+<<<<<<< HEAD
     xxxl: 64,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   borderRadius: {
@@ -147,8 +150,11 @@ export const designSystem = {
     cardPadding: 16,
     sectionSpacing: 24,
     itemSpacing: 12,
+<<<<<<< HEAD
     minTouchTarget: 44,
     maxContentWidth: 600,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
 };
 
@@ -160,7 +166,10 @@ export const cardStyles = {
     padding: designSystem.spacing.md,
     marginVertical: designSystem.spacing.sm,
     ...designSystem.shadows.md,
+<<<<<<< HEAD
     overflow: 'hidden' as const,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   elevated: {
     backgroundColor: designSystem.colors.surface,
@@ -168,7 +177,10 @@ export const cardStyles = {
     padding: designSystem.spacing.md,
     marginVertical: designSystem.spacing.sm,
     ...designSystem.shadows.lg,
+<<<<<<< HEAD
     overflow: 'hidden' as const,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   outlined: {
     backgroundColor: designSystem.colors.surface,
@@ -177,6 +189,7 @@ export const cardStyles = {
     marginVertical: designSystem.spacing.sm,
     borderWidth: 1,
     borderColor: designSystem.colors.border,
+<<<<<<< HEAD
     overflow: 'hidden' as const,
   },
   compact: {
@@ -186,6 +199,8 @@ export const cardStyles = {
     marginVertical: designSystem.spacing.xs,
     ...designSystem.shadows.sm,
     overflow: 'hidden' as const,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
 };
 
@@ -194,18 +209,28 @@ export const buttonStyles = {
   primary: {
     backgroundColor: designSystem.colors.primary,
     borderRadius: designSystem.borderRadius.md,
+<<<<<<< HEAD
     paddingVertical: 12,
     paddingHorizontal: 24,
     minHeight: 44,
+=======
+    paddingVertical: designSystem.spacing.sm,
+    paddingHorizontal: designSystem.spacing.md,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
   secondary: {
     backgroundColor: designSystem.colors.surface,
     borderRadius: designSystem.borderRadius.md,
+<<<<<<< HEAD
     paddingVertical: 12,
     paddingHorizontal: 24,
     minHeight: 44,
+=======
+    paddingVertical: designSystem.spacing.sm,
+    paddingHorizontal: designSystem.spacing.md,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
@@ -214,14 +239,20 @@ export const buttonStyles = {
   outline: {
     backgroundColor: 'transparent',
     borderRadius: designSystem.borderRadius.md,
+<<<<<<< HEAD
     paddingVertical: 12,
     paddingHorizontal: 24,
     minHeight: 44,
+=======
+    paddingVertical: designSystem.spacing.sm,
+    paddingHorizontal: designSystem.spacing.md,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
     borderColor: designSystem.colors.border,
   },
+<<<<<<< HEAD
   text: {
     backgroundColor: 'transparent',
     paddingVertical: 8,
@@ -238,6 +269,8 @@ export const buttonStyles = {
     justifyContent: 'center' as const,
     backgroundColor: designSystem.colors.surfaceVariant,
   },
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 };
 
 // Text Styles

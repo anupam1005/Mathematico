@@ -218,6 +218,10 @@ Frontend-app/.env*.local
 Frontend-app/*.tsbuildinfo
 
 # Android (Frontend-app - managed by Expo)
+<<<<<<< HEAD
+=======
+Frontend-app/android/
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 Frontend-app/android/app/build/
 Frontend-app/android/build/
 Frontend-app/android/.gradle/
@@ -241,11 +245,14 @@ Frontend-app/*.temp
 *.p12
 *.jks
 
+<<<<<<< HEAD
 # Android keystore files - CRITICAL SECURITY
 *.keystore
 **/*.keystore
 Frontend-app/my-upload-key.keystore
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 # Backup files
 *.bak
 *.backup
@@ -263,9 +270,12 @@ Frontend-app/my-upload-key.keystore
 .Trashes
 ehthumbs.db
 Thumbs.db
+<<<<<<< HEAD
 
 .vercel
 
 # Vercel configuration with secrets (if accidentally created)
 vercel.json.backup
 vercel.*.json
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686

@@ -1,7 +1,10 @@
 // Admin Controller - Handles admin panel operations with MongoDB
 const connectDB = require('../config/database');
 const cloudinary = require('cloudinary').v2;
+<<<<<<< HEAD
 const mongoose = require('mongoose');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Serverless timeout wrapper (Vercel has 30s limit)
 const withTimeout = (fn, timeoutMs = 25000) => {
@@ -53,6 +56,7 @@ try {
  */
 const getDashboard = async (req, res) => {
   try {
+<<<<<<< HEAD
     // Ensure database connection
     await connectDB();
     
@@ -109,20 +113,39 @@ const getDashboard = async (req, res) => {
       },
       recentUsers: recentUsers || [],
       recentCourses: recentCourses || []
+=======
+    console.log('📊 Admin dashboard - database disabled');
+    
+    const dashboardData = {
+      totalUsers: 0,
+      totalBooks: 0,
+      totalCourses: 0,
+      totalLiveClasses: 0,
+      totalRevenue: 0,
+      courseStats: { total: 0, published: 0, draft: 0 },
+      liveClassStats: { total: 0, upcoming: 0, completed: 0 }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     };
 
     res.json({
       success: true,
       data: dashboardData,
       timestamp: new Date().toISOString(),
+<<<<<<< HEAD
       message: 'Dashboard data retrieved successfully'
+=======
+      message: 'Database functionality has been removed'
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard data',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -132,6 +155,7 @@ const getDashboard = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
+<<<<<<< HEAD
     if (!UserModel) {
       return res.status(503).json({ success: false, message: 'User model unavailable' });
     }
@@ -173,13 +197,31 @@ const getAllUsers = async (req, res) => {
       },
       timestamp: new Date().toISOString(),
       message: 'Users retrieved successfully'
+=======
+    console.log('👥 Admin users - database disabled');
+    
+    res.json({
+      success: true,
+      data: [],
+      pagination: {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
+        total: 0,
+        totalPages: 0
+      },
+      timestamp: new Date().toISOString(),
+      message: 'Database functionality has been removed'
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch users',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -187,6 +229,7 @@ const getAllUsers = async (req, res) => {
 
 const getUserById = async (req, res) => {
   try {
+<<<<<<< HEAD
     if (!UserModel) {
       return res.status(503).json({ success: false, message: 'User model unavailable' });
     }
@@ -197,12 +240,25 @@ const getUserById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     res.json({ success: true, data: user, timestamp: new Date().toISOString() });
+=======
+    const { id } = req.params;
+    console.log('👤 Admin user by ID - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'User not found',
+      timestamp: new Date().toISOString()
+    });
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -270,7 +326,10 @@ const getAllBooks = async (req, res) => {
     }
 
     // Get books with pagination
+<<<<<<< HEAD
     console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const books = await BookModel.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
@@ -279,6 +338,7 @@ const getAllBooks = async (req, res) => {
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
+<<<<<<< HEAD
     
     console.log('📚 Found books:', books.length);
     console.log('📚 Total books in database:', total);
@@ -288,6 +348,8 @@ const getAllBooks = async (req, res) => {
     // Check if collection exists and has documents
     const collectionStats = await mongoose.connection.db.collection(BookModel.collection.name).countDocuments();
     console.log('📚 Direct collection count:', collectionStats);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.json({
       success: true,
@@ -342,10 +404,14 @@ const createBook = async (req, res) => {
 
     // Ensure DB is connected (serverless-safe)
     try {
+<<<<<<< HEAD
       console.log('🔗 Attempting to connect to database...');
       await connectDB();
       console.log('✅ Database connection successful');
       console.log('📊 Database ready state:', mongoose.connection.readyState);
+=======
+      await connectDB();
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
       return res.status(503).json({
@@ -374,11 +440,21 @@ const createBook = async (req, res) => {
       tags = []
     } = req.body;
 
+<<<<<<< HEAD
     // Validate category against enum values
     const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'reference', 'textbook'];
     const finalCategory = validCategories.includes(category) ? category : 'general';
 
     // No validation - admin can input anything they want
+=======
+    // Validate required fields
+    if (!title || !description || !author || !category || !subject || !grade) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title, description, author, category, subject, and grade are required'
+      });
+    }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     // Handle file uploads to Cloudinary
     let coverImageUrl = '';
@@ -443,6 +519,7 @@ const createBook = async (req, res) => {
 
     // Create book data
     const bookData = {
+<<<<<<< HEAD
       title: title || 'Untitled Book',
       description: description || 'No description provided',
       author: author || 'Unknown Author',
@@ -451,6 +528,16 @@ const createBook = async (req, res) => {
       grade: grade || 'All Levels',
       pages: pages ? Math.max(1, parseInt(pages)) : 1, // Ensure at least 1 page
       price: price ? parseFloat(price) : undefined,
+=======
+      title,
+      description,
+      author,
+      category,
+      subject,
+      grade,
+      pages: pages ? parseInt(pages) : undefined,
+      price: price ? parseFloat(price) : 0,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       currency,
       isFree: isFree === 'true' || isFree === true,
       isbn,
@@ -459,6 +546,7 @@ const createBook = async (req, res) => {
       publicationYear: publicationYear ? parseInt(publicationYear) : undefined,
       language,
       tags: Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim()),
+<<<<<<< HEAD
       coverImage: coverImageUrl || '',
       pdfFile: pdfFileUrl || '',
       status: 'draft', // Start as draft
@@ -473,6 +561,17 @@ const createBook = async (req, res) => {
     // Create book in database
     const book = await BookModel.create(bookData);
     console.log('✅ Book created successfully:', book._id);
+=======
+      coverImage: coverImageUrl,
+      pdfFile: pdfFileUrl,
+      status: 'draft', // Start as draft
+      createdBy: req.user.id || 'admin-1', // Use admin ID
+      isAvailable: true
+    };
+
+    // Create book in database
+    const book = await BookModel.create(bookData);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.status(201).json({
       success: true,
@@ -583,6 +682,7 @@ const updateBookStatus = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Prepare update data
     const updateData = { 
       status, 
@@ -597,6 +697,11 @@ const updateBookStatus = async (req, res) => {
     const book = await BookModel.findByIdAndUpdate(
       id,
       updateData,
+=======
+    const book = await BookModel.findByIdAndUpdate(
+      id,
+      { status, updatedAt: new Date() },
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email');
 
@@ -776,6 +881,7 @@ const createCourse = async (req, res) => {
       status: 'draft'
     };
 
+<<<<<<< HEAD
     // Handle instructor data
     if (req.body.instructorName) {
       courseData.instructor = {
@@ -783,6 +889,8 @@ const createCourse = async (req, res) => {
       };
     }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     // Handle file upload if present
     if (req.files && req.files.image && req.files.image[0]) {
       try {
@@ -806,9 +914,12 @@ const createCourse = async (req, res) => {
       } catch (uploadError) {
         console.error('File upload error:', uploadError);
       }
+<<<<<<< HEAD
     } else if (req.body.thumbnail) {
       // Handle thumbnail URL if provided directly
       courseData.thumbnail = req.body.thumbnail;
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
 
     const course = await CourseModel.create(courseData);
@@ -874,6 +985,7 @@ const updateCourse = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 const updateCourseStatus = async (req, res) => {
   try {
     if (!CourseModel) {
@@ -949,6 +1061,8 @@ const updateCourseStatus = async (req, res) => {
   }
 };
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 const deleteCourse = async (req, res) => {
   try {
     if (!CourseModel) {
@@ -1081,6 +1195,7 @@ const createLiveClass = async (req, res) => {
 
     await connectDB();
 
+<<<<<<< HEAD
     console.log('📝 Creating live class with data:', req.body);
     console.log('📎 File uploaded:', req.file ? 'Yes' : 'No');
 
@@ -1124,12 +1239,21 @@ const createLiveClass = async (req, res) => {
       },
       // Add timezone if not provided
       timezone: req.body.timezone || 'Asia/Kolkata'
+=======
+    const liveClassData = {
+      ...req.body,
+      createdBy: req.user.id,
+      status: 'scheduled'
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     };
 
     // Handle file upload if present
     if (req.file) {
       try {
+<<<<<<< HEAD
         console.log('📤 Uploading thumbnail to Cloudinary...');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         const imageResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
@@ -1147,6 +1271,7 @@ const createLiveClass = async (req, res) => {
           uploadStream.end(req.file.buffer);
         });
         liveClassData.thumbnail = imageResult.secure_url;
+<<<<<<< HEAD
         console.log('✅ Thumbnail uploaded:', imageResult.secure_url);
       } catch (uploadError) {
         console.error('❌ File upload error:', uploadError);
@@ -1163,6 +1288,14 @@ const createLiveClass = async (req, res) => {
     console.log('💾 Saving live class to database...');
     const liveClass = await LiveClassModel.create(liveClassData);
     console.log('✅ Live class created successfully:', liveClass._id);
+=======
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    }
+
+    const liveClass = await LiveClassModel.create(liveClassData);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.status(201).json({
       success: true,
@@ -1171,19 +1304,26 @@ const createLiveClass = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error('❌ Create live class error:', error);
     console.error('Error details:', error.message);
     if (error.errors) {
       console.error('Validation errors:', error.errors);
     }
+=======
+    console.error('Create live class error:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     res.status(500).json({
       success: false,
       message: 'Failed to create live class',
       error: error.message,
+<<<<<<< HEAD
       validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
         field: key,
         message: error.errors[key].message
       })) : undefined,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -1203,6 +1343,7 @@ const updateLiveClass = async (req, res) => {
     delete updateData.createdBy;
     delete updateData.createdAt;
 
+<<<<<<< HEAD
     // Handle file upload if present
     if (req.file) {
       try {
@@ -1228,6 +1369,8 @@ const updateLiveClass = async (req, res) => {
       }
     }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const liveClass = await LiveClassModel.findByIdAndUpdate(
       id,
       { ...updateData, updatedAt: new Date() },
@@ -1258,6 +1401,7 @@ const updateLiveClass = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 const updateLiveClassStatus = async (req, res) => {
   try {
     if (!LiveClassModel) {
@@ -1338,6 +1482,8 @@ const updateLiveClassStatus = async (req, res) => {
   }
 };
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 const deleteLiveClass = async (req, res) => {
   try {
     if (!LiveClassModel) {
@@ -1376,6 +1522,7 @@ const deleteLiveClass = async (req, res) => {
 
 const getAllPayments = async (req, res) => {
   try {
+<<<<<<< HEAD
     // If you have a PaymentModel, use it; else return empty but without the removed message
     let PaymentModel;
     try { PaymentModel = require('../models/Payment'); } catch (_) {}
@@ -1408,13 +1555,31 @@ const getAllPayments = async (req, res) => {
       pagination: { page, limit, total: 0, totalPages: 0 },
       timestamp: new Date().toISOString(),
       message: 'No payments found'
+=======
+    console.log('💳 Admin payments - database disabled');
+    
+    res.json({
+      success: true,
+      data: [],
+      pagination: {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
+        total: 0,
+        totalPages: 0
+      },
+      timestamp: new Date().toISOString(),
+      message: 'Database functionality has been removed'
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     });
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payments',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -1499,7 +1664,11 @@ module.exports = {
   createCourse,
   updateCourse,
   deleteCourse,
+<<<<<<< HEAD
   updateCourseStatus: withTimeout(updateCourseStatus),
+=======
+  updateCourseStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   uploadCourseThumbnail: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   toggleCoursePublish: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
@@ -1509,7 +1678,11 @@ module.exports = {
   createLiveClass,
   updateLiveClass,
   deleteLiveClass,
+<<<<<<< HEAD
   updateLiveClassStatus: withTimeout(updateLiveClassStatus),
+=======
+  updateLiveClassStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   
   // Payment Management
   getAllPayments,
@@ -1525,6 +1698,7 @@ module.exports = {
   getLiveClassStats: (req, res) => res.json({ success: true, data: { total: 0, upcoming: 0, completed: 0 } }),
   
   // Settings
+<<<<<<< HEAD
   getSettings: async (req, res) => {
     try {
       let SettingsModel;
@@ -1554,6 +1728,10 @@ module.exports = {
       res.status(500).json({ success: false, message: 'Failed to update settings', error: error.message });
     }
   },
+=======
+  getSettings: (req, res) => res.json({ success: true, data: {} }),
+  updateSettings: (req, res) => res.json({ success: true, message: 'Settings updated' }),
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   
   // Admin Info
   getAdminInfo

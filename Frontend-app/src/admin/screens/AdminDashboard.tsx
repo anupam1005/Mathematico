@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,13 +17,20 @@ import {
   FAB,
   Chip,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { adminService, DashboardStats } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
+<<<<<<< HEAD
 import { Logger } from '../../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +41,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+<<<<<<< HEAD
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,11 +57,17 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
     return () => {
       clearInterval(refreshInterval);
     };
+=======
+
+  useEffect(() => {
+    loadDashboardData();
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }, []);
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
+<<<<<<< HEAD
       setError(null);
       
       const response = await adminService.getDashboardStats();
@@ -82,6 +100,45 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
       // Don't set empty data - let the error message show
       setStats(null);
+=======
+      const data = await adminService.getDashboardStats();
+      console.log('Dashboard data received:', data);
+      
+      // Ensure we have the correct structure with fallbacks
+      const dashboardData: DashboardStats = {
+        stats: {
+          totalUsers: data?.totalUsers || data?.stats?.totalUsers || 0,
+          totalStudents: data?.totalStudents || data?.stats?.totalStudents || 0,
+          totalCourses: data?.totalCourses || data?.stats?.totalCourses || 0,
+          totalModules: data?.totalModules || data?.stats?.totalModules || 0,
+          totalLessons: data?.totalLessons || data?.stats?.totalLessons || 0,
+          totalRevenue: data?.totalRevenue || data?.stats?.totalRevenue || 0,
+          activeBatches: data?.activeBatches || data?.stats?.activeBatches || 0,
+        },
+        recentUsers: Array.isArray(data?.recentUsers) ? data.recentUsers : 
+                   Array.isArray(data?.recentActivity) ? data.recentActivity.filter((item: any) => item.type === 'user') : [],
+        recentCourses: Array.isArray(data?.recentCourses) ? data.recentCourses : 
+                     Array.isArray(data?.recentActivity) ? data.recentActivity.filter((item: any) => item.type === 'course') : [],
+      };
+      
+      setStats(dashboardData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Set empty data when API fails
+      setStats({
+        stats: {
+          totalUsers: 0,
+          totalStudents: 0,
+          totalCourses: 0,
+          totalModules: 0,
+          totalLessons: 0,
+          totalRevenue: 0,
+          activeBatches: 0,
+        },
+        recentUsers: [],
+        recentCourses: [],
+      });
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +150,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
     setRefreshing(false);
   };
 
+<<<<<<< HEAD
   // Add focus listener to refresh data when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -102,6 +160,8 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
     return unsubscribe;
   }, [navigation]);
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   const StatCard = ({ title, value, icon, color, subtitle }: any) => (
     <View style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
@@ -164,6 +224,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
             <View style={styles.headerText}>
               <Text style={textStyles.heading}>Analytics Dashboard</Text>
               <Text style={textStyles.bodySecondary}>
+<<<<<<< HEAD
                 {refreshing ? 'Updating data...' : 'Here\'s what\'s happening with your platform today.'}
               </Text>
               {lastUpdated && (
@@ -213,10 +274,20 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           </UnifiedCard>
         )}
 
+=======
+                Here's what's happening with your platform today.
+              </Text>
+            </View>
+            <Icon name="admin-panel-settings" size={48} color={designSystem.colors.primary} />
+          </View>
+        </UnifiedCard>
+
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <StatCard
             title="Total Users"
+<<<<<<< HEAD
             value={(stats.totalUsers ?? 0).toLocaleString()}
             icon="group"
             color={designSystem.colors.primary}
@@ -232,16 +303,41 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <StatCard
             title="Total Revenue"
             value={`₹${(stats.totalRevenue ?? 0).toLocaleString()}`}
+=======
+            value={(stats.stats.totalUsers ?? 0).toLocaleString()}
+            icon="group"
+            color={designSystem.colors.primary}
+            subtitle={`${stats.stats.totalStudents ?? 0} students`}
+          />
+          <StatCard
+            title="Total Courses"
+            value={(stats.stats.totalCourses ?? 0).toString()}
+            icon="school"
+            color={designSystem.colors.success}
+            subtitle={`${stats.stats.totalModules ?? 0} modules`}
+          />
+          <StatCard
+            title="Total Revenue"
+            value={`₹${(stats.stats.totalRevenue ?? 0).toLocaleString()}`}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             icon="attach-money"
             color={designSystem.colors.warning}
             subtitle="This month"
           />
           <StatCard
+<<<<<<< HEAD
             title="Live Classes"
             value={(stats.totalLiveClasses ?? 0).toString()}
             icon="groups"
             color={designSystem.colors.secondary}
             subtitle={`${stats.liveClassStats?.upcoming ?? 0} upcoming`}
+=======
+            title="Active Batches"
+            value={(stats.stats.activeBatches ?? 0).toString()}
+            icon="groups"
+            color={designSystem.colors.secondary}
+            subtitle="Currently running"
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           />
         </View>
 
@@ -272,7 +368,11 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <UnifiedCard variant="outlined" style={styles.recentCard}>
             <Text style={textStyles.subheading}>Recent Users</Text>
             {stats.recentUsers && Array.isArray(stats.recentUsers) && stats.recentUsers.length > 0 ? (
+<<<<<<< HEAD
               stats.recentUsers.map((user: any, index: number) => (
+=======
+              stats.recentUsers.map((user, index) => (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <RecentItem
                   key={user.id || index}
                   title={user.name || 'Unknown User'}
@@ -289,7 +389,11 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <UnifiedCard variant="outlined" style={styles.recentCard}>
             <Text style={textStyles.subheading}>Recent Courses</Text>
             {stats.recentCourses && Array.isArray(stats.recentCourses) && stats.recentCourses.length > 0 ? (
+<<<<<<< HEAD
               stats.recentCourses.map((course: any, index: number) => (
+=======
+              stats.recentCourses.map((course, index) => (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 <RecentItem
                   key={course.id || index}
                   title={course.title || 'Unknown Course'}
@@ -343,6 +447,10 @@ const styles = StyleSheet.create({
     color: designSystem.colors.error,
     marginTop: designSystem.spacing.md,
     textAlign: 'center',
+<<<<<<< HEAD
+=======
+    ...textStyles.body,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   retryButton: {
     marginTop: designSystem.spacing.md,
@@ -379,6 +487,7 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
+<<<<<<< HEAD
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,6 +531,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

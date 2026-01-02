@@ -10,6 +10,10 @@ import {
   Image,
 } from 'react-native';
 import {
+<<<<<<< HEAD
+=======
+  TextInput,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   Button,
   Card,
   Title,
@@ -17,8 +21,12 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../components/Icon';
 import { CustomTextInput } from '../components/CustomTextInput';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -98,7 +106,11 @@ export default function LoginScreen({ navigation }: any) {
             </Paragraph>
 
             <View style={styles.form}>
+<<<<<<< HEAD
               <CustomTextInput
+=======
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Email"
                 value={email}
                 onChangeText={setEmail}
@@ -108,7 +120,11 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="email"
+=======
+                left={<TextInput.Icon icon="email" />}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -116,7 +132,11 @@ export default function LoginScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.email}</Text>
               )}
 
+<<<<<<< HEAD
               <CustomTextInput
+=======
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
@@ -125,9 +145,19 @@ export default function LoginScreen({ navigation }: any) {
                 autoComplete="password"
                 error={!!errors.password}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="lock"
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
+=======
+                left={<TextInput.Icon icon="lock" />}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />

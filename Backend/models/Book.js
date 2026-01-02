@@ -4,21 +4,37 @@ const bookSchema = new mongoose.Schema({
   // Basic Information
   title: {
     type: String,
+<<<<<<< HEAD
     required: false,
     trim: true,
+=======
+    required: [true, 'Book title is required'],
+    trim: true,
+    minlength: [2, 'Title must be at least 2 characters'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     maxlength: [200, 'Title cannot exceed 200 characters']
   },
   
   description: {
     type: String,
+<<<<<<< HEAD
     required: false,
     trim: true,
+=======
+    required: [true, 'Book description is required'],
+    trim: true,
+    minlength: [10, 'Description must be at least 10 characters'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
   
   author: {
     type: String,
+<<<<<<< HEAD
     required: false,
+=======
+    required: [true, 'Author name is required'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     trim: true,
     maxlength: [100, 'Author name cannot exceed 100 characters']
   },
@@ -33,7 +49,11 @@ const bookSchema = new mongoose.Schema({
   // Categorization
   category: {
     type: String,
+<<<<<<< HEAD
     required: false,
+=======
+    required: [true, 'Category is required'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     enum: [
       'mathematics',
       'physics',
@@ -51,13 +71,21 @@ const bookSchema = new mongoose.Schema({
   
   subject: {
     type: String,
+<<<<<<< HEAD
     required: false,
+=======
+    required: [true, 'Subject is required'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     trim: true
   },
   
   grade: {
     type: String,
+<<<<<<< HEAD
     required: false,
+=======
+    required: [true, 'Grade level is required'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     trim: true
   },
   
@@ -98,12 +126,20 @@ const bookSchema = new mongoose.Schema({
   // Media Files
   coverImage: {
     type: String, // URL to cover image
+<<<<<<< HEAD
     required: false
+=======
+    required: [true, 'Cover image is required']
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   pdfFile: {
     type: String, // URL to PDF file
+<<<<<<< HEAD
     required: false
+=======
+    required: [true, 'PDF file is required']
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   samplePages: [{
@@ -113,7 +149,11 @@ const bookSchema = new mongoose.Schema({
   // Pricing and Availability
   price: {
     type: Number,
+<<<<<<< HEAD
     required: false,
+=======
+    required: [true, 'Price is required'],
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     min: [0, 'Price cannot be negative']
   },
   
@@ -150,7 +190,11 @@ const bookSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+<<<<<<< HEAD
     required: false
+=======
+    required: true
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   
   // Statistics
@@ -296,7 +340,10 @@ bookSchema.pre('save', function(next) {
 // Virtual for formatted price
 bookSchema.virtual('formattedPrice').get(function() {
   if (this.isFree) return 'Free';
+<<<<<<< HEAD
   if (!this.price && this.price !== 0) return 'Price not set';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   return `${this.currency} ${this.price.toFixed(2)}`;
 });
 
@@ -305,6 +352,7 @@ bookSchema.virtual('averageRating').get(function() {
   return this.ratings.average;
 });
 
+<<<<<<< HEAD
 // Virtual for cover image URL (frontend expects snake_case)
 bookSchema.virtual('cover_image_url').get(function() {
   return this.coverImage || '';
@@ -315,6 +363,8 @@ bookSchema.virtual('pdf_file_url').get(function() {
   return this.pdfFile || '';
 });
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Instance method to add review
 bookSchema.methods.addReview = function(userId, rating, comment) {
   // Check if user already reviewed
@@ -380,4 +430,8 @@ bookSchema.statics.searchBooks = function(query, filters = {}) {
   return this.find(searchQuery).sort({ score: { $meta: 'textScore' } });
 };
 
+<<<<<<< HEAD
 module.exports = mongoose.model('Book', bookSchema, 'book');
+=======
+module.exports = mongoose.model('Book', bookSchema);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686

@@ -42,12 +42,16 @@ const getAllCourses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'Course model unavailable' });
     }
 
+<<<<<<< HEAD
     console.log('📱 Mobile: Fetching courses...');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+<<<<<<< HEAD
     const { status, category, level, search } = req.query;
 
     // Build query object
@@ -96,6 +100,19 @@ const getAllCourses = async (req, res) => {
     console.log('📱 Mobile: Found courses:', courses.length);
 
     const total = await CourseModel.countDocuments(query);
+=======
+
+    const courses = await CourseModel.find({ 
+      status: 'published',
+      isAvailable: true 
+    })
+      .select('-enrolledStudents -reviews')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await CourseModel.countDocuments({ status: 'published', isAvailable: true });
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.json({
       success: true,
@@ -109,8 +126,12 @@ const getAllCourses = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error('❌ Mobile: Error fetching courses:', error);
     console.error('❌ Mobile: Error stack:', error.stack);
+=======
+    console.error('Error fetching courses:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     res.status(500).json({
       success: false,
       message: 'Failed to fetch courses',
@@ -166,8 +187,12 @@ const getAllBooks = async (req, res) => {
       .select('-pdfFile') // Don't include PDF file URL in list
       .sort({ createdAt: -1 })
       .skip(skip)
+<<<<<<< HEAD
       .limit(limit)
       .lean(); // Use lean() to get plain JavaScript objects without virtuals
+=======
+      .limit(limit);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
@@ -275,6 +300,7 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     const { id } = req.params;
+<<<<<<< HEAD
     console.log('📖 Fetching PDF viewer for book:', id);
 
     // Get book with PDF URL - check both published and draft for debugging
@@ -326,6 +352,25 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     console.log('✅ Secure viewer URL generated:', secureViewerUrl);
+=======
+
+    // Get book with PDF URL
+    const book = await BookModel.findOne({
+      _id: id,
+      status: 'published',
+      isAvailable: true
+    }).select('title pdfFile');
+
+    if (!book || !book.pdfFile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book or PDF not found'
+      });
+    }
+
+    // Generate secure viewer URL with restrictions
+    const secureViewerUrl = generateSecurePdfUrl(book.pdfFile, book.title);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.json({
       success: true,
@@ -342,7 +387,11 @@ const getSecurePdfViewer = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error('❌ Error getting secure PDF viewer:', error);
+=======
+    console.error('Error getting secure PDF viewer:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     res.status(500).json({
       success: false,
       message: 'Failed to get PDF viewer',
@@ -354,6 +403,7 @@ const getSecurePdfViewer = async (req, res) => {
 
 /**
  * Generate secure PDF URL with restrictions
+<<<<<<< HEAD
  * Ensures PDFs are viewable in WebView with proper text rendering
  */
 const generateSecurePdfUrl = (pdfUrl, title) => {
@@ -393,6 +443,28 @@ const generateSecurePdfUrl = (pdfUrl, title) => {
   }
   
   // Return as-is for other URL types
+=======
+ */
+const generateSecurePdfUrl = (pdfUrl, title) => {
+  // For Cloudinary PDFs, add transformation parameters to restrict access
+  if (pdfUrl.includes('cloudinary.com')) {
+    // Add transformation to make PDF read-only
+    const baseUrl = pdfUrl.split('/upload/')[0];
+    const path = pdfUrl.split('/upload/')[1];
+    
+    // Add transformations to prevent download and enable secure viewing
+    const transformations = [
+      'fl_attachment:false', // Disable direct download
+      'fl_immutable_cache:true', // Cache for performance
+      'fl_secure:true', // Use HTTPS
+      'fl_sanitize:true' // Sanitize the PDF
+    ].join(',');
+    
+    return `${baseUrl}/upload/${transformations}/${path}`;
+  }
+  
+  // For other URLs, return as-is (you might want to implement additional security)
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   return pdfUrl;
 };
 
@@ -482,12 +554,16 @@ const getAllLiveClasses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
     }
 
+<<<<<<< HEAD
     console.log('📱 Mobile: Fetching live classes...');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+<<<<<<< HEAD
     const { status, category, level, search } = req.query;
 
     // Build query object
@@ -546,6 +622,24 @@ const getAllLiveClasses = async (req, res) => {
     console.log('📱 Mobile: Found live classes:', liveClasses.length);
 
     const total = await LiveClassModel.countDocuments(query);
+=======
+
+    const liveClasses = await LiveClassModel.find({ 
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
+      startTime: { $gte: new Date() }
+    })
+      .select('-enrolledStudents -reviews')
+      .sort({ startTime: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await LiveClassModel.countDocuments({ 
+      status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
+      startTime: { $gte: new Date() }
+    });
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     res.json({
       success: true,
@@ -559,8 +653,12 @@ const getAllLiveClasses = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+<<<<<<< HEAD
     console.error('❌ Mobile: Error fetching live classes:', error);
     console.error('❌ Mobile: Error stack:', error.stack);
+=======
+    console.error('Error fetching live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live classes',
@@ -571,6 +669,7 @@ const getAllLiveClasses = async (req, res) => {
 };
 
 /**
+<<<<<<< HEAD
  * Start live class
  */
 const startLiveClass = async (req, res) => {
@@ -667,6 +766,8 @@ const endLiveClass = async (req, res) => {
 };
 
 /**
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
  * Get featured content for mobile app
  */
 const getFeaturedContent = async (req, res) => {
@@ -697,6 +798,7 @@ const getFeaturedContent = async (req, res) => {
  */
 const getCourseById = async (req, res) => {
   try {
+<<<<<<< HEAD
     if (!CourseModel) {
       return res.status(503).json({ 
         success: false, 
@@ -735,6 +837,14 @@ const getCourseById = async (req, res) => {
     res.json({
       success: true,
       data: course,
+=======
+    const { id } = req.params;
+    console.log('📱 Mobile course by ID endpoint - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'Course not found',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -742,7 +852,10 @@ const getCourseById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch course',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -753,6 +866,7 @@ const getCourseById = async (req, res) => {
  */
 const getLiveClassById = async (req, res) => {
   try {
+<<<<<<< HEAD
     if (!LiveClassModel) {
       return res.status(503).json({ 
         success: false, 
@@ -790,6 +904,14 @@ const getLiveClassById = async (req, res) => {
     res.json({
       success: true,
       data: liveClass,
+=======
+    const { id } = req.params;
+    console.log('📱 Mobile live class by ID endpoint - database disabled');
+    
+    res.status(404).json({
+      success: false,
+      message: 'Live class not found',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -797,7 +919,10 @@ const getLiveClassById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch live class',
+<<<<<<< HEAD
       error: error.message,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       timestamp: new Date().toISOString()
     });
   }
@@ -887,11 +1012,16 @@ const getMobileInfo = async (req, res) => {
 };
 
 module.exports = {
+<<<<<<< HEAD
   getAllCourses: withTimeout(getAllCourses),
+=======
+  getAllCourses,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   getAllBooks: withTimeout(getAllBooks),
   getBookById: withTimeout(getBookById),
   getSecurePdfViewer: withTimeout(getSecurePdfViewer),
   streamSecurePdf: withTimeout(streamSecurePdf),
+<<<<<<< HEAD
   getAllLiveClasses: withTimeout(getAllLiveClasses),
   getLiveClassById: withTimeout(getLiveClassById),
   startLiveClass: withTimeout(startLiveClass),
@@ -903,4 +1033,15 @@ module.exports = {
   searchContent: withTimeout(searchContent),
   getAppInfo: withTimeout(getMobileInfo),
   getMobileInfo: withTimeout(getMobileInfo)
+=======
+  getAllLiveClasses,
+  getFeaturedContent,
+  getCourseById,
+  getLiveClassById,
+  getCategories,
+  search: searchContent,
+  searchContent,
+  getAppInfo: getMobileInfo,
+  getMobileInfo
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 };

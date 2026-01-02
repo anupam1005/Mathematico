@@ -8,9 +8,12 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+<<<<<<< HEAD
   ScrollView,
   Image,
   Platform,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 } from 'react-native';
 import {
   Button,
@@ -21,14 +24,21 @@ import {
   Checkbox,
   Menu,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+<<<<<<< HEAD
 import { Logger } from '../../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface LiveClass {
   id?: string;
@@ -83,7 +93,11 @@ export default function AdminLiveClasses({ navigation }: any) {
         setLiveClasses([]);
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading live classes:', error);
+=======
+      console.error('Error loading live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setLiveClasses([]);
     } finally {
       setIsLoading(false);
@@ -98,7 +112,10 @@ export default function AdminLiveClasses({ navigation }: any) {
 
   const handleDelete = (liveClass: LiveClass) => {
     const id = getLiveClassId(liveClass);
+<<<<<<< HEAD
     console.log('AdminLiveClasses: Delete button clicked for live class ID:', id);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (!id) {
       Alert.alert('Error', 'Invalid live class ID');
       return;
@@ -114,6 +131,7 @@ export default function AdminLiveClasses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
+<<<<<<< HEAD
               console.log('AdminLiveClasses: Attempting to delete live class with ID:', id);
               const result = await adminService.deleteLiveClass(id);
               console.log('AdminLiveClasses: Delete result:', result);
@@ -126,6 +144,12 @@ export default function AdminLiveClasses({ navigation }: any) {
               }
             } catch (error) {
               Logger.error('AdminLiveClasses: Error deleting live class:', error);
+=======
+              await adminService.deleteLiveClass(id);
+              await loadLiveClasses();
+              Alert.alert('Success', 'Live class deleted successfully');
+            } catch (error) {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               Alert.alert('Error', 'Failed to delete live class');
             }
           },
@@ -142,6 +166,7 @@ export default function AdminLiveClasses({ navigation }: any) {
     }
     
     try {
+<<<<<<< HEAD
       // Map frontend status to backend status
       let newStatus = 'scheduled'; // Default to scheduled (published)
       
@@ -151,13 +176,27 @@ export default function AdminLiveClasses({ navigation }: any) {
       } else if (liveClass.status === 'cancelled' || liveClass.status === 'postponed') {
         // If cancelled/postponed, make it scheduled (publish)
         newStatus = 'scheduled';
+=======
+      // If draft, publish to upcoming; otherwise unpublish to draft
+      let newStatus = 'upcoming';
+      if (liveClass.status === 'draft') {
+        newStatus = 'upcoming';
+      } else if (liveClass.status === 'upcoming' || liveClass.status === 'live' || liveClass.status === 'completed' || liveClass.status === 'cancelled') {
+        newStatus = 'draft';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
       
       await adminService.updateLiveClassStatus(id, newStatus);
       await loadLiveClasses();
+<<<<<<< HEAD
       Alert.alert('Success', newStatus === 'scheduled' ? 'Live class published successfully' : 'Live class unpublished');
     } catch (error) {
       Logger.error('Error updating live class status:', error);
+=======
+      Alert.alert('Success', newStatus === 'upcoming' ? 'Live class published successfully' : 'Live class unpublished');
+    } catch (error) {
+      console.error('Error updating live class status:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to update live class status');
     }
   };
@@ -308,19 +347,29 @@ export default function AdminLiveClasses({ navigation }: any) {
           mode="outlined"
           onPress={() => navigation.navigate('LiveClassForm', { liveClass: item, isEditing: true })}
           style={styles.actionButton}
+<<<<<<< HEAD
           compact={false}
           labelStyle={styles.buttonLabel}
         >
           Edit
         </Button>
         {item.status === 'scheduled' && (
+=======
+        >
+          Edit
+        </Button>
+        {item.status === 'upcoming' && (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           <Button
             mode="outlined"
             onPress={() => handleStartLiveClass(item)}
             style={[styles.actionButton, styles.startButton]}
             textColor={designSystem.colors.success}
+<<<<<<< HEAD
             compact={false}
             labelStyle={styles.buttonLabel}
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           >
             Start
           </Button>
@@ -331,8 +380,11 @@ export default function AdminLiveClasses({ navigation }: any) {
             onPress={() => handleEndLiveClass(item)}
             style={[styles.actionButton, styles.endButton]}
             textColor={designSystem.colors.error}
+<<<<<<< HEAD
             compact={false}
             labelStyle={styles.buttonLabel}
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           >
             End
           </Button>
@@ -341,19 +393,28 @@ export default function AdminLiveClasses({ navigation }: any) {
           mode="outlined"
           onPress={() => handleTogglePublish(item)}
           style={styles.actionButton}
+<<<<<<< HEAD
           textColor={item.status === 'cancelled' || item.status === 'postponed' ? designSystem.colors.success : designSystem.colors.warning}
           compact={false}
           labelStyle={styles.buttonLabel}
         >
           {item.status === 'cancelled' || item.status === 'postponed' ? 'Publish' : 'Unpublish'}
+=======
+          textColor={item.status === 'draft' ? designSystem.colors.success : designSystem.colors.warning}
+        >
+          {item.status === 'draft' ? 'Publish' : 'Unpublish'}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </Button>
         <Button
           mode="outlined"
           onPress={() => handleDelete(item)}
           style={[styles.actionButton, styles.deleteButton]}
           textColor={designSystem.colors.error}
+<<<<<<< HEAD
           compact={false}
           labelStyle={styles.buttonLabel}
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         >
           Delete
         </Button>
@@ -489,12 +550,20 @@ export default function AdminLiveClasses({ navigation }: any) {
   );
 }
 
+<<<<<<< HEAD
 // Using StyleSheet.create for proper type checking
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
+=======
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     backgroundColor: designSystem.colors.background,
     padding: designSystem.spacing.xl,
   },
@@ -574,7 +643,11 @@ const styles = StyleSheet.create({
   },
   liveClassActions: {
     flexDirection: 'row',
+<<<<<<< HEAD
     flexWrap: 'wrap',
+=======
+    justifyContent: 'space-between',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     marginTop: designSystem.spacing.md,
     paddingTop: designSystem.spacing.md,
     borderTopWidth: 1,
@@ -582,6 +655,7 @@ const styles = StyleSheet.create({
     gap: designSystem.spacing.sm,
   },
   actionButton: {
+<<<<<<< HEAD
     minWidth: 90,
     borderRadius: designSystem.borderRadius.md,
     minHeight: 44,
@@ -592,6 +666,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginHorizontal: 8,
     marginVertical: 8,
+=======
+    flex: 1,
+    borderRadius: designSystem.borderRadius.md,
+    minHeight: 40,
+    fontSize: 14,
+    fontWeight: '600',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   },
   startButton: {
     borderColor: designSystem.colors.success,
@@ -610,5 +691,9 @@ const styles = StyleSheet.create({
     backgroundColor: designSystem.colors.primary,
     borderRadius: designSystem.borderRadius.full,
     ...designSystem.shadows.lg,
+<<<<<<< HEAD
   }
+=======
+  },
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });

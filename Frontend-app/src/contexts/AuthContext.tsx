@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+<<<<<<< HEAD
 import { Alert } from 'react-native';
 import authService from '../services/authService';
 import { Storage } from '../utils/storage';
+=======
+import * as SecureStore from 'expo-secure-store';
+import { Alert } from 'react-native';
+import authService from '../services/authService';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export interface User {
   id: string;
@@ -26,7 +32,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
+<<<<<<< HEAD
   checkAuthStatus: () => Promise<void>;
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,12 +57,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
+<<<<<<< HEAD
       console.log('AuthContext: Checking authentication status...');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       
       // Clear any invalid tokens first
       await authService.clearInvalidTokens();
       
       const token = await authService.getToken();
+<<<<<<< HEAD
       console.log('AuthContext: Token retrieved:', token ? 'YES' : 'NO');
       
       if (token && token.length > 10) {
@@ -79,20 +92,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // If no user data, clear token and logout
           console.log('AuthContext: No user data found, clearing tokens');
           await Storage.deleteItem('authToken');
+=======
+      
+      if (token) {
+        // Token is valid, try to get user data from storage
+        const storedUser = await SecureStore.getItemAsync('user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          // If no user data, clear token and logout
+          await SecureStore.deleteItemAsync('authToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           setUser(null);
           setIsAuthenticated(false);
         }
       } else {
+<<<<<<< HEAD
         console.log('AuthContext: No valid token found');
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       // Clear invalid tokens
+<<<<<<< HEAD
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       await Storage.deleteItem('user');
+=======
+      await SecureStore.deleteItemAsync('authToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -112,13 +146,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
+<<<<<<< HEAD
           await Storage.setItem('authToken', accessToken);
+=======
+          await SecureStore.setItemAsync('authToken', accessToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthContext: Access token stored after login');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
+<<<<<<< HEAD
           await Storage.setItem('refreshToken', refreshToken);
+=======
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthContext: Refresh token stored after login');
         }
         
@@ -137,7 +179,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // Store user data in SecureStore
+<<<<<<< HEAD
         await Storage.setItem('user', JSON.stringify(user));
+=======
+        await SecureStore.setItemAsync('user', JSON.stringify(user));
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         
         setUser(user);
         setIsAuthenticated(true);
@@ -163,6 +209,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(name, email, password);
       
       if (response.success && response.data) {
+<<<<<<< HEAD
         console.log('AuthContext: Registration response data:', response.data);
         const { user: userData, token, refreshToken } = response.data;
         
@@ -173,12 +220,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
           await Storage.setItem('authToken', accessToken);
+=======
+        const { user: userData, token, tokens } = response.data;
+        
+        // Extract the access token from the response
+        const accessToken = token || tokens?.accessToken;
+        const refreshToken = tokens?.refreshToken;
+        
+        // Store the real JWT token only if it exists
+        if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
+          await SecureStore.setItemAsync('authToken', accessToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthContext: Access token stored after registration');
         }
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
+<<<<<<< HEAD
           await Storage.setItem('refreshToken', refreshToken);
+=======
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthContext: Refresh token stored after registration');
         }
         
@@ -197,12 +259,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         // Store user data in SecureStore
+<<<<<<< HEAD
         console.log('AuthContext: Storing user data:', user);
         await Storage.setItem('user', JSON.stringify(user));
         
         // Verify user data was stored
         const storedUser = await Storage.getItem('user');
         console.log('AuthContext: Verification - stored user:', storedUser ? 'YES' : 'NO');
+=======
+        await SecureStore.setItemAsync('user', JSON.stringify(user));
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         
         setUser(user);
         setIsAuthenticated(true);
@@ -228,6 +294,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
+<<<<<<< HEAD
       console.log('AuthContext: Starting logout process');
       // Call logout API to invalidate tokens
       console.log('AuthContext: Calling authService.logout()');
@@ -251,12 +318,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(false);
       console.log('AuthContext: State updated - user:', null, 'isAuthenticated:', false);
       console.log('AuthContext: Logout process completed');
+=======
+      // Call logout API to invalidate tokens
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear all local storage
+      await SecureStore.deleteItemAsync('user');
+      await SecureStore.deleteItemAsync('authToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+      
+      // Update state
+      setUser(null);
+      setIsAuthenticated(false);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   };
 
   const refreshToken = async (): Promise<boolean> => {
     try {
+<<<<<<< HEAD
       const refreshTokenValue = await Storage.getItem('refreshToken');
+=======
+      const refreshTokenValue = await SecureStore.getItemAsync('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       if (!refreshTokenValue) {
         return false;
       }
@@ -268,10 +354,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Update tokens
         if (newAccessToken) {
+<<<<<<< HEAD
           await Storage.setItem('authToken', newAccessToken);
         }
         if (newRefreshToken) {
           await Storage.setItem('refreshToken', newRefreshToken);
+=======
+          await SecureStore.setItemAsync('authToken', newAccessToken);
+        }
+        if (newRefreshToken) {
+          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         }
         
         return true;
@@ -289,6 +382,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     try {
+<<<<<<< HEAD
       console.log('AuthContext: Starting profile update with data:', data);
       const response = await authService.updateProfile(data);
       console.log('AuthContext: Profile update response:', response);
@@ -319,11 +413,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       } else {
         console.error('AuthContext: Profile update failed:', response.message);
+=======
+      const response = await authService.updateProfile(data);
+      
+      if (response.success && response.data) {
+        const updatedUser = {
+          ...user,
+          ...response.data,
+          isAdmin: response.data.isAdmin || response.data.role === 'admin',
+          is_admin: response.data.isAdmin || response.data.role === 'admin',
+        };
+        
+        // Update state
+        setUser(updatedUser);
+        
+        // Persist to SecureStore
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+        
+        return true;
+      } else {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         Alert.alert('Update Failed', response.message || 'Profile update failed');
         return false;
       }
     } catch (error) {
+<<<<<<< HEAD
       console.error('AuthContext: Profile update error:', error);
+=======
+      console.error('Profile update error:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');
       return false;
     }
@@ -338,7 +456,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshToken,
     updateProfile,
+<<<<<<< HEAD
     checkAuthStatus,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   };
 
   return (

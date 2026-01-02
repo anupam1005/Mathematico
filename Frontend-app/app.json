@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Mathematico - Learn Mathematics",
+    "slug": "mathematico-app",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "owner": "testaccount125",
+    "icon": "./assets/icon.png",
+    "newArchEnabled": true,
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f4a7320d-9731-4ddb-9e3f-a8c056934cd9"
+      }
+    },
+    "android": {
+      "package": "com.anupam1505.mathematicoapp",
+      "versionCode": 4,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": []
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}

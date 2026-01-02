@@ -6,6 +6,7 @@ require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
+<<<<<<< HEAD
 // Fallback secrets for development (NOT for production)
 const FALLBACK_JWT_SECRET = 'ea8d2dd209821c788f00430dbada14059f8729cdb9787927fc66d4b614ce934d8a605ca223405bddd2b4c984ed8490c7c62550d579f1b245754ee2f0c6e6fe33';
 const FALLBACK_JWT_REFRESH_SECRET = '4f5093c4703da4e343a60514af3d606f885386828349a58d2cec5c6d66bb829b373361b340518abc1011e697cecd71dfcad0a32cc4a1e05a167e11076877f090';
@@ -33,6 +34,23 @@ if (ACTUAL_JWT_SECRET.length < 64 || ACTUAL_JWT_REFRESH_SECRET.length < 64) {
 console.log('🔑 JWT_SECRET loaded: YES (length:', ACTUAL_JWT_SECRET.length, ')');
 console.log('🔑 JWT_REFRESH_SECRET loaded: YES (length:', ACTUAL_JWT_REFRESH_SECRET.length, ')');
 console.log('🔑 Using environment variables:', JWT_SECRET ? 'YES' : 'NO (using fallback)');
+=======
+// Validate that secrets are set and different
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('❌ CRITICAL: JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+}
+
+if (JWT_SECRET === JWT_REFRESH_SECRET) {
+  throw new Error('❌ CRITICAL: JWT_SECRET and JWT_REFRESH_SECRET must be different');
+}
+
+if (JWT_SECRET.length < 64 || JWT_REFRESH_SECRET.length < 64) {
+  console.warn('⚠️ WARNING: JWT secrets should be at least 64 characters long for production');
+}
+
+console.log('🔑 JWT_SECRET loaded: YES (length:', JWT_SECRET.length, ')');
+console.log('🔑 JWT_REFRESH_SECRET loaded: YES (length:', JWT_REFRESH_SECRET.length, ')');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Token expiration times
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m'; // Short-lived
@@ -47,7 +65,11 @@ console.log('⏱️ Refresh token expires in:', JWT_REFRESH_EXPIRES_IN);
  * @returns {string} JWT access token
  */
 function generateAccessToken(payload) {
+<<<<<<< HEAD
   return jwt.sign(payload, ACTUAL_JWT_SECRET, { 
+=======
+  return jwt.sign(payload, JWT_SECRET, { 
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend'
@@ -91,7 +113,11 @@ function verifyHashedRefreshToken(plainToken, hashedToken) {
  * @throws {Error} If token is invalid or expired
  */
 function verifyAccessToken(token) {
+<<<<<<< HEAD
   return jwt.verify(token, ACTUAL_JWT_SECRET, {
+=======
+  return jwt.verify(token, JWT_SECRET, {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend'
   });

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState } from 'react';
 import {
   View,
@@ -10,16 +14,26 @@ import {
   Image,
 } from 'react-native';
 import {
+<<<<<<< HEAD
+=======
+  TextInput,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   Button,
   Card,
   Title,
   Paragraph,
   ActivityIndicator,
   Divider,
+<<<<<<< HEAD
 } from 'react-native-paper';
 import { Icon } from '../components/Icon';
 import { CustomTextInput } from '../components/CustomTextInput';
 import { CustomCheckbox } from '../components/CustomCheckbox';
+=======
+  Checkbox,
+} from 'react-native-paper';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
@@ -51,6 +65,7 @@ export default function RegisterScreen({ navigation }: any) {
 
     if (!password.trim()) {
       newErrors.password = 'Password is required';
+<<<<<<< HEAD
     } else if (password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
@@ -58,6 +73,13 @@ export default function RegisterScreen({ navigation }: any) {
     // } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
     //   newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
     // }
+=======
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, and number';
+    }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = 'Please confirm your password';
@@ -80,9 +102,14 @@ export default function RegisterScreen({ navigation }: any) {
 
     const success = await register(name.trim(), email.trim(), password);
     if (success) {
+<<<<<<< HEAD
       // Registration successful - user is now authenticated and will be automatically
       // redirected to the main dashboard by the AuthContext
       console.log('Registration successful - user will be redirected to dashboard');
+=======
+      // Navigate to login screen after successful registration
+      navigation.navigate('Login');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   };
 
@@ -114,6 +141,7 @@ export default function RegisterScreen({ navigation }: any) {
             <Paragraph style={styles.cardSubtitle}>
               Start your learning journey today
             </Paragraph>
+<<<<<<< HEAD
             
             {/* Student Registration Note */}
             <View style={styles.studentNote}>
@@ -125,6 +153,11 @@ export default function RegisterScreen({ navigation }: any) {
 
             <View style={styles.form}>
               <CustomTextInput
+=======
+
+            <View style={styles.form}>
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Full Name"
                 value={name}
                 onChangeText={setName}
@@ -133,7 +166,11 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="name"
                 error={!!errors.name}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="person"
+=======
+                left={<TextInput.Icon icon="account" />}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
@@ -141,7 +178,11 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.name}</Text>
               )}
 
+<<<<<<< HEAD
               <CustomTextInput
+=======
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Email"
                 value={email}
                 onChangeText={setEmail}
@@ -151,7 +192,11 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="email"
                 error={!!errors.email}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="email"
+=======
+                left={<TextInput.Icon icon="email" />}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="email-input"
                 accessibilityLabel="Email input field"
               />
@@ -159,7 +204,11 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={styles.errorText}>{errors.email}</Text>
               )}
 
+<<<<<<< HEAD
               <CustomTextInput
+=======
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
@@ -168,15 +217,26 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.password}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="lock"
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
+=======
+                left={<TextInput.Icon icon="lock" />}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="password-input"
                 accessibilityLabel="Password input field"
               />
               {errors.password && (
                 <Text style={styles.errorText}>{errors.password}</Text>
               )}
+<<<<<<< HEAD
               
               {/* Password Requirements */}
               <View style={styles.passwordRequirements}>
@@ -190,6 +250,10 @@ export default function RegisterScreen({ navigation }: any) {
               </View>
 
               <CustomTextInput
+=======
+
+              <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 label="Confirm Password"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -198,9 +262,19 @@ export default function RegisterScreen({ navigation }: any) {
                 autoComplete="password-new"
                 error={!!errors.confirmPassword}
                 style={styles.input}
+<<<<<<< HEAD
                 leftIcon="lock"
                 rightIcon={showConfirmPassword ? 'eye-off' : 'eye'}
                 onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+=======
+                left={<TextInput.Icon icon="lock" />}
+                right={
+                  <TextInput.Icon
+                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                }
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm password input field"
               />
@@ -209,7 +283,11 @@ export default function RegisterScreen({ navigation }: any) {
               )}
 
               <View style={styles.termsContainer}>
+<<<<<<< HEAD
                 <CustomCheckbox
+=======
+                <Checkbox
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
                   status={agreeToTerms ? 'checked' : 'unchecked'}
                   onPress={() => setAgreeToTerms(!agreeToTerms)}
                   testID="terms-checkbox"
@@ -315,6 +393,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: designSystem.spacing.lg,
   },
+<<<<<<< HEAD
   studentNote: {
     backgroundColor: designSystem.colors.secondary + '10',
     borderLeftWidth: 4,
@@ -332,6 +411,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: designSystem.colors.secondary,
   },
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   form: {
     marginTop: designSystem.spacing.md,
   },
@@ -394,6 +475,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+<<<<<<< HEAD
   passwordRequirements: {
     marginTop: designSystem.spacing.sm,
     marginBottom: designSystem.spacing.md,
@@ -418,4 +500,6 @@ const styles = StyleSheet.create({
     color: designSystem.colors.success || '#4CAF50',
     textDecorationLine: 'line-through',
   },
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });

@@ -19,6 +19,7 @@ import {
   FAB,
   Portal,
   Modal,
+<<<<<<< HEAD
 
   HelperText,
 } from 'react-native-paper';
@@ -30,6 +31,17 @@ import { designSystem, layoutStyles, textStyles } from '../../styles/designSyste
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
 import { Logger } from '../../utils/errorHandler';
+=======
+  TextInput,
+  HelperText,
+} from 'react-native-paper';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { adminService } from '../../services/adminService';
+import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
+import { UnifiedCard } from '../../components/UnifiedCard';
+import { EmptyState } from '../../components/EmptyState';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface User {
   id: string;
@@ -43,7 +55,10 @@ interface User {
 }
 
 export default function AdminUsers({ navigation }: { navigation: any }) {
+<<<<<<< HEAD
   const { user } = useAuth();
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setIsLoading] = useState(true);
@@ -82,7 +97,11 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       
       setUsers(users);
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading users:', error);
+=======
+      console.error('Error loading users:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setUsers([]);
     } finally {
       setIsLoading(false);
@@ -452,20 +471,32 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
         >
           <Title>Edit User</Title>
           <View style={styles.editForm}>
+<<<<<<< HEAD
             <CustomTextInput
+=======
+            <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="Name"
               value={editForm.name || ''}
               onChangeText={(text) => setEditForm({ ...editForm, name: text })}
               style={styles.input}
+<<<<<<< HEAD
               leftIcon="person"
             />
             <CustomTextInput
+=======
+            />
+            <TextInput
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               label="Email"
               value={editForm.email || ''}
               onChangeText={(text) => setEditForm({ ...editForm, email: text })}
               style={styles.input}
               keyboardType="email-address"
+<<<<<<< HEAD
               leftIcon="email"
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             />
             <View style={styles.switchContainer}>
               <Text style={textStyles.body}>Admin privileges</Text>

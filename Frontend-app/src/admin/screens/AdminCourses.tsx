@@ -18,14 +18,21 @@ import {
   Checkbox,
   Menu,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+<<<<<<< HEAD
 import { Logger } from '../../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface Course {
   id?: string;
@@ -79,7 +86,11 @@ export default function AdminCourses({ navigation }: any) {
         setCourses([]);
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading courses:', error);
+=======
+      console.error('Error loading courses:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setCourses([]);
     } finally {
       setIsLoading(false);
@@ -94,7 +105,10 @@ export default function AdminCourses({ navigation }: any) {
 
   const handleDelete = (course: Course) => {
     const id = getCourseId(course);
+<<<<<<< HEAD
     console.log('AdminCourses: Delete button clicked for course ID:', id);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (!id) {
       Alert.alert('Error', 'Invalid course ID');
       return;
@@ -110,6 +124,7 @@ export default function AdminCourses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
+<<<<<<< HEAD
               console.log('AdminCourses: Attempting to delete course with ID:', id);
               const result = await adminService.deleteCourse(id);
               console.log('AdminCourses: Delete result:', result);
@@ -122,6 +137,12 @@ export default function AdminCourses({ navigation }: any) {
               }
             } catch (error) {
               Logger.error('AdminCourses: Error deleting course:', error);
+=======
+              await adminService.deleteCourse(id);
+              await loadCourses();
+              Alert.alert('Success', 'Course deleted successfully');
+            } catch (error) {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               Alert.alert('Error', 'Failed to delete course');
             }
           },
@@ -150,7 +171,11 @@ export default function AdminCourses({ navigation }: any) {
       await loadCourses();
       Alert.alert('Success', newStatus === 'published' ? 'Course published successfully' : 'Course unpublished');
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error updating course status:', error);
+=======
+      console.error('Error updating course status:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to update course status');
     }
   };

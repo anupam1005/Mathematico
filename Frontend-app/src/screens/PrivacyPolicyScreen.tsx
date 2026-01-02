@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Card, Title, Paragraph, List } from 'react-native-paper';

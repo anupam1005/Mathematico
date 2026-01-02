@@ -23,7 +23,11 @@ const storage = multer.diskStorage({
     
     if (file.fieldname === 'pdf' || file.fieldname === 'pdfFile') {
       uploadPath = uploadDirs.pdfs;
+<<<<<<< HEAD
     } else if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+=======
+    } else if (file.fieldname === 'coverImage') {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       uploadPath = uploadDirs.covers;
     }
     
@@ -57,7 +61,11 @@ const fileFilter = (req, file, cb) => {
     } else {
       cb(new Error('Only PDF files are allowed for book content'), false);
     }
+<<<<<<< HEAD
   } else if (file.fieldname === 'coverImage' || file.fieldname === 'image') {
+=======
+  } else if (file.fieldname === 'coverImage') {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     // Only allow specific image types with proper validation
     if (allowedImageTypes.includes(file.mimetype) && allowedImageExtensions.includes(fileExtension)) {
       cb(null, true);

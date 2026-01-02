@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,7 +10,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+<<<<<<< HEAD
   Linking,
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 } from 'react-native';
 import {
   Card,
@@ -16,6 +23,7 @@ import {
   Chip,
   ActivityIndicator,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Calendar, Clock, Users, Tag, GraduationCap, PlayCircle, Square, Video, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
@@ -23,12 +31,22 @@ import { designSystem } from '../styles/designSystem';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Logger } from '../utils/errorHandler';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import { liveClassService, LiveClass } from '../services/liveClassService';
+import { designSystem } from '../styles/designSystem';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 export default function LiveClassDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const { liveClassId } = route.params;
   const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
+=======
+  const [enrolling, setEnrolling] = useState(false);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
   useEffect(() => {
     loadLiveClass();
@@ -42,6 +60,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (response.success && response.data) {
         // Handle both single object and array responses
         const liveClassData = Array.isArray(response.data) ? response.data[0] : response.data;
+<<<<<<< HEAD
         console.log('Live class data received:', liveClassData);
         
         // Ensure all required properties exist with fallbacks
@@ -70,11 +89,19 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         setLiveClass(safeLiveClassData);
       } else {
         Logger.error('Failed to load live class:', response.message);
+=======
+        setLiveClass(liveClassData);
+      } else {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         Alert.alert('Error', response.message || 'Failed to load live class');
         navigation.goBack();
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading live class:', error);
+=======
+      console.error('Error loading live class:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to load live class');
       navigation.goBack();
     } finally {
@@ -82,6 +109,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     }
   };
 
+<<<<<<< HEAD
 
   const handleStartLiveClass = async () => {
     if (!liveClass) return;
@@ -92,10 +120,22 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Start', onPress: startLiveClass },
+=======
+  const handleEnroll = async () => {
+    if (!liveClass) return;
+
+    Alert.alert(
+      'Enroll in Live Class',
+      `Are you sure you want to enroll in "${liveClass.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Enroll', onPress: enrollInLiveClass },
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       ]
     );
   };
 
+<<<<<<< HEAD
   const handleEndLiveClass = async () => {
     if (!liveClass) return;
 
@@ -176,6 +216,24 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     } catch (error) {
       Logger.error('Error joining live class:', error);
       Alert.alert('Error', 'Failed to join live class. Please try again.');
+=======
+  const enrollInLiveClass = async () => {
+    try {
+      setEnrolling(true);
+      const response = await liveClassService.enrollInLiveClass(liveClassId);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Successfully enrolled in live class!');
+        // You might want to update UI or navigate somewhere
+      } else {
+        Alert.alert('Error', response.message || 'Failed to enroll in live class');
+      }
+    } catch (error) {
+      console.error('Error enrolling in live class:', error);
+      Alert.alert('Error', 'Failed to enroll in live class');
+    } finally {
+      setEnrolling(false);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   };
 
@@ -216,6 +274,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
   };
 
   const formatDate = (dateString: string) => {
+<<<<<<< HEAD
     if (!dateString) return 'TBD';
     try {
       const date = new Date(dateString);
@@ -237,6 +296,14 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       Logger.error('Error checking if date is upcoming:', error);
       return false;
     }
+=======
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const isUpcoming = (dateString: string) => {
+    return new Date(dateString) > new Date();
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   };
 
   const isLive = (status: string) => {
@@ -256,10 +323,17 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     );
   }
 
+<<<<<<< HEAD
   if (!liveClass || typeof liveClass !== 'object') {
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={64} color={designSystem.colors.error} />
+=======
+  if (!liveClass) {
+    return (
+      <View style={styles.errorContainer}>
+        <Icon name="error" size={64} color={designSystem.colors.error} />
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Text style={styles.errorText}>Live class not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -268,9 +342,14 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     );
   }
 
+<<<<<<< HEAD
   try {
     return (
       <ScrollView style={styles.container}>
+=======
+  return (
+    <ScrollView style={styles.container}>
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       {/* Live Class Header */}
       <Card style={styles.headerCard}>
         <Card.Cover
@@ -283,6 +362,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         />
         <Card.Content style={styles.headerContent}>
           <View style={styles.titleContainer}>
+<<<<<<< HEAD
             <Title style={styles.title}>{liveClass.title || 'Untitled Live Class'}</Title>
             <Chip
               mode="flat"
@@ -290,11 +370,21 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
               textStyle={{ color: designSystem.colors.surface }}
             >
               {(liveClass.status || 'unknown').toUpperCase()}
+=======
+            <Title style={styles.title}>{liveClass.title}</Title>
+            <Chip
+              mode="flat"
+              style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status) }]}
+              textStyle={{ color: designSystem.colors.surface }}
+            >
+              {liveClass.status.toUpperCase()}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             </Chip>
           </View>
           <View style={styles.metaContainer}>
             <Chip
               mode="flat"
+<<<<<<< HEAD
               style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
               textStyle={{ color: designSystem.colors.surface }}
             >
@@ -306,6 +396,22 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           </View>
           <View style={styles.priceContainer}>
             <Text style={styles.price}>FREE</Text>
+=======
+              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level) }]}
+              textStyle={{ color: designSystem.colors.surface }}
+            >
+              {liveClass.level}
+            </Chip>
+            <Chip mode="outlined" style={styles.categoryChip}>
+              {liveClass.category}
+            </Chip>
+          </View>
+          <View style={styles.priceContainer}>
+            {liveClass.original_price && liveClass.original_price > liveClass.price && (
+              <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
+            )}
+            <Text style={styles.price}>₹{liveClass.price}</Text>
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           </View>
         </Card.Content>
       </Card>
@@ -314,11 +420,15 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.sectionTitle}>Description</Title>
+<<<<<<< HEAD
           <Paragraph style={styles.description}>
             {liveClass.description && typeof liveClass.description === 'string' 
               ? liveClass.description 
               : 'No description available.'}
           </Paragraph>
+=======
+          <Paragraph style={styles.description}>{liveClass.description}</Paragraph>
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         </Card.Content>
       </Card>
 
@@ -328,6 +438,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Class Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
+<<<<<<< HEAD
               <Calendar size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Scheduled:</Text>
               <Text style={styles.detailValue}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
@@ -351,6 +462,31 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
               <GraduationCap size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{liveClass.class || 'All Classes'}</Text>
+=======
+              <Icon name="schedule" size={20} color={designSystem.colors.primary} />
+              <Text style={styles.detailLabel}>Scheduled:</Text>
+              <Text style={styles.detailValue}>{formatDate(liveClass.scheduled_at)}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="access-time" size={20} color={designSystem.colors.primary} />
+              <Text style={styles.detailLabel}>Duration:</Text>
+              <Text style={styles.detailValue}>{liveClass.duration} minutes</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="group" size={20} color={designSystem.colors.primary} />
+              <Text style={styles.detailLabel}>Enrolled:</Text>
+              <Text style={styles.detailValue}>{liveClass.enrolled_students}/{liveClass.max_students}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="category" size={20} color={designSystem.colors.primary} />
+              <Text style={styles.detailLabel}>Subject:</Text>
+              <Text style={styles.detailValue}>{liveClass.subject}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="school" size={20} color={designSystem.colors.primary} />
+              <Text style={styles.detailLabel}>Class:</Text>
+              <Text style={styles.detailValue}>{liveClass.class}</Text>
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             </View>
           </View>
         </Card.Content>
@@ -373,7 +509,11 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Prerequisites */}
+<<<<<<< HEAD
       {liveClass.prerequisites && typeof liveClass.prerequisites === 'string' && liveClass.prerequisites.trim() && (
+=======
+      {liveClass.prerequisites && (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Prerequisites</Title>
@@ -383,7 +523,11 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Materials */}
+<<<<<<< HEAD
       {liveClass.materials && typeof liveClass.materials === 'string' && liveClass.materials.trim() && (
+=======
+      {liveClass.materials && (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Materials Required</Title>
@@ -393,7 +537,11 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Notes */}
+<<<<<<< HEAD
       {liveClass.notes && typeof liveClass.notes === 'string' && liveClass.notes.trim() && (
+=======
+      {liveClass.notes && (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Additional Notes</Title>
@@ -403,7 +551,11 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       )}
 
       {/* Recording */}
+<<<<<<< HEAD
       {isCompleted(liveClass.status || '') && liveClass.recording_url && (
+=======
+      {isCompleted(liveClass.status) && liveClass.recording_url && (
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.sectionTitle}>Class Recording</Title>
@@ -421,6 +573,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View style={styles.actionContainer}>
+<<<<<<< HEAD
         {/* Admin Controls - Only show for admin users */}
         {user?.isAdmin && (
           <>
@@ -504,6 +657,51 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       </View>
     );
   }
+=======
+        {isUpcoming(liveClass.scheduled_at) && !isCompleted(liveClass.status) && (
+          <Button
+            mode="contained"
+            onPress={handleEnroll}
+            style={styles.enrollButton}
+            contentStyle={styles.enrollButtonContent}
+            disabled={enrolling}
+            icon="school"
+          >
+            {enrolling ? (
+              <ActivityIndicator color={designSystem.colors.surface} />
+            ) : (
+              `Enroll Now - ₹${liveClass.price}`
+            )}
+          </Button>
+        )}
+        
+        {isLive(liveClass.status) && (
+          <Button
+            mode="contained"
+            onPress={() => Alert.alert('Info', 'Join live class functionality would be implemented here')}
+            style={styles.joinButton}
+            contentStyle={styles.joinButtonContent}
+            icon="videocam"
+          >
+            Join Live Class
+          </Button>
+        )}
+        
+        {isCompleted(liveClass.status) && (
+          <Button
+            mode="outlined"
+            onPress={() => Alert.alert('Info', 'View recording functionality would be implemented here')}
+            style={styles.recordingButton}
+            contentStyle={styles.recordingButtonContent}
+            icon="play-circle"
+          >
+            View Recording
+          </Button>
+        )}
+      </View>
+    </ScrollView>
+  );
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }
 
 const styles = StyleSheet.create({
@@ -669,6 +867,7 @@ const styles = StyleSheet.create({
   joinButtonContent: {
     paddingVertical: designSystem.spacing.md,
   },
+<<<<<<< HEAD
   startButton: {
     borderRadius: designSystem.borderRadius.md,
     backgroundColor: designSystem.colors.success,
@@ -705,4 +904,9 @@ const styles = StyleSheet.create({
     marginLeft: designSystem.spacing.sm,
     textAlign: 'center',
   },
+=======
+  recordingButtonContent: {
+    paddingVertical: designSystem.spacing.md,
+  },
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });

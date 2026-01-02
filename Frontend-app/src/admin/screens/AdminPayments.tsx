@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// @ts-nocheck
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,12 +22,19 @@ import {
   Paragraph,
   Button,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+<<<<<<< HEAD
 import { Logger } from '../../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface Payment {
   id: string;
@@ -71,7 +82,11 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
       // Load payments from API
       setPayments([]);
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error loading payments:', error);
+=======
+      console.error('Error loading payments:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to load payments. Please try again.');
     } finally {
       setIsLoading(false);
@@ -366,6 +381,10 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     paddingHorizontal: designSystem.spacing.md,
+<<<<<<< HEAD
+=======
+    marginBottom: designSystem.spacing.sm,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     backgroundColor: designSystem.colors.surface,
     borderRadius: designSystem.borderRadius.lg,
     margin: designSystem.spacing.md,

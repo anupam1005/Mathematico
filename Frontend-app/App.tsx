@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
+<<<<<<< HEAD
 import { NavigationContainer, ParamListBase } from '@react-navigation/native';
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -15,6 +16,16 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+=======
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+import * as Font from 'expo-font';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Import screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -29,8 +40,11 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import BookDetailScreen from './src/screens/BookDetailScreen';
 import CourseDetailScreen from './src/screens/CourseDetailScreen';
 import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
+<<<<<<< HEAD
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import SecurePdfScreen from './src/screens/SecurePdfScreen';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import AboutScreen from './src/screens/AboutScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
@@ -45,6 +59,7 @@ import { theme } from './src/styles/theme';
 // Import Auth Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
+<<<<<<< HEAD
 // Define the param list for the root stack
 type RootStackParamList = {
   MainTabs: undefined;
@@ -63,6 +78,12 @@ type RootStackParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+=======
+// Import ErrorBoundary
+import ErrorBoundary from './src/components/ErrorBoundary';
+
+const Stack = createStackNavigator();
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
@@ -70,8 +91,13 @@ function MainTabs() {
   
   return (
     <Tab.Navigator
+<<<<<<< HEAD
       screenOptions={({ route }: any) => ({
         tabBarIcon: ({ focused, color, size }: any) => {
+=======
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           let iconName: any;
 
           if (route.name === 'Home') {
@@ -189,6 +215,7 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
+<<<<<<< HEAD
       <Stack.Screen 
         name="Checkout" 
         component={CheckoutScreen}
@@ -205,6 +232,8 @@ function AppNavigator() {
           headerShown: false,
         }}
       />
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
       {/* Legal & Info Screens */}
       <Stack.Screen 
@@ -250,6 +279,7 @@ function AppContent() {
   const [fontError, setFontError] = useState(false);
 
   useEffect(() => {
+<<<<<<< HEAD
     async function prepare() {
       try {
         // Skip custom font loading to avoid ExpoFontLoader issues
@@ -285,6 +315,53 @@ function AppContent() {
 }
 
 
+=======
+    async function loadFonts() {
+      try {
+        // Try to load custom fonts, but don't crash if they fail
+        await Font.loadAsync({
+          MaterialIcons: require('./src/assets/fonts/MaterialIcons.ttf'),
+        });
+        console.log('✅ Custom fonts loaded successfully');
+        setFontsLoaded(true);
+      } catch (error) {
+        console.warn('⚠️ Custom font loading failed, using system fonts:', error);
+        setFontError(true);
+        setFontsLoaded(true); // Continue without custom fonts
+      }
+    }
+    
+    // Add a timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      console.warn('⚠️ Font loading timeout, continuing with system fonts');
+      setFontsLoaded(true);
+    }, 5000);
+    
+    loadFonts().finally(() => {
+      clearTimeout(timeout);
+    });
+  }, []);
+
+  if (!fontsLoaded) {
+    return null; // Show loading screen
+  }
+
+  return (
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <PaperProvider theme={theme as any}>
+          <AuthProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </AuthProvider>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
+  );
+}
+
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

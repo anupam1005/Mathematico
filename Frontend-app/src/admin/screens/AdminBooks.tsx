@@ -21,14 +21,21 @@ import {
   Menu,
   Divider,
 } from 'react-native-paper';
+<<<<<<< HEAD
 import { Icon } from '../../components/Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
+<<<<<<< HEAD
 import { Logger } from '../../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface Book {
   id: string | number;
@@ -113,7 +120,11 @@ export default function AdminBooks({ navigation }: any) {
         setBooks([]);
       }
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('📚 AdminBooks: Error loading books:', error);
+=======
+      console.error('📚 AdminBooks: Error loading books:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       setBooks([]);
     } finally {
       setIsLoading(false);
@@ -127,7 +138,10 @@ export default function AdminBooks({ navigation }: any) {
   };
 
   const handleDelete = (id: string) => {
+<<<<<<< HEAD
     console.log('AdminBooks: Delete button clicked for book ID:', id);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     Alert.alert(
       'Delete Book',
       'Are you sure you want to delete this book?',
@@ -138,6 +152,7 @@ export default function AdminBooks({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
+<<<<<<< HEAD
               console.log('AdminBooks: Attempting to delete book with ID:', id);
               const result = await adminService.deleteBook(id);
               console.log('AdminBooks: Delete result:', result);
@@ -154,6 +169,17 @@ export default function AdminBooks({ navigation }: any) {
               }
             } catch (error) {
               Logger.error('AdminBooks: Error deleting book:', error);
+=======
+              await adminService.deleteBook(id);
+              // Remove the book from local state immediately
+              setBooks(prevBooks => prevBooks.filter(book => {
+                const bookId = book.id || book._id || book.Id;
+                return bookId !== id;
+              }));
+              Alert.alert('Success', 'Book deleted successfully');
+            } catch (error) {
+              console.error('Error deleting book:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               Alert.alert('Error', 'Failed to delete book');
             }
           },
@@ -185,7 +211,11 @@ export default function AdminBooks({ navigation }: any) {
       
       Alert.alert('Success', newStatus === 'published' ? 'Book published successfully' : 'Book unpublished');
     } catch (error) {
+<<<<<<< HEAD
       Logger.error('Error updating book status:', error);
+=======
+      console.error('Error updating book status:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       Alert.alert('Error', 'Failed to update book status');
     }
   };

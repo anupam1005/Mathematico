@@ -3,7 +3,10 @@ import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
 import { API_CONFIG } from '../config';
+<<<<<<< HEAD
 import { Logger } from '../utils/errorHandler';
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 interface SecurePdfViewerProps {
   bookId: string;
@@ -24,6 +27,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       setLoading(true);
       setError('');
 
+<<<<<<< HEAD
       const { Storage } = await import('../utils/storage');
       
       // Get auth token for authenticated requests
@@ -52,14 +56,31 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
       const data = await response.json();
 
       if (data.success && data.data?.viewerUrl) {
+=======
+      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         setViewerUrl(data.data.viewerUrl);
       } else {
         setError(data.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
+<<<<<<< HEAD
       const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
       setError(errorMessage);
       Logger.error('Error fetching PDF viewer:', err);
+=======
+      setError('Network error. Please check your connection.');
+      console.error('Error fetching PDF viewer:', err);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     } finally {
       setLoading(false);
     }
@@ -74,13 +95,19 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     setLoading(false);
   };
 
+<<<<<<< HEAD
   // Custom HTML for full-screen PDF viewing
   // Uses Google PDF Viewer for better mobile compatibility
   const securePdfHtml = viewerUrl ? `
+=======
+  // Custom HTML for secure PDF viewing with restrictions
+  const securePdfHtml = `
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
+<<<<<<< HEAD
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <title>PDF Viewer</title>
@@ -102,6 +129,16 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         }
         
         body {
+=======
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Secure PDF Viewer</title>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background: #f5f5f5;
+          overflow: hidden;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           user-select: none;
           -webkit-user-select: none;
           -webkit-touch-callout: none;
@@ -112,13 +149,20 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           width: 100vw;
           height: 100vh;
           position: relative;
+<<<<<<< HEAD
           background: white;
+=======
+          display: flex;
+          align-items: center;
+          justify-content: center;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         }
         
         .pdf-viewer {
           width: 100%;
           height: 100%;
           border: none;
+<<<<<<< HEAD
           background: white;
         }
         
@@ -130,11 +174,50 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           text-align: center;
           color: #666;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+=======
+          pointer-events: auto;
+        }
+        
+        .security-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: transparent;
+          z-index: 10;
+          pointer-events: none;
+        }
+        
+        .restriction-notice {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 8px 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          text-align: center;
+          z-index: 20;
+        }
+        
+        /* Disable right-click context menu */
+        * {
+          -webkit-touch-callout: none;
+          -webkit-user-select: none;
+          -khtml-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         }
       </style>
     </head>
     <body>
       <div class="pdf-container">
+<<<<<<< HEAD
         <div class="loading" id="loading">Loading PDF...</div>
         <iframe 
           class="pdf-viewer" 
@@ -145,6 +228,19 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           onload="document.getElementById('loading').style.display='none';"
           onerror="document.getElementById('loading').innerHTML='Failed to load PDF. Please try again.';"
         ></iframe>
+=======
+        <div class="restriction-notice">
+          📖 Read-only mode • Download and screenshots disabled
+        </div>
+        <iframe 
+          class="pdf-viewer" 
+          src="${viewerUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
+          oncontextmenu="return false;"
+          onselectstart="return false;"
+          ondragstart="return false;"
+        ></iframe>
+        <div class="security-overlay"></div>
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       </div>
       
       <script>
@@ -152,6 +248,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         document.addEventListener('contextmenu', function(e) {
           e.preventDefault();
           return false;
+<<<<<<< HEAD
         }, true);
         
         // Disable keyboard shortcuts for save/print
@@ -174,6 +271,52 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     </body>
     </html>
   ` : '';
+=======
+        });
+        
+        // Disable text selection
+        document.addEventListener('selectstart', function(e) {
+          e.preventDefault();
+          return false;
+        });
+        
+        // Disable drag
+        document.addEventListener('dragstart', function(e) {
+          e.preventDefault();
+          return false;
+        });
+        
+        // Disable keyboard shortcuts for save/print
+        document.addEventListener('keydown', function(e) {
+          // Disable Ctrl+S (Save), Ctrl+P (Print), F12 (DevTools)
+          if ((e.ctrlKey && (e.keyCode === 83 || e.keyCode === 80)) || e.keyCode === 123) {
+            e.preventDefault();
+            return false;
+          }
+        });
+        
+        // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+        document.addEventListener('keydown', function(e) {
+          if (e.keyCode === 123 || 
+              (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
+              (e.ctrlKey && e.keyCode === 85)) {
+            e.preventDefault();
+            return false;
+          }
+        });
+        
+        // Prevent screenshot attempts (basic protection)
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) {
+            // Page is being hidden (possibly for screenshot)
+            console.log('Page visibility changed - potential screenshot attempt');
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
   if (loading) {
     return (
@@ -198,6 +341,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     );
   }
 
+<<<<<<< HEAD
   if (!viewerUrl) {
     return (
       <View style={styles.container}>
@@ -209,6 +353,8 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     );
   }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   return (
     <View style={styles.container}>
       <WebView
@@ -216,15 +362,21 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         style={styles.webView}
         onError={handleWebViewError}
         onLoad={handleWebViewLoad}
+<<<<<<< HEAD
         onLoadEnd={handleWebViewLoad}
         javaScriptEnabled={true}
         domStorageEnabled={true}
+=======
+        javaScriptEnabled={true}
+        domStorageEnabled={false}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         startInLoadingState={true}
         scalesPageToFit={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
+<<<<<<< HEAD
         allowFileAccess={false}
         allowUniversalAccessFromFileURLs={false}
         mixedContentMode="always"
@@ -264,6 +416,15 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
               </Button>
             </View>
           );
+=======
+        onShouldStartLoadWithRequest={(request) => {
+          // Only allow the secure PDF URL
+          return request.url.includes('cloudinary.com') || request.url.startsWith('data:');
+        }}
+        onMessage={(event) => {
+          // Handle any messages from the WebView
+          console.log('WebView message:', event.nativeEvent.data);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         }}
       />
     </View>

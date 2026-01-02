@@ -1,13 +1,20 @@
+<<<<<<< HEAD
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
+=======
+import axios from 'axios';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+<<<<<<< HEAD
 // Create a service error handler for liveClassService
 const errorHandler = createServiceErrorHandler('liveClassService');
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 export type LiveClassLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
 export type LiveClassStatus = 'scheduled' | 'live' | 'completed' | 'cancelled';
 
@@ -49,13 +56,18 @@ export interface UpdateLiveClassData extends Partial<BaseLiveClassData> {
 
 // Create axios instance for live class endpoints
 const liveClassApi = axios.create({
+<<<<<<< HEAD
   baseURL: API_CONFIG.mobile, // This will be updated dynamically
+=======
+  baseURL: API_CONFIG.mobile,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+<<<<<<< HEAD
 // Update the base URL dynamically
 (async () => {
   try {
@@ -69,22 +81,37 @@ const liveClassApi = axios.create({
 // Request interceptor to add auth token
 liveClassApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+=======
+// Request interceptor to add auth token
+liveClassApi.interceptors.request.use(
+  async (config) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     const token = await authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
+<<<<<<< HEAD
   (error: AxiosError) => {
+=======
+  (error) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle token refresh
 liveClassApi.interceptors.response.use(
+<<<<<<< HEAD
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
+=======
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -100,7 +127,11 @@ liveClassApi.interceptors.response.use(
           await AsyncStorage.removeItem('refreshToken');
         }
       } catch (refreshError) {
+<<<<<<< HEAD
         errorHandler.handleError('LiveClassService: Token refresh error:', refreshError);
+=======
+        console.error('LiveClassService: Token refresh error:', refreshError);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
@@ -121,6 +152,7 @@ class LiveClassService {
 
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
+<<<<<<< HEAD
       // Ensure we're using the correct backend URL
       const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
       const fullUrl = `${backendUrl}${endpoint}`;
@@ -130,11 +162,18 @@ class LiveClassService {
       const response = await liveClassApi({
         url: endpoint,
         baseURL: backendUrl,
+=======
+      const response = await liveClassApi({
+        url: endpoint,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         ...options,
       });
       return response.data;
     } catch (error) {
+<<<<<<< HEAD
       console.error('LiveClassService: Request failed:', error);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -144,7 +183,10 @@ class LiveClassService {
     subject?: string;
     level?: string;
     status?: string;
+<<<<<<< HEAD
     search?: string;
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }): Promise<PaginatedResponse<any>> {
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
@@ -152,6 +194,7 @@ class LiveClassService {
       if (filters?.subject) params.append('subject', filters.subject);
       if (filters?.level) params.append('level', filters.level);
       if (filters?.status) params.append('status', filters.status);
+<<<<<<< HEAD
       if (filters?.search) params.append('search', filters.search);
       
       const response = await this.makeRequest(`/live-classes?${params.toString()}`);
@@ -163,12 +206,22 @@ class LiveClassService {
         };
       }
       
+=======
+      
+      const response = await this.makeRequest(`/live-classes?${params.toString()}`);
+      
+      // Since database is disabled, always return empty data
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching live classes:', error);
+=======
+      console.error('Error fetching live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -179,6 +232,7 @@ class LiveClassService {
   async getLiveClassById(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/live-classes/${id}`);
+<<<<<<< HEAD
       
       if (response && response.data) {
         return {
@@ -200,6 +254,12 @@ class LiveClassService {
         data: null,
         message: 'Failed to fetch live class'
       };
+=======
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching live class:', error);
+      throw ErrorHandler.handleApiError(error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
   }
 
@@ -208,11 +268,16 @@ class LiveClassService {
       const response = await this.makeRequest('/featured');
       return response.data?.liveClasses || [];
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching featured live classes:', error);
+=======
+      console.error('Error fetching featured live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return [];
     }
   }
 
+<<<<<<< HEAD
   async startLiveClass(id: string): Promise<any> {
     try {
       const response = await this.makeRequest(`/live-classes/${id}/start`, {
@@ -271,12 +336,18 @@ class LiveClassService {
     }
   }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   async getUpcomingLiveClasses(page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> {
     try {
       const response = await this.getLiveClasses(page, limit, { status: 'scheduled' });
       return response;
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching upcoming live classes:', error);
+=======
+      console.error('Error fetching upcoming live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -295,6 +366,7 @@ class LiveClassService {
       
       const response = await this.makeRequest(`/live-classes?${params.toString()}`);
       
+<<<<<<< HEAD
       if (response && response.data) {
         return {
           data: response.data,
@@ -302,12 +374,19 @@ class LiveClassService {
         };
       }
       
+=======
+      // Since database is disabled, always return empty data
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error searching live classes:', error);
+=======
+      console.error('Error searching live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -320,7 +399,11 @@ class LiveClassService {
       const response = await this.getLiveClasses(page, limit, { category });
       return response;
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching live classes by category:', error);
+=======
+      console.error('Error fetching live classes by category:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -333,7 +416,11 @@ class LiveClassService {
       const response = await this.getLiveClasses(page, limit, { level });
       return response;
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching live classes by level:', error);
+=======
+      console.error('Error fetching live classes by level:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         data: [],
         meta: { total: 0, page, limit, totalPages: 0 }
@@ -341,6 +428,7 @@ class LiveClassService {
     }
   }
 
+<<<<<<< HEAD
   // Admin methods
   async createLiveClass(liveClassData: CreateLiveClassData): Promise<any> {
     try {
@@ -438,10 +526,32 @@ class LiveClassService {
       errorHandler.handleError('Error enrolling in live class:', error);
       throw ErrorHandler.handleApiError(error);
     }
+=======
+  // Admin methods (will return errors since database is disabled)
+  async createLiveClass(liveClassData: CreateLiveClassData): Promise<any> {
+    throw new Error('Live class creation is not available. Database functionality has been removed.');
+  }
+
+  async updateLiveClass(id: string, liveClassData: UpdateLiveClassData): Promise<any> {
+    throw new Error('Live class update is not available. Database functionality has been removed.');
+  }
+
+  async deleteLiveClass(id: string): Promise<void> {
+    throw new Error('Live class deletion is not available. Database functionality has been removed.');
+  }
+
+  async uploadLiveClassThumbnail(liveClassId: string, imageUri: string): Promise<string> {
+    throw new Error('Live class thumbnail upload is not available. Database functionality has been removed.');
+  }
+
+  async joinLiveClass(liveClassId: string): Promise<string> {
+    throw new Error('Live class joining is not available. Database functionality has been removed.');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 }
 
 export const liveClassService = new LiveClassService();
+<<<<<<< HEAD
 export default liveClassService;
 
 // Export LiveClass type for use in components
@@ -477,3 +587,6 @@ export type LiveClass = BaseLiveClassData & {
   createdAt?: string;
   updatedAt?: string;
 };
+=======
+export default liveClassService;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686

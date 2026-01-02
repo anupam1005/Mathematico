@@ -1,5 +1,6 @@
 // src/services/adminService.ts
 import axios from "axios";
+<<<<<<< HEAD
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import authService from "./authService";
@@ -8,6 +9,11 @@ import { Storage } from "../utils/storage";
 
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
+=======
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import authService from "./authService";
+import { API_CONFIG } from "../config";
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Generic API response type
 interface ApiResponse<T = any> {
@@ -23,6 +29,7 @@ interface ApiResponse<T = any> {
   };
 }
 
+<<<<<<< HEAD
 // Dashboard stats interface
 export interface DashboardStats {
   totalUsers: number;
@@ -52,6 +59,8 @@ export interface DashboardStats {
   }>;
 }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // --- Utility: map snake_case <-> camelCase --- //
 function toCamelCase(obj: any): any {
   if (Array.isArray(obj)) return obj.map(toCamelCase);
@@ -81,7 +90,11 @@ function toSnakeCase(obj: any): any {
 
 // ----------------- AXIOS INSTANCE -----------------
 const adminApi = axios.create({
+<<<<<<< HEAD
   baseURL: API_CONFIG.admin, // This will be updated dynamically
+=======
+  baseURL: API_CONFIG.admin,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   timeout: 30000, // 30 seconds timeout
   validateStatus: (status) => status < 500,
   headers: {
@@ -90,6 +103,7 @@ const adminApi = axios.create({
   },
 });
 
+<<<<<<< HEAD
 // Update the base URL dynamically
 (async () => {
   try {
@@ -103,6 +117,8 @@ const adminApi = axios.create({
   }
 })();
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Request interceptor to add auth token
 adminApi.interceptors.request.use(
   async (config) => {
@@ -112,12 +128,20 @@ adminApi.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('AdminService: Error getting token:', error);
+=======
+      console.error('AdminService: Error getting token:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     }
     return config;
   },
   (error) => {
+<<<<<<< HEAD
     errorHandler.handleError('AdminService: Request interceptor error:', error);
+=======
+    console.error('AdminService: Request interceptor error:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return Promise.reject(error);
   }
 );
@@ -138,6 +162,7 @@ adminApi.interceptors.response.use(
           return adminApi(originalRequest);
         } else {
           console.log('AdminService: Token refresh failed, clearing tokens...');
+<<<<<<< HEAD
           await Storage.deleteItem('authToken');
           await Storage.deleteItem('refreshToken');
         }
@@ -145,6 +170,15 @@ adminApi.interceptors.response.use(
         errorHandler.handleError('AdminService: Token refresh error:', refreshError);
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
+=======
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('refreshToken');
+        }
+      } catch (refreshError) {
+        console.error('AdminService: Token refresh error:', refreshError);
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
     }
     
@@ -171,7 +205,11 @@ class AdminService {
         }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching dashboard:', error);
+=======
+      console.error('Error fetching dashboard:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch dashboard data',
@@ -188,11 +226,14 @@ class AdminService {
     }
   }
 
+<<<<<<< HEAD
   // Dashboard Stats (alias for getDashboard)
   async getDashboardStats(): Promise<ApiResponse<any>> {
     return this.getDashboard();
   }
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   // Users
   async getAllUsers(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
@@ -203,7 +244,11 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching users:', error);
+=======
+      console.error('Error fetching users:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch users',
@@ -218,7 +263,11 @@ class AdminService {
       const response = await adminApi.get(`/users/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching user:', error);
+=======
+      console.error('Error fetching user:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return { success: false, error: 'Failed to fetch user' };
     }
   }
@@ -249,7 +298,11 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching books:', error);
+=======
+      console.error('Error fetching books:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch books',
@@ -264,12 +317,17 @@ class AdminService {
       const response = await adminApi.get(`/books/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching book:', error);
+=======
+      console.error('Error fetching book:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return { success: false, error: 'Failed to fetch book' };
     }
   }
 
   async createBook(bookData: any): Promise<ApiResponse<any>> {
+<<<<<<< HEAD
     try {
       errorHandler.logInfo('AdminService: Creating book with data:', bookData);
       
@@ -439,6 +497,21 @@ class AdminService {
       errorHandler.handleError('AdminService: Book deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete book' };
     }
+=======
+    throw new Error('Book creation is not available. Database functionality has been removed.');
+  }
+
+  async updateBook(id: string, bookData: any): Promise<ApiResponse<any>> {
+    throw new Error('Book update is not available. Database functionality has been removed.');
+  }
+
+  async updateBookStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Book status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteBook(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Book deletion is not available. Database functionality has been removed.');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 
   // Courses
@@ -451,7 +524,11 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching courses:', error);
+=======
+      console.error('Error fetching courses:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch courses',
@@ -466,12 +543,17 @@ class AdminService {
       const response = await adminApi.get(`/courses/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching course:', error);
+=======
+      console.error('Error fetching course:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return { success: false, error: 'Failed to fetch course' };
     }
   }
 
   async createCourse(courseData: any): Promise<ApiResponse<any>> {
+<<<<<<< HEAD
     try {
       errorHandler.logInfo('AdminService: Creating course with data:', courseData);
       
@@ -657,6 +739,21 @@ class AdminService {
       errorHandler.handleError('AdminService: Course deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete course' };
     }
+=======
+    throw new Error('Course creation is not available. Database functionality has been removed.');
+  }
+
+  async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
+    throw new Error('Course update is not available. Database functionality has been removed.');
+  }
+
+  async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Course status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteCourse(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Course deletion is not available. Database functionality has been removed.');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 
   // Live Classes
@@ -669,7 +766,11 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching live classes:', error);
+=======
+      console.error('Error fetching live classes:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch live classes',
@@ -684,12 +785,17 @@ class AdminService {
       const response = await adminApi.get(`/live-classes/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching live class:', error);
+=======
+      console.error('Error fetching live class:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return { success: false, error: 'Failed to fetch live class' };
     }
   }
 
   async createLiveClass(liveClassData: any): Promise<ApiResponse<any>> {
+<<<<<<< HEAD
     try {
       errorHandler.logInfo('AdminService: Creating live class with data:', liveClassData);
       
@@ -869,6 +975,21 @@ class AdminService {
       errorHandler.handleError('AdminService: Live class deletion error:', error);
       return { success: false, error: error.message || 'Failed to delete live class' };
     }
+=======
+    throw new Error('Live class creation is not available. Database functionality has been removed.');
+  }
+
+  async updateLiveClass(id: string, liveClassData: any): Promise<ApiResponse<any>> {
+    throw new Error('Live class update is not available. Database functionality has been removed.');
+  }
+
+  async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    throw new Error('Live class status update is not available. Database functionality has been removed.');
+  }
+
+  async deleteLiveClass(id: string): Promise<ApiResponse<any>> {
+    throw new Error('Live class deletion is not available. Database functionality has been removed.');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   }
 
   // Payments
@@ -881,7 +1002,11 @@ class AdminService {
         pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching payments:', error);
+=======
+      console.error('Error fetching payments:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         error: 'Failed to fetch payments',
@@ -896,7 +1021,11 @@ class AdminService {
       const response = await adminApi.get(`/payments/${id}`);
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching payment:', error);
+=======
+      console.error('Error fetching payment:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return { success: false, error: 'Failed to fetch payment' };
     }
   }
@@ -907,7 +1036,11 @@ class AdminService {
       const response = await adminApi.get('/info');
       return { success: true, data: response.data.data };
     } catch (error) {
+<<<<<<< HEAD
       errorHandler.handleError('Error fetching admin info:', error);
+=======
+      console.error('Error fetching admin info:', error);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         data: {
@@ -928,6 +1061,7 @@ class AdminService {
       };
     }
   }
+<<<<<<< HEAD
 
   // Settings methods
   async getSettings(): Promise<ApiResponse<any>> {
@@ -964,6 +1098,8 @@ class AdminService {
       };
     }
   }
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 }
 
 export const adminService = new AdminService();

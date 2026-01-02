@@ -157,7 +157,39 @@ const liveClassSchema = new mongoose.Schema({
     type: String // URL to preview video
   },
   
+<<<<<<< HEAD
   // Enrollment (no pricing)
+=======
+  // Pricing and Enrollment
+  price: {
+    type: Number,
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative']
+  },
+  
+  currency: {
+    type: String,
+    default: 'INR',
+    enum: ['INR', 'USD', 'EUR', 'GBP']
+  },
+  
+  isFree: {
+    type: Boolean,
+    default: false
+  },
+  
+  discount: {
+    percentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    },
+    validUntil: {
+      type: Date
+    }
+  },
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   
   // Instructor Information
   instructor: {
@@ -463,9 +495,23 @@ liveClassSchema.pre('save', function(next) {
   next();
 });
 
+<<<<<<< HEAD
 // Virtual for free status (all live classes are free)
 liveClassSchema.virtual('isFree').get(function() {
   return true;
+=======
+// Virtual for formatted price
+liveClassSchema.virtual('formattedPrice').get(function() {
+  if (this.isFree) return 'Free';
+  
+  let price = this.price;
+  if (this.discount.percentage > 0 && 
+      (!this.discount.validUntil || this.discount.validUntil > new Date())) {
+    price = price * (1 - this.discount.percentage / 100);
+  }
+  
+  return `${this.currency} ${price.toFixed(2)}`;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 });
 
 // Virtual for enrollment count
@@ -496,11 +542,14 @@ liveClassSchema.virtual('currentStatus').get(function() {
   }
 });
 
+<<<<<<< HEAD
 // Virtual for thumbnail URL (frontend expects snake_case)
 liveClassSchema.virtual('thumbnail_url').get(function() {
   return this.thumbnail || '';
 });
 
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 // Virtual for time until class starts
 liveClassSchema.virtual('timeUntilStart').get(function() {
   const now = new Date();

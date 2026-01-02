@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ViewStyle } from 'react-native';
+<<<<<<< HEAD
 import { Icon } from './Icon';
+=======
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { listStyles, textStyles, designSystem } from '../styles/designSystem';
 
 interface ListItemProps {

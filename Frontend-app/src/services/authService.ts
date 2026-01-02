@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
@@ -30,6 +31,11 @@ const createSafeError = (error: any) => {
     };
   }
 };
+=======
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../config';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 
 // Create axios instance for auth endpoints
 const api = axios.create({
@@ -37,29 +43,48 @@ const api = axios.create({
   timeout: 30000, // Increased timeout for better reliability
   headers: {
     'Content-Type': 'application/json',
+<<<<<<< HEAD
     'Accept': 'application/json'
   },
   // Add request/response interceptors for debugging
   validateStatus: function (status: number) {
+=======
+    'Accept': 'application/json',
+  },
+  // Add request/response interceptors for debugging
+  validateStatus: function (status) {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     return status >= 200 && status < 300; // default
   },
 });
 
 // Request interceptor to add auth token and debug
 api.interceptors.request.use(
+<<<<<<< HEAD
   async (config: InternalAxiosRequestConfig) => {
+=======
+  async (config) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     console.log('AuthService: Making request to:', config.url);
     console.log('AuthService: Full URL:', `${config.baseURL}${config.url}`);
     console.log('AuthService: Method:', config.method);
     console.log('AuthService: Headers:', config.headers);
     
+<<<<<<< HEAD
     const token = await Storage.getItem('authToken');
+=======
+    const token = await AsyncStorage.getItem('authToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
+<<<<<<< HEAD
   (error: AxiosError) => {
+=======
+  (error) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     console.error('AuthService: Request interceptor error:', error);
     return Promise.reject(error);
   }
@@ -67,11 +92,16 @@ api.interceptors.request.use(
 
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
+<<<<<<< HEAD
   (response: AxiosResponse) => {
+=======
+  (response) => {
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
     console.log('AuthService: Response received:', response.status, response.statusText);
     console.log('AuthService: Response data:', response.data);
     return response;
   },
+<<<<<<< HEAD
   async (error: AxiosError) => {
     // Create a completely safe error object to prevent NONE property assignment issues
     const safeError = createSafeError(error);
@@ -112,15 +142,51 @@ api.interceptors.response.use(
             // Store new tokens
             if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
               await Storage.setItem('authToken', actualToken);
+=======
+  async (error) => {
+    console.error('AuthService: Response error:', error.message);
+    console.error('AuthService: Error code:', error.code);
+    console.error('AuthService: Error response:', error.response?.data);
+    console.error('AuthService: Error status:', error.response?.status);
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = await AsyncStorage.getItem('refreshToken');
+        if (refreshToken) {
+          console.log('AuthService: Attempting token refresh...');
+          
+          const response = await axios.post(`${API_CONFIG.auth}/refresh-token`, {
+            refreshToken,
+          });
+          
+          if (response.data.success && response.data.data) {
+            const { tokens } = response.data.data;
+            
+            // Extract tokens from the backend response structure
+            const actualToken = tokens?.accessToken;
+            const actualRefreshToken = tokens?.refreshToken;
+            
+            // Store new tokens
+            if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
+              await AsyncStorage.setItem('authToken', actualToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               console.log('AuthService: New access token stored via interceptor');
             }
             
             if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
+<<<<<<< HEAD
               await Storage.setItem('refreshToken', actualRefreshToken);
+=======
+              await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
               console.log('AuthService: New refresh token stored via interceptor');
             }
             
             // Retry original request with new token
+<<<<<<< HEAD
             const retryRequest: AxiosRequestConfig & { _retry?: boolean } = {
               ...originalRequest,
               headers: {
@@ -129,6 +195,10 @@ api.interceptors.response.use(
               }
             };
             return api(retryRequest);
+=======
+            originalRequest.headers.Authorization = `Bearer ${actualToken}`;
+            return api(originalRequest);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           } else {
             console.error('AuthService: Invalid refresh response structure:', response.data);
             throw new Error('Invalid refresh response');
@@ -140,8 +210,13 @@ api.interceptors.response.use(
       } catch (refreshError: any) {
         console.error('AuthService: Token refresh failed:', refreshError.message);
         // Refresh failed, clear tokens and redirect to login
+<<<<<<< HEAD
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
+=======
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         console.log('AuthService: Tokens cleared, user needs to login again');
       }
     }
@@ -156,7 +231,11 @@ export interface LoginResponse {
   data?: {
     user: any;
     token: string;
+<<<<<<< HEAD
     refreshToken?: string;
+=======
+    refreshToken: string;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
   };
 }
 
@@ -175,6 +254,7 @@ export interface UserResponse {
 const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
+<<<<<<< HEAD
       // Get the current backend URL
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
@@ -193,29 +273,50 @@ const authService = {
           'Accept': 'application/json'
         },
         timeout: 30000 // 30 second timeout
+=======
+      console.log('AuthService: Attempting login to:', API_CONFIG.auth);
+      const response = await api.post('/login', {
+        email,
+        password,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       });
       
       console.log('AuthService: Login response received:', response.data);
       
       if (response.data.success && response.data.data) {
+<<<<<<< HEAD
         const { user, accessToken, tokenType, expiresIn } = response.data.data;
         
         // Extract tokens from the backend response structure
         const actualToken = accessToken;
         const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
+=======
+        const { user, tokens } = response.data.data;
+        
+        // Extract tokens from the backend response structure
+        const actualToken = tokens?.accessToken;
+        const actualRefreshToken = tokens?.refreshToken;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         
         // Validate tokens before storing
         if (!actualToken || actualToken === 'null' || actualToken === 'undefined') {
           console.error('AuthService: Login failed - No valid access token received');
+<<<<<<< HEAD
           console.error('AuthService: Response data:', response.data);
           console.error('AuthService: Access token value:', actualToken);
           return {
             success: false,
             message: 'Login failed - No valid access token received. Please check server configuration.',
+=======
+          return {
+            success: false,
+            message: 'Login failed - No valid access token received',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           };
         }
         
         // Store access token
+<<<<<<< HEAD
         console.log('AuthService: Storing access token:', actualToken.substring(0, 20) + '...');
         await Storage.setItem('authToken', actualToken);
         console.log('AuthService: Access token stored successfully');
@@ -227,6 +328,14 @@ const authService = {
         // Store refresh token if available
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
           await Storage.setItem('refreshToken', actualRefreshToken);
+=======
+        await AsyncStorage.setItem('authToken', actualToken);
+        console.log('AuthService: Access token stored successfully');
+        
+        // Store refresh token if available
+        if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
+          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthService: Refresh token stored successfully');
         }
         
@@ -237,7 +346,11 @@ const authService = {
           data: {
             user: user,
             token: actualToken,
+<<<<<<< HEAD
             refreshToken: actualRefreshToken || undefined
+=======
+            refreshToken: actualRefreshToken
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           },
         };
       } else {
@@ -250,6 +363,7 @@ const authService = {
     } catch (error: any) {
       console.error('AuthService: Login error:', error);
       
+<<<<<<< HEAD
       // Create a safe error object to prevent property assignment issues
       const safeError = createSafeError(error);
       
@@ -266,6 +380,21 @@ const authService = {
         errorMessage = safeError.response.data.message;
       } else if (safeError.message) {
         errorMessage = safeError.message;
+=======
+      // Provide more specific error messages
+      let errorMessage = 'Login failed';
+      
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Server not found. Please check if the backend server is running.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
       
       return {
@@ -277,6 +406,7 @@ const authService = {
 
   async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     try {
+<<<<<<< HEAD
       // Get the current backend URL
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
@@ -296,11 +426,22 @@ const authService = {
           'Accept': 'application/json'
         },
         timeout: 30000 // 30 second timeout
+=======
+      console.log('AuthService: Attempting registration to:', API_CONFIG.auth);
+      console.log('AuthService: Full registration URL:', `${API_CONFIG.auth}/register`);
+      console.log('AuthService: Registration payload:', { name, email, password: '***' });
+      
+      const response = await api.post('/register', {
+        name,
+        email,
+        password,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       });
       
       console.log('AuthService: Registration response received:', response.data);
       
       if (response.data.success && response.data.data) {
+<<<<<<< HEAD
         const { user, accessToken, tokenType, expiresIn } = response.data.data;
         
         // Extract tokens from the backend response structure
@@ -322,6 +463,22 @@ const authService = {
         
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
           await Storage.setItem('refreshToken', actualRefreshToken);
+=======
+        const { user, tokens } = response.data.data;
+        
+        // Extract tokens from the backend response structure
+        const actualToken = tokens?.accessToken;
+        const actualRefreshToken = tokens?.refreshToken;
+        
+        // Store tokens if available
+        if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
+          await AsyncStorage.setItem('authToken', actualToken);
+          console.log('AuthService: Access token stored after registration');
+        }
+        
+        if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
+          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthService: Refresh token stored after registration');
         }
         
@@ -331,7 +488,11 @@ const authService = {
           data: {
             user: user,
             token: actualToken,
+<<<<<<< HEAD
             refreshToken: actualRefreshToken || undefined
+=======
+            refreshToken: actualRefreshToken
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           },
         };
       } else {
@@ -343,6 +504,7 @@ const authService = {
     } catch (error: any) {
       console.error('AuthService: Registration error:', error);
       
+<<<<<<< HEAD
       // Create a safe error object to prevent property assignment issues
       const safeError = createSafeError(error);
       
@@ -361,6 +523,23 @@ const authService = {
         errorMessage = safeError.response.data.message;
       } else if (safeError.message) {
         errorMessage = safeError.message;
+=======
+      // Provide more specific error messages
+      let errorMessage = 'Registration failed';
+      
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Server not found. Please check if the backend server is running.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'Email already exists. Please use a different email address.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       }
       
       return {
@@ -372,6 +551,7 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
+<<<<<<< HEAD
       console.log('AuthService: Starting logout request...');
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
@@ -383,13 +563,19 @@ const authService = {
         }
       });
       console.log('AuthService: Logout response:', response.data);
+=======
+      await api.post('/logout');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: true,
         message: 'Logout successful',
       };
     } catch (error: any) {
+<<<<<<< HEAD
       console.error('AuthService: Logout error:', error);
       console.error('AuthService: Error response:', error.response?.data);
+=======
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return {
         success: false,
         message: error.response?.data?.message || 'Logout failed',
@@ -400,6 +586,7 @@ const authService = {
   async getCurrentUser(): Promise<any> {
     try {
       // Backend exposes /api/v1/auth/profile
+<<<<<<< HEAD
       const token = await this.getToken();
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
@@ -411,6 +598,9 @@ const authService = {
           'Authorization': `Bearer ${token}`
         }
       });
+=======
+      const response = await api.get('/profile');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to get user data');
@@ -420,6 +610,7 @@ const authService = {
 
   async updateProfile(data: any): Promise<{ success: boolean; message: string; data?: any }> {
     try {
+<<<<<<< HEAD
       console.log('AuthService: Starting profile update request with data:', data);
       const token = await this.getToken();
       console.log('AuthService: Using token for profile update:', token ? 'Token present' : 'No token');
@@ -447,6 +638,9 @@ const authService = {
       });
       
       console.log('AuthService: Profile update response:', response.data);
+=======
+      const response = await api.put('/profile', data);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       
       return {
         success: true,
@@ -454,6 +648,7 @@ const authService = {
         data: response.data.data,
       };
     } catch (error: any) {
+<<<<<<< HEAD
       console.error('AuthService: Profile update error:', error);
       console.error('AuthService: Error response:', error.response?.data);
       
@@ -472,12 +667,18 @@ const authService = {
       return {
         success: false,
         message: errorMessage,
+=======
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Profile update failed',
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       };
     }
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
+<<<<<<< HEAD
       const token = await this.getToken();
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
@@ -491,6 +692,11 @@ const authService = {
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
         }
+=======
+      const response = await api.put('/change-password', {
+        currentPassword,
+        newPassword,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       });
       
       return {
@@ -507,6 +713,7 @@ const authService = {
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
+<<<<<<< HEAD
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
@@ -517,6 +724,10 @@ const authService = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
+=======
+      const response = await api.post('/forgot-password', {
+        email,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       });
       
       return {
@@ -533,6 +744,7 @@ const authService = {
 
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
+<<<<<<< HEAD
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
@@ -544,6 +756,11 @@ const authService = {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
+=======
+      const response = await api.post('/reset-password', {
+        token,
+        newPassword,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       });
       
       return {
@@ -560,7 +777,11 @@ const authService = {
 
   async refreshToken(): Promise<{ success: boolean; message: string; data?: any }> {
     try {
+<<<<<<< HEAD
       const refreshToken = await Storage.getItem('refreshToken');
+=======
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       
       if (!refreshToken) {
         return {
@@ -571,6 +792,7 @@ const authService = {
       
       console.log('AuthService: Manual token refresh requested...');
       
+<<<<<<< HEAD
       const authUrl = API_CONFIG.auth;
       
       const response = await axios.post(`${authUrl}/refresh-token`, {
@@ -592,11 +814,31 @@ const authService = {
         // Store new tokens
         if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
           await Storage.setItem('authToken', actualToken);
+=======
+      const response = await axios.post(`${API_CONFIG.auth}/refresh-token`, {
+        refreshToken,
+      });
+      
+      if (response.data.success && response.data.data) {
+        const { tokens } = response.data.data;
+        
+        // Extract tokens from the backend response structure
+        const actualToken = tokens?.accessToken;
+        const actualRefreshToken = tokens?.refreshToken;
+        
+        // Store new tokens
+        if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
+          await AsyncStorage.setItem('authToken', actualToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthService: New access token stored via manual refresh');
         }
         
         if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
+<<<<<<< HEAD
           await Storage.setItem('refreshToken', actualRefreshToken);
+=======
+          await AsyncStorage.setItem('refreshToken', actualRefreshToken);
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           console.log('AuthService: New refresh token stored via manual refresh');
         }
         
@@ -605,7 +847,11 @@ const authService = {
           message: response.data.message || 'Token refreshed successfully',
           data: {
             token: actualToken,
+<<<<<<< HEAD
             refreshToken: actualRefreshToken || undefined,
+=======
+            refreshToken: actualRefreshToken,
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
           },
         };
       } else {
@@ -619,8 +865,13 @@ const authService = {
       console.error('AuthService: Manual token refresh failed:', error.message);
       
       // Clear tokens on refresh failure
+<<<<<<< HEAD
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
+=======
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('refreshToken');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       
       return {
         success: false,
@@ -631,12 +882,27 @@ const authService = {
 
   async getToken(): Promise<string | null> {
     try {
+<<<<<<< HEAD
       const token = await Storage.getItem('authToken');
       console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
       
       if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
         // Basic validation - check if it's not empty and has reasonable length
         console.log('AuthService: Valid token found, length:', token.length);
+=======
+      const token = await AsyncStorage.getItem('authToken');
+      console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      if (token && token !== 'null' && token !== 'undefined') {
+        // Basic validation - check if it's not empty and not a dummy token
+        if (token.startsWith('admin-token-') || token.startsWith('user-token-')) {
+          console.error('AuthService: Dummy token detected, removing');
+          await AsyncStorage.removeItem('authToken');
+          return null;
+        }
+        
+        console.log('AuthService: Valid token found');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
         return token;
       }
       
@@ -651,8 +917,13 @@ const authService = {
   async clearInvalidTokens(): Promise<void> {
     try {
       console.log('AuthService: Clearing all invalid tokens...');
+<<<<<<< HEAD
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('user');
+=======
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('user');
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
       console.log('AuthService: All tokens cleared');
     } catch (error) {
       console.error('Error clearing tokens:', error);

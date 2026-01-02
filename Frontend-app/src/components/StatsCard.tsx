@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+<<<<<<< HEAD
 import { Icon } from './Icon';
+=======
+import { LucideIcon, icons } from 'lucide-react-native';
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
 import { UnifiedCard } from './UnifiedCard';
 import { statsStyles, textStyles, designSystem } from '../styles/designSystem';
 
@@ -55,11 +59,19 @@ export const StatsCard: React.FC<StatsCardProps> = ({
               statsStyles.icon,
               { backgroundColor: stat.color || designSystem.colors.surfaceVariant }
             ]}>
+<<<<<<< HEAD
               <Icon 
                 name={stat.icon} 
                 size={20} 
                 color={stat.color || designSystem.colors.primary} 
               />
+=======
+              {(() => {
+                const Key = (stat.icon as keyof typeof icons) || 'Circle';
+                const IconCmp: LucideIcon = (icons as any)[Key] || icons.Circle;
+                return <IconCmp size={20} color={stat.color || designSystem.colors.primary} />;
+              })()}
+>>>>>>> origin/cursor/install-mathematico-project-dependencies-1686
             </View>
             <Text style={statsStyles.number}>
               {stat.value}
