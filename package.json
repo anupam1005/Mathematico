@@ -34,5 +34,8 @@
     "monorepo"
   ],
   "author": "Mathematico Team",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^19.2.7"
+  }
 }

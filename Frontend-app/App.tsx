@@ -1,5 +1,8 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
+
+console.log('[App] module initializing');
+
 import { NavigationContainer, ParamListBase } from '@react-navigation/native';
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,7 +10,6 @@ import { RouteProp } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
 
 import { Icon } from './src/components/Icon';
 import * as Font from 'expo-font';
@@ -30,7 +32,24 @@ import BookDetailScreen from './src/screens/BookDetailScreen';
 import CourseDetailScreen from './src/screens/CourseDetailScreen';
 import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
-import SecurePdfScreen from './src/screens/SecurePdfScreen';
+
+const ENABLE_SECURE_PDF = process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF === 'true';
+console.log('[App] Secure PDF feature flag:', ENABLE_SECURE_PDF);
+
+let SecurePdfScreen: React.ComponentType<any> | null = null;
+if (ENABLE_SECURE_PDF) {
+  console.log('[App] loading SecurePdfScreen module');
+  try {
+    SecurePdfScreen = require('./src/screens/SecurePdfScreen').default;
+    console.log('[App] SecurePdfScreen module loaded');
+  } catch (error) {
+    console.error('[App] SecurePdfScreen import failed:', error);
+    SecurePdfScreen = null;
+  }
+} else {
+  console.log('[App] SecurePdfScreen disabled via feature flag');
+}
+
 import AboutScreen from './src/screens/AboutScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
@@ -198,14 +217,24 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="SecurePdf" 
-        component={SecurePdfScreen as React.ComponentType<any>}
-        options={{
-          headerShown: false,
-        }}
-      />
-
+      {ENABLE_SECURE_PDF && SecurePdfScreen ? (
+        <Stack.Screen 
+          name="SecurePdf" 
+          component={SecurePdfScreen as React.ComponentType<any>}
+          options={{
+            headerShown: false,
+          }}
+        />
+      ) : (
+        <Stack.Screen 
+          name="SecurePdf" 
+          component={() => {
+            console.warn('[AppNavigator] Secure PDF route accessed while feature disabled');
+            return null;
+          }}
+          options={{ headerShown: false }}
+        />
+      )}
       {/* Legal & Info Screens */}
       <Stack.Screen 
         name="About" 

@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSecurePdf } from '../hooks/useSecurePdf';
 import SecurePdfViewer from '../components/SecurePdfViewer';
 
+console.log('[SecurePdfScreen] module loaded');
+
 interface SecurePdfScreenProps {
   route: {
     params: {
@@ -16,6 +18,7 @@ interface SecurePdfScreenProps {
 }
 
 const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) => {
+  console.log('[SecurePdfScreen] component mounting');
   const { bookId, bookTitle } = route.params;
   const {
     viewerUrl,
@@ -30,6 +33,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
   } = useSecurePdf();
 
   useEffect(() => {
+    console.log('[SecurePdfScreen] useEffect -> loading data for bookId:', bookId);
     // Load both book details and PDF viewer
     const loadData = async () => {
       await Promise.all([
@@ -42,6 +46,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
 
     // Cleanup on unmount
     return () => {
+      console.log('[SecurePdfScreen] cleanup for bookId:', bookId);
       reset();
     };
   }, [bookId, loadBookDetails, loadPdfViewer, reset]);

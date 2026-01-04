@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "Node16",
-    "lib": ["es2020"],
+    "lib": [
+      "es2020"
+    ],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,13 +18,23 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "types": [
+      "node",
+      "jest",
+      "@testing-library/jest-dom"
+    ],
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": ".",
     "allowJs": true,
     "checkJs": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "**/*.js"]
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.js"
+  ],
+  "extends": "expo/tsconfig.base"
 }
