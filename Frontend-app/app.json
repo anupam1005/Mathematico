@@ -4,7 +4,7 @@
     "slug": "mathematico-app",
     "version": "2.0.0",
     "orientation": "portrait",
-    "owner": "testaccount125",
+    "owner": "hexaanupam",
     "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "main": "index.ts",
@@ -13,12 +13,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "f4a7320d-9731-4ddb-9e3f-a8c056934cd9"
+        "projectId": "f7a70815-47dc-4d9f-a832-8ee98ea1ab55"
       }
     },
     "android": {
       "package": "com.anupam1505.mathematicoapp",
-      "versionCode": 4,
+      "versionCode": 12,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
