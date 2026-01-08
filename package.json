@@ -4,24 +4,16 @@
   "private": true,
   "description": "Mathematico Learning Platform - Backend + Expo mobile app",
   "scripts": {
-    "install:all": "npm install --workspaces",
-    "dev": "npm run dev:backend",
-    "dev:backend": "npm run dev --workspace Backend",
-    "dev:mobile": "npm run start --workspace Frontend-app",
-    "start:backend": "npm start --workspace Backend",
-    "start:mobile": "npm run start --workspace Frontend-app",
-    "build:android": "npm run build:android --workspace Frontend-app",
-    "build:android-preview": "npm run build:android-preview --workspace Frontend-app",
-    "build:ios": "npm run build:ios --workspace Frontend-app",
-    "submit:android": "npm run submit:android --workspace Frontend-app",
-    "submit:ios": "npm run submit:ios --workspace Frontend-app",
-    "clean": "rd /s /q node_modules 2>$null; rd /s /q Backend\\node_modules 2>$null; rd /s /q Frontend-app\\node_modules 2>$null; del package-lock.json 2>$null; del Backend\\package-lock.json 2>$null; del Frontend-app\\package-lock.json 2>$null",
-    "reset": "npm run clean && npm install"
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:mobile": "cd Frontend-app && npm start",
+    "start:backend": "cd Backend && npm start",
+    "start:mobile": "cd Frontend-app && npm start",
+    "build:android": "cd Frontend-app && npm run build:android",
+    "build:android-preview": "cd Frontend-app && npm run build:android-preview",
+    "build:ios": "cd Frontend-app && npm run build:ios",
+    "submit:android": "cd Frontend-app && npm run submit:android",
+    "submit:ios": "cd Frontend-app && npm run submit:ios"
   },
-  "workspaces": [
-    "Backend",
-    "Frontend-app"
-  ],
   "engines": {
     "node": ">=20.19.4",
     "npm": ">=10.0.0"
@@ -30,12 +22,8 @@
     "mathematico",
     "expo",
     "react-native",
-    "backend",
-    "monorepo"
+    "backend"
   ],
   "author": "Mathematico Team",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/react": "^19.2.7"
-  }
+  "license": "MIT"
 }

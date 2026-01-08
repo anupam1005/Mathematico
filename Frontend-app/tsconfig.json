@@ -1,5 +1,5 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "target": "esnext",
     "lib": ["dom", "esnext"],
@@ -17,8 +17,7 @@
     "baseUrl": "./src",
     "paths": {
       "*": ["*", "admin/*", "services/*", "config/*"]
-    },
-    "types": ["node", "jest", "@testing-library/jest-dom"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
   "exclude": ["node_modules", "**/__tests__/*"]
