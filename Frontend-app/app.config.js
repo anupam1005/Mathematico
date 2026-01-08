@@ -24,7 +24,7 @@ export default {
     },
     extra: {
       eas: {
-        projectId: 'f7a70815-47dc-4d9f-a832-8ee98ea1ab55'
+        projectId: '16fc30f1-ac07-4fe1-9ca8-64b17f9ffad7'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY
