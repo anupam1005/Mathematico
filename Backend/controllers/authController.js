@@ -95,18 +95,14 @@ const login = async (req, res) => {
 
       console.log('✅ Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
 
+      // Get public profile (includes isAdmin, is_admin, etc.)
+      const publicUser = dbAdmin.getPublicProfile();
+
       return res.json({
         success: true,
         message: 'Admin login successful',
         data: {
-          user: {
-            id: dbAdmin._id,
-            name: dbAdmin.name,
-            email: dbAdmin.email,
-            role: dbAdmin.role,
-            isAdmin: true,
-            isActive: true
-          },
+          user: publicUser,
           accessToken: tokens.accessToken,
           tokenType: 'Bearer',
           expiresIn: tokens.accessTokenExpiresIn

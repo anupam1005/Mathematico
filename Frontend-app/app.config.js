@@ -1,11 +1,11 @@
 const IS_DEV = process.env.APP_VARIANT === 'development';
 
-// Feature flags (default off for debugging)
+// Feature flags (enabled by default for production)
 if (!process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF) {
-  process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF = 'false';
+  process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF = 'true';
 }
 if (!process.env.EXPO_PUBLIC_ENABLE_RAZORPAY) {
-  process.env.EXPO_PUBLIC_ENABLE_RAZORPAY = 'false';
+  process.env.EXPO_PUBLIC_ENABLE_RAZORPAY = 'true';
 }
 
 const ENABLE_SECURE_PDF = process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF === 'true';

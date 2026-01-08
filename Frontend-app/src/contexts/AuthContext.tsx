@@ -124,16 +124,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Convert backend user data to our User interface
         const user: User = {
-          id: userData.id?.toString() || 'unknown',
+          id: userData.id?.toString() || userData._id?.toString() || 'unknown',
           name: userData.name || userData.email?.split('@')[0] || 'User',
           email: userData.email || email,
-          is_admin: userData.isAdmin || userData.role === 'admin',
-          isAdmin: userData.isAdmin || userData.role === 'admin',
+          is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
+          isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
           role: userData.role || 'user',
-          email_verified: true,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
+          is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
+          created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
+          updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
         };
         
         // Store user data in SecureStore
@@ -184,16 +184,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Convert backend user data to our User interface
         const user: User = {
-          id: userData.id?.toString() || 'unknown',
+          id: userData.id?.toString() || userData._id?.toString() || 'unknown',
           name: userData.name || userData.email?.split('@')[0] || 'User',
           email: userData.email || email,
-          is_admin: userData.isAdmin || userData.role === 'admin',
-          isAdmin: userData.isAdmin || userData.role === 'admin',
+          is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
+          isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
           role: userData.role || 'user',
-          email_verified: userData.email_verified || false,
-          is_active: userData.is_active !== false,
-          created_at: userData.created_at || new Date().toISOString(),
-          updated_at: userData.updated_at || new Date().toISOString(),
+          email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
+          is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
+          created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
+          updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
         };
         
         // Store user data in SecureStore

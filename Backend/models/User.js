@@ -360,6 +360,23 @@ userSchema.methods.getPublicProfile = function() {
   delete userObject.emailVerificationToken;
   delete userObject.passwordResetToken;
   delete userObject.passwordResetExpires;
+  
+  // Ensure isAdmin field is set based on role
+  userObject.isAdmin = this.role === 'admin';
+  userObject.is_admin = this.role === 'admin';
+  
+  // Ensure isActive field is properly set
+  userObject.isActive = this.isActive !== false;
+  userObject.is_active = this.isActive !== false;
+  
+  // Ensure email_verified field is set
+  userObject.email_verified = this.isEmailVerified || false;
+  
+  // Map _id to id for frontend compatibility
+  if (userObject._id) {
+    userObject.id = userObject._id.toString();
+  }
+  
   return userObject;
 };
 

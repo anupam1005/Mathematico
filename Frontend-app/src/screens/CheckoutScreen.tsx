@@ -39,8 +39,23 @@ export default function CheckoutScreen({ navigation, route }: any) {
     if (!itemData) {
       Alert.alert('Error', 'Item data not found');
       navigation.goBack();
+      return;
     }
-  }, [itemData]);
+    
+    // Only allow payment for courses
+    if (type !== 'course') {
+      Alert.alert(
+        'Payment Not Available',
+        `Payment is only available for course enrollment. ${type === 'book' ? 'Books are free to read.' : 'Live classes have different enrollment process.'}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    }
+  }, [itemData, type]);
 
   const handlePayment = async () => {
     if (!itemData) return;

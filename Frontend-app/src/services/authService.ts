@@ -6,21 +6,54 @@ import { Storage } from '../utils/storage';
 // Utility function to safely handle errors and prevent NONE property assignment
 const createSafeError = (error: any) => {
   try {
-    return {
-      message: error?.message || 'Unknown error',
-      code: error?.code || 'UNKNOWN',
-      response: error?.response ? {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
-      } : null,
-      config: error?.config ? {
-        url: error.config.url,
-        method: error.config.method,
-        headers: { ...error.config.headers },
-        _retry: error.config._retry || false
-      } : null
-    };
+    const safeError: any = {};
+    
+    // Safely extract message
+    try {
+      safeError.message = error?.message || 'Unknown error';
+    } catch (e) {
+      safeError.message = 'Unknown error';
+    }
+    
+    // Safely extract code
+    try {
+      safeError.code = error?.code || 'UNKNOWN';
+    } catch (e) {
+      safeError.code = 'UNKNOWN';
+    }
+    
+    // Safely extract response
+    try {
+      if (error?.response) {
+        safeError.response = {
+          status: error.response.status || 0,
+          statusText: error.response.statusText || '',
+          data: error.response.data || null
+        };
+      } else {
+        safeError.response = null;
+      }
+    } catch (e) {
+      safeError.response = null;
+    }
+    
+    // Safely extract config
+    try {
+      if (error?.config) {
+        safeError.config = {
+          url: error.config.url || '',
+          method: error.config.method || '',
+          headers: error.config.headers ? JSON.parse(JSON.stringify(error.config.headers)) : {},
+          _retry: error.config._retry || false
+        };
+      } else {
+        safeError.config = null;
+      }
+    } catch (e) {
+      safeError.config = null;
+    }
+    
+    return safeError;
   } catch (e) {
     return {
       message: 'Error processing error object',

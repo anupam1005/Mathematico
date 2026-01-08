@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Icon } from './src/components/Icon';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -33,21 +34,14 @@ import CourseDetailScreen from './src/screens/CourseDetailScreen';
 import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 
-const ENABLE_SECURE_PDF = process.env.EXPO_PUBLIC_ENABLE_SECURE_PDF === 'true';
-console.log('[App] Secure PDF feature flag:', ENABLE_SECURE_PDF);
-
+console.log('[App] Loading SecurePdfScreen module');
 let SecurePdfScreen: React.ComponentType<any> | null = null;
-if (ENABLE_SECURE_PDF) {
-  console.log('[App] loading SecurePdfScreen module');
-  try {
-    SecurePdfScreen = require('./src/screens/SecurePdfScreen').default;
-    console.log('[App] SecurePdfScreen module loaded');
-  } catch (error) {
-    console.error('[App] SecurePdfScreen import failed:', error);
-    SecurePdfScreen = null;
-  }
-} else {
-  console.log('[App] SecurePdfScreen disabled via feature flag');
+try {
+  SecurePdfScreen = require('./src/screens/SecurePdfScreen').default;
+  console.log('[App] SecurePdfScreen module loaded successfully');
+} catch (error) {
+  console.error('[App] SecurePdfScreen import failed:', error);
+  SecurePdfScreen = null;
 }
 
 import AboutScreen from './src/screens/AboutScreen';
@@ -217,19 +211,19 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      {ENABLE_SECURE_PDF && SecurePdfScreen ? (
-        <Stack.Screen 
-          name="SecurePdf" 
+      {SecurePdfScreen ? (
+        <Stack.Screen
+          name="SecurePdf"
           component={SecurePdfScreen as React.ComponentType<any>}
           options={{
             headerShown: false,
           }}
         />
       ) : (
-        <Stack.Screen 
-          name="SecurePdf" 
+        <Stack.Screen
+          name="SecurePdf"
           component={() => {
-            console.warn('[AppNavigator] Secure PDF route accessed while feature disabled');
+            console.warn('[AppNavigator] Secure PDF module failed to load');
             return null;
           }}
           options={{ headerShown: false }}
@@ -316,8 +310,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppContent />
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AppContent />
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
