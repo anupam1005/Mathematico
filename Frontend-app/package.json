@@ -15,7 +15,8 @@
     "build:android-preview": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile production",
     "submit:android": "eas submit --platform android --profile production",
-    "submit:ios": "eas submit --platform ios --profile production"
+    "submit:ios": "eas submit --platform ios --profile production",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -67,6 +68,7 @@
     "eas-cli": "^16.28.0",
     "expo-build-properties": "~1.0.10",
     "jest-expo": "~54.0.16",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "engines": {

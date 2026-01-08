@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native-razorpay/android/build.gradle b/node_modules/react-native-razorpay/android/build.gradle
+index 1234567..abcdefg 100644
+--- a/node_modules/react-native-razorpay/android/build.gradle
++++ b/node_modules/react-native-razorpay/android/build.gradle
+@@ -23,5 +23,8 @@ android {
+ 
+ dependencies {
+     implementation 'com.facebook.react:react-native:+'
+-    implementation 'com.razorpay:standard-core:1.7.1'
++    implementation('com.razorpay:standard-core:1.7.1') {
++        exclude group: 'com.razorpay', module: 'checkout'
++        exclude group: 'com.razorpay', module: 'core'
++    }
+ }
