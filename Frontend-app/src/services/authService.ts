@@ -93,8 +93,9 @@ api.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    console.error('AuthService: Request interceptor error:', error);
-    return Promise.reject(error);
+    const safeError = createSafeError(error);
+    console.error('AuthService: Request interceptor error:', safeError.message);
+    return Promise.reject(safeError);
   }
 );
 

@@ -67,8 +67,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('AuthContext: User data parsed successfully');
             setUser(userData);
             setIsAuthenticated(true);
-          } catch (parseError) {
-            console.error('AuthContext: Error parsing user data:', parseError);
+          } catch (parseError: any) {
+            const errMsg = parseError?.message || 'Unknown parse error';
+            console.error('AuthContext: Error parsing user data:', errMsg);
             // Clear invalid data and logout
             await Storage.deleteItem('user');
             await Storage.deleteItem('authToken');
@@ -87,8 +88,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('Auth check failed:', errMsg);
       // Clear invalid tokens
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
@@ -146,9 +148,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         Alert.alert('Login Failed', response.message || 'Invalid credentials');
         return false;
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Login Error', 'An error occurred during login. Please try again.');
+    } catch (error: any) {
+      // Safely extract error message without modifying the error object
+      const errorMessage = typeof error === 'object' && error !== null 
+        ? (error.message || 'An error occurred during login. Please try again.')
+        : 'An error occurred during login. Please try again.';
+      console.error('Login error:', errorMessage);
+      Alert.alert('Login Error', errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -217,9 +223,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         Alert.alert('Registration Failed', response.message || 'Registration failed. Please try again.');
         return false;
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Registration Error', 'An error occurred during registration. Please try again.');
+    } catch (error: any) {
+      // Safely extract error message without modifying the error object
+      const errorMessage = typeof error === 'object' && error !== null 
+        ? (error.message || 'An error occurred during registration. Please try again.')
+        : 'An error occurred during registration. Please try again.';
+      console.error('Registration error:', errorMessage);
+      Alert.alert('Registration Error', errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -233,8 +243,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext: Calling authService.logout()');
       await authService.logout();
       console.log('AuthContext: Backend logout successful');
-    } catch (error) {
-      console.error('AuthContext: Logout error:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('AuthContext: Logout error:', errMsg);
     } finally {
       console.log('AuthContext: Clearing local storage');
       // Clear all local storage
@@ -280,8 +291,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await logout();
         return false;
       }
-    } catch (error) {
-      console.error('Token refresh error:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('Token refresh error:', errMsg);
       await logout();
       return false;
     }
@@ -322,8 +334,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         Alert.alert('Update Failed', response.message || 'Profile update failed');
         return false;
       }
-    } catch (error) {
-      console.error('AuthContext: Profile update error:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('AuthContext: Profile update error:', errMsg);
       Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');
       return false;
     }

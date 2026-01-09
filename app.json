@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "753584b2-53df-424a-8d0b-d89a88325d58"
+      }
+    },
+    "android": {
+      "package": "com.easdev.mathematicoplatform"
+    }
+  }
+}
