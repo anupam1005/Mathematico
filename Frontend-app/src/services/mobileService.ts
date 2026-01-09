@@ -35,7 +35,15 @@ mobileApi.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    return Promise.reject(error);
+    const safeError = {
+      message: error?.message || 'Request failed',
+      code: error?.code || 'UNKNOWN',
+      response: error?.response ? {
+        status: error.response.status,
+        data: error.response.data
+      } : null
+    };
+    return Promise.reject(safeError);
   }
 );
 
@@ -48,7 +56,15 @@ mobileApi.interceptors.response.use(
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('refreshToken');
     }
-    return Promise.reject(error);
+    const safeError = {
+      message: error?.message || 'Response failed',
+      code: error?.code || 'UNKNOWN',
+      response: error?.response ? {
+        status: error.response.status,
+        data: error.response.data
+      } : null
+    };
+    return Promise.reject(safeError);
   }
 );
 

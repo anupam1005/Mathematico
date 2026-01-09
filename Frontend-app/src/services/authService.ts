@@ -132,7 +132,7 @@ api.interceptors.response.use(
           const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
           const authUrl = API_CONFIG.auth;
           
-      const response: AxiosResponse<any> = await axios.post(`${authUrl}/refresh-token`, {
+      const response: AxiosResponse<any> = await api.post('/refresh-token', {
         refreshToken,
       });
           
@@ -276,10 +276,9 @@ const authService = {
         };
       }
     } catch (error: any) {
-      console.error('AuthService: Login error:', error);
-      
       // Create a safe error object to prevent property assignment issues
       const safeError = createSafeError(error);
+      console.error('AuthService: Login error:', safeError.message);
       
       // Provide more specific error messages
       let errorMessage = 'Login failed';
@@ -363,10 +362,9 @@ const authService = {
         };
       }
     } catch (error: any) {
-      console.error('AuthService: Registration error:', error);
-      
       // Create a safe error object to prevent property assignment issues
       const safeError = createSafeError(error);
+      console.error('AuthService: Registration error:', safeError.message);
       
       // Provide more specific error messages
       let errorMessage = 'Registration failed';
@@ -398,23 +396,19 @@ const authService = {
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.post(`${authUrl}/logout`, {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
+      const response = await api.post('/logout', {});
       console.log('AuthService: Logout response:', response.data);
       return {
         success: true,
         message: 'Logout successful',
       };
     } catch (error: any) {
-      console.error('AuthService: Logout error:', error);
-      console.error('AuthService: Error response:', error.response?.data);
+      const safeError = createSafeError(error);
+      console.error('AuthService: Logout error:', safeError.message);
+      console.error('AuthService: Error response:', safeError.response?.data);
       return {
         success: false,
-        message: error.response?.data?.message || 'Logout failed',
+        message: safeError.response?.data?.message || 'Logout failed',
       };
     }
   },
@@ -426,16 +420,11 @@ const authService = {
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.get(`${authUrl}/profile`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await api.get('/profile');
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to get user data');
+      const safeError = createSafeError(error);
+      throw new Error(safeError.response?.data?.message || 'Failed to get user data');
     }
   },
 
@@ -459,14 +448,7 @@ const authService = {
       
       console.log('AuthService: Profile update URL:', authUrl);
       
-      const response = await axios.put(`${authUrl}/profile`, data, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        timeout: 30000
-      });
+      const response = await api.put('/profile', data);
       
       console.log('AuthService: Profile update response:', response.data);
       
@@ -476,11 +458,10 @@ const authService = {
         data: response.data.data,
       };
     } catch (error: any) {
-      console.error('AuthService: Profile update error:', error);
-      console.error('AuthService: Error response:', error.response?.data);
-      
       // Create a safe error object
       const safeError = createSafeError(error);
+      console.error('AuthService: Profile update error:', safeError.message);
+      console.error('AuthService: Error response:', safeError.response?.data);
       
       let errorMessage = 'Profile update failed';
       if (safeError.response?.status === 401) {
@@ -504,15 +485,9 @@ const authService = {
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.put(`${authUrl}/change-password`, {
+      const response = await api.put('/change-password', {
         currentPassword,
         newPassword,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
       });
       
       return {
@@ -520,9 +495,11 @@ const authService = {
         message: 'Password changed successfully',
       };
     } catch (error: any) {
+      const safeError = createSafeError(error);
+      console.error('AuthService: Password change error:', safeError.message);
       return {
         success: false,
-        message: error.response?.data?.message || 'Password change failed',
+        message: safeError.response?.data?.message || 'Password change failed',
       };
     }
   },
@@ -532,13 +509,8 @@ const authService = {
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.post(`${authUrl}/forgot-password`, {
+      const response = await api.post('/forgot-password', {
         email,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
       
       return {
@@ -546,9 +518,10 @@ const authService = {
         message: 'Password reset email sent',
       };
     } catch (error: any) {
+      const safeError = createSafeError(error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to send reset email',
+        message: safeError.response?.data?.message || 'Failed to send reset email',
       };
     }
   },
@@ -558,14 +531,9 @@ const authService = {
       const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.post(`${authUrl}/reset-password`, {
+      const response = await api.post('/reset-password', {
         token,
         newPassword,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
       
       return {
@@ -573,9 +541,10 @@ const authService = {
         message: 'Password reset successfully',
       };
     } catch (error: any) {
+      const safeError = createSafeError(error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Password reset failed',
+        message: safeError.response?.data?.message || 'Password reset failed',
       };
     }
   },
@@ -595,13 +564,8 @@ const authService = {
       
       const authUrl = API_CONFIG.auth;
       
-      const response = await axios.post(`${authUrl}/refresh-token`, {
+      const response = await api.post('/refresh-token', {
         refreshToken,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
       });
       
       if (response.data.success && response.data.data) {
@@ -638,7 +602,8 @@ const authService = {
         };
       }
     } catch (error: any) {
-      console.error('AuthService: Manual token refresh failed:', error.message);
+      const safeError = createSafeError(error);
+      console.error('AuthService: Manual token refresh failed:', safeError.message);
       
       // Clear tokens on refresh failure
       await Storage.deleteItem('authToken');
@@ -646,7 +611,7 @@ const authService = {
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Token refresh failed',
+        message: safeError.response?.data?.message || 'Token refresh failed',
       };
     }
   },
@@ -664,8 +629,9 @@ const authService = {
       
       console.log('AuthService: No valid token found');
       return null;
-    } catch (error) {
-      console.error('Error getting token:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('Error getting token:', errMsg);
       return null;
     }
   },
@@ -676,8 +642,9 @@ const authService = {
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('user');
       console.log('AuthService: All tokens cleared');
-    } catch (error) {
-      console.error('Error clearing tokens:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Unknown error';
+      console.error('Error clearing tokens:', errMsg);
     }
   },
 };

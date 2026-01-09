@@ -21,9 +21,10 @@ export class Storage {
         await SecureStore.setItemAsync(key, valueToStore);
         console.log(`Storage: Set ${key} in SecureStore`);
       }
-    } catch (error) {
-      console.error('Storage setItem error:', error);
-      throw error;
+    } catch (error: any) {
+      const errMsg = error?.message || 'Storage setItem failed';
+      console.error('Storage setItem error:', errMsg);
+      throw new Error(errMsg);
     }
   }
 
@@ -55,8 +56,9 @@ export class Storage {
       }
       
       return result;
-    } catch (error) {
-      console.error('Storage getItem error:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || 'Storage getItem failed';
+      console.error('Storage getItem error:', errMsg);
       return null;
     }
   }
@@ -73,9 +75,10 @@ export class Storage {
         await SecureStore.deleteItemAsync(key);
         console.log(`Storage: Deleted ${key} from SecureStore`);
       }
-    } catch (error) {
-      console.error('Storage deleteItem error:', error);
-      throw error;
+    } catch (error: any) {
+      const errMsg = error?.message || 'Storage deleteItem failed';
+      console.error('Storage deleteItem error:', errMsg);
+      throw new Error(errMsg);
     }
   }
 
@@ -90,9 +93,10 @@ export class Storage {
         await SecureStore.deleteItemAsync('refreshToken');
         await SecureStore.deleteItemAsync('user');
       }
-    } catch (error) {
-      console.error('Storage clear error:', error);
-      throw error;
+    } catch (error: any) {
+      const errMsg = error?.message || 'Storage clear failed';
+      console.error('Storage clear error:', errMsg);
+      throw new Error(errMsg);
     }
   }
 }
