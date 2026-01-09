@@ -216,16 +216,10 @@ const authService = {
       console.log('AuthService: Full login URL:', `${authUrl}/login`);
       console.log('AuthService: Backend URL:', backendUrl);
       
-      // Use the full URL for the serverless backend
-      const response = await axios.post(`${authUrl}/login`, {
+      // Use the api instance with safe error handling
+      const response = await api.post('/login', {
         email,
         password,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 30000 // 30 second timeout
       });
       
       console.log('AuthService: Login response received:', response.data);
@@ -318,17 +312,11 @@ const authService = {
       console.log('AuthService: Full registration URL:', `${authUrl}/register`);
       console.log('AuthService: Registration payload:', { name, email, password: '***' });
       
-      // Use the full URL for the serverless backend
-      const response = await axios.post(`${authUrl}/register`, {
+      // Use the api instance with safe error handling
+      const response = await api.post('/register', {
         name,
         email,
         password,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 30000 // 30 second timeout
       });
       
       console.log('AuthService: Registration response received:', response.data);
