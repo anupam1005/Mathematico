@@ -52,13 +52,44 @@ mobileApi.interceptors.request.use(
       errorCode = 'UNKNOWN';
     }
     
+    // Safely extract message using descriptor
+    let errorMessage = 'Request failed';
+    try {
+      if (error && typeof error === 'object' && 'message' in error) {
+        const messageDesc = Object.getOwnPropertyDescriptor(error, 'message');
+        if (messageDesc && 'value' in messageDesc) {
+          errorMessage = String(messageDesc.value || 'Request failed');
+        }
+      }
+    } catch (e) {
+      errorMessage = 'Request failed';
+    }
+    
+    // Safely extract response using descriptor
+    let responseData: any = null;
+    try {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const responseDesc = Object.getOwnPropertyDescriptor(error, 'response');
+        if (responseDesc && 'value' in responseDesc && responseDesc.value) {
+          const responseValue = responseDesc.value;
+          if (typeof responseValue === 'object') {
+            const statusDesc = Object.getOwnPropertyDescriptor(responseValue, 'status');
+            const dataDesc = Object.getOwnPropertyDescriptor(responseValue, 'data');
+            responseData = {
+              status: statusDesc && 'value' in statusDesc ? statusDesc.value : 0,
+              data: dataDesc && 'value' in dataDesc ? dataDesc.value : null
+            };
+          }
+        }
+      }
+    } catch (e) {
+      responseData = null;
+    }
+    
     const safeError = {
-      message: error?.message || 'Request failed',
+      message: errorMessage,
       code: errorCode,
-      response: error?.response ? {
-        status: error.response.status,
-        data: error.response.data
-      } : null
+      response: responseData
     };
     return Promise.reject(safeError);
   }
@@ -91,13 +122,44 @@ mobileApi.interceptors.response.use(
       errorCode = 'UNKNOWN';
     }
     
+    // Safely extract message using descriptor
+    let errorMessage = 'Response failed';
+    try {
+      if (error && typeof error === 'object' && 'message' in error) {
+        const messageDesc = Object.getOwnPropertyDescriptor(error, 'message');
+        if (messageDesc && 'value' in messageDesc) {
+          errorMessage = String(messageDesc.value || 'Response failed');
+        }
+      }
+    } catch (e) {
+      errorMessage = 'Response failed';
+    }
+    
+    // Safely extract response using descriptor
+    let responseData: any = null;
+    try {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const responseDesc = Object.getOwnPropertyDescriptor(error, 'response');
+        if (responseDesc && 'value' in responseDesc && responseDesc.value) {
+          const responseValue = responseDesc.value;
+          if (typeof responseValue === 'object') {
+            const statusDesc = Object.getOwnPropertyDescriptor(responseValue, 'status');
+            const dataDesc = Object.getOwnPropertyDescriptor(responseValue, 'data');
+            responseData = {
+              status: statusDesc && 'value' in statusDesc ? statusDesc.value : 0,
+              data: dataDesc && 'value' in dataDesc ? dataDesc.value : null
+            };
+          }
+        }
+      }
+    } catch (e) {
+      responseData = null;
+    }
+    
     const safeError = {
-      message: error?.message || 'Response failed',
+      message: errorMessage,
       code: errorCode,
-      response: error?.response ? {
-        status: error.response.status,
-        data: error.response.data
-      } : null
+      response: responseData
     };
     return Promise.reject(safeError);
   }

@@ -195,7 +195,25 @@ const extractSafeMessage = (arg: any): any => {
           } catch (e) {
             // If all else fails, return a generic message with object type
             try {
-              return `[Object: ${arg.constructor?.name || 'Object'}]`;
+              // Safely get constructor name using descriptor
+              let constructorName = 'Object';
+              try {
+                if ('constructor' in arg) {
+                  const constructorDesc = Object.getOwnPropertyDescriptor(arg, 'constructor');
+                  if (constructorDesc && 'value' in constructorDesc && constructorDesc.value) {
+                    const constructorValue = constructorDesc.value;
+                    if (constructorValue && typeof constructorValue === 'function') {
+                      const nameDesc = Object.getOwnPropertyDescriptor(constructorValue, 'name');
+                      if (nameDesc && 'value' in nameDesc) {
+                        constructorName = String(nameDesc.value || 'Object');
+                      }
+                    }
+                  }
+                }
+              } catch (e3) {
+                // Constructor name extraction failed, use default
+              }
+              return `[Object: ${constructorName}]`;
             } catch (e2) {
               return '[Object - Unable to extract properties]';
             }
@@ -261,35 +279,66 @@ if (typeof ErrorUtils !== 'undefined') {
     
     ErrorUtils.setGlobalHandler((error: any, isFatal?: boolean) => {
       try {
-        // Convert error to string IMMEDIATELY without accessing any properties
-        let errorMessage = 'Unknown error';
+        // Use extractSafeMessage to safely convert error without accessing properties directly
+        // This prevents triggering React Native's read-only property errors
+        let errorMessage: string;
         try {
-          if (error && typeof error === 'object') {
-            // Use a try-catch for each property access
-            if (error.message !== undefined) {
-              try {
-                errorMessage = String(error.message);
-              } catch (e) {
-                errorMessage = 'Error message unavailable';
-              }
-            } else {
-              errorMessage = String(error);
-            }
-          } else {
-            errorMessage = String(error);
+          errorMessage = extractSafeMessage(error);
+          // Ensure we have a string
+          if (typeof errorMessage !== 'string') {
+            errorMessage = String(errorMessage || 'Unknown error');
           }
         } catch (e) {
-          errorMessage = 'Unable to extract error message';
+          // If extraction fails, use safe fallback
+          try {
+            errorMessage = String(error || 'Unknown error');
+          } catch (e2) {
+            errorMessage = 'Unable to extract error message';
+          }
         }
         
         // Log using our safe console.error (which already has safe extraction)
         console.error('Global Error Handler:', errorMessage);
         
         // Call original handler if it exists, but wrap in try-catch
+        // DO NOT pass the original error object - it might have read-only properties
+        // Instead, pass a safe representation or skip it entirely
         if (originalErrorHandler && typeof originalErrorHandler === 'function') {
           try {
-            // Pass the error as-is but wrapped in a try-catch
-            originalErrorHandler(error, isFatal);
+            // Create a safe error-like object to pass to original handler
+            // This prevents the original handler from accessing read-only properties
+            const safeErrorObj = {
+              message: typeof errorMessage === 'string' ? errorMessage : 'Unknown error',
+              name: 'Error',
+              stack: ''
+            };
+            
+            // Try to extract stack safely if available using descriptor only
+            try {
+              if (error && typeof error === 'object' && 'stack' in error) {
+                const stackDesc = Object.getOwnPropertyDescriptor(error, 'stack');
+                if (stackDesc && 'value' in stackDesc && stackDesc.value) {
+                  safeErrorObj.stack = String(stackDesc.value);
+                }
+              }
+            } catch (e) {
+              // Stack extraction failed, continue without it
+            }
+            
+            // Try to extract name safely if available using descriptor only
+            try {
+              if (error && typeof error === 'object' && 'name' in error) {
+                const nameDesc = Object.getOwnPropertyDescriptor(error, 'name');
+                if (nameDesc && 'value' in nameDesc && nameDesc.value) {
+                  safeErrorObj.name = String(nameDesc.value);
+                }
+              }
+            } catch (e) {
+              // Name extraction failed, continue with default
+            }
+            
+            // Call original handler with safe object instead of original error
+            originalErrorHandler(safeErrorObj as any, isFatal);
           } catch (e) {
             // If original handler fails, don't let it propagate
             console.error('Error in original error handler (caught)');

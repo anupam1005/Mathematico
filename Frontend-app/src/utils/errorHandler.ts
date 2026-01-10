@@ -36,17 +36,19 @@ export class ErrorHandler {
   static handleApiError(error: any): ApiError {
     // Safely log error without accessing read-only properties
     // The global error handler will safely extract the message
-    try {
-      const errorMsg = error?.message || 'Unknown API error';
-      console.error('API Error:', errorMsg);
-    } catch (e) {
-      console.error('API Error: [Unable to extract error message]');
-    }
+    console.error('API Error:', error);
     
-    // Network error - safely check for response property
+    // Network error - safely check for response property using descriptor
     let hasResponse = false;
+    let responseValue: any = null;
     try {
-      hasResponse = error && typeof error === 'object' && 'response' in error && error.response !== undefined && error.response !== null;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const responseDesc = Object.getOwnPropertyDescriptor(error, 'response');
+        if (responseDesc && 'value' in responseDesc && responseDesc.value !== undefined && responseDesc.value !== null) {
+          hasResponse = true;
+          responseValue = responseDesc.value;
+        }
+      }
     } catch (e) {
       hasResponse = false;
     }
@@ -59,14 +61,43 @@ export class ErrorHandler {
       };
     }
     
-    // HTTP error
-    const status = error.response?.status;
-    const data = error.response?.data;
+    // HTTP error - safely extract status and data using descriptors
+    let status: number | undefined;
+    let data: any;
+    
+    try {
+      if (responseValue && typeof responseValue === 'object') {
+        const statusDesc = Object.getOwnPropertyDescriptor(responseValue, 'status');
+        if (statusDesc && 'value' in statusDesc) {
+          status = Number(statusDesc.value);
+        }
+        
+        const dataDesc = Object.getOwnPropertyDescriptor(responseValue, 'data');
+        if (dataDesc && 'value' in dataDesc) {
+          data = dataDesc.value;
+        }
+      }
+    } catch (e) {
+      // Property extraction failed
+    }
+    
+    // Safely extract message from data if it exists
+    let dataMessage: string | undefined;
+    try {
+      if (data && typeof data === 'object' && 'message' in data) {
+        const dataMessageDesc = Object.getOwnPropertyDescriptor(data, 'message');
+        if (dataMessageDesc && 'value' in dataMessageDesc) {
+          dataMessage = String(dataMessageDesc.value);
+        }
+      }
+    } catch (e) {
+      // Message extraction from data failed
+    }
     
     switch (status) {
       case 400:
         return {
-          message: data?.message || 'Bad request. Please check your input.',
+          message: dataMessage || 'Bad request. Please check your input.',
           status,
           code: 'BAD_REQUEST',
           details: data
@@ -94,7 +125,7 @@ export class ErrorHandler {
         };
       case 422:
         return {
-          message: data?.message || 'Validation error. Please check your input.',
+          message: dataMessage || 'Validation error. Please check your input.',
           status,
           code: 'VALIDATION_ERROR',
           details: data
@@ -115,7 +146,7 @@ export class ErrorHandler {
         };
       default:
         return {
-          message: data?.message || 'An unexpected error occurred.',
+          message: dataMessage || 'An unexpected error occurred.',
           status,
           code: 'UNKNOWN_ERROR',
           details: data

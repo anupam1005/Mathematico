@@ -19,7 +19,11 @@ const createSafeError = (error: any) => {
       if (error && typeof error === 'object') {
         if ('message' in error) {
           try {
-            safeError.message = String(error.message || 'Unknown error');
+            // Use descriptor to safely access message property
+            const messageDesc = Object.getOwnPropertyDescriptor(error, 'message');
+            if (messageDesc && 'value' in messageDesc) {
+              safeError.message = String(messageDesc.value || 'Unknown error');
+            }
           } catch (e) {
             safeError.message = 'Unable to extract message';
           }
