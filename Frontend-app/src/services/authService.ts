@@ -172,7 +172,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token');
         }
       } catch (refreshError: any) {
-        console.error('AuthService: Token refresh failed:', refreshError.message);
+        console.log('AuthService: Token refresh failed');
         // Refresh failed, clear tokens and redirect to login
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
