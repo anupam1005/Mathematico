@@ -34,10 +34,24 @@ export const Logger = {
 
 export class ErrorHandler {
   static handleApiError(error: any): ApiError {
-    console.error('API Error:', error);
+    // Safely log error without accessing read-only properties
+    // The global error handler will safely extract the message
+    try {
+      const errorMsg = error?.message || 'Unknown API error';
+      console.error('API Error:', errorMsg);
+    } catch (e) {
+      console.error('API Error: [Unable to extract error message]');
+    }
     
-    // Network error
-    if (!error.response) {
+    // Network error - safely check for response property
+    let hasResponse = false;
+    try {
+      hasResponse = error && typeof error === 'object' && 'response' in error && error.response !== undefined && error.response !== null;
+    } catch (e) {
+      hasResponse = false;
+    }
+    
+    if (!hasResponse) {
       return {
         message: 'Network error. Please check your internet connection.',
         status: 0,

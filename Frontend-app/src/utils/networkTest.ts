@@ -78,30 +78,69 @@ export const testNetworkConnectivity = async (): Promise<{
     let errorMessage = 'Network test failed';
     let errorDetails: any = {};
     
-    if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+    // Safely extract error properties without accessing read-only ones
+    let errorCode: string | undefined;
+    let errorMsg: string | undefined;
+    
+    try {
+      if (error && typeof error === 'object') {
+        // Safely check if code property exists and is accessible
+        if ('code' in error) {
+          try {
+            const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+            if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+              // Use descriptor value directly, avoid accessing property
+              const codeValue = codeDesc.value;
+              if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+                errorCode = String(codeValue);
+              }
+            }
+          } catch (e) {
+            // Property is read-only or inaccessible
+            errorCode = undefined;
+          }
+        }
+        
+        // Safely extract message
+        if ('message' in error) {
+          try {
+            errorMsg = String(error.message);
+          } catch (e) {
+            errorMsg = 'Unable to extract error message';
+          }
+        }
+      }
+    } catch (e) {
+      errorMsg = 'Unknown network error';
+    }
+    
+    if (errorCode === 'NETWORK_ERROR' || errorMsg?.includes('Network Error')) {
       errorMessage = 'Network error - cannot reach backend server';
       errorDetails = {
-        code: error.code,
-        message: error.message,
+        code: errorCode || 'NETWORK_ERROR',
+        message: errorMsg,
         backendUrl: AUTH_URL
       };
     } else if (error.response) {
-      errorMessage = `Server responded with status ${error.response.status}`;
-      errorDetails = {
-        status: error.response.status,
-        data: error.response.data,
-        backendUrl: AUTH_URL
-      };
+      try {
+        errorMessage = `Server responded with status ${error.response.status}`;
+        errorDetails = {
+          status: error.response.status,
+          data: error.response.data,
+          backendUrl: AUTH_URL
+        };
+      } catch (e) {
+        errorMessage = 'Server response error';
+        errorDetails = { backendUrl: AUTH_URL };
+      }
     } else if (error.request) {
       errorMessage = 'No response received from server';
       errorDetails = {
-        request: error.request,
         backendUrl: AUTH_URL
       };
     } else {
-      errorMessage = error.message || 'Unknown network error';
+      errorMessage = errorMsg || 'Unknown network error';
       errorDetails = {
-        error: error,
         backendUrl: AUTH_URL
       };
     }

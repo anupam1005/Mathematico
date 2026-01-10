@@ -35,9 +35,26 @@ mobileApi.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
+    // Safely extract error code without accessing read-only properties
+    let errorCode = 'UNKNOWN';
+    try {
+      if (error && typeof error === 'object' && 'code' in error) {
+        const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+        if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+          // Use descriptor value directly, avoid accessing property
+          const codeValue = codeDesc.value;
+          if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+            errorCode = String(codeValue);
+          }
+        }
+      }
+    } catch (e) {
+      errorCode = 'UNKNOWN';
+    }
+    
     const safeError = {
       message: error?.message || 'Request failed',
-      code: error?.code || 'UNKNOWN',
+      code: errorCode,
       response: error?.response ? {
         status: error.response.status,
         data: error.response.data
@@ -56,9 +73,27 @@ mobileApi.interceptors.response.use(
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('refreshToken');
     }
+    
+    // Safely extract error code without accessing read-only properties
+    let errorCode = 'UNKNOWN';
+    try {
+      if (error && typeof error === 'object' && 'code' in error) {
+        const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+        if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+          // Use descriptor value directly, avoid accessing property
+          const codeValue = codeDesc.value;
+          if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+            errorCode = String(codeValue);
+          }
+        }
+      }
+    } catch (e) {
+      errorCode = 'UNKNOWN';
+    }
+    
     const safeError = {
       message: error?.message || 'Response failed',
-      code: error?.code || 'UNKNOWN',
+      code: errorCode,
       response: error?.response ? {
         status: error.response.status,
         data: error.response.data

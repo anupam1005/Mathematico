@@ -357,8 +357,24 @@ class RazorpayService {
         };
       }
       
-      // Handle user cancellation
-      if (error.code === 'PAYMENT_CANCELLED') {
+      // Handle user cancellation - safely check error code
+      let errorCode: string | undefined;
+      try {
+        if (error && typeof error === 'object' && 'code' in error) {
+          const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+          if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+            // Use descriptor value directly, avoid accessing property
+            const codeValue = codeDesc.value;
+            if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+              errorCode = String(codeValue);
+            }
+          }
+        }
+      } catch (e) {
+        // Property access failed, continue without code
+      }
+      
+      if (errorCode === 'PAYMENT_CANCELLED') {
         return {
           success: false,
           error: 'Payment cancelled by user',

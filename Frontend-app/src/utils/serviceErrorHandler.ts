@@ -5,27 +5,77 @@ type AnyError = any;
 
 const toSafeError = (error: any) => {
   try {
-    return {
-      message: error?.message || 'Unknown error',
-      code: error?.code || 'UNKNOWN',
-      response: error?.response
-        ? {
-            status: error.response.status,
-            statusText: error.response.statusText,
-            data: error.response.data,
-          }
-        : null,
-      config: error?.config
-        ? {
-            url: error.config.url,
-            method: error.config.method,
-            headers: { ...error.config.headers },
-            _retry: error.config._retry || false,
-          }
-        : null,
+    const safeError: any = {
+      message: 'Unknown error',
+      code: 'UNKNOWN',
+      response: null,
+      config: null,
     };
+    
+    // Safely extract message without accessing read-only properties
+    try {
+      if (error && typeof error === 'object') {
+        if ('message' in error) {
+          try {
+            safeError.message = String(error.message || 'Unknown error');
+          } catch (e) {
+            safeError.message = 'Unable to extract message';
+          }
+        }
+        
+        // DO NOT access error.code directly - it might be read-only 'NONE'
+        // React Native's error system uses 'NONE' as a read-only property value
+        // Use property descriptor value instead of direct access
+        try {
+          const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+          if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+            // Use descriptor value directly, avoid accessing property
+            const codeValue = codeDesc.value;
+            if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+              safeError.code = String(codeValue);
+            }
+          }
+        } catch (e) {
+          // Code property might be read-only or inaccessible, leave as 'UNKNOWN'
+          safeError.code = 'UNKNOWN';
+        }
+        
+        // Safely extract response
+        if ('response' in error && error.response) {
+          try {
+            safeError.response = {
+              status: error.response.status || 0,
+              statusText: String(error.response.statusText || ''),
+              data: error.response.data || null,
+            };
+          } catch (e) {
+            safeError.response = null;
+          }
+        }
+        
+        // Safely extract config
+        if ('config' in error && error.config) {
+          try {
+            safeError.config = {
+              url: String(error.config.url || ''),
+              method: String(error.config.method || ''),
+              headers: error.config.headers ? JSON.parse(JSON.stringify(error.config.headers)) : {},
+              _retry: Boolean(error.config._retry),
+            };
+          } catch (e) {
+            safeError.config = null;
+          }
+        }
+      } else {
+        safeError.message = String(error || 'Unknown error');
+      }
+    } catch (e) {
+      safeError.message = 'Error processing error object';
+    }
+    
+    return safeError;
   } catch {
-    return { message: 'Error processing error object', code: 'ERROR_PROCESSING' };
+    return { message: 'Error processing error object', code: 'ERROR_PROCESSING', response: null, config: null };
   }
 };
 

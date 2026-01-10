@@ -4,21 +4,49 @@ import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
 
 // Utility function to safely handle errors and prevent NONE property assignment
+// This function never accesses read-only properties that might trigger React Native's error handlers
 const createSafeError = (error: any) => {
   try {
-    const safeError: any = {};
+    const safeError: any = {
+      message: 'Unknown error',
+      code: 'UNKNOWN',
+      response: null,
+      config: null,
+    };
     
-    // Safely extract message
+    // Safely extract message without accessing read-only properties
     try {
-      safeError.message = error?.message || 'Unknown error';
+      if (error && typeof error === 'object') {
+        if ('message' in error) {
+          try {
+            safeError.message = String(error.message || 'Unknown error');
+          } catch (e) {
+            safeError.message = 'Unable to extract message';
+          }
+        }
+      } else {
+        safeError.message = String(error || 'Unknown error');
+      }
     } catch (e) {
       safeError.message = 'Unknown error';
     }
     
-    // Safely extract code
+    // NEVER access error.code directly - it might be read-only 'NONE' property
+    // React Native's error system uses 'NONE' as a read-only property value
+    // Use property descriptor value instead of direct property access
     try {
-      safeError.code = error?.code || 'UNKNOWN';
+      if (error && typeof error === 'object' && 'code' in error) {
+        const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+        if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
+          // Use descriptor value directly, avoid accessing property
+          const codeValue = codeDesc.value;
+          if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
+            safeError.code = String(codeValue);
+          }
+        }
+      }
     } catch (e) {
+      // Property is read-only, inaccessible, or is 'NONE', leave as 'UNKNOWN'
       safeError.code = 'UNKNOWN';
     }
     
