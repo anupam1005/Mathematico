@@ -86,11 +86,7 @@ class PdfService {
       return data;
     } catch (error) {
       errorHandler.handleError('Error fetching secure PDF viewer:', error);
-      throw new Error(
-        error instanceof Error 
-          ? error.message 
-          : 'Failed to load PDF viewer. Please check your connection.'
-      );
+      throw new Error('Failed to load PDF viewer. Please check your connection.');
     }
   }
 
@@ -117,11 +113,7 @@ class PdfService {
       return data;
     } catch (error) {
       errorHandler.handleError('Error fetching book details:', error);
-      throw new Error(
-        error instanceof Error 
-          ? error.message 
-          : 'Failed to load book details. Please check your connection.'
-      );
+      throw new Error('Failed to load book details. Please check your connection.');
     }
   }
 

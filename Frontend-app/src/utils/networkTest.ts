@@ -73,7 +73,7 @@ export const testNetworkConnectivity = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Network connectivity test failed:', error);
+    console.error('❌ Network connectivity test failed');
     
     let errorMessage = 'Network test failed';
     let errorDetails: any = {};

@@ -63,7 +63,7 @@ const liveClassApi = axios.create({
     liveClassApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('LiveClassService: Base URL updated to:', liveClassApi.defaults.baseURL);
   } catch (error) {
-    console.error('LiveClassService: Failed to update base URL:', error);
+    console.error('LiveClassService: Failed to update base URL');
   }
 })();
 
@@ -113,7 +113,7 @@ class LiveClassService {
       });
       return response.data;
     } catch (error) {
-      console.error('LiveClassService: Request failed:', error);
+      console.error('LiveClassService: Request failed');
       throw ErrorHandler.handleApiError(error);
     }
   }

@@ -97,7 +97,7 @@ const adminApi = axios.create({
     adminApi.defaults.baseURL = API_CONFIG.admin;
     console.log('AdminService: Base URL updated to:', adminApi.defaults.baseURL);
   } catch (error) {
-    console.error('AdminService: Failed to update base URL:', error);
+    console.error('AdminService: Failed to update base URL');
     // Fallback to API_CONFIG.admin if getBackendUrl fails
     adminApi.defaults.baseURL = API_CONFIG.admin;
     console.log('AdminService: Using fallback base URL:', adminApi.defaults.baseURL);
@@ -673,7 +673,7 @@ class AdminService {
       
       const token = await authService.getToken();
       if (!token) {
-        console.error('❌ AdminService: No authentication token found');
+        console.error('AdminService: No authentication token found');
         return { success: false, error: 'No authentication token found' };
       }
 
@@ -689,16 +689,16 @@ class AdminService {
       if (isFormData) {
         // For FormData, don't set Content-Type, let the browser set it with boundary
         body = liveClassData;
-        console.log('📤 AdminService: Sending FormData to backend');
+        console.log('AdminService: Sending FormData to backend');
       } else {
         // For JSON data
         headers['Content-Type'] = 'application/json';
         body = JSON.stringify(liveClassData);
-        console.log('📤 AdminService: Sending JSON data to backend');
+        console.log('AdminService: Sending JSON data to backend');
       }
 
       const adminUrl = API_CONFIG.admin;
-      console.log('🌐 AdminService: Posting to URL:', `${adminUrl}/live-classes`);
+      console.log('AdminService: Posting to URL:', `${adminUrl}/live-classes`);
       
       const response = await fetch(`${adminUrl}/live-classes`, {
         method: 'POST',
@@ -706,26 +706,21 @@ class AdminService {
         body
       });
 
-      console.log('📥 AdminService: Response status:', response.status, response.statusText);
+      console.log('AdminService: Response status:', response.status, response.statusText);
       
       const result = await response.json();
-      console.log('📥 AdminService: Response data:', result);
+      console.log('AdminService: Response data:', result);
       
       if (response.ok) {
         errorHandler.logInfo('AdminService: Live class created successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('❌ AdminService: Live class creation failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: result.message || result.error,
-          details: result
-        });
+        console.error('AdminService: Live class creation failed:', result);
         errorHandler.handleError('AdminService: Live class creation failed:', result);
         return { success: false, error: result.message || result.error || 'Failed to create live class' };
       }
     } catch (error: any) {
-      console.error('❌ AdminService: Live class creation exception:', error);
+      console.error('AdminService: Live class creation exception:');
       errorHandler.handleError('AdminService: Live class creation error:', error);
       return { success: false, error: error.message || 'Failed to create live class' };
     }

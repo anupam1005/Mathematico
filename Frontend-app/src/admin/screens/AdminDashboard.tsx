@@ -79,7 +79,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       setLastUpdated(new Date());
     } catch (error) {
       Logger.error('Error loading dashboard data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      setError('Failed to load dashboard data');
       // Don't set empty data - let the error message show
       setStats(null);
     } finally {

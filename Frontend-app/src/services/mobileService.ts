@@ -22,7 +22,7 @@ const mobileApi = axios.create({
     mobileApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('MobileService: Base URL updated to:', mobileApi.defaults.baseURL);
   } catch (error) {
-    console.error('MobileService: Failed to update base URL:', error);
+    console.error('MobileService: Failed to update base URL');
   }
 })();
 

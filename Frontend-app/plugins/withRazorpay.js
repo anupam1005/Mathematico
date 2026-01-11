@@ -1,4 +1,4 @@
-const { withProjectBuildGradle, withAppBuildGradle } = require('@expo/config-plugins');
+const { withProjectBuildGradle, withAppBuildGradle } = require('expo/config-plugins');
 
 const withRazorpay = (config) => {
   // Modify project-level build.gradle

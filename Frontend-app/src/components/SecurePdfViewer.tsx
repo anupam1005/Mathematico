@@ -57,9 +57,8 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         setError(data.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
-      setError(errorMessage);
-      Logger.error('Error fetching PDF viewer:', err);
+      setError('Network error. Please check your connection.');
+      Logger.error('Error fetching PDF viewer');
     } finally {
       setLoading(false);
     }

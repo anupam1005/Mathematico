@@ -64,7 +64,7 @@ const courseApi = axios.create({
     courseApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('CourseService: Base URL updated to:', courseApi.defaults.baseURL);
   } catch (error) {
-    console.error('CourseService: Failed to update base URL:', error);
+    console.error('CourseService: Failed to update base URL');
   }
 })();
 
@@ -113,7 +113,7 @@ class CourseService {
       });
       return response.data;
     } catch (error) {
-      console.error('CourseService: Request failed:', error);
+      console.error('CourseService: Request failed');
       throw ErrorHandler.handleApiError(error);
     }
   }

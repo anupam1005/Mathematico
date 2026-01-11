@@ -18,8 +18,7 @@ export const getLocalSettings = async (): Promise<UserSettings> => {
     const settings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
     return settings ? JSON.parse(settings) : { ...DEFAULT_SETTINGS };
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error getting local settings:', errMsg);
+    console.error('Error getting local settings');
     return { ...DEFAULT_SETTINGS };
   }
 };
@@ -39,9 +38,8 @@ export const getServerSettings = async (): Promise<UserSettings> => {
     const data = await response.json();
     return data.data || { ...DEFAULT_SETTINGS };
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error getting server settings:', errMsg);
-    throw new Error(errMsg);
+    console.error('Error getting server settings');
+    throw new Error('Failed to get server settings');
   }
 };
 
@@ -50,8 +48,7 @@ export const getPendingSettings = async (): Promise<PendingSetting[]> => {
     const pending = await AsyncStorage.getItem(PENDING_SETTINGS_KEY);
     return pending ? JSON.parse(pending) : [];
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error getting pending settings:', errMsg);
+    console.error('Error getting pending settings');
     return [];
   }
 };
@@ -70,9 +67,8 @@ export const addPendingSettings = async (settings: Partial<UserSettings>): Promi
     await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(updatedPending));
     return updatedPending;
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error adding pending settings:', errMsg);
-    throw new Error(errMsg);
+    console.error('Error adding pending settings');
+    throw new Error('Failed to add pending settings');
   }
 };
 
@@ -80,9 +76,8 @@ export const clearPendingSettings = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error clearing pending settings:', errMsg);
-    throw new Error(errMsg);
+    console.error('Error clearing pending settings');
+    throw new Error('Failed to clear pending settings');
   }
 };
 
@@ -90,9 +85,8 @@ export const clearLocalSettings = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error clearing local settings:', errMsg);
-    throw new Error(errMsg);
+    console.error('Error clearing local settings');
+    throw new Error('Failed to clear local settings');
   }
 };
 
@@ -153,17 +147,16 @@ const DEFAULT_SETTINGS: UserSettings = {
 };
 
 const handleError = (error: any, defaultMessage: string) => {
-  const errMsg = error?.message || 'Unknown error';
-  console.error('Settings Service Error:', errMsg);
+  console.error('Settings Service Error');
 
   const hasNavigator = typeof navigator !== 'undefined' && navigator !== null;
-  const isOnlineFlag =
-    hasNavigator && typeof navigator.onLine === 'boolean' ? navigator.onLine : true;
+  const isOnlineFlag = hasNavigator ? navigator.onLine : true;
+  console.log('Settings Service: Online status:', isOnlineFlag);
 
   return {
     success: false,
-    message: error?.response?.data?.message || error?.message || defaultMessage,
-    silent: error?.silent || false,
+    message: defaultMessage,
+    silent: false,
     isOffline: !isOnlineFlag,
   };
 };
@@ -191,9 +184,8 @@ const fetchWithRetry = async (
     
     return response;
   } catch (error: any) {
-    const errMsg = error?.message || 'Unknown error';
-    console.error('Error fetching with retry:', errMsg);
-    if (retries <= 0) throw new Error(errMsg);
+    console.error('Error fetching with retry');
+    if (retries <= 0) throw new Error('Fetch failed after retries');
     await new Promise(resolve => setTimeout(resolve, 1000));
     return fetchWithRetry(url, options, retries - 1, timeout);
   }
@@ -232,8 +224,7 @@ export const SettingsService = {
             };
           }
         } catch (error: any) {
-          const errMsg = error?.message || 'Unknown error';
-          console.error('Failed to fetch settings from server, using local copy', errMsg);
+          console.error('Failed to fetch settings from server, using local copy');
         }
       }
 
@@ -256,8 +247,7 @@ export const SettingsService = {
         isOffline: !isConnected,
       };
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Error getting settings:', errMsg);
+      console.error('Error getting settings');
       return handleError(error, 'Failed to load settings');
     }
   },
@@ -319,8 +309,7 @@ export const SettingsService = {
           throw new Error(data.message || 'Failed to update settings');
         }
       } catch (error: any) {
-        const errMsg = error?.message || 'Unknown error';
-        console.error('Error updating settings:', errMsg);
+        console.error('Error updating settings');
         // If server update fails but we have local changes, queue for sync
         await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(newSettings));
         return {
@@ -331,8 +320,7 @@ export const SettingsService = {
         };
       }
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Error updating settings:', errMsg);
+      console.error('Error updating settings');
       return handleError(error, 'Failed to update settings');
     }
   },
@@ -347,8 +335,7 @@ export const SettingsService = {
         message: 'Settings cleared successfully',
       };
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Error clearing settings:', errMsg);
+      console.error('Error clearing settings');
       return handleError(error, 'Failed to clear settings');
     }
   },
@@ -378,8 +365,7 @@ export const SettingsService = {
       }
       return false;
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Failed to sync pending settings:', errMsg);
+      console.error('Failed to sync pending settings');
       return false;
     }
   },

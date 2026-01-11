@@ -34,9 +34,8 @@ export const useSecurePdf = (): UseSecurePdfReturn => {
         setError(response.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load PDF viewer';
-      setError(errorMessage);
-      console.error('Error loading PDF viewer:', err);
+      setError('Failed to load PDF viewer');
+      console.error('Error loading PDF viewer');
     } finally {
       setLoading(false);
     }
@@ -55,9 +54,8 @@ export const useSecurePdf = (): UseSecurePdfReturn => {
         setError(response.message || 'Failed to load book details');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load book details';
-      setError(errorMessage);
-      console.error('Error loading book details:', err);
+      setError('Failed to load book details');
+      console.error('Error loading book details');
     } finally {
       setLoading(false);
     }

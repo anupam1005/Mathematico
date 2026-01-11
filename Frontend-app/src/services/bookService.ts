@@ -65,7 +65,7 @@ const bookApi = axios.create({
     bookApi.defaults.baseURL = API_CONFIG.mobile;
     console.log('BookService: Base URL updated to:', bookApi.defaults.baseURL);
   } catch (error) {
-    console.error('BookService: Failed to update base URL:', error);
+    console.error('BookService: Failed to update base URL');
   }
 })();
 
@@ -114,7 +114,7 @@ class BookService {
       });
       return response.data;
     } catch (error) {
-      console.error('BookService: Request failed:', error);
+      console.error('BookService: Request failed');
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -163,7 +163,7 @@ class BookService {
       console.log('BookService: Book fetched successfully');
       return response;
     } catch (error) {
-      console.error('BookService: Error fetching book:', error);
+      console.error('BookService: Error fetching book');
       errorHandler.handleError('Error fetching book:', error);
       
       // Return a fallback book object instead of throwing

@@ -21,7 +21,23 @@ import {
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
-import { icons } from 'lucide-react-native';
+import { User, Mail, Phone, Calendar, MapPin, Award, Settings, LifeBuoy, ShieldCheck, ChevronRight, Circle, FileText } from 'lucide-react-native';
+
+// Create icons object for dynamic lookup
+const icons = {
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  Award,
+  Settings,
+  LifeBuoy,
+  ShieldCheck,
+  ChevronRight,
+  Circle,
+  FileText
+};
 import { useAuth } from '../contexts/AuthContext';
 import { CustomTextInput } from '../components/CustomTextInput';
 import { designSystem } from '../styles/designSystem';

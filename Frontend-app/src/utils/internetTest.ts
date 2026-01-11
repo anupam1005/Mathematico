@@ -16,7 +16,7 @@ export const testInternetConnectivity = async (): Promise<{
       });
       console.log('✅ Google DNS accessible');
     } catch (error) {
-      console.log('❌ Google DNS not accessible:', error);
+      console.log('❌ Google DNS not accessible');
     }
     
     // Test 2: Cloudflare DNS
@@ -26,7 +26,7 @@ export const testInternetConnectivity = async (): Promise<{
       });
       console.log('✅ Cloudflare DNS accessible');
     } catch (error) {
-      console.log('❌ Cloudflare DNS not accessible:', error);
+      console.log('❌ Cloudflare DNS not accessible');
     }
     
     // Test 3: HTTPBin
@@ -53,7 +53,7 @@ export const testInternetConnectivity = async (): Promise<{
         console.log('❌ HTTPBin failed:', httpbinResponse.status);
       }
     } catch (error: any) {
-      console.error('❌ HTTPBin error:', error);
+      console.error('❌ HTTPBin error');
     }
     
     // Test 4: JSONPlaceholder
@@ -80,7 +80,7 @@ export const testInternetConnectivity = async (): Promise<{
         console.log('❌ JSONPlaceholder failed:', jsonResponse.status);
       }
     } catch (error: any) {
-      console.error('❌ JSONPlaceholder error:', error);
+      console.error('❌ JSONPlaceholder error');
     }
     
     return {
@@ -92,7 +92,7 @@ export const testInternetConnectivity = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Internet connectivity test failed:', error);
+    console.error('❌ Internet connectivity test failed');
     return {
       success: false,
       message: `Internet connectivity test failed: ${error.message}`,

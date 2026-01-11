@@ -19,14 +19,13 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: any) {
-    console.error('[ErrorBoundary] Error caught:', error);
-    return { hasError: true, error };
+    console.error('[ErrorBoundary] Error caught');
+    return { hasError: true, error: null };
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error('[ErrorBoundary] Component error:', error);
-    console.error('[ErrorBoundary] Error info:', errorInfo);
-    this.setState({ errorInfo });
+    console.error('[ErrorBoundary] Component error occurred');
+    this.setState({ errorInfo: null });
   }
 
   handleReload = () => {
@@ -41,19 +40,9 @@ class ErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.subtitle}>The app encountered an error</Text>
           <ScrollView style={styles.errorContainer}>
             <Text style={styles.errorLabel}>Error:</Text>
-            <Text style={styles.error}>{this.state.error?.toString()}</Text>
-            {this.state.error?.message && (
-              <>
-                <Text style={styles.errorLabel}>Message:</Text>
-                <Text style={styles.error}>{this.state.error.message}</Text>
-              </>
-            )}
-            {this.state.error?.stack && (
-              <>
-                <Text style={styles.errorLabel}>Stack:</Text>
-                <Text style={styles.stackTrace}>{this.state.error.stack}</Text>
-              </>
-            )}
+            <Text style={styles.error}>An unexpected error occurred</Text>
+            <Text style={styles.errorLabel}>Message:</Text>
+            <Text style={styles.error}>Please restart the app</Text>
           </ScrollView>
           <Button mode="contained" onPress={this.handleReload} style={styles.button}>
             Try Again

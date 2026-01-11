@@ -9,8 +9,8 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "node16",
-    "moduleResolution": "node16",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
@@ -19,6 +19,6 @@
       "*": ["*", "admin/*", "services/*", "config/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "**/__tests__/*"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "**/__tests__/*", "**/*.js", "**/*.jsx"]
 }
