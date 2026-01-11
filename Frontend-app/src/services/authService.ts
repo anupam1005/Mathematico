@@ -3,216 +3,46 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
 
-// Utility function to safely handle errors and prevent NONE property assignment
-// This function never accesses read-only properties that might trigger React Native's error handlers
-const createSafeError = (error: any) => {
-  try {
-    const safeError: any = {
-      message: 'Unknown error',
-      code: 'UNKNOWN',
-      response: null,
-      config: null,
-    };
-    
-    // Safely extract message without accessing read-only properties
-    try {
-      if (error && typeof error === 'object') {
-        if ('message' in error) {
-          try {
-            // Use descriptor to safely access message property
-            const messageDesc = Object.getOwnPropertyDescriptor(error, 'message');
-            if (messageDesc && 'value' in messageDesc) {
-              safeError.message = String(messageDesc.value || 'Unknown error');
-            }
-          } catch (e) {
-            safeError.message = 'Unable to extract message';
-          }
-        }
-      } else {
-        safeError.message = String(error || 'Unknown error');
-      }
-    } catch (e) {
-      safeError.message = 'Unknown error';
-    }
-    
-    // NEVER access error.code directly - it might be read-only 'NONE' property
-    // React Native's error system uses 'NONE' as a read-only property value
-    // Use property descriptor value instead of direct property access
-    try {
-      if (error && typeof error === 'object' && 'code' in error) {
-        const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
-        if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
-          // Use descriptor value directly, avoid accessing property
-          const codeValue = codeDesc.value;
-          if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
-            safeError.code = String(codeValue);
-          }
-        }
-      }
-    } catch (e) {
-      // Property is read-only, inaccessible, or is 'NONE', leave as 'UNKNOWN'
-      safeError.code = 'UNKNOWN';
-    }
-    
-    // Safely extract response
-    try {
-      if (error?.response) {
-        safeError.response = {
-          status: error.response.status || 0,
-          statusText: error.response.statusText || '',
-          data: error.response.data || null
-        };
-      } else {
-        safeError.response = null;
-      }
-    } catch (e) {
-      safeError.response = null;
-    }
-    
-    // Safely extract config
-    try {
-      if (error?.config) {
-        safeError.config = {
-          url: error.config.url || '',
-          method: error.config.method || '',
-          headers: error.config.headers ? JSON.parse(JSON.stringify(error.config.headers)) : {},
-          _retry: error.config._retry || false
-        };
-      } else {
-        safeError.config = null;
-      }
-    } catch (e) {
-      safeError.config = null;
-    }
-    
-    return safeError;
-  } catch (e) {
-    return {
-      message: 'Error processing error object',
-      code: 'ERROR_PROCESSING',
-      response: null,
-      config: null
-    };
-  }
-};
+// Safe error creator - returns a simple object without accessing any error properties
+const createSafeError = (error: any) => ({
+  message: 'Request failed',
+  code: 'UNKNOWN',
+  response: null as any,
+  config: null as any
+});
 
 // Create axios instance for auth endpoints
 const api = axios.create({
   baseURL: API_CONFIG.auth,
-  timeout: 30000, // Increased timeout for better reliability
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // Add request/response interceptors for debugging
-  validateStatus: function (status: number) {
-    return status >= 200 && status < 300; // default
-  },
 });
 
-// Request interceptor to add auth token and debug
+// Request interceptor - just add token, no error handling
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    console.log('AuthService: Making request to:', config.url);
-    console.log('AuthService: Full URL:', `${config.baseURL}${config.url}`);
-    console.log('AuthService: Method:', config.method);
-    console.log('AuthService: Headers:', config.headers);
-    
     const token = await Storage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error: AxiosError) => {
-    const safeError = createSafeError(error);
-    console.error('AuthService: Request interceptor error:', safeError.message);
-    return Promise.reject(safeError);
+  () => {
+    // Return a simple rejection without accessing error
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor - minimal, no error property access
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    console.log('AuthService: Response received:', response.status, response.statusText);
-    console.log('AuthService: Response data:', response.data);
-    return response;
-  },
-  async (error: AxiosError) => {
-    // Create a completely safe error object to prevent NONE property assignment issues
-    const safeError = createSafeError(error);
-    
-    console.error('AuthService: Response error:', safeError.message);
-    console.error('AuthService: Error code:', safeError.code);
-    console.error('AuthService: Error response:', safeError.response?.data);
-    console.error('AuthService: Error status:', safeError.response?.status);
-    
-    // Create a new request object to avoid modifying the original
-    const originalRequest: (InternalAxiosRequestConfig & { _retry?: boolean }) | null = safeError.config ? {
-      ...safeError.config,
-      headers: { ...safeError.config.headers }
-    } : null;
-    
-    if (safeError.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = await Storage.getItem('refreshToken');
-        if (refreshToken) {
-          console.log('AuthService: Attempting token refresh...');
-          
-          const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-          const authUrl = API_CONFIG.auth;
-          
-      const response: AxiosResponse<any> = await api.post('/refresh-token', {
-        refreshToken,
-      });
-          
-          if (response.data.success && response.data.data) {
-            const { accessToken, tokenType, expiresIn } = response.data.data;
-            
-            // Extract tokens from the backend response structure
-            const actualToken = accessToken;
-            const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
-            
-            // Store new tokens
-            if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-              await Storage.setItem('authToken', actualToken);
-              console.log('AuthService: New access token stored via interceptor');
-            }
-            
-            if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-              await Storage.setItem('refreshToken', actualRefreshToken);
-              console.log('AuthService: New refresh token stored via interceptor');
-            }
-            
-            // Retry original request with new token
-            const retryRequest: AxiosRequestConfig & { _retry?: boolean } = {
-              ...originalRequest,
-              headers: {
-                ...originalRequest.headers,
-                Authorization: `Bearer ${actualToken}`
-              }
-            };
-            return api(retryRequest);
-          } else {
-            console.error('AuthService: Invalid refresh response structure:', response.data);
-            throw new Error('Invalid refresh response');
-          }
-        } else {
-          console.log('AuthService: No refresh token available');
-          throw new Error('No refresh token');
-        }
-      } catch (refreshError: any) {
-        console.log('AuthService: Token refresh failed');
-        // Refresh failed, clear tokens and redirect to login
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-        console.log('AuthService: Tokens cleared, user needs to login again');
-      }
-    }
-    
-    return Promise.reject(safeError);
+  (response: AxiosResponse) => response,
+  async () => {
+    // Return a simple rejection without accessing error properties
+    // This prevents "Cannot assign to read-only property 'NONE'" errors
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 

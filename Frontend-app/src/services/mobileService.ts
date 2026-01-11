@@ -99,17 +99,21 @@ mobileApi.interceptors.request.use(
 mobileApi.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    // Create safe error object to prevent frozen object access
-    const safeError = {
-      message: error?.message || 'Response failed',
-      code: 'UNKNOWN',
-      response: error?.response ? { status: error.response.status, data: error.response.data } : null
-    };
+    // Create safe error object using try-catch to prevent frozen object access
+    let message = 'Response failed';
+    let status: number | null = null;
+    let data: any = null;
     
-    if (safeError.response?.status === 401) {
-      // Clear invalid tokens
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('refreshToken');
+    try { message = String(error.message || 'Response failed'); } catch (e) { /* ignore */ }
+    try { if (error.response) { status = error.response.status; data = error.response.data; } } catch (e) { /* ignore */ }
+    
+    const safeError = { message, code: 'UNKNOWN', response: status ? { status, data } : null };
+    
+    if (status === 401) {
+      try {
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
+      } catch (e) { /* ignore */ }
     }
     
     return Promise.reject(safeError);
