@@ -2,25 +2,29 @@
 import { API_CONFIG } from '../config';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
-import RazorpayCheckoutNative from 'react-native-razorpay';
 
 // Create a service error handler for razorpayService
 const errorHandler = createServiceErrorHandler('razorpayService');
 
-// Ensure Razorpay native module is bundled by importing it directly.
-// Fallback to global reference if running in environments where the module isn't available (e.g., web/tests).
-const RazorpayCheckout =
-  RazorpayCheckoutNative ||
-  // Some builds expose the module on the global scope
-  (typeof globalThis !== 'undefined' ? (globalThis as any).RazorpayCheckout : null);
+// LAZY LOAD: Defer native module initialization to prevent Hermes frozen object crash
+let RazorpayCheckoutNative: any = null;
 
-if (!RazorpayCheckout) {
-  errorHandler.logWarning(
-    '⚠️ RazorpayCheckout not available after import. Payment module may be missing from this build.'
-  );
-} else {
-  console.log('✅ RazorpayCheckout loaded successfully');
-}
+// Lazy-load the Razorpay native module only when needed
+const getRazorpayCheckout = () => {
+  if (RazorpayCheckoutNative !== null) {
+    return RazorpayCheckoutNative;
+  }
+  
+  try {
+    RazorpayCheckoutNative = require('react-native-razorpay');
+    console.log('✅ RazorpayCheckout lazy-loaded successfully');
+    return RazorpayCheckoutNative;
+  } catch (error) {
+    errorHandler.logWarning('⚠️ RazorpayCheckout lazy-load failed. Payment module may be missing from this build.');
+    RazorpayCheckoutNative = (typeof globalThis !== 'undefined' ? (globalThis as any).RazorpayCheckout : null);
+    return RazorpayCheckoutNative;
+  }
+};
 
 export interface RazorpayOrder {
   id: string;
@@ -289,6 +293,9 @@ class RazorpayService {
           message: 'Razorpay payment is only available on mobile devices. Please use the mobile app to complete your purchase.',
         };
       }
+      
+      // Lazy-load RazorpayCheckout module
+      const RazorpayCheckout = getRazorpayCheckout();
       
       // Check if RazorpayCheckout is available
       if (!RazorpayCheckout || !RazorpayCheckout.open) {
