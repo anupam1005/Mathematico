@@ -34,10 +34,18 @@ export const Logger = {
 
 export class ErrorHandler {
   static handleApiError(error: any): ApiError {
-    // Safely log error without accessing read-only properties
-    // The global error handler will safely extract the message
-    console.error('API Error:', error);
+    // NEVER access any properties on error objects - just log a generic message
+    console.error('API Error occurred');
     
+    // Return a generic error - don't try to extract anything from the error object
+    return {
+      message: 'Request failed',
+      status: 0,
+      code: 'UNKNOWN'
+    };
+  }
+
+  static handleApiErrorLegacy(error: any): ApiError {
     // Network error - safely check for response property using descriptor
     let hasResponse = false;
     let responseValue: any = null;

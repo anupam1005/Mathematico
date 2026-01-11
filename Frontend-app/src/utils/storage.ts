@@ -22,9 +22,8 @@ export class Storage {
         console.log(`Storage: Set ${key} in SecureStore`);
       }
     } catch (error: any) {
-      const errMsg = error?.message || 'Storage setItem failed';
-      console.error('Storage setItem error:', errMsg);
-      throw new Error(errMsg);
+      console.error('Storage setItem error');
+      throw new Error('Storage setItem failed');
     }
   }
 
@@ -57,8 +56,7 @@ export class Storage {
       
       return result;
     } catch (error: any) {
-      const errMsg = error?.message || 'Storage getItem failed';
-      console.error('Storage getItem error:', errMsg);
+      console.error('Storage getItem error');
       return null;
     }
   }
@@ -76,9 +74,8 @@ export class Storage {
         console.log(`Storage: Deleted ${key} from SecureStore`);
       }
     } catch (error: any) {
-      const errMsg = error?.message || 'Storage deleteItem failed';
-      console.error('Storage deleteItem error:', errMsg);
-      throw new Error(errMsg);
+      console.error('Storage deleteItem error');
+      throw new Error('Storage deleteItem failed');
     }
   }
 
@@ -94,9 +91,8 @@ export class Storage {
         await SecureStore.deleteItemAsync('user');
       }
     } catch (error: any) {
-      const errMsg = error?.message || 'Storage clear failed';
-      console.error('Storage clear error:', errMsg);
-      throw new Error(errMsg);
+      console.error('Storage clear error');
+      throw new Error('Storage clear failed');
     }
   }
 }

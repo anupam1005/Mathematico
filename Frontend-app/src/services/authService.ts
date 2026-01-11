@@ -492,8 +492,7 @@ const authService = {
       console.log('AuthService: No valid token found');
       return null;
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Error getting token:', errMsg);
+      console.error('Error getting token');
       return null;
     }
   },
@@ -505,8 +504,7 @@ const authService = {
       await Storage.deleteItem('user');
       console.log('AuthService: All tokens cleared');
     } catch (error: any) {
-      const errMsg = error?.message || 'Unknown error';
-      console.error('Error clearing tokens:', errMsg);
+      console.error('Error clearing tokens');
     }
   },
 };

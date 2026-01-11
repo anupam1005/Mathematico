@@ -76,44 +76,17 @@ courseApi.interceptors.request.use(
     }
     return config;
   },
-  (error: AxiosError) => {
-    const safeError = { message: error?.message || 'Request failed', code: 'UNKNOWN' };
-    return Promise.reject(safeError);
+  () => {
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 
 // Response interceptor to handle token refresh
 courseApi.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error: AxiosError) => {
-    const safeError = {
-      message: error?.message || 'Request failed',
-      code: 'UNKNOWN',
-      response: error?.response ? { status: error.response.status, data: error.response.data } : null
-    };
-    const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
-    
-    if (safeError.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshResult = await authService.refreshToken();
-        if (refreshResult.success) {
-          console.log('CourseService: Token refreshed successfully, retrying request...');
-          return courseApi(originalRequest);
-        } else {
-          console.log('CourseService: Token refresh failed, clearing tokens...');
-          await AsyncStorage.removeItem('authToken');
-          await AsyncStorage.removeItem('refreshToken');
-        }
-      } catch (refreshError: any) {
-        console.log('CourseService: Token refresh error:', refreshError?.message || 'Unknown');
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('refreshToken');
-      }
-    }
-    
-    return Promise.reject(safeError);
+  async () => {
+    // NEVER access error properties - just return a safe rejection
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 

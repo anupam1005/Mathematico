@@ -25,12 +25,15 @@ export const Logger = {
 
   error: (...args: any[]) => {
     // Always show errors, even in production
-    // Safely extract error messages to prevent frozen object issues
+    // NEVER access any properties on objects - just convert to string or skip
     const safeArgs = args.map(arg => {
-      if (arg instanceof Error || (typeof arg === 'object' && arg !== null && 'message' in arg)) {
-        return arg.message || String(arg);
+      if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') {
+        return arg;
       }
-      return arg;
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+      // For ANY object, just return a placeholder - never access properties
+      return '[Error]';
     });
     console.error(...safeArgs);
   },
@@ -43,10 +46,8 @@ export const Logger = {
 
   // For critical production errors that need tracking
   critical: (message: string, error?: any) => {
-    const safeError = error instanceof Error || (typeof error === 'object' && error !== null && 'message' in error)
-      ? error.message || String(error)
-      : error;
-    console.error('[CRITICAL]', message, safeError);
+    // NEVER access any properties on error objects
+    console.error('[CRITICAL]', message, error ? '[Error]' : '');
     // TODO: Add error tracking service here (e.g., Sentry)
   }
 };

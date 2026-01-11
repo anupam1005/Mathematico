@@ -112,48 +112,21 @@ adminApi.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error: any) {
-      console.log('AdminService: Error getting token:', error?.message || 'Unknown');
+      console.log('AdminService: Error getting token');
     }
     return config;
   },
-  (error: any) => {
-    const safeError = { message: error?.message || 'Request failed', code: 'UNKNOWN' };
-    return Promise.reject(safeError);
+  () => {
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 
 // Response interceptor to handle token refresh
 adminApi.interceptors.response.use(
   (response) => response,
-  async (error: any) => {
-    const safeError = {
-      message: error?.message || 'Request failed',
-      code: 'UNKNOWN',
-      response: error?.response ? { status: error.response.status, data: error.response.data } : null
-    };
-    const originalRequest = error.config;
-    
-    if (safeError.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshResult = await authService.refreshToken();
-        if (refreshResult.success) {
-          console.log('AdminService: Token refreshed successfully, retrying request...');
-          return adminApi(originalRequest);
-        } else {
-          console.log('AdminService: Token refresh failed, clearing tokens...');
-          await Storage.deleteItem('authToken');
-          await Storage.deleteItem('refreshToken');
-        }
-      } catch (refreshError: any) {
-        console.log('AdminService: Token refresh error:', refreshError?.message || 'Unknown');
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-      }
-    }
-    
-    return Promise.reject(safeError);
+  async () => {
+    // NEVER access error properties - just return a safe rejection
+    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
   }
 );
 
