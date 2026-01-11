@@ -121,7 +121,7 @@ export class ErrorHandler {
       const stringValue = String(value);
       return operation(stringValue);
     } catch (error) {
-      console.warn('String operation failed:', error);
+      console.warn('String operation failed');
       return fallback;
     }
   }
@@ -136,7 +136,7 @@ export class ErrorHandler {
       const searchString = this.safeToLowerCase(searchTerm);
       return stringValue.includes(searchString);
     } catch (error) {
-      console.warn('String includes operation failed:', error);
+      console.warn('String includes operation failed');
       return false;
     }
   }
@@ -196,7 +196,7 @@ export class ErrorHandler {
         data: response.data
       };
     } catch (error) {
-      console.error('Response validation error:', error);
+      console.error('Response validation error');
       return {
         success: false,
         error: {

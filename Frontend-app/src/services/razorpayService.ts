@@ -63,7 +63,7 @@ class RazorpayService {
       this.baseUrl = API_CONFIG.mobile;
       console.log('RazorpayService: Base URL updated to:', this.baseUrl);
     } catch (error) {
-      console.error('RazorpayService: Failed to update base URL:', error);
+      console.error('RazorpayService: Failed to update base URL');
     }
   }
 
@@ -110,11 +110,11 @@ class RazorpayService {
         };
       }
     } catch (error: any) {
-      console.error('❌ RazorpayService: Error creating order:', error);
+      console.error('❌ RazorpayService: Error creating order');
       errorHandler.handleError('RazorpayService: Error creating order:', error);
       return {
         success: false,
-        error: error.message || 'Network error occurred',
+        error: 'Network error occurred',
         message: 'Failed to create payment order. Please check your connection.',
       };
     }
@@ -347,8 +347,18 @@ class RazorpayService {
     } catch (error: any) {
       errorHandler.handleError('RazorpayService: Payment failed:', error);
       
+      // Safely extract error message using try-catch
+      let errorMsg = '';
+      try {
+        if (error && error.message) {
+          errorMsg = String(error.message).toLowerCase();
+        }
+      } catch (e) {
+        // Property access failed, continue with empty string
+      }
+      
       // Handle native module not available
-      if (error.message && error.message.includes('_nativeModule')) {
+      if (errorMsg.includes('_nativemodule')) {
         console.error('RazorpayService: Native module not available');
         return {
           success: false,
@@ -357,18 +367,8 @@ class RazorpayService {
         };
       }
       
-      // Handle user cancellation - check error message instead of code
-      let isCancelled = false;
-      try {
-        if (error && error.message) {
-          const msg = String(error.message).toLowerCase();
-          isCancelled = msg.includes('cancel') || msg.includes('cancelled');
-        }
-      } catch (e) {
-        // Property access failed, continue
-      }
-      
-      if (isCancelled) {
+      // Handle user cancellation
+      if (errorMsg.includes('cancel') || errorMsg.includes('cancelled')) {
         return {
           success: false,
           error: 'Payment cancelled by user',
@@ -378,7 +378,7 @@ class RazorpayService {
       
       return {
         success: false,
-        error: error.message || 'Payment failed',
+        error: 'Payment failed',
         message: 'Payment could not be completed',
       };
     }

@@ -95,10 +95,9 @@ export const testInternetConnectivity = async (): Promise<{
     console.error('❌ Internet connectivity test failed');
     return {
       success: false,
-      message: `Internet connectivity test failed: ${error.message}`,
+      message: 'Internet connectivity test failed',
       details: {
-        platform: Platform.OS,
-        error: error.message
+        platform: Platform.OS
       }
     };
   }

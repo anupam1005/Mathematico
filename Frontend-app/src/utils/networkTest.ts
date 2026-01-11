@@ -145,7 +145,7 @@ export const testBackendEndpoints = async (): Promise<{
       const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });
       endpoints.health = { success: true, status: healthResponse.status, data: healthResponse.data };
     } catch (error: any) {
-      endpoints.health = { success: false, error: error.message };
+      endpoints.health = { success: false, error: 'Request failed' };
     }
     
     // Test register endpoint
@@ -157,7 +157,7 @@ export const testBackendEndpoints = async (): Promise<{
       }, { timeout: 5000, validateStatus: (status) => status < 500 });
       endpoints.register = { success: true, status: registerResponse.status };
     } catch (error: any) {
-      endpoints.register = { success: false, error: error.message };
+      endpoints.register = { success: false, error: 'Request failed' };
     }
     
     // Test login endpoint
@@ -168,7 +168,7 @@ export const testBackendEndpoints = async (): Promise<{
       }, { timeout: 5000, validateStatus: (status) => status < 500 });
       endpoints.login = { success: true, status: loginResponse.status };
     } catch (error: any) {
-      endpoints.login = { success: false, error: error.message };
+      endpoints.login = { success: false, error: 'Request failed' };
     }
     
     return {

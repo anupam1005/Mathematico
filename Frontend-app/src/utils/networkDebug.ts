@@ -68,8 +68,8 @@ export const testDirectConnection = async (): Promise<{
         console.log('❌ Root endpoint failed:', rootResponse.status);
       }
     } catch (error: any) {
-      results.root = { success: false, error: error.message };
-      console.log('❌ Root endpoint error:', error.message);
+      results.root = { success: false, error: 'Request failed' };
+      console.log('❌ Root endpoint error');
     }
     
     // Test 2: Auth health endpoint
@@ -91,8 +91,8 @@ export const testDirectConnection = async (): Promise<{
         console.log('❌ Auth health endpoint failed:', healthResponse.status);
       }
     } catch (error: any) {
-      results.health = { success: false, error: error.message };
-      console.log('❌ Auth health endpoint error:', error.message);
+      results.health = { success: false, error: 'Request failed' };
+      console.log('❌ Auth health endpoint error');
     }
     
     // Test 3: Auth register endpoint (without actually registering)
@@ -124,8 +124,8 @@ export const testDirectConnection = async (): Promise<{
         console.log('❌ Auth register endpoint failed:', registerResponse.status, errorData.message);
       }
     } catch (error: any) {
-      results.register = { success: false, error: error.message };
-      console.log('❌ Auth register endpoint error:', error.message);
+      results.register = { success: false, error: 'Request failed' };
+      console.log('❌ Auth register endpoint error');
     }
     
     const successCount = Object.values(results).filter((result: any) => result.success).length;
@@ -138,10 +138,10 @@ export const testDirectConnection = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Direct connection test failed:', error);
+    console.error('❌ Direct connection test failed');
     return {
       success: false,
-      message: `Direct connection test failed: ${error.message}`,
+      message: 'Direct connection test failed',
       results
     };
   }

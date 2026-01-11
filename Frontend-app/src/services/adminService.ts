@@ -290,11 +290,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Book creation failed:', result);
-        return { success: false, error: result.message || 'Failed to create book' };
+        return { success: false, error: 'Failed to create book' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book creation error:', error);
-      return { success: false, error: error.message || 'Failed to create book' };
+      return { success: false, error: 'Failed to create book' };
     }
   }
 
@@ -341,11 +341,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Book update failed:', result);
-        return { success: false, error: result.message || 'Failed to update book' };
+        return { success: false, error: 'Failed to update book' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book update error:', error);
-      return { success: false, error: error.message || 'Failed to update book' };
+      return { success: false, error: 'Failed to update book' };
     }
   }
 
@@ -377,11 +377,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Book status update failed:', result);
-        return { success: false, error: result.message || 'Failed to update book status' };
+        return { success: false, error: 'Failed to update book status' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book status update error:', error);
-      return { success: false, error: error.message || 'Failed to update book status' };
+      return { success: false, error: 'Failed to update book status' };
     }
   }
 
@@ -411,11 +411,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Book deletion failed:', result);
-        return { success: false, error: result.message || 'Failed to delete book' };
+        return { success: false, error: 'Failed to delete book' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book deletion error:', error);
-      return { success: false, error: error.message || 'Failed to delete book' };
+      return { success: false, error: 'Failed to delete book' };
     }
   }
 
@@ -499,7 +499,7 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Course creation failed:', result);
-        return { success: false, error: result.message || 'Failed to create course' };
+        return { success: false, error: 'Failed to create course' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Course creation error:', error);
@@ -512,7 +512,7 @@ class AdminService {
         };
       }
       
-      return { success: false, error: error.message || 'Failed to create course' };
+      return { success: false, error: 'Failed to create course' };
     }
   }
 
@@ -559,11 +559,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Course update failed:', result);
-        return { success: false, error: result.message || 'Failed to update course' };
+        return { success: false, error: 'Failed to update course' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Course update error:', error);
-      return { success: false, error: error.message || 'Failed to update course' };
+      return { success: false, error: 'Failed to update course' };
     }
   }
 
@@ -595,11 +595,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Course status update failed:', result);
-        return { success: false, error: result.message || 'Failed to update course status' };
+        return { success: false, error: 'Failed to update course status' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Course status update error:', error);
-      return { success: false, error: error.message || 'Failed to update course status' };
+      return { success: false, error: 'Failed to update course status' };
     }
   }
 
@@ -629,16 +629,17 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Course deletion failed:', result);
-        return { success: false, error: result.message || 'Failed to delete course' };
+        return { success: false, error: 'Failed to delete course' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Course deletion error:', error);
-      return { success: false, error: error.message || 'Failed to delete course' };
+      return { success: false, error: 'Failed to delete course' };
     }
   }
 
   // Live Classes
   async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
+    // ... (rest of the code remains the same)
     try {
       const response = await adminApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return {
@@ -717,12 +718,12 @@ class AdminService {
       } else {
         console.error('AdminService: Live class creation failed:', result);
         errorHandler.handleError('AdminService: Live class creation failed:', result);
-        return { success: false, error: result.message || result.error || 'Failed to create live class' };
+        return { success: false, error: 'Failed to create live class' };
       }
     } catch (error: any) {
       console.error('AdminService: Live class creation exception:');
       errorHandler.handleError('AdminService: Live class creation error:', error);
-      return { success: false, error: error.message || 'Failed to create live class' };
+      return { success: false, error: 'Failed to create live class' };
     }
   }
 
@@ -768,11 +769,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Live class update failed:', result);
-        return { success: false, error: result.message || 'Failed to update live class' };
+        return { success: false, error: 'Failed to update live class' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Live class update error:', error);
-      return { success: false, error: error.message || 'Failed to update live class' };
+      return { success: false, error: 'Failed to update live class' };
     }
   }
 
@@ -803,11 +804,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Live class status update failed:', result);
-        return { success: false, error: result.message || 'Failed to update live class status' };
+        return { success: false, error: 'Failed to update live class status' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Live class status update error:', error);
-      return { success: false, error: error.message || 'Failed to update live class status' };
+      return { success: false, error: 'Failed to update live class status' };
     }
   }
 
@@ -836,11 +837,11 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Live class deletion failed:', result);
-        return { success: false, error: result.message || 'Failed to delete live class' };
+        return { success: false, error: 'Failed to delete live class' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Live class deletion error:', error);
-      return { success: false, error: error.message || 'Failed to delete live class' };
+      return { success: false, error: 'Failed to delete live class' };
     }
   }
 
