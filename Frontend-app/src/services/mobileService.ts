@@ -99,68 +99,19 @@ mobileApi.interceptors.request.use(
 mobileApi.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    // Create safe error object to prevent frozen object access
+    const safeError = {
+      message: error?.message || 'Response failed',
+      code: 'UNKNOWN',
+      response: error?.response ? { status: error.response.status, data: error.response.data } : null
+    };
+    
+    if (safeError.response?.status === 401) {
       // Clear invalid tokens
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('refreshToken');
     }
     
-    // Safely extract error code without accessing read-only properties
-    let errorCode = 'UNKNOWN';
-    try {
-      if (error && typeof error === 'object' && 'code' in error) {
-        const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
-        if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
-          // Use descriptor value directly, avoid accessing property
-          const codeValue = codeDesc.value;
-          if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
-            errorCode = String(codeValue);
-          }
-        }
-      }
-    } catch (e) {
-      errorCode = 'UNKNOWN';
-    }
-    
-    // Safely extract message using descriptor
-    let errorMessage = 'Response failed';
-    try {
-      if (error && typeof error === 'object' && 'message' in error) {
-        const messageDesc = Object.getOwnPropertyDescriptor(error, 'message');
-        if (messageDesc && 'value' in messageDesc) {
-          errorMessage = String(messageDesc.value || 'Response failed');
-        }
-      }
-    } catch (e) {
-      errorMessage = 'Response failed';
-    }
-    
-    // Safely extract response using descriptor
-    let responseData: any = null;
-    try {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const responseDesc = Object.getOwnPropertyDescriptor(error, 'response');
-        if (responseDesc && 'value' in responseDesc && responseDesc.value) {
-          const responseValue = responseDesc.value;
-          if (typeof responseValue === 'object') {
-            const statusDesc = Object.getOwnPropertyDescriptor(responseValue, 'status');
-            const dataDesc = Object.getOwnPropertyDescriptor(responseValue, 'data');
-            responseData = {
-              status: statusDesc && 'value' in statusDesc ? statusDesc.value : 0,
-              data: dataDesc && 'value' in dataDesc ? dataDesc.value : null
-            };
-          }
-        }
-      }
-    } catch (e) {
-      responseData = null;
-    }
-    
-    const safeError = {
-      message: errorMessage,
-      code: errorCode,
-      response: responseData
-    };
     return Promise.reject(safeError);
   }
 );

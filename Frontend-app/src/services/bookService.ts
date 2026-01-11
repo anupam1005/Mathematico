@@ -78,7 +78,8 @@ bookApi.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    return Promise.reject(error);
+    const safeError = { message: error?.message || 'Request failed', code: 'UNKNOWN' };
+    return Promise.reject(safeError);
   }
 );
 
@@ -86,30 +87,34 @@ bookApi.interceptors.request.use(
 bookApi.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
+    const safeError = {
+      message: error?.message || 'Request failed',
+      code: 'UNKNOWN',
+      response: error?.response ? { status: error.response.status, data: error.response.data } : null
+    };
     const originalRequest = (error.config || {}) as InternalAxiosRequestConfig & { _retry?: boolean };
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (safeError.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         const refreshResult = await authService.refreshToken();
         if (refreshResult.success) {
           console.log('BookService: Token refreshed successfully, retrying request...');
-          // Retry the request with new token
           return bookApi(originalRequest);
         } else {
           console.log('BookService: Token refresh failed, clearing tokens...');
           await AsyncStorage.removeItem('authToken');
           await AsyncStorage.removeItem('refreshToken');
         }
-      } catch (refreshError) {
-        errorHandler.handleError('BookService: Token refresh error:', refreshError);
+      } catch (refreshError: any) {
+        console.log('BookService: Token refresh error:', refreshError?.message || 'Unknown');
         await AsyncStorage.removeItem('authToken');
         await AsyncStorage.removeItem('refreshToken');
       }
     }
     
-    return Promise.reject(error);
+    return Promise.reject(safeError);
   }
 );
 

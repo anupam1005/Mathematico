@@ -111,24 +111,29 @@ adminApi.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    } catch (error) {
-      errorHandler.handleError('AdminService: Error getting token:', error);
+    } catch (error: any) {
+      console.log('AdminService: Error getting token:', error?.message || 'Unknown');
     }
     return config;
   },
-  (error) => {
-    errorHandler.handleError('AdminService: Request interceptor error:', error);
-    return Promise.reject(error);
+  (error: any) => {
+    const safeError = { message: error?.message || 'Request failed', code: 'UNKNOWN' };
+    return Promise.reject(safeError);
   }
 );
 
 // Response interceptor to handle token refresh
 adminApi.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: any) => {
+    const safeError = {
+      message: error?.message || 'Request failed',
+      code: 'UNKNOWN',
+      response: error?.response ? { status: error.response.status, data: error.response.data } : null
+    };
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (safeError.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
@@ -141,14 +146,14 @@ adminApi.interceptors.response.use(
           await Storage.deleteItem('authToken');
           await Storage.deleteItem('refreshToken');
         }
-      } catch (refreshError) {
-        errorHandler.handleError('AdminService: Token refresh error:', refreshError);
+      } catch (refreshError: any) {
+        console.log('AdminService: Token refresh error:', refreshError?.message || 'Unknown');
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
       }
     }
     
-    return Promise.reject(error);
+    return Promise.reject(safeError);
   }
 );
 
