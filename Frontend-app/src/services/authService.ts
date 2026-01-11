@@ -136,7 +136,7 @@ const authService = {
       // Provide more specific error messages
       let errorMessage = 'Login failed';
       
-      if (safeError.code === 'NETWORK_ERROR' || safeError.message?.includes('Network Error')) {
+      if (safeError.message?.includes('Network Error') || safeError.message?.includes('network')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (safeError.response?.status === 404) {
         errorMessage = 'Server not found. Please check if the backend server is running.';
@@ -222,7 +222,7 @@ const authService = {
       // Provide more specific error messages
       let errorMessage = 'Registration failed';
       
-      if (safeError.code === 'NETWORK_ERROR' || safeError.message?.includes('Network Error')) {
+      if (safeError.message?.includes('Network Error') || safeError.message?.includes('network')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (safeError.response?.status === 404) {
         errorMessage = 'Server not found. Please check if the backend server is running.';

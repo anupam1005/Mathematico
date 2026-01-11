@@ -34,74 +34,15 @@ export const Logger = {
 
 export class ErrorHandler {
   static handleApiError(error: any): ApiError {
-    // NEVER access any properties on error objects - just log a generic message
-    console.error('API Error occurred');
+    // Use createSafeError to safely extract error info without triggering NONE error
+    const safeError = require('./safeError').createSafeError(error);
     
-    // Return a generic error - don't try to extract anything from the error object
-    return {
-      message: 'Request failed',
-      status: 0,
-      code: 'UNKNOWN'
-    };
-  }
-
-  static handleApiErrorLegacy(error: any): ApiError {
-    // Network error - safely check for response property using descriptor
-    let hasResponse = false;
-    let responseValue: any = null;
-    try {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const responseDesc = Object.getOwnPropertyDescriptor(error, 'response');
-        if (responseDesc && 'value' in responseDesc && responseDesc.value !== undefined && responseDesc.value !== null) {
-          hasResponse = true;
-          responseValue = responseDesc.value;
-        }
-      }
-    } catch (e) {
-      hasResponse = false;
-    }
+    // Extract status from safe error
+    const status = safeError.response?.status || 0;
+    const data = safeError.response?.data;
+    const dataMessage = data?.message;
     
-    if (!hasResponse) {
-      return {
-        message: 'Network error. Please check your internet connection.',
-        status: 0,
-        code: 'NETWORK_ERROR'
-      };
-    }
-    
-    // HTTP error - safely extract status and data using descriptors
-    let status: number | undefined;
-    let data: any;
-    
-    try {
-      if (responseValue && typeof responseValue === 'object') {
-        const statusDesc = Object.getOwnPropertyDescriptor(responseValue, 'status');
-        if (statusDesc && 'value' in statusDesc) {
-          status = Number(statusDesc.value);
-        }
-        
-        const dataDesc = Object.getOwnPropertyDescriptor(responseValue, 'data');
-        if (dataDesc && 'value' in dataDesc) {
-          data = dataDesc.value;
-        }
-      }
-    } catch (e) {
-      // Property extraction failed
-    }
-    
-    // Safely extract message from data if it exists
-    let dataMessage: string | undefined;
-    try {
-      if (data && typeof data === 'object' && 'message' in data) {
-        const dataMessageDesc = Object.getOwnPropertyDescriptor(data, 'message');
-        if (dataMessageDesc && 'value' in dataMessageDesc) {
-          dataMessage = String(dataMessageDesc.value);
-        }
-      }
-    } catch (e) {
-      // Message extraction from data failed
-    }
-    
+    // Return appropriate error based on status
     switch (status) {
       case 400:
         return {
@@ -114,26 +55,23 @@ export class ErrorHandler {
         return {
           message: 'Authentication required. Please log in again.',
           status,
-          code: 'UNAUTHORIZED',
-          details: data
+          code: 'UNAUTHORIZED'
         };
       case 403:
         return {
-          message: 'Access denied. You do not have permission to perform this action.',
+          message: 'Access forbidden. You do not have permission.',
           status,
-          code: 'FORBIDDEN',
-          details: data
+          code: 'FORBIDDEN'
         };
       case 404:
         return {
-          message: 'Resource not found.',
+          message: dataMessage || 'Resource not found.',
           status,
-          code: 'NOT_FOUND',
-          details: data
+          code: 'NOT_FOUND'
         };
       case 422:
         return {
-          message: dataMessage || 'Validation error. Please check your input.',
+          message: dataMessage || 'Validation failed. Please check your input.',
           status,
           code: 'VALIDATION_ERROR',
           details: data
@@ -142,21 +80,33 @@ export class ErrorHandler {
         return {
           message: 'Too many requests. Please try again later.',
           status,
-          code: 'RATE_LIMITED',
-          details: data
+          code: 'RATE_LIMITED'
         };
       case 500:
         return {
-          message: 'Server error. Please try again later.',
+          message: 'Internal server error. Please try again later.',
           status,
-          code: 'SERVER_ERROR',
-          details: data
+          code: 'SERVER_ERROR'
+        };
+      case 502:
+      case 503:
+      case 504:
+        return {
+          message: 'Service temporarily unavailable. Please try again later.',
+          status,
+          code: 'SERVICE_UNAVAILABLE'
+        };
+      case 0:
+        return {
+          message: 'Network error. Please check your internet connection.',
+          status: 0,
+          code: 'NETWORK_ERROR'
         };
       default:
         return {
-          message: dataMessage || 'An unexpected error occurred.',
+          message: dataMessage || safeError.message || 'An unexpected error occurred.',
           status,
-          code: 'UNKNOWN_ERROR',
+          code: 'UNKNOWN',
           details: data
         };
     }

@@ -78,46 +78,20 @@ export const testNetworkConnectivity = async (): Promise<{
     let errorMessage = 'Network test failed';
     let errorDetails: any = {};
     
-    // Safely extract error properties without accessing read-only ones
-    let errorCode: string | undefined;
+    // Safely extract error message - NEVER access error.code
     let errorMsg: string | undefined;
-    
     try {
-      if (error && typeof error === 'object') {
-        // Safely check if code property exists and is accessible
-        if ('code' in error) {
-          try {
-            const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
-            if (codeDesc && codeDesc.enumerable && codeDesc.writable !== false && 'value' in codeDesc) {
-              // Use descriptor value directly, avoid accessing property
-              const codeValue = codeDesc.value;
-              if (codeValue !== undefined && codeValue !== null && String(codeValue) !== 'NONE') {
-                errorCode = String(codeValue);
-              }
-            }
-          } catch (e) {
-            // Property is read-only or inaccessible
-            errorCode = undefined;
-          }
-        }
-        
-        // Safely extract message
-        if ('message' in error) {
-          try {
-            errorMsg = String(error.message);
-          } catch (e) {
-            errorMsg = 'Unable to extract error message';
-          }
-        }
+      if (error && error.message) {
+        errorMsg = String(error.message);
       }
     } catch (e) {
       errorMsg = 'Unknown network error';
     }
     
-    if (errorCode === 'NETWORK_ERROR' || errorMsg?.includes('Network Error')) {
+    // Check if it's a network error based on message
+    if (errorMsg?.includes('Network Error') || errorMsg?.includes('network')) {
       errorMessage = 'Network error - cannot reach backend server';
       errorDetails = {
-        code: errorCode || 'NETWORK_ERROR',
         message: errorMsg,
         backendUrl: AUTH_URL
       };
