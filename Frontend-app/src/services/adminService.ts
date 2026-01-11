@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import authService from "./authService";
 import { API_CONFIG } from "../config";
 import { Storage } from "../utils/storage";
+import { createSafeError } from '../utils/safeError';
 
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
@@ -116,17 +117,16 @@ adminApi.interceptors.request.use(
     }
     return config;
   },
-  () => {
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  (error: any) => {
+    return Promise.reject(createSafeError(error));
   }
 );
 
 // Response interceptor to handle token refresh
 adminApi.interceptors.response.use(
   (response) => response,
-  async () => {
-    // NEVER access error properties - just return a safe rejection
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  async (error: any) => {
+    return Promise.reject(createSafeError(error));
   }
 );
 

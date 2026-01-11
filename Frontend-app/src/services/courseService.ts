@@ -4,6 +4,7 @@ import authService from './authService';
 import { API_CONFIG } from '../config';
 import ErrorHandler from '../utils/errorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createSafeError } from '../utils/safeError';
 
 // Create a service error handler for courseService
 const errorHandler = createServiceErrorHandler('courseService');
@@ -76,17 +77,16 @@ courseApi.interceptors.request.use(
     }
     return config;
   },
-  () => {
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  (error: any) => {
+    return Promise.reject(createSafeError(error));
   }
 );
 
 // Response interceptor to handle token refresh
 courseApi.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async () => {
-    // NEVER access error properties - just return a safe rejection
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  async (error: any) => {
+    return Promise.reject(createSafeError(error));
   }
 );
 

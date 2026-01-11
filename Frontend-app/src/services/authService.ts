@@ -2,14 +2,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestCo
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
-
-// Safe error creator - returns a simple object without accessing any error properties
-const createSafeError = (error: any) => ({
-  message: 'Request failed',
-  code: 'UNKNOWN',
-  response: null as any,
-  config: null as any
-});
+import { createSafeError } from '../utils/safeError';
 
 // Create axios instance for auth endpoints
 const api = axios.create({
@@ -21,7 +14,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - just add token, no error handling
+// Request interceptor - just add token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await Storage.getItem('authToken');
@@ -30,19 +23,17 @@ api.interceptors.request.use(
     }
     return config;
   },
-  () => {
-    // Return a simple rejection without accessing error
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  (error: any) => {
+    return Promise.reject(createSafeError(error));
   }
 );
 
-// Response interceptor - minimal, no error property access
+// Response interceptor - use safe error extraction
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async () => {
-    // Return a simple rejection without accessing error properties
-    // This prevents "Cannot assign to read-only property 'NONE'" errors
-    return Promise.reject({ message: 'Request failed', code: 'UNKNOWN' });
+  async (error: any) => {
+    const safeError = createSafeError(error);
+    return Promise.reject(safeError);
   }
 );
 
