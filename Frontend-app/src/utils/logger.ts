@@ -20,7 +20,15 @@ export const Logger = {
 
   warn: (...args: any[]) => {
     // Always show warnings, even in production
-    console.warn(...args);
+    const safeArgs = args.map(arg => {
+      if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') {
+        return arg;
+      }
+      if (arg === null) return 'null';
+      if (arg === undefined) return 'undefined';
+      return '[Warning]';
+    });
+    console.warn(...safeArgs);
   },
 
   error: (...args: any[]) => {

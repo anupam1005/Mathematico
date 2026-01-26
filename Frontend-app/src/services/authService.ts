@@ -136,6 +136,12 @@ const authService = {
       // Provide more specific error messages
       let errorMessage = 'Login failed';
       
+      // Sanitize RN/Hermes read-only property errors
+      const msg = typeof safeError.message === 'string' ? safeError.message : '';
+      if (msg && (msg.includes('Cannot assign to read-only property') || msg.includes('NONE'))) {
+        errorMessage = 'An unexpected error occurred. Please try again.';
+      }
+      
       if (safeError.message?.includes('Network Error') || safeError.message?.includes('network')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (safeError.response?.status === 404) {
