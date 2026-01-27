@@ -17,14 +17,14 @@ export default {
     slug: 'mathematico-app',
     version: '8.2.0',
     orientation: 'portrait',
-    owner: 'eas-dev',
+    owner: 'mathematico',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: '2b2cdce0-4d37-4b4b-a83e-305b26c855e9'
+        projectId: '48a013c9-f058-4b62-8a9f-915b4a9446d9'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY
