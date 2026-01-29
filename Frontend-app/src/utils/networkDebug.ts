@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { API_CONFIG } from '../config';
+import { safeCatch } from './safeCatch';
 
 export const debugNetworkConfiguration = async () => {
   console.log('🔍 Network Configuration Debug:');
@@ -68,8 +68,8 @@ export const testDirectConnection = async (): Promise<{
         console.log('❌ Root endpoint failed:', rootResponse.status);
       }
     } catch (error: any) {
+      safeCatch('NetworkDebug.testDirectConnection.root')(error);
       results.root = { success: false, error: 'Request failed' };
-      console.log('❌ Root endpoint error');
     }
     
     // Test 2: Auth health endpoint
@@ -91,8 +91,8 @@ export const testDirectConnection = async (): Promise<{
         console.log('❌ Auth health endpoint failed:', healthResponse.status);
       }
     } catch (error: any) {
+      safeCatch('NetworkDebug.testDirectConnection.health')(error);
       results.health = { success: false, error: 'Request failed' };
-      console.log('❌ Auth health endpoint error');
     }
     
     // Test 3: Auth register endpoint (without actually registering)
@@ -115,17 +115,20 @@ export const testDirectConnection = async (): Promise<{
         results.register = { success: true, status: registerResponse.status, data };
         console.log('✅ Auth register endpoint accessible');
       } else {
-        const errorData = await registerResponse.json().catch(() => ({}));
+        await registerResponse.json().catch((parseError) => {
+          safeCatch('NetworkDebug.testDirectConnection.register.parse')(parseError);
+          return null;
+        });
         results.register = { 
           success: false, 
           status: registerResponse.status, 
-          error: errorData.message || 'HTTP Error' 
+          error: 'HTTP Error'
         };
-        console.log('❌ Auth register endpoint failed:', registerResponse.status, errorData.message);
+        console.log('❌ Auth register endpoint failed:', registerResponse.status);
       }
     } catch (error: any) {
+      safeCatch('NetworkDebug.testDirectConnection.register')(error);
       results.register = { success: false, error: 'Request failed' };
-      console.log('❌ Auth register endpoint error');
     }
     
     const successCount = Object.values(results).filter((result: any) => result.success).length;
@@ -138,7 +141,7 @@ export const testDirectConnection = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Direct connection test failed');
+    safeCatch('NetworkDebug.testDirectConnection')(error);
     return {
       success: false,
       message: 'Direct connection test failed',

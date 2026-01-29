@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 import { testNetworkConnectivity, testBackendEndpoints } from '../utils/networkTest';
-import { API_CONFIG } from '../config';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export const NetworkDiagnostic: React.FC = () => {
   const [testResults, setTestResults] = useState<any>(null);
@@ -33,9 +32,9 @@ export const NetworkDiagnostic: React.FC = () => {
       setTestResults(results);
       console.log('🔍 Diagnostics completed:', results);
     } catch (error) {
-      Logger.error('🔍 Diagnostics failed:', error);
+      const safeError = safeCatch('NetworkDiagnostic.runDiagnostics')(error);
       setTestResults({
-        error: error,
+        error: safeError,
         timestamp: new Date().toISOString()
       });
     } finally {

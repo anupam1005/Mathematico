@@ -13,7 +13,7 @@ import { Search, X, Book as BookIcon, Download, Tag } from 'lucide-react-native'
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { theme } from '../styles/theme';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function BooksScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -58,7 +58,7 @@ export default function BooksScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      Logger.error('Error loading books:', error);
+      safeCatch('BooksScreen.loadBooks')(error);
     } finally {
       setLoading(false);
     }

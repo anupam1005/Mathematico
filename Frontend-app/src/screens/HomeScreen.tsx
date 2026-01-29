@@ -20,7 +20,7 @@ import { designSystem, layoutStyles, textStyles } from '../styles/designSystem';
 import { UnifiedCard } from '../components/UnifiedCard';
 import { StatsCard } from '../components/StatsCard';
 import { EmptyState } from '../components/EmptyState';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +93,7 @@ export default function HomeScreen({ navigation }: any) {
       ]);
       setDataLoaded(true);
     } catch (error) {
-      Logger.error('Error loading data:', error);
+      safeCatch('HomeScreen.loadData')(error);
     } finally {
       setLoading(false);
     }
@@ -102,9 +102,18 @@ export default function HomeScreen({ navigation }: any) {
   const loadStats = async () => {
     try {
       const [courses, books, liveClasses] = await Promise.all([
-        courseService.getCourses(1, 1000).catch(() => ({ data: [] })),
-        bookService.getBooks(1, 1000).catch(() => ({ data: [] })),
-        liveClassService.getLiveClasses(1, 1000).catch(() => ({ data: [] })),
+        courseService.getCourses(1, 1000).catch((error) => {
+          safeCatch('HomeScreen.loadStats.courses')(error);
+          return { data: [] };
+        }),
+        bookService.getBooks(1, 1000).catch((error) => {
+          safeCatch('HomeScreen.loadStats.books')(error);
+          return { data: [] };
+        }),
+        liveClassService.getLiveClasses(1, 1000).catch((error) => {
+          safeCatch('HomeScreen.loadStats.liveClasses')(error);
+          return { data: [] };
+        }),
       ]);
 
       setStats({
@@ -114,7 +123,7 @@ export default function HomeScreen({ navigation }: any) {
         totalStudents: 0,
       });
     } catch (error) {
-      Logger.error('Error loading stats:', error);
+      safeCatch('HomeScreen.loadStats')(error);
       // Don't set empty data on error
     }
   };
@@ -128,8 +137,9 @@ export default function HomeScreen({ navigation }: any) {
         setFeaturedCourses([]);
       }
     } catch (error) {
-      Logger.error('Error loading featured courses:', error);
-      setFeaturedCourses([]);
+      safeCatch('HomeScreen.loadFeaturedCourses', () => {
+        setFeaturedCourses([]);
+      })(error);
     }
   };
 
@@ -142,8 +152,9 @@ export default function HomeScreen({ navigation }: any) {
         setFeaturedBooks([]);
       }
     } catch (error) {
-      Logger.error('Error loading featured books:', error);
-      setFeaturedBooks([]);
+      safeCatch('HomeScreen.loadFeaturedBooks', () => {
+        setFeaturedBooks([]);
+      })(error);
     }
   };
 
@@ -156,8 +167,9 @@ export default function HomeScreen({ navigation }: any) {
         setUpcomingClasses([]);
       }
     } catch (error) {
-      Logger.error('Error loading upcoming classes:', error);
-      setUpcomingClasses([]);
+      safeCatch('HomeScreen.loadUpcomingClasses', () => {
+        setUpcomingClasses([]);
+      })(error);
     }
   };
 

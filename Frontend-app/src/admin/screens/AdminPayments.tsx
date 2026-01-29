@@ -23,7 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface Payment {
   id: string;
@@ -71,8 +71,9 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
       // Load payments from API
       setPayments([]);
     } catch (error) {
-      Logger.error('Error loading payments:', error);
-      Alert.alert('Error', 'Failed to load payments. Please try again.');
+      safeCatch('AdminPayments.loadPayments', () => {
+        Alert.alert('Error', 'Failed to load payments. Please try again.');
+      })(error);
     } finally {
       setIsLoading(false);
     }

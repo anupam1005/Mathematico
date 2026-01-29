@@ -3,6 +3,8 @@
  * Automatically disables console logs in production builds
  */
 
+import { safeCatch } from './safeCatch';
+
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 export const Logger = {
@@ -31,19 +33,21 @@ export const Logger = {
     console.warn(...safeArgs);
   },
 
-  error: (...args: any[]) => {
-    // Always show errors, even in production
-    // NEVER access any properties on objects - just convert to string or skip
-    const safeArgs = args.map(arg => {
-      if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') {
-        return arg;
-      }
-      if (arg === null) return 'null';
-      if (arg === undefined) return 'undefined';
-      // For ANY object, just return a placeholder - never access properties
-      return '[Error]';
-    });
-    console.error(...safeArgs);
+  error: (message?: any, error?: any, ..._rest: any[]) => {
+    const scope = typeof message === 'string' ? `Logger.error ${message}` : 'Logger.error';
+    if (error !== undefined) {
+      safeCatch(scope)(error);
+      return;
+    }
+    if (message instanceof Error) {
+      safeCatch(scope)(message);
+      return;
+    }
+    if (typeof message === 'string') {
+      safeCatch(scope)(new Error(message));
+      return;
+    }
+    safeCatch(scope)(new Error('Logger error'));
   },
 
   debug: (...args: any[]) => {
@@ -54,8 +58,12 @@ export const Logger = {
 
   // For critical production errors that need tracking
   critical: (message: string, error?: any) => {
-    // NEVER access any properties on error objects
-    console.error('[CRITICAL]', message, error ? '[Error]' : '');
+    const scope = `Logger.critical ${message}`;
+    if (error !== undefined) {
+      safeCatch(scope)(error);
+    } else {
+      safeCatch(scope)(new Error(message));
+    }
     // TODO: Add error tracking service here (e.g., Sentry)
   }
 };

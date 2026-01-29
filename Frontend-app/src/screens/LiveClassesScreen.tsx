@@ -13,7 +13,7 @@ import { Search, X, Calendar, Clock, Users, Tag, PlayCircle } from 'lucide-react
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function LiveClassesScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -62,7 +62,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      Logger.error('Error loading live classes:', error);
+      safeCatch('LiveClassesScreen.loadLiveClasses')(error);
     } finally {
       setLoading(false);
     }

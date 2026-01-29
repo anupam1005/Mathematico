@@ -22,7 +22,7 @@ import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function LiveClassDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -69,14 +69,14 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         
         setLiveClass(safeLiveClassData);
       } else {
-        Logger.error('Failed to load live class:', response.message);
         Alert.alert('Error', response.message || 'Failed to load live class');
         navigation.goBack();
       }
     } catch (error) {
-      Logger.error('Error loading live class:', error);
-      Alert.alert('Error', 'Failed to load live class');
-      navigation.goBack();
+      safeCatch('LiveClassDetailScreen.loadLiveClass', () => {
+        Alert.alert('Error', 'Failed to load live class');
+        navigation.goBack();
+      })(error);
     } finally {
       setLoading(false);
     }
@@ -122,8 +122,9 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         Alert.alert('Error', response.message || 'Failed to start live class');
       }
     } catch (error) {
-      Logger.error('Error starting live class:', error);
-      Alert.alert('Error', 'Failed to start live class');
+      safeCatch('LiveClassDetailScreen.startLiveClass', () => {
+        Alert.alert('Error', 'Failed to start live class');
+      })(error);
     }
   };
 
@@ -140,8 +141,9 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         Alert.alert('Error', response.message || 'Failed to end live class');
       }
     } catch (error) {
-      Logger.error('Error ending live class:', error);
-      Alert.alert('Error', 'Failed to end live class');
+      safeCatch('LiveClassDetailScreen.endLiveClass', () => {
+        Alert.alert('Error', 'Failed to end live class');
+      })(error);
     }
   };
 
@@ -165,17 +167,19 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
           {
             text: 'Join Now',
             onPress: () => {
-              Linking.openURL(joinLink).catch(err => {
-                Logger.error('Failed to open meeting link:', err);
-                Alert.alert('Error', 'Could not open the meeting link.');
-              });
+              Linking.openURL(joinLink).catch(
+                safeCatch('LiveClassDetailScreen.joinLiveClass.openURL', () => {
+                  Alert.alert('Error', 'Could not open the meeting link.');
+                })
+              );
             },
           },
         ],
       );
     } catch (error) {
-      Logger.error('Error joining live class:', error);
-      Alert.alert('Error', 'Failed to join live class. Please try again.');
+      safeCatch('LiveClassDetailScreen.joinLiveClass', () => {
+        Alert.alert('Error', 'Failed to join live class. Please try again.');
+      })(error);
     }
   };
 
@@ -222,7 +226,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (isNaN(date.getTime())) return 'Invalid Date';
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
-      Logger.error('Error formatting date:', error);
+      safeCatch('LiveClassDetailScreen.formatDate')(error);
       return 'Invalid Date';
     }
   };
@@ -234,7 +238,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (isNaN(date.getTime())) return false;
       return date > new Date();
     } catch (error) {
-      Logger.error('Error checking if date is upcoming:', error);
+      safeCatch('LiveClassDetailScreen.isUpcoming')(error);
       return false;
     }
   };
@@ -493,7 +497,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     </ScrollView>
     );
   } catch (error) {
-    Logger.error('Error rendering LiveClassDetailScreen:', error);
+    safeCatch('LiveClassDetailScreen.render')(error);
     return (
       <View style={styles.errorContainer}>
         <AlertCircle size={64} color={designSystem.colors.error} />

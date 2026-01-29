@@ -3,7 +3,7 @@ import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
 import { API_CONFIG } from '../config';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 interface SecurePdfViewerProps {
   bookId: string;
@@ -57,8 +57,9 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         setError(data.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
-      setError('Network error. Please check your connection.');
-      Logger.error('Error fetching PDF viewer');
+      safeCatch('SecurePdfViewer.fetchSecureViewerUrl', () => {
+        setError('Network error. Please check your connection.');
+      })(err);
     } finally {
       setLoading(false);
     }
@@ -241,20 +242,16 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           // Block other URLs for security
           return false;
         }}
-        onMessage={(event: any) => {
-          // Handle any messages from the WebView
-          Logger.info('WebView message:', event.nativeEvent.data);
-        }}
         onHttpError={(syntheticEvent: any) => {
           const { nativeEvent } = syntheticEvent;
-          Logger.error('WebView HTTP error:', nativeEvent);
+          safeCatch('SecurePdfViewer.onHttpError')(new Error(`WebView HTTP error (${nativeEvent.statusCode})`));
           if (nativeEvent.statusCode >= 400) {
             setError(`Failed to load PDF (Error ${nativeEvent.statusCode})`);
           }
         }}
         renderError={(errorDomain?: string, errorCode?: number, errorDesc?: string) => {
           const errorMessage = errorDesc || errorDomain || 'Unknown error';
-          Logger.error('WebView render error:', { errorDomain, errorCode, errorDesc });
+          safeCatch('SecurePdfViewer.renderError')(new Error(errorMessage));
           return (
             <View style={styles.container}>
               <Text style={styles.errorText}>Failed to render PDF: {errorMessage}</Text>

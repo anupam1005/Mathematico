@@ -25,7 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface Course {
   id?: string;
@@ -79,8 +79,9 @@ export default function AdminCourses({ navigation }: any) {
         setCourses([]);
       }
     } catch (error) {
-      Logger.error('Error loading courses:', error);
-      setCourses([]);
+      safeCatch('AdminCourses.loadCourses', () => {
+        setCourses([]);
+      })(error);
     } finally {
       setIsLoading(false);
     }
@@ -121,8 +122,9 @@ export default function AdminCourses({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete course');
               }
             } catch (error) {
-              Logger.error('AdminCourses: Error deleting course:', error);
-              Alert.alert('Error', 'Failed to delete course');
+              safeCatch('AdminCourses.handleDelete', () => {
+                Alert.alert('Error', 'Failed to delete course');
+              })(error);
             }
           },
         },
@@ -150,8 +152,9 @@ export default function AdminCourses({ navigation }: any) {
       await loadCourses();
       Alert.alert('Success', newStatus === 'published' ? 'Course published successfully' : 'Course unpublished');
     } catch (error) {
-      Logger.error('Error updating course status:', error);
-      Alert.alert('Error', 'Failed to update course status');
+      safeCatch('AdminCourses.handleTogglePublish', () => {
+        Alert.alert('Error', 'Failed to update course status');
+      })(error);
     }
   };
 
@@ -178,7 +181,9 @@ export default function AdminCourses({ navigation }: any) {
               await loadCourses();
               Alert.alert('Success', 'Courses deleted successfully');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete some courses');
+              safeCatch('AdminCourses.handleBulkDelete', () => {
+                Alert.alert('Error', 'Failed to delete some courses');
+              })(error);
             }
           },
         },

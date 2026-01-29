@@ -1,15 +1,9 @@
 // Lightweight service-specific error and logging helper
 // NEVER access any properties on error objects to prevent NONE errors
 
-type AnyError = any;
+import { safeCatch } from './safeCatch';
 
-// Return a static safe error - NEVER access any properties on the error object
-const toSafeError = (error: any) => ({
-  message: 'An error occurred',
-  code: 'UNKNOWN',
-  response: null,
-  config: null,
-});
+type AnyError = any;
 
 export interface ServiceLogger {
   handleError: (message: string, error?: AnyError) => void;
@@ -21,11 +15,11 @@ export const createServiceErrorHandler = (serviceName: string): ServiceLogger =>
   const prefix = `[${serviceName}]`;
   return {
     handleError: (message: string, error?: AnyError) => {
-      const safe = error !== undefined ? toSafeError(error) : undefined;
-      if (safe) {
-        console.error(`${prefix} ${message}`, safe);
+      const scope = `${prefix} ${message}`;
+      if (error !== undefined) {
+        safeCatch(scope)(error);
       } else {
-        console.error(`${prefix} ${message}`);
+        safeCatch(scope)(new Error(message));
       }
     },
     logInfo: (message: string, ...args: any[]) => {

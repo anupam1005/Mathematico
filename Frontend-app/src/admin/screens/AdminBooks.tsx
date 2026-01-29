@@ -28,7 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface Book {
   id: string | number;
@@ -113,8 +113,9 @@ export default function AdminBooks({ navigation }: any) {
         setBooks([]);
       }
     } catch (error) {
-      Logger.error('📚 AdminBooks: Error loading books:', error);
-      setBooks([]);
+      safeCatch('AdminBooks.loadBooks', () => {
+        setBooks([]);
+      })(error);
     } finally {
       setIsLoading(false);
     }
@@ -153,8 +154,9 @@ export default function AdminBooks({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete book');
               }
             } catch (error) {
-              Logger.error('AdminBooks: Error deleting book:', error);
-              Alert.alert('Error', 'Failed to delete book');
+              safeCatch('AdminBooks.handleDelete', () => {
+                Alert.alert('Error', 'Failed to delete book');
+              })(error);
             }
           },
         },
@@ -185,8 +187,9 @@ export default function AdminBooks({ navigation }: any) {
       
       Alert.alert('Success', newStatus === 'published' ? 'Book published successfully' : 'Book unpublished');
     } catch (error) {
-      Logger.error('Error updating book status:', error);
-      Alert.alert('Error', 'Failed to update book status');
+      safeCatch('AdminBooks.handleTogglePublish', () => {
+        Alert.alert('Error', 'Failed to update book status');
+      })(error);
     }
   };
 
@@ -213,7 +216,9 @@ export default function AdminBooks({ navigation }: any) {
               await loadBooks();
               Alert.alert('Success', 'Books deleted successfully');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete some books');
+              safeCatch('AdminBooks.handleBulkDelete', () => {
+                Alert.alert('Error', 'Failed to delete some books');
+              })(error);
             }
           },
         },

@@ -15,7 +15,7 @@ import { courseService, Course } from '../services/courseService';
 import { theme } from '../styles/theme';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function CoursesScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -67,7 +67,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         setPage(pageNum);
       }
     } catch (error) {
-      Logger.error('Error loading courses:', error);
+      safeCatch('CoursesScreen.loadCourses')(error);
     } finally {
       setLoading(false);
     }

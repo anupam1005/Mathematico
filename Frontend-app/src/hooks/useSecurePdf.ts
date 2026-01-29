@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { pdfService, SecurePdfViewerResponse, BookDetailsResponse } from '../services/pdfService';
+import { safeCatch } from '../utils/safeCatch';
 
 interface UseSecurePdfReturn {
   viewerUrl: string | null;
@@ -34,8 +35,9 @@ export const useSecurePdf = (): UseSecurePdfReturn => {
         setError(response.message || 'Failed to load PDF viewer');
       }
     } catch (err) {
-      setError('Failed to load PDF viewer');
-      console.error('Error loading PDF viewer');
+      safeCatch('useSecurePdf.loadPdfViewer', () => {
+        setError('Failed to load PDF viewer');
+      })(err);
     } finally {
       setLoading(false);
     }
@@ -54,8 +56,9 @@ export const useSecurePdf = (): UseSecurePdfReturn => {
         setError(response.message || 'Failed to load book details');
       }
     } catch (err) {
-      setError('Failed to load book details');
-      console.error('Error loading book details');
+      safeCatch('useSecurePdf.loadBookDetails', () => {
+        setError('Failed to load book details');
+      })(err);
     } finally {
       setLoading(false);
     }

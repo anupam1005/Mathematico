@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Button } from 'react-native-paper';
+import { safeCatch } from '../utils/safeCatch';
 
 type Props = {
   children: React.ReactNode;
@@ -19,12 +20,12 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: any) {
-    console.error('[ErrorBoundary] Error caught');
+    safeCatch('ErrorBoundary.getDerivedStateFromError')(error);
     return { hasError: true, error: null };
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error('[ErrorBoundary] Component error occurred');
+    safeCatch('ErrorBoundary.componentDidCatch')(error);
     this.setState({ errorInfo: null });
   }
 

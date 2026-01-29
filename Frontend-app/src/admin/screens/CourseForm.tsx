@@ -6,7 +6,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface CourseFormProps {
   courseId?: string;
@@ -48,6 +48,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
             pdf: null,
           });
         }
+      }).catch((error) => {
+        safeCatch('CourseForm.loadCourse')(error);
       }).finally(() => setLoading(false));
     }
   }, [courseId]);
@@ -190,8 +192,9 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       }
       onSuccess?.();
     } catch (err: any) {
-      Logger.error('CourseForm: Error during submission:', err);
-      Alert.alert("Error", err.message || "Something went wrong");
+      safeCatch('CourseForm.handleSubmit', (safeError) => {
+        Alert.alert("Error", safeError.message || "Something went wrong");
+      })(err);
     } finally {
       setLoading(false);
     }

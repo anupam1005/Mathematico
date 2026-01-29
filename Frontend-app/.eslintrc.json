@@ -1,0 +1,47 @@
+{
+  "root": true,
+  "env": {
+    "es2021": true,
+    "browser": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "error",
+        "property": "code",
+        "message": "Do not access error.code. Use createSafeError() and SafeError instead."
+      },
+      {
+        "object": "error",
+        "property": "errno",
+        "message": "Do not access error.errno. Use createSafeError() and SafeError instead."
+      },
+      {
+        "object": "error",
+        "property": "stack",
+        "message": "Do not access error.stack. Use createSafeError() and SafeError instead."
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ObjectExpression > SpreadElement[argument.name='error']",
+        "message": "Do not spread raw errors. Use createSafeError() first."
+      },
+      {
+        "selector": "CallExpression[callee.object.name='JSON'][callee.property.name='stringify'] > Identifier[name='error']",
+        "message": "Do not JSON.stringify(error). Use createSafeError() first."
+      },
+      {
+        "selector": "ThrowStatement > Identifier[name='error']",
+        "message": "Do not throw raw error. Throw a SafeError or handle via safeCatch."
+      }
+    ]
+  }
+}

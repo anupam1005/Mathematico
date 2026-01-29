@@ -1,3 +1,5 @@
+import { safeCatch } from './safeCatch';
+
 // Error handling utility for API responses and frontend operations
 export interface ApiError {
   message: string;
@@ -15,14 +17,24 @@ export interface SafeApiResponse<T> {
 
 // Logger utility
 export const Logger = {
-  error: (message: string, ...args: any[]) => {
-    console.error(message, ...args);
+  error: (message: string, error?: unknown) => {
+    const scope = `ErrorHandler.Logger.error ${message}`;
+    if (error !== undefined) {
+      safeCatch(scope)(error);
+      return;
+    }
+    safeCatch(scope)(new Error(message));
   },
   info: (message: string, ...args: any[]) => {
     console.info(message, ...args);
   },
-  warn: (message: string, ...args: any[]) => {
-    console.warn(message, ...args);
+  warn: (message: string, error?: unknown) => {
+    const scope = `ErrorHandler.Logger.warn ${message}`;
+    if (error !== undefined) {
+      safeCatch(scope)(error);
+      return;
+    }
+    console.warn(message);
   },
   log: (message: string, ...args: any[]) => {
     console.log(message, ...args);
@@ -121,7 +133,7 @@ export class ErrorHandler {
       const stringValue = String(value);
       return operation(stringValue);
     } catch (error) {
-      console.warn('String operation failed');
+      safeCatch('ErrorHandler.safeStringOperation')(error);
       return fallback;
     }
   }
@@ -136,7 +148,7 @@ export class ErrorHandler {
       const searchString = this.safeToLowerCase(searchTerm);
       return stringValue.includes(searchString);
     } catch (error) {
-      console.warn('String includes operation failed');
+      safeCatch('ErrorHandler.safeIncludes')(error);
       return false;
     }
   }
@@ -196,13 +208,13 @@ export class ErrorHandler {
         data: response.data
       };
     } catch (error) {
-      console.error('Response validation error');
+      const safeError = safeCatch('ErrorHandler.validateApiResponse')(error);
       return {
         success: false,
         error: {
           message: 'Failed to validate response',
           code: 'VALIDATION_ERROR',
-          details: error
+          details: safeError
         }
       };
     }

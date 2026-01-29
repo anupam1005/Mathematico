@@ -3,6 +3,7 @@ import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { API_CONFIG } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createSafeError } from '../utils/safeError';
+import type { ApiError } from '../utils/errorHandler';
 
 // Create a service error handler for mobileService
 const errorHandler = createServiceErrorHandler('mobileService');
@@ -69,6 +70,7 @@ export interface MobileApiResponse<T> {
   };
   timestamp: string;
   fallback?: boolean;
+  error?: ApiError;
 }
 
 export interface Categories {
@@ -78,18 +80,27 @@ export interface Categories {
 }
 
 class MobileService {
+  private createFailureResponse<T>(data: T, message: string, code: string = 'NETWORK_ERROR'): MobileApiResponse<T> {
+    return {
+      success: false,
+      data,
+      timestamp: new Date().toISOString(),
+      fallback: true,
+      error: {
+        message,
+        code,
+      },
+    };
+  }
+
   async getBooks(page: number = 1, limit: number = 10): Promise<MobileApiResponse<any[]>> {
     try {
       const response = await mobileApi.get(`/books?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching books:', error);
-      return {
-        success: true,
-        data: [],
-        pagination: { total: 0, page, limit, totalPages: 0 },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching books:', safeError);
+      return this.createFailureResponse([], safeError.message || 'Failed to fetch books');
     }
   }
 
@@ -98,13 +109,9 @@ class MobileService {
       const response = await mobileApi.get(`/courses?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching courses:', error);
-      return {
-        success: true,
-        data: [],
-        pagination: { total: 0, page, limit, totalPages: 0 },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching courses:', safeError);
+      return this.createFailureResponse([], safeError.message || 'Failed to fetch courses');
     }
   }
 
@@ -113,13 +120,9 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching live classes:', error);
-      return {
-        success: true,
-        data: [],
-        pagination: { total: 0, page, limit, totalPages: 0 },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching live classes:', safeError);
+      return this.createFailureResponse([], safeError.message || 'Failed to fetch live classes');
     }
   }
 
@@ -132,16 +135,13 @@ class MobileService {
       const response = await mobileApi.get('/featured');
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching featured content:', error);
-      return {
-        success: true,
-        data: {
-          books: [],
-          courses: [],
-          liveClasses: []
-        },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching featured content:', safeError);
+      return this.createFailureResponse({
+        books: [],
+        courses: [],
+        liveClasses: []
+      }, safeError.message || 'Failed to fetch featured content');
     }
   }
 
@@ -150,16 +150,13 @@ class MobileService {
       const response = await mobileApi.get('/categories');
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching categories:', error);
-      return {
-        success: true,
-        data: {
-          books: [],
-          courses: [],
-          liveClasses: []
-        },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching categories:', safeError);
+      return this.createFailureResponse({
+        books: [],
+        courses: [],
+        liveClasses: []
+      }, safeError.message || 'Failed to fetch categories');
     }
   }
 
@@ -171,12 +168,9 @@ class MobileService {
       const response = await mobileApi.get(`/search?${params.toString()}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error searching content:', error);
-      return {
-        success: true,
-        data: [],
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error searching content:', safeError);
+      return this.createFailureResponse([], safeError.message || 'Failed to search content');
     }
   }
 
@@ -185,8 +179,9 @@ class MobileService {
       const response = await mobileApi.get(`/books/${id}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching book:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching book:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to fetch book');
     }
   }
 
@@ -195,8 +190,9 @@ class MobileService {
       const response = await mobileApi.get(`/courses/${id}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching course:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching course:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to fetch course');
     }
   }
 
@@ -205,8 +201,9 @@ class MobileService {
       const response = await mobileApi.get(`/live-classes/${id}`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching live class:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching live class:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to fetch live class');
     }
   }
 
@@ -227,24 +224,21 @@ class MobileService {
       const response = await mobileApi.get('/info');
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching mobile info:', error);
-      return {
-        success: true,
-        data: {
-          appName: 'Mathematico',
-          version: '2.0.0',
-          database: 'disabled',
-          features: {
-            books: false,
-            courses: false,
-            liveClasses: false,
-            userRegistration: false,
-            userProfiles: false
-          },
-          message: 'Database functionality has been removed. Only admin authentication is available.'
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching mobile info:', safeError);
+      return this.createFailureResponse({
+        appName: 'Mathematico',
+        version: '2.0.0',
+        database: 'disabled',
+        features: {
+          books: false,
+          courses: false,
+          liveClasses: false,
+          userRegistration: false,
+          userProfiles: false
         },
-        timestamp: new Date().toISOString()
-      };
+        message: 'Database functionality has been removed. Only admin authentication is available.'
+      }, safeError.message || 'Failed to fetch mobile info');
     }
   }
 
@@ -259,18 +253,15 @@ class MobileService {
       const response = await mobileApi.get('/stats');
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching stats:', error);
-      return {
-        success: true,
-        data: {
-          totalBooks: 0,
-          totalCourses: 0,
-          totalLiveClasses: 0,
-          totalStudents: 0,
-          activeUsers: 0
-        },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching stats:', safeError);
+      return this.createFailureResponse({
+        totalBooks: 0,
+        totalCourses: 0,
+        totalLiveClasses: 0,
+        totalStudents: 0,
+        activeUsers: 0
+      }, safeError.message || 'Failed to fetch stats');
     }
   }
 
@@ -279,23 +270,20 @@ class MobileService {
       const response = await mobileApi.get('/settings');
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching settings:', error);
-      return {
-        success: true,
-        data: {
-          pushNotifications: true,
-          emailNotifications: true,
-          courseUpdates: true,
-          liveClassReminders: true,
-          darkMode: false,
-          autoPlayVideos: true,
-          downloadQuality: 'High',
-          language: 'en',
-          timezone: 'UTC',
-          theme: 'light'
-        },
-        timestamp: new Date().toISOString()
-      };
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching settings:', safeError);
+      return this.createFailureResponse({
+        pushNotifications: true,
+        emailNotifications: true,
+        courseUpdates: true,
+        liveClassReminders: true,
+        darkMode: false,
+        autoPlayVideos: true,
+        downloadQuality: 'High',
+        language: 'en',
+        timezone: 'UTC',
+        theme: 'light'
+      }, safeError.message || 'Failed to fetch settings');
     }
   }
 
@@ -304,8 +292,9 @@ class MobileService {
       const response = await mobileApi.put('/settings', settings);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error updating settings:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error updating settings:', safeError);
+      return this.createFailureResponse(settings, safeError.message || 'Failed to update settings');
     }
   }
 
@@ -323,8 +312,18 @@ class MobileService {
       const response = await mobileApi.get(`/books/${bookId}/viewer`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error fetching PDF viewer:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error fetching PDF viewer:', safeError);
+      return this.createFailureResponse({
+        viewerUrl: '',
+        title: '',
+        restrictions: {
+          download: false,
+          print: false,
+          copy: false,
+          screenshot: false,
+        },
+      }, safeError.message || 'Failed to load secure PDF viewer');
     }
   }
 
@@ -336,8 +335,12 @@ class MobileService {
       const response = await mobileApi.post(`/live-classes/${classId}/join`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error joining live class:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error joining live class:', safeError);
+      return this.createFailureResponse({
+        joinLink: '',
+        message: 'Live class unavailable',
+      }, safeError.message || 'Failed to join live class');
     }
   }
 
@@ -346,8 +349,9 @@ class MobileService {
       const response = await mobileApi.put(`/live-classes/${classId}/start`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error starting live class:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error starting live class:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to start live class');
     }
   }
 
@@ -356,8 +360,9 @@ class MobileService {
       const response = await mobileApi.put(`/live-classes/${classId}/end`);
       return response.data;
     } catch (error) {
-      errorHandler.handleError('Error ending live class:', error);
-      throw error;
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error ending live class:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to end live class');
     }
   }
 
@@ -366,6 +371,9 @@ class MobileService {
       const response = await mobileApi.get('/health');
       return response.data;
     } catch (error) {
+      const safeError = createSafeError(error);
+      errorHandler.handleError('Error checking health:', safeError);
+      return this.createFailureResponse(null, safeError.message || 'Failed to check health');
       errorHandler.handleError('Error checking health:', error);
       return {
         success: false,

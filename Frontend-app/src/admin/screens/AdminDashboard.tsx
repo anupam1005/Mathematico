@@ -19,7 +19,7 @@ import { adminService, DashboardStats } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 const { width } = Dimensions.get('window');
 
@@ -78,10 +78,11 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       setStats(dashboardData);
       setLastUpdated(new Date());
     } catch (error) {
-      Logger.error('Error loading dashboard data:', error);
-      setError('Failed to load dashboard data');
-      // Don't set empty data - let the error message show
-      setStats(null);
+      safeCatch('AdminDashboard.loadDashboardData', () => {
+        setError('Failed to load dashboard data');
+        // Don't set empty data - let the error message show
+        setStats(null);
+      })(error);
     } finally {
       setIsLoading(false);
     }

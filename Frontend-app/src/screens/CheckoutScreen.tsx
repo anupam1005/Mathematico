@@ -26,7 +26,7 @@ import { razorpayService } from '../services/razorpayService';
 import { CURRENCY_CONFIG } from '../config';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function CheckoutScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -103,9 +103,10 @@ export default function CheckoutScreen({ navigation, route }: any) {
         setLoading(false);
       }
     } catch (error) {
-      Logger.error('Payment error:', error);
-      Alert.alert('Error', 'Payment failed. Please try again.');
-      setLoading(false);
+      safeCatch('CheckoutScreen.handlePayment', () => {
+        Alert.alert('Error', 'Payment failed. Please try again.');
+        setLoading(false);
+      })(error);
     }
   };
 
@@ -136,8 +137,9 @@ export default function CheckoutScreen({ navigation, route }: any) {
         Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
       }
     } catch (error) {
-      Logger.error('Payment processing error:', error);
-      Alert.alert('Error', 'Payment processing failed. Please try again.');
+      safeCatch('CheckoutScreen.processPayment', () => {
+        Alert.alert('Error', 'Payment processing failed. Please try again.');
+      })(error);
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config';
-const AUTH_URL = API_CONFIG.auth;
 import { testDirectConnection } from './networkDebug';
+import { safeCatch } from './safeCatch';
+
+const AUTH_URL = API_CONFIG.auth;
 
 export const testNetworkConnectivity = async (): Promise<{
   success: boolean;
@@ -73,47 +75,32 @@ export const testNetworkConnectivity = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Network connectivity test failed');
+    const safeError = safeCatch('NetworkTest.testNetworkConnectivity')(error);
     
     let errorMessage = 'Network test failed';
     let errorDetails: any = {};
-    
-    // Safely extract error message - NEVER access error.code
-    let errorMsg: string | undefined;
-    try {
-      if (error && error.message) {
-        errorMsg = String(error.message);
-      }
-    } catch (e) {
-      errorMsg = 'Unknown network error';
-    }
+    const errorMsg = safeError.message || 'Unknown network error';
+    const normalizedMessage = errorMsg.toLowerCase();
     
     // Check if it's a network error based on message
-    if (errorMsg?.includes('Network Error') || errorMsg?.includes('network')) {
+    if (normalizedMessage.includes('network')) {
       errorMessage = 'Network error - cannot reach backend server';
       errorDetails = {
         message: errorMsg,
         backendUrl: AUTH_URL
       };
-    } else if (error.response) {
-      try {
-        errorMessage = `Server responded with status ${error.response.status}`;
-        errorDetails = {
-          status: error.response.status,
-          data: error.response.data,
-          backendUrl: AUTH_URL
-        };
-      } catch (e) {
-        errorMessage = 'Server response error';
-        errorDetails = { backendUrl: AUTH_URL };
-      }
-    } else if (error.request) {
-      errorMessage = 'No response received from server';
+    } else if (safeError.response?.status) {
+      errorMessage = `Server responded with status ${safeError.response.status}`;
       errorDetails = {
+        status: safeError.response.status,
+        data: safeError.response.data,
         backendUrl: AUTH_URL
       };
+    } else if (safeError.response) {
+      errorMessage = 'Server response error';
+      errorDetails = { backendUrl: AUTH_URL };
     } else {
-      errorMessage = errorMsg || 'Unknown network error';
+      errorMessage = errorMsg || 'No response received from server';
       errorDetails = {
         backendUrl: AUTH_URL
       };
@@ -145,6 +132,7 @@ export const testBackendEndpoints = async (): Promise<{
       const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });
       endpoints.health = { success: true, status: healthResponse.status, data: healthResponse.data };
     } catch (error: any) {
+      safeCatch('NetworkTest.testBackendEndpoints.health')(error);
       endpoints.health = { success: false, error: 'Request failed' };
     }
     
@@ -157,6 +145,7 @@ export const testBackendEndpoints = async (): Promise<{
       }, { timeout: 5000, validateStatus: (status) => status < 500 });
       endpoints.register = { success: true, status: registerResponse.status };
     } catch (error: any) {
+      safeCatch('NetworkTest.testBackendEndpoints.register')(error);
       endpoints.register = { success: false, error: 'Request failed' };
     }
     
@@ -168,6 +157,7 @@ export const testBackendEndpoints = async (): Promise<{
       }, { timeout: 5000, validateStatus: (status) => status < 500 });
       endpoints.login = { success: true, status: loginResponse.status };
     } catch (error: any) {
+      safeCatch('NetworkTest.testBackendEndpoints.login')(error);
       endpoints.login = { success: false, error: 'Request failed' };
     }
     
@@ -178,6 +168,7 @@ export const testBackendEndpoints = async (): Promise<{
     };
     
   } catch (error: any) {
+    safeCatch('NetworkTest.testBackendEndpoints')(error);
     return {
       success: false,
       message: 'Backend endpoints test failed',

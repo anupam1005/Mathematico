@@ -22,7 +22,7 @@ import { adminService } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface AdminSettings {
   site_name: string;
@@ -65,7 +65,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         setSettings(prev => ({ ...prev, ...response.data }));
       }
     } catch (error) {
-      Logger.error('Error loading settings:', error);
+      safeCatch('AdminSettings.loadSettings')(error);
       // Use default settings if API fails
     } finally {
       setIsLoading(false);
@@ -88,8 +88,9 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         Alert.alert('Error', 'Failed to save settings');
       }
     } catch (error) {
-      Logger.error('Error saving settings:', error);
-      Alert.alert('Error', 'Failed to save settings');
+      safeCatch('AdminSettings.handleSave', () => {
+        Alert.alert('Error', 'Failed to save settings');
+      })(error);
     } finally {
       setIsSaving(false);
     }

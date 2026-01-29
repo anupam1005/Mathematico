@@ -1,6 +1,4 @@
 // Centralized API Configuration for Mobile
-import { Platform } from 'react-native';
-import { Logger } from './utils/logger';
 
 // Get environment variables with fallbacks
 const ENV = {
@@ -24,7 +22,7 @@ let BACKEND = isDev ? LOCAL_DEV : ENV.BACKEND_URL;
 
 // Force HTTPS in production
 if (!isDev && !BACKEND.startsWith('https://')) {
-  Logger.warn('⚠️ Production backend must use HTTPS!');
+  console.warn('⚠️ Production backend must use HTTPS!');
   BACKEND = BACKEND.replace(/^http:\/\//i, 'https://');
 }
 
@@ -53,7 +51,7 @@ export const getBackendUrl = async (): Promise<string> => {
 
 // Log configuration in development
 if (isDev) {
-  Logger.log('⚙️ Environment Configuration:', {
+  console.log('⚙️ Environment Configuration:', {
     env: ENV.ENV,
     backend: BACKEND,
     isDev,

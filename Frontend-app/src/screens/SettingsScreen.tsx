@@ -55,6 +55,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import * as Updates from 'expo-updates';
 import { debounce } from '../utils/debounce';
+import { safeCatch } from '../utils/safeCatch';
 import SettingsService, { Settings, PendingSetting, UserSettings } from '../services/settingsService';
 import { designSystem } from '../styles/designSystem';
 import { theme } from '../styles/theme';
@@ -156,8 +157,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         await SettingsService.updateSettings(newSettings);
         setHasChanges(false);
       } catch (error) {
-        console.error('Error saving settings:', error);
-        showSnackbar('Failed to save settings', 'error');
+        safeCatch('SettingsScreen.saveSettings', () => {
+          showSnackbar('Failed to save settings', 'error');
+        })(error);
       }
     }, 1000),
     []
@@ -173,8 +175,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         setSettings(loadedSettings);
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
-      showSnackbar('Failed to load settings', 'error');
+      safeCatch('SettingsScreen.loadSettings', () => {
+        showSnackbar('Failed to load settings', 'error');
+      })(error);
     }
   }, [showSnackbar]);
 
@@ -188,7 +191,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         setPendingChanges([]);
       }
     } catch (error) {
-      console.error('Error syncing pending settings:', error);
+      safeCatch('SettingsScreen.syncPendingSettings')(error);
       // If there was an error, we'll keep the existing pending changes
     }
   }, []);
@@ -210,7 +213,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(initialData));
       setDataUsage(initialData);
     } catch (error) {
-      console.error('Error loading data usage:', error);
+      safeCatch('SettingsScreen.loadDataUsage')(error);
     }
   }, []);
 
@@ -252,8 +255,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       setHasChanges(false);
       showSnackbar('Settings saved successfully', 'success');
     } catch (error) {
-      console.error('Error saving settings:', error);
-      showSnackbar('Failed to save settings', 'error');
+      safeCatch('SettingsScreen.handleSaveSettings', () => {
+        showSnackbar('Failed to save settings', 'error');
+      })(error);
     } finally {
       setIsSaving(false);
     }
@@ -300,8 +304,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       
       showSnackbar('Settings reset to default', 'success');
     } catch (error) {
-      console.error('Error resetting settings:', error);
-      showSnackbar('Failed to reset settings', 'error');
+      safeCatch('SettingsScreen.resetSettings', () => {
+        showSnackbar('Failed to reset settings', 'error');
+      })(error);
     } finally {
       setIsSaving(false);
     }
@@ -315,8 +320,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       await loadDataUsage();
       showSnackbar('Cache cleared successfully', 'success');
     } catch (error) {
-      console.error('Error clearing cache:', error);
-      showSnackbar('Failed to clear cache', 'error');
+      safeCatch('SettingsScreen.clearCache', () => {
+        showSnackbar('Failed to clear cache', 'error');
+      })(error);
     } finally {
       setIsSaving(false);
       setShowClearCacheDialog(false);
@@ -349,7 +355,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
           const netInfoState = await NetInfo.fetch();
           setIsOnline(netInfoState.isConnected ?? false);
         } catch (netError) {
-          console.error('Network check failed:', netError);
+          safeCatch('SettingsScreen.initialLoad.networkCheck')(netError);
           setIsOnline(false);
         }
 
@@ -357,7 +363,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         try {
           await loadSettings();
         } catch (settingsError) {
-          console.error('Failed to load settings:', settingsError);
+          safeCatch('SettingsScreen.initialLoad.loadSettings')(settingsError);
           // Continue with default settings
         }
 
@@ -365,7 +371,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         try {
           await loadDataUsage();
         } catch (dataError) {
-          console.error('Failed to load data usage:', dataError);
+          safeCatch('SettingsScreen.initialLoad.loadDataUsage')(dataError);
           // Continue without data usage
         }
 
@@ -376,7 +382,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
             await loadPendingSettings();
           }
         } catch (pendingError) {
-          console.error('Failed to load pending settings:', pendingError);
+          safeCatch('SettingsScreen.initialLoad.loadPendingSettings')(pendingError);
           // Continue without pending settings
         }
 
@@ -384,11 +390,11 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         try {
           netInfoUnsubscribe = NetInfo.addEventListener(handleNetworkChange);
         } catch (listenerError) {
-          console.error('Failed to set up network listener:', listenerError);
+          safeCatch('SettingsScreen.initialLoad.networkListener')(listenerError);
           // Continue without network listener
         }
       } catch (error) {
-        console.error('Failed to load initial data:', error);
+        safeCatch('SettingsScreen.initialLoad')(error);
         // Don't show snackbar during initial load to avoid crash
       } finally {
         if (isMounted) {
@@ -406,7 +412,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         try {
           netInfoUnsubscribe();
         } catch (cleanupError) {
-          console.error('Cleanup error:', cleanupError);
+          safeCatch('SettingsScreen.cleanup')(cleanupError);
         }
       }
     };

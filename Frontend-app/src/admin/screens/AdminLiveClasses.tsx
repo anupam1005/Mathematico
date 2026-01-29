@@ -28,7 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface LiveClass {
   id?: string;
@@ -83,8 +83,9 @@ export default function AdminLiveClasses({ navigation }: any) {
         setLiveClasses([]);
       }
     } catch (error) {
-      Logger.error('Error loading live classes:', error);
-      setLiveClasses([]);
+      safeCatch('AdminLiveClasses.loadLiveClasses', () => {
+        setLiveClasses([]);
+      })(error);
     } finally {
       setIsLoading(false);
     }
@@ -125,8 +126,9 @@ export default function AdminLiveClasses({ navigation }: any) {
                 Alert.alert('Error', result.error || 'Failed to delete live class');
               }
             } catch (error) {
-              Logger.error('AdminLiveClasses: Error deleting live class:', error);
-              Alert.alert('Error', 'Failed to delete live class');
+              safeCatch('AdminLiveClasses.handleDelete', () => {
+                Alert.alert('Error', 'Failed to delete live class');
+              })(error);
             }
           },
         },
@@ -157,8 +159,9 @@ export default function AdminLiveClasses({ navigation }: any) {
       await loadLiveClasses();
       Alert.alert('Success', newStatus === 'scheduled' ? 'Live class published successfully' : 'Live class unpublished');
     } catch (error) {
-      Logger.error('Error updating live class status:', error);
-      Alert.alert('Error', 'Failed to update live class status');
+      safeCatch('AdminLiveClasses.handleTogglePublish', () => {
+        Alert.alert('Error', 'Failed to update live class status');
+      })(error);
     }
   };
 
@@ -174,7 +177,9 @@ export default function AdminLiveClasses({ navigation }: any) {
       await loadLiveClasses();
       Alert.alert('Success', 'Live class started successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to start live class');
+      safeCatch('AdminLiveClasses.handleStartLiveClass', () => {
+        Alert.alert('Error', 'Failed to start live class');
+      })(error);
     }
   };
 
@@ -190,7 +195,9 @@ export default function AdminLiveClasses({ navigation }: any) {
       await loadLiveClasses();
       Alert.alert('Success', 'Live class ended successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to end live class');
+      safeCatch('AdminLiveClasses.handleEndLiveClass', () => {
+        Alert.alert('Error', 'Failed to end live class');
+      })(error);
     }
   };
 
@@ -217,7 +224,9 @@ export default function AdminLiveClasses({ navigation }: any) {
               await loadLiveClasses();
               Alert.alert('Success', 'Live classes deleted successfully');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete some live classes');
+              safeCatch('AdminLiveClasses.handleBulkDelete', () => {
+                Alert.alert('Error', 'Failed to delete some live classes');
+              })(error);
             }
           },
         },

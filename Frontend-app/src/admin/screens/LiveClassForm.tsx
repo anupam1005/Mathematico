@@ -21,6 +21,7 @@ import { CustomTextInput } from '../../components/CustomTextInput';
 import { Button } from 'react-native-paper';
 import { colors } from '../../styles/colors';
 import { formatDateTime, validateTimeRange } from '../../utils/dateTimeUtils';
+import { safeCatch } from '../../utils/safeCatch';
 
 // Form validation types
 interface FormErrors {
@@ -140,8 +141,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         throw new Error(response.error || 'Failed to load live class data');
       }
     } catch (error) {
-      console.error('Error loading live class:', error);
-      Alert.alert('Error', 'Failed to load live class data. Please try again.');
+      safeCatch('LiveClassForm.loadLiveClassData', () => {
+        Alert.alert('Error', 'Failed to load live class data. Please try again.');
+      })(error);
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
@@ -290,8 +292,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         });
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      safeCatch('LiveClassForm.pickImage', () => {
+        Alert.alert('Error', 'Failed to pick image. Please try again.');
+      })(error);
     }
   };
 
@@ -427,8 +430,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         }
       }
     } catch (err: any) {
-      console.error('LiveClassForm: Error during submission:', err);
-      Alert.alert("Error", err.message || "Something went wrong while processing your request");
+      safeCatch('LiveClassForm.handleSubmit', (safeError) => {
+        Alert.alert("Error", safeError.message || "Something went wrong while processing your request");
+      })(err);
     } finally {
       setLoading(false);
     }

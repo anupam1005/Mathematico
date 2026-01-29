@@ -7,7 +7,7 @@ import { adminService } from "../../services/adminService";
 import authService from "../../services/authService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface BookFormProps {
   bookId?: string;
@@ -61,10 +61,10 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
             });
           }
         }).catch((error) => {
-          Logger.error('Error loading book:', error);
+          safeCatch('BookForm.loadBook')(error);
         }).finally(() => setLoading(false));
       } catch (error) {
-        Logger.error('Error in useEffect:', error);
+        safeCatch('BookForm.loadBook')(error);
         setLoading(false);
       }
     }
@@ -176,8 +176,9 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
       
       onSuccess?.();
     } catch (err: any) {
-      Logger.error('📚 BookForm: Error during submission:', err);
-      Alert.alert("Error", err.message || "Something went wrong");
+      safeCatch('BookForm.handleSubmit', (safeError) => {
+        Alert.alert("Error", safeError.message || "Something went wrong");
+      })(err);
     } finally {
       setLoading(false);
       setUploadProgress(0);

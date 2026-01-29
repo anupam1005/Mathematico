@@ -20,6 +20,7 @@ import { Book as BookIcon, Download, User, Building, Tag, GraduationCap, Barcode
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { designSystem } from '../styles/designSystem';
+import { safeCatch } from '../utils/safeCatch';
 
 export default function BookDetailScreen({ navigation, route }: any) {
   const { user } = useAuth();
@@ -49,9 +50,10 @@ export default function BookDetailScreen({ navigation, route }: any) {
         navigation.goBack();
       }
     } catch (error) {
-      console.error('Error loading book:', error);
-      Alert.alert('Error', 'Failed to load book');
-      navigation.goBack();
+      safeCatch('BookDetailScreen.loadBook', () => {
+        Alert.alert('Error', 'Failed to load book');
+        navigation.goBack();
+      })(error);
     } finally {
       setLoading(false);
     }

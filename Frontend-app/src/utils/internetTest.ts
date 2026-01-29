@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { safeCatch } from './safeCatch';
 
 export const testInternetConnectivity = async (): Promise<{
   success: boolean;
@@ -53,7 +54,7 @@ export const testInternetConnectivity = async (): Promise<{
         console.log('❌ HTTPBin failed:', httpbinResponse.status);
       }
     } catch (error: any) {
-      console.error('❌ HTTPBin error');
+      safeCatch('InternetTest.httpbin')(error);
     }
     
     // Test 4: JSONPlaceholder
@@ -80,7 +81,7 @@ export const testInternetConnectivity = async (): Promise<{
         console.log('❌ JSONPlaceholder failed:', jsonResponse.status);
       }
     } catch (error: any) {
-      console.error('❌ JSONPlaceholder error');
+      safeCatch('InternetTest.jsonPlaceholder')(error);
     }
     
     return {
@@ -92,7 +93,7 @@ export const testInternetConnectivity = async (): Promise<{
     };
     
   } catch (error: any) {
-    console.error('❌ Internet connectivity test failed');
+    safeCatch('InternetTest.testInternetConnectivity')(error);
     return {
       success: false,
       message: 'Internet connectivity test failed',

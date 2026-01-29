@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Alert } from 'react-native';
 import authService from '../services/authService';
 import { Storage } from '../utils/storage';
+import { safeCatch } from '../utils/safeCatch';
 
 export interface User {
   id: string;
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(userData);
             setIsAuthenticated(true);
           } catch (parseError: any) {
-            console.error('AuthContext: Error parsing user data');
+            safeCatch('AuthContext.checkAuthStatus.parseUser')(parseError);
             // Clear invalid data and logout
             await Storage.deleteItem('user');
             await Storage.deleteItem('authToken');
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(false);
       }
     } catch (error: any) {
-      console.error('Auth check failed');
+      safeCatch('AuthContext.checkAuthStatus')(error);
       // Clear invalid tokens
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
@@ -149,8 +150,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       // NEVER access error properties - use generic message
       const errorMessage = 'An error occurred during login. Please try again.';
-      console.error('Login error');
-      Alert.alert('Login Error', errorMessage);
+      safeCatch('AuthContext.login', () => {
+        Alert.alert('Login Error', errorMessage);
+      })(error);
       return false;
     } finally {
       setIsLoading(false);
@@ -222,8 +224,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       // NEVER access error properties - use generic message
       const errorMessage = 'An error occurred during registration. Please try again.';
-      console.error('Registration error');
-      Alert.alert('Registration Error', errorMessage);
+      safeCatch('AuthContext.register', () => {
+        Alert.alert('Registration Error', errorMessage);
+      })(error);
       return false;
     } finally {
       setIsLoading(false);
@@ -238,7 +241,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.logout();
       console.log('AuthContext: Backend logout successful');
     } catch (error: any) {
-      console.error('AuthContext: Logout error');
+      safeCatch('AuthContext.logout')(error);
     } finally {
       console.log('AuthContext: Clearing local storage');
       // Clear all local storage
@@ -285,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
     } catch (error: any) {
-      console.error('Token refresh error');
+      safeCatch('AuthContext.refreshToken')(error);
       await logout();
       return false;
     }
@@ -322,13 +325,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         return true;
       } else {
-        console.error('AuthContext: Profile update failed:', response.message);
-        Alert.alert('Update Failed', response.message || 'Profile update failed');
+        safeCatch('AuthContext.updateProfile.response', () => {
+          Alert.alert('Update Failed', response.message || 'Profile update failed');
+        })(new Error('Profile update failed'));
         return false;
       }
     } catch (error: any) {
-      console.error('AuthContext: Profile update error');
-      Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');
+      safeCatch('AuthContext.updateProfile', () => {
+        Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');
+      })(error);
       return false;
     }
   };

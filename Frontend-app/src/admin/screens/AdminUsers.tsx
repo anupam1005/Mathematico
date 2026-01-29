@@ -29,7 +29,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
-import { Logger } from '../../utils/errorHandler';
+import { safeCatch } from '../../utils/safeCatch';
 
 interface User {
   id: string;
@@ -82,8 +82,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       
       setUsers(users);
     } catch (error) {
-      Logger.error('Error loading users:', error);
-      setUsers([]);
+      safeCatch('AdminUsers.loadUsers', () => {
+        setUsers([]);
+      })(error);
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +144,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               await loadUsers();
               Alert.alert('Success', 'User deleted successfully');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete user');
+              safeCatch('AdminUsers.handleDelete', () => {
+                Alert.alert('Error', 'Failed to delete user');
+              })(error);
             }
           },
         },
@@ -157,7 +160,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       await loadUsers();
       Alert.alert('Success', 'User status updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update user status');
+      safeCatch('AdminUsers.handleToggleStatus', () => {
+        Alert.alert('Error', 'Failed to update user status');
+      })(error);
     }
   };
 
@@ -169,7 +174,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       await loadUsers();
       Alert.alert('Success', 'User admin status updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update user admin status');
+      safeCatch('AdminUsers.handleToggleAdmin', () => {
+        Alert.alert('Error', 'Failed to update user admin status');
+      })(error);
     }
   };
 
@@ -195,7 +202,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       setIsEditModalVisible(false);
       Alert.alert('Success', 'User updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update user');
+      safeCatch('AdminUsers.handleSaveUser', () => {
+        Alert.alert('Error', 'Failed to update user');
+      })(error);
     }
   };
 

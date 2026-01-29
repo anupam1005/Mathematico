@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { safeCatch } from './safeCatch';
 
 // Storage utility that works on both web and mobile
 export class Storage {
@@ -22,7 +23,7 @@ export class Storage {
         console.log(`Storage: Set ${key} in SecureStore`);
       }
     } catch (error: any) {
-      console.error('Storage setItem error');
+      safeCatch('Storage.setItem')(error);
       throw new Error('Storage setItem failed');
     }
   }
@@ -49,14 +50,14 @@ export class Storage {
         try {
           return JSON.parse(result) as T;
         } catch (e) {
-          console.warn(`Failed to parse stored JSON for key ${key}:`, e);
+          safeCatch('Storage.getItem.parseJson')(e);
           return result;
         }
       }
       
       return result;
     } catch (error: any) {
-      console.error('Storage getItem error');
+      safeCatch('Storage.getItem')(error);
       return null;
     }
   }
@@ -74,7 +75,7 @@ export class Storage {
         console.log(`Storage: Deleted ${key} from SecureStore`);
       }
     } catch (error: any) {
-      console.error('Storage deleteItem error');
+      safeCatch('Storage.deleteItem')(error);
       throw new Error('Storage deleteItem failed');
     }
   }
@@ -91,7 +92,7 @@ export class Storage {
         await SecureStore.deleteItemAsync('user');
       }
     } catch (error: any) {
-      console.error('Storage clear error');
+      safeCatch('Storage.clear')(error);
       throw new Error('Storage clear failed');
     }
   }

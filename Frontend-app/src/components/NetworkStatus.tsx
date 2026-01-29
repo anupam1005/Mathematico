@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 import { NetworkUtils } from '../utils/networkUtils';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 interface NetworkStatusProps {
   onConnectionChange?: (isConnected: boolean) => void;
@@ -36,8 +36,9 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
       });
       onConnectionChange?.(result.success);
     } catch (error) {
-      Logger.error('Connection test failed:', error);
-      setIsConnected(false);
+      safeCatch('NetworkStatus.testConnection', () => {
+        setIsConnected(false);
+      })(error);
     } finally {
       setIsTesting(false);
     }

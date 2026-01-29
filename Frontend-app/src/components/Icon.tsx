@@ -2,7 +2,7 @@ import React from 'react';
 import { ViewStyle } from 'react-native';
 import { getLucideIcon } from '../utils/iconMapping';
 import { FallbackIcon } from './FallbackIcon';
-import { Logger } from '../utils/errorHandler';
+import { safeCatch } from '../utils/safeCatch';
 
 interface IconProps {
   name: string;
@@ -31,7 +31,7 @@ export const Icon = ({ name, size = 24, color = '#000', style, ...props }: IconP
       ...props
     });
   } catch (error) {
-    Logger.warn(`Icon '${name}' failed to render, using fallback:`, error);
+    safeCatch('Icon.render')(error);
     // Use fallback icon when Lucide fails
     return (
       <FallbackIcon
