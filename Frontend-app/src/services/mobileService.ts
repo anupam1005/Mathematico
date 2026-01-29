@@ -18,16 +18,6 @@ const mobileApi = axios.create({
   },
 });
 
-// Update the base URL dynamically
-(async () => {
-  try {
-    mobileApi.defaults.baseURL = API_CONFIG.mobile;
-    console.log('MobileService: Base URL updated to:', mobileApi.defaults.baseURL);
-  } catch (error) {
-    console.error('MobileService: Failed to update base URL');
-  }
-})();
-
 // Request interceptor to add auth token
 mobileApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

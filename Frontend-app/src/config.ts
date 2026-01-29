@@ -22,7 +22,6 @@ let BACKEND = isDev ? LOCAL_DEV : ENV.BACKEND_URL;
 
 // Force HTTPS in production
 if (!isDev && !BACKEND.startsWith('https://')) {
-  console.warn('⚠️ Production backend must use HTTPS!');
   BACKEND = BACKEND.replace(/^http:\/\//i, 'https://');
 }
 
@@ -49,16 +48,3 @@ export const getBackendUrl = async (): Promise<string> => {
   return BACKEND.replace(/\/$/, '');
 };
 
-// Log configuration in development
-if (isDev) {
-  console.log('⚙️ Environment Configuration:', {
-    env: ENV.ENV,
-    backend: BACKEND,
-    isDev,
-    apiConfig: {
-      auth: API_CONFIG.auth,
-      mobile: API_CONFIG.mobile,
-      admin: API_CONFIG.admin,
-    },
-  });
-}

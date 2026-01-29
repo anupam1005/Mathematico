@@ -59,16 +59,6 @@ const bookApi = axios.create({
   },
 });
 
-// Update the base URL dynamically
-(async () => {
-  try {
-    bookApi.defaults.baseURL = API_CONFIG.mobile;
-    console.log('BookService: Base URL updated to:', bookApi.defaults.baseURL);
-  } catch (error) {
-    console.error('BookService: Failed to update base URL');
-  }
-})();
-
 // Request interceptor to add auth token
 bookApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

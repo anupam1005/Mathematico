@@ -1,12 +1,10 @@
 import 'react-native-gesture-handler';
-import React, { useEffect, useState } from 'react';
-
-console.log('[App] module initializing');
-
-import { NavigationContainer, ParamListBase } from '@react-navigation/native';
-import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
+import React, { Suspense, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { RouteProp } from '@react-navigation/native';
+
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,50 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Icon } from './src/components/Icon';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { safeCatch } from './src/utils/safeCatch';
-import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-
-// Prevent the splash screen from auto-hiding
-(async () => {
-  try {
-    await SplashScreen.preventAutoHideAsync();
-  } catch (error) {
-    safeCatch('App.SplashScreen.preventAutoHideAsync')(error);
-  }
-})();
-
-// Import screens
-import HomeScreen from './src/screens/HomeScreen';
-import BooksScreen from './src/screens/BooksScreen';
-import CoursesScreen from './src/screens/CoursesScreen';
-import LiveClassesScreen from './src/screens/LiveClassesScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-
-// Import detail screens
-import BookDetailScreen from './src/screens/BookDetailScreen';
-import CourseDetailScreen from './src/screens/CourseDetailScreen';
-import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
-import CheckoutScreen from './src/screens/CheckoutScreen';
-
-console.log('[App] Loading SecurePdfScreen module');
-let SecurePdfScreen: React.ComponentType<any> | null = null;
-try {
-  SecurePdfScreen = require('./src/screens/SecurePdfScreen').default;
-  console.log('[App] SecurePdfScreen module loaded successfully');
-} catch (error) {
-  safeCatch('App.SecurePdfScreen.import')(error);
-  SecurePdfScreen = null;
-}
-
-import AboutScreen from './src/screens/AboutScreen';
-import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
-import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-
-// Import admin navigator
-import AdminNavigator from './src/admin/AdminNavigator';
 
 // Import theme
 import { theme } from './src/styles/theme';
@@ -85,9 +40,42 @@ type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
+const HomeScreen = React.lazy(() => import('./src/screens/HomeScreen'));
+const BooksScreen = React.lazy(() => import('./src/screens/BooksScreen'));
+const CoursesScreen = React.lazy(() => import('./src/screens/CoursesScreen'));
+const LiveClassesScreen = React.lazy(() => import('./src/screens/LiveClassesScreen'));
+const ProfileScreen = React.lazy(() => import('./src/screens/ProfileScreen'));
+const LoginScreen = React.lazy(() => import('./src/screens/LoginScreen'));
+const RegisterScreen = React.lazy(() => import('./src/screens/RegisterScreen'));
+
+const BookDetailScreen = React.lazy(() => import('./src/screens/BookDetailScreen'));
+const CourseDetailScreen = React.lazy(() => import('./src/screens/CourseDetailScreen'));
+const LiveClassDetailScreen = React.lazy(() => import('./src/screens/LiveClassDetailScreen'));
+const CheckoutScreen = React.lazy(() => import('./src/screens/CheckoutScreen'));
+
+const SecurePdfScreen = React.lazy(() =>
+  import('./src/screens/SecurePdfScreen').catch((error) => {
+    safeCatch('App.SecurePdfScreen.import')(error);
+    return { default: () => null };
+  })
+);
+
+const AboutScreen = React.lazy(() => import('./src/screens/AboutScreen'));
+const PrivacyPolicyScreen = React.lazy(() => import('./src/screens/PrivacyPolicyScreen'));
+const TermsOfUseScreen = React.lazy(() => import('./src/screens/TermsOfUseScreen'));
+const SettingsScreen = React.lazy(() => import('./src/screens/SettingsScreen'));
+
+const AdminNavigator = React.lazy(() => import('./src/admin/AdminNavigator'));
+
+const AppLoading = () => (
+  <View style={styles.loadingContainer}>
+    <ActivityIndicator size="large" color={theme.colors.primary} />
+  </View>
+);
+
 function MainTabs() {
   const { user } = useAuth();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }: any) => ({
@@ -117,45 +105,45 @@ function MainTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
         }}
       />
-      <Tab.Screen 
-        name="Books" 
+      <Tab.Screen
+        name="Books"
         component={BooksScreen}
         options={{
           tabBarLabel: 'Books',
         }}
       />
-      <Tab.Screen 
-        name="Courses" 
+      <Tab.Screen
+        name="Courses"
         component={CoursesScreen}
         options={{
           tabBarLabel: 'Courses',
         }}
       />
-      <Tab.Screen 
-        name="LiveClasses" 
+      <Tab.Screen
+        name="LiveClasses"
         component={LiveClassesScreen}
         options={{
           tabBarLabel: 'Live Classes',
         }}
       />
       {user?.isAdmin && (
-        <Tab.Screen 
-          name="Admin" 
+        <Tab.Screen
+          name="Admin"
           component={AdminNavigator}
           options={{
             tabBarLabel: 'Admin',
           }}
         />
       )}
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
@@ -180,10 +168,10 @@ function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
-      
+
       {/* Detail Screens */}
-      <Stack.Screen 
-        name="BookDetail" 
+      <Stack.Screen
+        name="BookDetail"
         component={BookDetailScreen}
         options={{
           headerShown: true,
@@ -191,8 +179,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="CourseDetail" 
+      <Stack.Screen
+        name="CourseDetail"
         component={CourseDetailScreen}
         options={{
           headerShown: true,
@@ -200,8 +188,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="LiveClassDetail" 
+      <Stack.Screen
+        name="LiveClassDetail"
         component={LiveClassDetailScreen}
         options={{
           headerShown: true,
@@ -209,8 +197,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="Checkout" 
+      <Stack.Screen
+        name="Checkout"
         component={CheckoutScreen}
         options={{
           headerShown: true,
@@ -218,27 +206,17 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      {SecurePdfScreen ? (
-        <Stack.Screen
-          name="SecurePdf"
-          component={SecurePdfScreen as React.ComponentType<any>}
-          options={{
-            headerShown: false,
-          }}
-        />
-      ) : (
-        <Stack.Screen
-          name="SecurePdf"
-          component={() => {
-            console.warn('[AppNavigator] Secure PDF module failed to load');
-            return null;
-          }}
-          options={{ headerShown: false }}
-        />
-      )}
+      <Stack.Screen
+        name="SecurePdf"
+        component={SecurePdfScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+
       {/* Legal & Info Screens */}
-      <Stack.Screen 
-        name="About" 
+      <Stack.Screen
+        name="About"
         component={AboutScreen}
         options={{
           headerShown: true,
@@ -246,8 +224,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="PrivacyPolicy" 
+      <Stack.Screen
+        name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
         options={{
           headerShown: true,
@@ -255,8 +233,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="TermsOfUse" 
+      <Stack.Screen
+        name="TermsOfUse"
         component={TermsOfUseScreen}
         options={{
           headerShown: true,
@@ -264,8 +242,8 @@ function AppNavigator() {
           headerBackTitle: 'Back',
         }}
       />
-      <Stack.Screen 
-        name="Settings" 
+      <Stack.Screen
+        name="Settings"
         component={SettingsScreen}
         options={{
           headerShown: false,
@@ -277,15 +255,19 @@ function AppNavigator() {
 
 function AppContent() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [fontError, setFontError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    let settingsSyncCleanup: (() => void) | null = null;
 
-    (async () => {
+    const prepareApp = async () => {
       try {
+        try {
+          await SplashScreen.preventAutoHideAsync();
+        } catch (error) {
+          safeCatch('AppContent.SplashScreen.preventAutoHideAsync')(error);
+        }
         // Skip custom font loading to avoid ExpoFontLoader issues
-        console.log('✅ Using system fonts for compatibility');
       } catch (error) {
         safeCatch('AppContent.prepareFonts')(error);
       } finally {
@@ -298,10 +280,29 @@ function AppContent() {
           safeCatch('AppContent.SplashScreen.hideAsync')(error);
         }
       }
-    })();
+    };
+
+    const startSettingsSync = async () => {
+      try {
+        const { startSettingsSyncListener } = await import('./src/services/settingsService');
+        settingsSyncCleanup = startSettingsSyncListener();
+      } catch (error) {
+        safeCatch('AppContent.startSettingsSyncListener')(error);
+      }
+    };
+
+    prepareApp();
+    startSettingsSync();
 
     return () => {
       isMounted = false;
+      if (settingsSyncCleanup) {
+        try {
+          settingsSyncCleanup();
+        } catch (error) {
+          safeCatch('AppContent.settingsSyncCleanup')(error);
+        }
+      }
     };
   }, []);
 
@@ -314,7 +315,9 @@ function AppContent() {
       <PaperProvider theme={theme as any}>
         <AuthProvider>
           <NavigationContainer>
-            <AppNavigator />
+            <Suspense fallback={<AppLoading />}>
+              <AppNavigator />
+            </Suspense>
           </NavigationContainer>
         </AuthProvider>
       </PaperProvider>
@@ -322,6 +325,14 @@ function AppContent() {
   );
 }
 
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background,
+  },
+});
 
 export default function App() {
   return (

@@ -91,19 +91,6 @@ const adminApi = axios.create({
   },
 });
 
-// Update the base URL dynamically
-(async () => {
-  try {
-    adminApi.defaults.baseURL = API_CONFIG.admin;
-    console.log('AdminService: Base URL updated to:', adminApi.defaults.baseURL);
-  } catch (error) {
-    console.error('AdminService: Failed to update base URL');
-    // Fallback to API_CONFIG.admin if getBackendUrl fails
-    adminApi.defaults.baseURL = API_CONFIG.admin;
-    console.log('AdminService: Using fallback base URL:', adminApi.defaults.baseURL);
-  }
-})();
-
 // Request interceptor to add auth token
 adminApi.interceptors.request.use(
   async (config) => {

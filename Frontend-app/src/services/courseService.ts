@@ -58,16 +58,6 @@ const courseApi = axios.create({
   },
 });
 
-// Update the base URL dynamically
-(async () => {
-  try {
-    courseApi.defaults.baseURL = API_CONFIG.mobile;
-    console.log('CourseService: Base URL updated to:', courseApi.defaults.baseURL);
-  } catch (error) {
-    console.error('CourseService: Failed to update base URL');
-  }
-})();
-
 // Request interceptor to add auth token
 courseApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

@@ -54,22 +54,7 @@ export interface PaymentOptions {
 }
 
 class RazorpayService {
-  private baseUrl = API_CONFIG.baseUrl; // This will be updated dynamically
   private config: any = null;
-
-  constructor() {
-    // Update the base URL dynamically
-    this.updateBaseUrl();
-  }
-
-  private async updateBaseUrl() {
-    try {
-      this.baseUrl = API_CONFIG.mobile;
-      console.log('RazorpayService: Base URL updated to:', this.baseUrl);
-    } catch (error) {
-      console.error('RazorpayService: Failed to update base URL');
-    }
-  }
 
   /**
    * Create a Razorpay order

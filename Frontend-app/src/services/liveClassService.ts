@@ -57,16 +57,6 @@ const liveClassApi = axios.create({
   },
 });
 
-// Update the base URL dynamically
-(async () => {
-  try {
-    liveClassApi.defaults.baseURL = API_CONFIG.mobile;
-    console.log('LiveClassService: Base URL updated to:', liveClassApi.defaults.baseURL);
-  } catch (error) {
-    console.error('LiveClassService: Failed to update base URL');
-  }
-})();
-
 // Request interceptor to add auth token
 liveClassApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

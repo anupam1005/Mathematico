@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { Platform } from 'react-native';
 import { API_CONFIG } from '../config';
+import { safeCatch } from '../utils/safeCatch';
 
 export interface PendingSetting {
   id: string;
@@ -371,11 +372,18 @@ export const SettingsService = {
   },
 };
 
-// Initialize network listener for syncing pending settings
-NetInfo.addEventListener((state: NetInfoState) => {
-  if (state.isConnected) {
-    SettingsService.syncPendingSettings();
+// Initialize network listener for syncing pending settings (call at runtime)
+export const startSettingsSyncListener = () => {
+  try {
+    return NetInfo.addEventListener((state: NetInfoState) => {
+      if (state.isConnected) {
+        SettingsService.syncPendingSettings();
+      }
+    });
+  } catch (error: any) {
+    safeCatch('SettingsService.startSettingsSyncListener')(error);
+    return () => {};
   }
-});
+};
 
 export default SettingsService;
