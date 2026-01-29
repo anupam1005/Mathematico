@@ -3,18 +3,25 @@ import { View, StyleSheet, StatusBar } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useSecurePdf } from '../hooks/useSecurePdf';
 
-interface Props {
-  route: { params: { bookId: string; bookTitle?: string } };
+interface SecurePdfScreenProps {
+  route: {
+    params: {
+      bookId: string;
+      bookTitle?: string;
+    };
+  };
   navigation: any;
 }
 
-const SecurePdfScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { bookId } = route.params;
+const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) => {
+  const { bookId, bookTitle } = route.params;
 
   const {
     viewerUrl,
+    bookDetails,
     loading,
     error,
+    restrictions,
     loadPdfViewer,
     loadBookDetails,
     clearError,
@@ -22,6 +29,8 @@ const SecurePdfScreen: React.FC<Props> = ({ route, navigation }) => {
   } = useSecurePdf();
 
   useEffect(() => {
+    let mounted = true;
+
     (async () => {
       try {
         await Promise.all([
@@ -29,47 +38,65 @@ const SecurePdfScreen: React.FC<Props> = ({ route, navigation }) => {
           loadPdfViewer(bookId),
         ]);
       } catch {
-        // handled internally
+        // handled internally by hook
       }
     })();
 
     return () => {
+      mounted = false;
       reset();
     };
-  }, [bookId]);
+  }, [bookId, loadBookDetails, loadPdfViewer, reset]);
 
   const handleRetry = () => {
     clearError();
     loadPdfViewer(bookId);
   };
 
-  const handleClose = () => navigation.goBack();
+  const handleClose = () => {
+    navigation.goBack();
+  };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
-      <View style={styles.topRight}>
-        <Button mode="contained" onPress={handleClose}>
+      <View style={styles.closeButtonContainer}>
+        <Button
+          mode="contained"
+          onPress={handleClose}
+          style={styles.closeButton}
+          icon="close"
+        >
           Close
         </Button>
       </View>
 
-      <View style={styles.content}>
-        {loading && <Text>Loading PDF…</Text>}
-
-        {!loading && error && (
-          <>
-            <Text style={styles.error}>{error}</Text>
-            <Button onPress={handleRetry}>Retry</Button>
-          </>
+      <View style={styles.viewerContainer}>
+        {loading ? (
+          <View style={styles.center}>
+            <Text>Loading PDF…</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Button mode="contained" onPress={handleRetry}>
+              Retry
+            </Button>
+          </View>
+        ) : viewerUrl ? (
+          (() => {
+            const SecurePdfViewer = require('../components/SecurePdfViewer').default;
+            return <SecurePdfViewer bookId={bookId} onClose={handleClose} />;
+          })()
+        ) : (
+          <View style={styles.center}>
+            <Text>PDF not available</Text>
+            <Button mode="outlined" onPress={handleClose}>
+              Close
+            </Button>
+          </View>
         )}
-
-        {!loading && !error && viewerUrl && (() => {
-          const SecurePdfViewer =
-            require('../components/SecurePdfViewer').default;
-          return <SecurePdfViewer bookId={bookId} onClose={handleClose} />;
-        })()}
       </View>
     </View>
   );
@@ -79,7 +106,9 @@ export default SecurePdfScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  topRight: { position: 'absolute', top: 40, right: 16, zIndex: 10 },
-  error: { color: '#d32f2f', marginBottom: 16 },
+  viewerContainer: { flex: 1, backgroundColor: '#fff' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorText: { color: '#d32f2f', marginBottom: 16 },
+  closeButtonContainer: { position: 'absolute', top: 40, right: 16, zIndex: 1000 },
+  closeButton: { borderRadius: 24 },
 });

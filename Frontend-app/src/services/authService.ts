@@ -1,41 +1,44 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
-import { safeCatch } from '../utils/safeCatch';
 
-// Create axios instance for auth endpoints
-const api = axios.create({
+/* ------------------------------------------------------------------ */
+/* Axios instance (NO logging, NO raw rejects)                          */
+/* ------------------------------------------------------------------ */
+
+const api: AxiosInstance = axios.create({
   baseURL: API_CONFIG.auth,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    Accept: 'application/json',
   },
 });
 
-// Request interceptor - just add token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = await Storage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await Storage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore token read failures
     }
     return config;
   },
-  (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
+  () => Promise.reject({ message: 'Request preparation failed' })
 );
 
-// Response interceptor - use safe error extraction
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error: any) => {
-    const safeError = createSafeError(error);
-    return Promise.reject(safeError);
-  }
+  (error: unknown) => Promise.reject(createSafeError(error))
 );
+
+/* ------------------------------------------------------------------ */
+/* Types                                                              */
+/* ------------------------------------------------------------------ */
 
 export interface LoginResponse {
   success: boolean;
@@ -53,474 +56,141 @@ export interface RegisterResponse {
   data?: any;
 }
 
-export interface UserResponse {
-  success: boolean;
-  message: string;
-  data?: any;
-}
+/* ------------------------------------------------------------------ */
+/* Auth Service                                                       */
+/* ------------------------------------------------------------------ */
 
 const authService = {
+  /* ---------------------------- LOGIN ----------------------------- */
+
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      // Get the current backend URL
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      console.log('AuthService: Attempting login to:', authUrl);
-      console.log('AuthService: Full login URL:', `${authUrl}/login`);
-      console.log('AuthService: Backend URL:', backendUrl);
-      
-      // Use the api instance with safe error handling
-      const response = await api.post('/login', {
-        email,
-        password,
-      });
-      
-      console.log('AuthService: Login response received:', response.data);
-      
-      if (response.data.success && response.data.data) {
-        const { user, accessToken, tokenType, expiresIn } = response.data.data;
-        
-        // Extract tokens from the backend response structure
-        const actualToken = accessToken;
-        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
-        
-        // Validate tokens before storing
-        if (!actualToken || actualToken === 'null' || actualToken === 'undefined') {
-          console.error('AuthService: Login failed - No valid access token received');
-          console.error('AuthService: Response data:', response.data);
-          console.error('AuthService: Access token value:', actualToken);
-          return {
-            success: false,
-            message: 'Login failed - No valid access token received. Please check server configuration.',
-          };
-        }
-        
-        // Store access token
-        console.log('AuthService: Storing access token:', actualToken.substring(0, 20) + '...');
-        await Storage.setItem('authToken', actualToken);
-        console.log('AuthService: Access token stored successfully');
-        
-        // Verify the token was stored correctly
-        const storedToken = await Storage.getItem('authToken');
-        console.log('AuthService: Verification - stored token:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
-        
-        // Store refresh token if available
-        if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await Storage.setItem('refreshToken', actualRefreshToken);
-          console.log('AuthService: Refresh token stored successfully');
-        }
-        
-        // Return normalized response structure
-        return {
-          success: true,
-          message: response.data.message || 'Login successful',
-          data: {
-            user: user,
-            token: actualToken,
-            refreshToken: actualRefreshToken || undefined
-          },
-        };
-      } else {
-        console.error('AuthService: Login failed - Invalid response structure:', response.data);
+      const response = await api.post('/login', { email, password });
+      const payload = response?.data;
+
+      if (!payload?.success || !payload?.data?.accessToken) {
         return {
           success: false,
-          message: response.data.message || 'Login failed - Invalid response from server',
+          message: payload?.message || 'Invalid login response',
         };
       }
-    } catch (error: any) {
-      // Create a safe error object to prevent property assignment issues
-      const safeError = createSafeError(error);
-      console.error('AuthService: Login error:', safeError.message);
-      
-      // Provide more specific error messages
-      let errorMessage = 'Login failed';
-      
-      // Sanitize RN/Hermes read-only property errors
-      const msg = typeof safeError.message === 'string' ? safeError.message : '';
-      if (msg && (msg.includes('Cannot assign to read-only property') || msg.includes('NONE'))) {
-        errorMessage = 'An unexpected error occurred. Please try again.';
+
+      const accessToken = payload.data.accessToken;
+
+      if (typeof accessToken !== 'string' || accessToken.length < 10) {
+        return {
+          success: false,
+          message: 'Invalid access token received',
+        };
       }
-      
-      if (safeError.message?.includes('Network Error') || safeError.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (safeError.response?.status === 404) {
-        errorMessage = 'Server not found. Please check if the backend server is running.';
-      } else if (safeError.response?.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (safeError.response?.data?.message) {
-        errorMessage = safeError.response.data.message;
-      } else if (safeError.message) {
-        errorMessage = safeError.message;
-      }
-      
+
+      await Storage.setItem('authToken', accessToken);
+
       return {
-        success: false,
-        message: errorMessage,
+        success: true,
+        message: payload.message || 'Login successful',
+        data: {
+          user: payload.data.user,
+          token: accessToken,
+        },
       };
+    } catch (err) {
+      const safe = createSafeError(err);
+
+      let message = 'Login failed';
+      const msg = String(safe.message || '');
+
+      if (msg.includes('Network')) {
+        message = 'Network error. Please check your internet connection.';
+      } else if (safe.response?.status === 401) {
+        message = 'Invalid email or password';
+      } else if (safe.response?.data?.message) {
+        message = safe.response.data.message;
+      }
+
+      return { success: false, message };
     }
   },
 
-  async register(name: string, email: string, password: string): Promise<RegisterResponse> {
+  /* --------------------------- REGISTER ---------------------------- */
+
+  async register(
+    name: string,
+    email: string,
+    password: string
+  ): Promise<RegisterResponse> {
     try {
-      // Get the current backend URL
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      console.log('AuthService: Attempting registration to:', authUrl);
-      console.log('AuthService: Full registration URL:', `${authUrl}/register`);
-      console.log('AuthService: Registration payload:', { name, email, password: '***' });
-      
-      // Use the api instance with safe error handling
-      const response = await api.post('/register', {
-        name,
-        email,
-        password,
-      });
-      
-      console.log('AuthService: Registration response received:', response.data);
-      
-      if (response.data.success && response.data.data) {
-        const { user, accessToken, tokenType, expiresIn } = response.data.data;
-        
-        // Extract tokens from the backend response structure
-        const actualToken = accessToken;
-        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
-        
-        // Store tokens if available
-        if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-          console.log('AuthService: Storing access token:', actualToken.substring(0, 20) + '...');
-          await Storage.setItem('authToken', actualToken);
-          console.log('AuthService: Access token stored after registration');
-          
-          // Verify the token was stored correctly
-          const storedToken = await Storage.getItem('authToken');
-          console.log('AuthService: Verification - stored token:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
-        } else {
-          console.error('AuthService: No valid access token to store:', actualToken);
-        }
-        
-        if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await Storage.setItem('refreshToken', actualRefreshToken);
-          console.log('AuthService: Refresh token stored after registration');
-        }
-        
-        return {
-          success: true,
-          message: response.data.message || 'Registration successful',
-          data: {
-            user: user,
-            token: actualToken,
-            refreshToken: actualRefreshToken || undefined
-          },
-        };
-      } else {
+      const response = await api.post('/register', { name, email, password });
+      const payload = response?.data;
+
+      if (!payload?.success) {
         return {
           success: false,
-          message: response.data.message || 'Registration failed - Invalid response from server',
+          message: payload?.message || 'Registration failed',
         };
       }
-    } catch (error: any) {
-      // Create a safe error object to prevent property assignment issues
-      const safeError = createSafeError(error);
-      console.error('AuthService: Registration error:', safeError.message);
-      
-      // Provide more specific error messages
-      let errorMessage = 'Registration failed';
-      
-      if (safeError.message?.includes('Network Error') || safeError.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (safeError.response?.status === 404) {
-        errorMessage = 'Server not found. Please check if the backend server is running.';
-      } else if (safeError.response?.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (safeError.response?.status === 409) {
-        errorMessage = 'Email already exists. Please use a different email address.';
-      } else if (safeError.response?.data?.message) {
-        errorMessage = safeError.response.data.message;
-      } else if (safeError.message) {
-        errorMessage = safeError.message;
+
+      if (payload?.data?.accessToken) {
+        await Storage.setItem('authToken', payload.data.accessToken);
       }
-      
+
       return {
-        success: false,
-        message: errorMessage,
+        success: true,
+        message: payload.message || 'Registration successful',
+        data: payload.data,
       };
+    } catch (err) {
+      const safe = createSafeError(err);
+
+      let message = 'Registration failed';
+      if (safe.response?.status === 409) {
+        message = 'Email already exists';
+      } else if (safe.response?.data?.message) {
+        message = safe.response.data.message;
+      }
+
+      return { success: false, message };
     }
   },
+
+  /* ----------------------------- LOGOUT ---------------------------- */
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('AuthService: Starting logout request...');
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.post('/logout', {});
-      console.log('AuthService: Logout response:', response.data);
-      return {
-        success: true,
-        message: 'Logout successful',
-      };
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      console.error('AuthService: Logout error:', safeError.message);
-      console.error('AuthService: Error response:', safeError.response?.data);
-      return {
-        success: false,
-        message: safeError.response?.data?.message || 'Logout failed',
-      };
-    }
-  },
-
-  async getCurrentUser(): Promise<any> {
-    try {
-      // Backend exposes /api/v1/auth/profile
-      const token = await this.getToken();
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.get('/profile');
-      return response.data.data;
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      throw new Error(safeError.response?.data?.message || 'Failed to get user data');
-    }
-  },
-
-
-  async updateProfile(data: any): Promise<{ success: boolean; message: string; data?: any }> {
-    try {
-      console.log('AuthService: Starting profile update request with data:', data);
-      const token = await this.getToken();
-      console.log('AuthService: Using token for profile update:', token ? 'Token present' : 'No token');
-      
-      if (!token) {
-        return {
-          success: false,
-          message: 'Access token is required',
-        };
-      }
-      
-      // Get the current backend URL dynamically
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      console.log('AuthService: Profile update URL:', authUrl);
-      
-      const response = await api.put('/profile', data);
-      
-      console.log('AuthService: Profile update response:', response.data);
-      
-      return {
-        success: true,
-        message: 'Profile updated successfully',
-        data: response.data.data,
-      };
-    } catch (error: any) {
-      // Create a safe error object
-      const safeError = createSafeError(error);
-      console.error('AuthService: Profile update error:', safeError.message);
-      console.error('AuthService: Error response:', safeError.response?.data);
-      
-      let errorMessage = 'Profile update failed';
-      if (safeError.response?.status === 401) {
-        errorMessage = 'Access token is required';
-      } else if (safeError.response?.data?.message) {
-        errorMessage = safeError.response.data.message;
-      } else if (safeError.message) {
-        errorMessage = safeError.message;
-      }
-      
-      return {
-        success: false,
-        message: errorMessage,
-      };
-    }
-  },
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const token = await this.getToken();
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.put('/change-password', {
-        currentPassword,
-        newPassword,
-      });
-      
-      return {
-        success: true,
-        message: 'Password changed successfully',
-      };
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      console.error('AuthService: Password change error:', safeError.message);
-      return {
-        success: false,
-        message: safeError.response?.data?.message || 'Password change failed',
-      };
-    }
-  },
-
-  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.post('/forgot-password', {
-        email,
-      });
-      
-      return {
-        success: true,
-        message: 'Password reset email sent',
-      };
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      return {
-        success: false,
-        message: safeError.response?.data?.message || 'Failed to send reset email',
-      };
-    }
-  },
-
-  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const backendUrl = API_CONFIG.auth.replace('/api/v1/auth', '');
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.post('/reset-password', {
-        token,
-        newPassword,
-      });
-      
-      return {
-        success: true,
-        message: 'Password reset successfully',
-      };
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      return {
-        success: false,
-        message: safeError.response?.data?.message || 'Password reset failed',
-      };
-    }
-  },
-
-  async refreshToken(): Promise<{ success: boolean; message: string; data?: any }> {
-    try {
-      const refreshToken = await Storage.getItem('refreshToken');
-      
-      if (!refreshToken) {
-        return {
-          success: false,
-          message: 'No refresh token available',
-        };
-      }
-      
-      console.log('AuthService: Manual token refresh requested...');
-      
-      const authUrl = API_CONFIG.auth;
-      
-      const response = await api.post('/refresh-token', {
-        refreshToken,
-      });
-      
-      if (response.data.success && response.data.data) {
-        const { accessToken, tokenType, expiresIn } = response.data.data;
-        
-        // Extract tokens from the backend response structure
-        const actualToken = accessToken;
-        const actualRefreshToken = null; // Backend uses HttpOnly cookies for refresh tokens
-        
-        // Store new tokens
-        if (actualToken && actualToken !== 'null' && actualToken !== 'undefined') {
-          await Storage.setItem('authToken', actualToken);
-          console.log('AuthService: New access token stored via manual refresh');
-        }
-        
-        if (actualRefreshToken && actualRefreshToken !== 'null' && actualRefreshToken !== 'undefined') {
-          await Storage.setItem('refreshToken', actualRefreshToken);
-          console.log('AuthService: New refresh token stored via manual refresh');
-        }
-        
-        return {
-          success: true,
-          message: response.data.message || 'Token refreshed successfully',
-          data: {
-            token: actualToken,
-            refreshToken: actualRefreshToken || undefined,
-          },
-        };
-      } else {
-        console.error('AuthService: Invalid manual refresh response structure:', response.data);
-        return {
-          success: false,
-          message: response.data.message || 'Invalid refresh response',
-        };
-      }
-    } catch (error: any) {
-      const safeError = createSafeError(error);
-      console.error('AuthService: Manual token refresh failed:', safeError.message);
-      
-      // Clear tokens on refresh failure
+      await api.post('/logout');
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
-      
-      return {
-        success: false,
-        message: safeError.response?.data?.message || 'Token refresh failed',
-      };
+      return { success: true, message: 'Logout successful' };
+    } catch {
+      return { success: false, message: 'Logout failed' };
     }
   },
+
+  /* ------------------------- TOKEN HELPERS ------------------------- */
 
   async getToken(): Promise<string | null> {
     try {
       const token = await Storage.getItem('authToken');
-      console.log('AuthService: Retrieved token:', token ? `${token.substring(0, 20)}...` : 'null');
-      
-      if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
-        // Basic validation - check if it's not empty and has reasonable length
-        console.log('AuthService: Valid token found, length:', token.length);
-        return token;
-      }
-      
-      console.log('AuthService: No valid token found');
-      return null;
-    } catch (error: any) {
-      console.error('Error getting token');
+      return typeof token === 'string' && token.length > 10 ? token : null;
+    } catch {
       return null;
     }
   },
 
   async clearInvalidTokens(): Promise<void> {
     try {
-      const token = await Storage.getItem<string>('authToken', false);
-      const refreshToken = await Storage.getItem<string>('refreshToken', false);
-
-      const invalidToken = !token || token === 'null' || token === 'undefined' || token.length <= 10;
-      const invalidRefreshToken = refreshToken === 'null' || refreshToken === 'undefined';
-
-      if (!invalidToken && !invalidRefreshToken) {
-        return;
-      }
-
-      console.log('AuthService: Clearing invalid tokens...');
-      if (invalidToken) {
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('user');
-      }
-      if (invalidToken || invalidRefreshToken) {
-        await Storage.deleteItem('refreshToken');
-      }
-      console.log('AuthService: Invalid tokens cleared');
-    } catch (error: any) {
-      safeCatch('AuthService.clearInvalidTokens')(error);
+      await Storage.deleteItem('authToken');
+      await Storage.deleteItem('refreshToken');
+      await Storage.deleteItem('user');
+    } catch {
+      // ignore
     }
   },
 };
 
-// Export both named and default exports
+/* ------------------------------------------------------------------ */
+/* Exports                                                            */
+/* ------------------------------------------------------------------ */
+
 export { authService };
 export default authService;
