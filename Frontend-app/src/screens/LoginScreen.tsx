@@ -6,7 +6,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from 'react-native';
 import {
@@ -31,13 +30,17 @@ export default function LoginScreen({ navigation }: any) {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email))
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Please enter a valid email';
+    }
 
-    if (!password.trim()) newErrors.password = 'Password is required';
-    else if (password.length < 6)
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -54,6 +57,7 @@ export default function LoginScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Header */}
         <View style={styles.header}>
           <Image
             source={require('../../assets/icon.png')}
@@ -66,51 +70,63 @@ export default function LoginScreen({ navigation }: any) {
           </Paragraph>
         </View>
 
+        {/* Card */}
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.cardTitle}>Welcome Back</Title>
 
-            <CustomTextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={!!errors.email}
-            />
-            {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-
-            <CustomTextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              rightIcon={showPassword ? 'eye-off' : 'eye'}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-              error={!!errors.password}
-            />
-            {errors.password && (
-              <Text style={styles.error}>{errors.password}</Text>
-            )}
-
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              disabled={isLoading}
-              style={styles.loginButton}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                'Sign In'
+            <View style={styles.form}>
+              <CustomTextInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={!!errors.email}
+                style={styles.input}
+              />
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
               )}
-            </Button>
 
-            <Divider style={{ marginVertical: 16 }} />
+              <CustomTextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                rightIcon={showPassword ? 'eye-off' : 'eye'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                error={!!errors.password}
+                style={styles.input}
+              />
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
 
-            <Button mode="text" onPress={() => navigation.navigate('Register')}>
-              Create an account
-            </Button>
+              <Button
+                mode="contained"
+                onPress={handleLogin}
+                disabled={isLoading}
+                style={styles.loginButton}
+                contentStyle={styles.buttonContent}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={designSystem.colors.surface} />
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+
+              <Divider style={styles.divider} />
+
+              <Button
+                mode="text"
+                onPress={() => navigation.navigate('Register')}
+                labelStyle={styles.registerText}
+              >
+                Create an account
+              </Button>
+            </View>
           </Card.Content>
         </Card>
       </ScrollView>
@@ -119,14 +135,68 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: designSystem.colors.background },
-  scrollContainer: { padding: designSystem.spacing.lg },
-  header: { alignItems: 'center', marginBottom: 32 },
-  logo: { width: 80, height: 80 },
-  title: { color: designSystem.colors.primary },
-  subtitle: { textAlign: 'center' },
-  card: { borderRadius: 12 },
-  cardTitle: { textAlign: 'center', marginBottom: 16 },
-  loginButton: { marginTop: 16 },
-  error: { color: designSystem.colors.error, marginBottom: 8 },
+  container: {
+    flex: 1,
+    backgroundColor: designSystem.colors.background,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    padding: designSystem.spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginTop: designSystem.spacing.xxl,
+    marginBottom: designSystem.spacing.xl,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: designSystem.spacing.md,
+  },
+  title: {
+    ...designSystem.typography.h1,
+    color: designSystem.colors.primary,
+  },
+  subtitle: {
+    ...designSystem.typography.body,
+    color: designSystem.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: designSystem.spacing.sm,
+  },
+  card: {
+    ...designSystem.shadows.lg,
+    borderRadius: designSystem.borderRadius.lg,
+  },
+  cardTitle: {
+    ...designSystem.typography.h2,
+    textAlign: 'center',
+    marginBottom: designSystem.spacing.lg,
+  },
+  form: {
+    marginTop: designSystem.spacing.md,
+  },
+  input: {
+    marginBottom: designSystem.spacing.sm,
+  },
+  errorText: {
+    color: designSystem.colors.error,
+    ...designSystem.typography.caption,
+    marginBottom: designSystem.spacing.sm,
+    marginLeft: designSystem.spacing.sm,
+  },
+  loginButton: {
+    marginTop: designSystem.spacing.lg,
+    borderRadius: designSystem.borderRadius.md,
+    ...designSystem.shadows.md,
+  },
+  buttonContent: {
+    paddingVertical: designSystem.spacing.md,
+  },
+  divider: {
+    marginVertical: designSystem.spacing.lg,
+  },
+  registerText: {
+    color: designSystem.colors.primary,
+    fontWeight: 'bold',
+  },
 });
