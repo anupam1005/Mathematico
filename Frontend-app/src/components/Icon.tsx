@@ -1,8 +1,6 @@
 import React from 'react';
-import { ViewStyle } from 'react-native';
-import { getLucideIcon } from '../utils/iconMapping';
-import { FallbackIcon } from './FallbackIcon';
-import { safeCatch } from '../utils/safeCatch';
+import { TextInput } from 'react-native-paper';
+import type { ViewStyle } from 'react-native';
 
 interface IconProps {
   name: string;
@@ -11,37 +9,20 @@ interface IconProps {
   style?: ViewStyle;
 }
 
-export const Icon = ({ name, size = 24, color = '#000', style, ...props }: IconProps) => {
-  try {
-    const IconComponent = getLucideIcon(name);
-    if (!IconComponent) {
-      return (
-        <FallbackIcon
-          name={name}
-          size={size}
-          color={color}
-          style={style}
-        />
-      );
-    }
-    return React.createElement(IconComponent, {
-      size,
-      color,
-      style,
-      ...props
-    });
-  } catch (error) {
-    safeCatch('Icon.render')(error);
-    // Use fallback icon when Lucide fails
-    return (
-      <FallbackIcon
-        name={name}
-        size={size}
-        color={color}
-        style={style}
-      />
-    );
-  }
+/**
+ * Uses react-native-paper's built-in icon system
+ * ✔ No SVG
+ * ✔ No frozen enums
+ * ✔ No Android crashes
+ */
+export const Icon = ({ name, size = 24, color }: IconProps) => {
+  return (
+    <TextInput.Icon
+      icon={name}
+      size={size}
+      color={color}
+    />
+  );
 };
 
 export default Icon;
