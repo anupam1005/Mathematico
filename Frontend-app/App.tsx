@@ -13,11 +13,18 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Icon } from './src/components/Icon';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import { safeCatch } from './src/utils/safeCatch';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent the splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
+(async () => {
+  try {
+    await SplashScreen.preventAutoHideAsync();
+  } catch (error) {
+    safeCatch('App.SplashScreen.preventAutoHideAsync')(error);
+  }
+})();
 
 // Import screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -40,7 +47,7 @@ try {
   SecurePdfScreen = require('./src/screens/SecurePdfScreen').default;
   console.log('[App] SecurePdfScreen module loaded successfully');
 } catch (error) {
-  console.error('[App] SecurePdfScreen import failed:', error);
+  safeCatch('App.SecurePdfScreen.import')(error);
   SecurePdfScreen = null;
 }
 
@@ -273,21 +280,29 @@ function AppContent() {
   const [fontError, setFontError] = useState(false);
 
   useEffect(() => {
-    async function prepare() {
+    let isMounted = true;
+
+    (async () => {
       try {
         // Skip custom font loading to avoid ExpoFontLoader issues
         console.log('✅ Using system fonts for compatibility');
-        setFontsLoaded(true);
       } catch (error) {
-        console.warn('⚠️ Font preparation failed:', error);
-        setFontsLoaded(true);
+        safeCatch('AppContent.prepareFonts')(error);
       } finally {
-        // Hide splash screen
-        await SplashScreen.hideAsync();
+        if (isMounted) {
+          setFontsLoaded(true);
+        }
+        try {
+          await SplashScreen.hideAsync();
+        } catch (error) {
+          safeCatch('AppContent.SplashScreen.hideAsync')(error);
+        }
       }
-    }
-    
-    prepare();
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (!fontsLoaded) {

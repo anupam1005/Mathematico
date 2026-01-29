@@ -43,7 +43,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check if user is logged in on app start
   useEffect(() => {
-    checkAuthStatus();
+    (async () => {
+      try {
+        await checkAuthStatus();
+      } catch (error) {
+        safeCatch('AuthContext.checkAuthStatus.useEffect')(error);
+      }
+    })();
   }, []);
 
   const checkAuthStatus = async () => {
