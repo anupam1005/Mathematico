@@ -1,9 +1,10 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { API_CONFIG } from '../config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createSafeError } from '../utils/safeError';
 import type { ApiError } from '../utils/errorHandler';
+import { Storage } from '../utils/storage';
+import { safeCatch } from '../utils/safeCatch';
 
 // Create a service error handler for mobileService
 const errorHandler = createServiceErrorHandler('mobileService');
@@ -30,10 +31,11 @@ const mobileApi = axios.create({
 // Request interceptor to add auth token
 mobileApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = await AsyncStorage.getItem('authToken');
+    const token = await Storage.getItem<string>('authToken', false);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error: AxiosError) => {
@@ -50,9 +52,11 @@ mobileApi.interceptors.response.use(
     
     if (safeError.response?.status === 401) {
       try {
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('refreshToken');
-      } catch (e) { /* ignore */ }
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('refreshToken');
+      } catch (cleanupError) {
+        safeCatch('mobileService.clearTokens')(cleanupError);
+      }
     }
     
     return Promise.reject(safeError);

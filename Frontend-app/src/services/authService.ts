@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
+import { safeCatch } from '../utils/safeCatch';
 
 // Create axios instance for auth endpoints
 const api = axios.create({
@@ -496,12 +496,27 @@ const authService = {
 
   async clearInvalidTokens(): Promise<void> {
     try {
-      console.log('AuthService: Clearing all invalid tokens...');
-      await Storage.deleteItem('authToken');
-      await Storage.deleteItem('user');
-      console.log('AuthService: All tokens cleared');
+      const token = await Storage.getItem<string>('authToken', false);
+      const refreshToken = await Storage.getItem<string>('refreshToken', false);
+
+      const invalidToken = !token || token === 'null' || token === 'undefined' || token.length <= 10;
+      const invalidRefreshToken = refreshToken === 'null' || refreshToken === 'undefined';
+
+      if (!invalidToken && !invalidRefreshToken) {
+        return;
+      }
+
+      console.log('AuthService: Clearing invalid tokens...');
+      if (invalidToken) {
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('user');
+      }
+      if (invalidToken || invalidRefreshToken) {
+        await Storage.deleteItem('refreshToken');
+      }
+      console.log('AuthService: Invalid tokens cleared');
     } catch (error: any) {
-      console.error('Error clearing tokens');
+      safeCatch('AuthService.clearInvalidTokens')(error);
     }
   },
 };

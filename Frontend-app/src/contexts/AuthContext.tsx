@@ -59,12 +59,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (token && token.length > 10) {
         // Token is valid, try to get user data from storage
-        const storedUser = await Storage.getItem('user');
+        const storedUser = await Storage.getItem<string>('user', false);
         console.log('AuthContext: Stored user data:', storedUser ? 'YES' : 'NO');
         
         if (storedUser) {
           try {
-            const userData = JSON.parse(storedUser);
+            const userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
             console.log('AuthContext: User data parsed successfully');
             setUser(userData);
             setIsAuthenticated(true);
