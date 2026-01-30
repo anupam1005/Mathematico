@@ -186,6 +186,85 @@ const authService = {
       // ignore
     }
   },
+
+  /* -------------------------- REFRESH TOKEN -------------------------- */
+
+  async refreshToken(): Promise<{ success: boolean; message: string; data?: { token: string; refreshToken: string } }> {
+    try {
+      const refreshTokenValue = await Storage.getItem('refreshToken');
+      if (!refreshTokenValue) {
+        return { success: false, message: 'No refresh token available' };
+      }
+
+      const response = await api.post('/refresh-token', { refreshToken: refreshTokenValue });
+      const payload = response?.data;
+
+      if (!payload?.success || !payload?.data?.accessToken) {
+        return {
+          success: false,
+          message: payload?.message || 'Invalid refresh response',
+        };
+      }
+
+      const accessToken = payload.data.accessToken;
+      const newRefreshToken = payload.data.refreshToken || refreshTokenValue;
+
+      if (typeof accessToken !== 'string' || accessToken.length < 10) {
+        return {
+          success: false,
+          message: 'Invalid access token received from refresh',
+        };
+      }
+
+      await Storage.setItem('authToken', accessToken);
+      if (newRefreshToken !== refreshTokenValue) {
+        await Storage.setItem('refreshToken', newRefreshToken);
+      }
+
+      return {
+        success: true,
+        message: 'Token refreshed successfully',
+        data: {
+          token: accessToken,
+          refreshToken: newRefreshToken,
+        },
+      };
+    } catch (err) {
+      const safe = createSafeError(err);
+      return {
+        success: false,
+        message: safe.message || 'Token refresh failed',
+      };
+    }
+  },
+
+  /* ------------------------- UPDATE PROFILE -------------------------- */
+
+  async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const response = await api.put('/profile', data);
+      const payload = response?.data;
+
+      if (!payload?.success) {
+        return {
+          success: false,
+          message: payload?.message || 'Profile update failed',
+        };
+      }
+
+      return {
+        success: true,
+        message: payload.message || 'Profile updated successfully',
+        data: payload.data,
+      };
+    } catch (err) {
+      const safe = createSafeError(err);
+      return {
+        success: false,
+        message: safe.message || 'Profile update failed',
+      };
+    }
+  },
 };
 
 /* ------------------------------------------------------------------ */
