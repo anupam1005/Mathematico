@@ -18,7 +18,7 @@ import {
   Paragraph,
   Button,
 } from 'react-native-paper';
-import { Icon } from '../../components/Icon';
+import { Icon, type IconName } from '../../components/Icon';
 import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
@@ -122,18 +122,18 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): IconName => {
     switch (status) {
       case 'completed':
         return 'check-circle';
       case 'pending':
-        return 'schedule';
+        return 'calendar-clock';
       case 'failed':
-        return 'error';
+        return 'alert-circle';
       case 'refunded':
         return 'undo';
       default:
-        return 'help';
+        return 'help-circle';
     }
   };
 
@@ -242,7 +242,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
 
   const renderEmptyState = () => (
     <EmptyState
-      icon="payment"
+      icon="credit-card"
       title="No Payments Found"
       description="No payments match your current filters."
       actionText="Clear Filters"
@@ -268,7 +268,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color={designSystem.colors.primary} />
+            <Icon name="arrow-left" size={24} color={designSystem.colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={textStyles.heading}>Payment Management</Text>
@@ -276,7 +276,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
               Manage and monitor all payment transactions
             </Text>
           </View>
-          <Icon name="payment" size={48} color={designSystem.colors.primary} />
+          <Icon name="credit-card" size={48} color={designSystem.colors.primary} />
         </View>
       </UnifiedCard>
 

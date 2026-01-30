@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { Calendar, Users, Tag, GraduationCap, CheckCircle, AlertCircle } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { designSystem } from '../styles/designSystem';
@@ -98,7 +98,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
   if (!course) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={64} color={designSystem.colors.error} />
+        <Icon name="alert-circle" size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Course not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -156,22 +156,22 @@ export default function CourseDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Course Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-              <Calendar size={20} color={designSystem.colors.primary} />
+              <Icon name="calendar-month" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Duration:</Text>
               <Text style={styles.detailValue}>{course.duration}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Users size={20} color={designSystem.colors.primary} />
+              <Icon name="account-group" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Students:</Text>
               <Text style={styles.detailValue}>{course.students}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Tag size={20} color={designSystem.colors.primary} />
+              <Icon name="tag" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{course.subject}</Text>
             </View>
             <View style={styles.detailItem}>
-              <GraduationCap size={20} color={designSystem.colors.primary} />
+              <Icon name="school" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{course.class}</Text>
             </View>
@@ -186,7 +186,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>What You Will Learn</Title>
             {course.what_you_will_learn.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-                <CheckCircle size={16} color={designSystem.colors.success} />
+                <Icon name="check-circle" size={16} color={designSystem.colors.success} />
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}
@@ -201,7 +201,7 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             <Title style={styles.sectionTitle}>Who Is This For</Title>
             {course.who_is_this_for.map((item, index) => (
               <View key={index} style={styles.learningItem}>
-                <Users size={16} color={designSystem.colors.primary} />
+                <Icon name="account-group" size={16} color={designSystem.colors.primary} />
                 <Text style={styles.learningText}>{item}</Text>
               </View>
             ))}

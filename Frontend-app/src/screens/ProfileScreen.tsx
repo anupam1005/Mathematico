@@ -17,27 +17,32 @@ import {
   Avatar,
   Dialog,
   Portal,
-
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
-import { User, Mail, Phone, Calendar, MapPin, Award, Settings, LifeBuoy, ShieldCheck, ChevronRight, Circle, FileText } from 'lucide-react-native';
+import Icon from '../components/Icon';
 
 // Create icons object for dynamic lookup
 const icons = {
-  User,
-  Mail,
-  Phone,
-  Calendar,
-  MapPin,
-  Award,
-  Settings,
-  LifeBuoy,
-  ShieldCheck,
-  ChevronRight,
-  Circle,
-  FileText
-};
+  User: 'account',
+  Mail: 'email-outline',
+  Phone: 'phone',
+  Calendar: 'calendar-month',
+  MapPin: 'map-marker',
+  Award: 'trophy',
+  Settings: 'cog',
+  LifeBuoy: 'lifebuoy',
+  ShieldCheck: 'shield-check',
+  ChevronRight: 'chevron-right',
+  Circle: 'circle-outline',
+  FileText: 'file-document-outline',
+  GraduationCap: 'school',
+  BookOpen: 'book-open-variant',
+  Video: 'video',
+  Info: 'information',
+  ShieldQuestion: 'head-question-outline',
+  Scale: 'scale-balance',
+} as const;
 import { useAuth } from '../contexts/AuthContext';
 import { CustomTextInput } from '../components/CustomTextInput';
 import { designSystem } from '../styles/designSystem';
@@ -222,10 +227,10 @@ export default function ProfileScreen({ navigation }: any) {
                 title={item.title}
                 left={(props) => {
                   const Key = item.icon as keyof typeof icons;
-                  const IconCmp = icons[Key] || icons.Circle;
+                  const iconName = icons[Key] || icons.Circle;
                   return (
                     <View style={{ justifyContent: 'center', alignItems: 'center', width: 24 }}>
-                      <IconCmp size={20} color={props.color} />
+                      <Icon name={iconName} size={20} color={props.color} />
                     </View>
                   );
                 }}
@@ -233,7 +238,7 @@ export default function ProfileScreen({ navigation }: any) {
                   const Chevron = icons.ChevronRight;
                   return (
                     <View style={{ justifyContent: 'center', alignItems: 'center', width: 24 }}>
-                      <Chevron size={20} color={props.color} />
+                      <Icon name={Chevron} size={20} color={props.color} />
                     </View>
                   );
                 }}

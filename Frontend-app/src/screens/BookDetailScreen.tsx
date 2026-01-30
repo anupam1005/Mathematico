@@ -16,7 +16,7 @@ import {
   Chip,
   ActivityIndicator,
 } from 'react-native-paper';
-import { Book as BookIcon, Download, User, Building, Tag, GraduationCap, Barcode, AlertCircle } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { bookService, Book } from '../services/bookService';
 import { designSystem } from '../styles/designSystem';
@@ -89,7 +89,7 @@ export default function BookDetailScreen({ navigation, route }: any) {
   if (!book) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={64} color={designSystem.colors.error} />
+        <Icon name="alert-circle" size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Book not found</Text>
         <Button mode="contained" onPress={() => navigation.goBack()}>
           Go Back
@@ -127,11 +127,11 @@ export default function BookDetailScreen({ navigation, route }: any) {
           </View>
           <View style={styles.bookMeta}>
             <View style={styles.metaItem}>
-              <BookIcon size={20} color={designSystem.colors.primary} />
+              <Icon name="book-open-variant" size={20} color={designSystem.colors.primary} />
               <Text style={styles.metaText}>{book.pages} pages</Text>
             </View>
             <View style={styles.metaItem}>
-              <Download size={20} color={designSystem.colors.primary} />
+              <Icon name="download" size={20} color={designSystem.colors.primary} />
               <Text style={styles.metaText}>{book.downloads} downloads</Text>
             </View>
           </View>
@@ -152,28 +152,28 @@ export default function BookDetailScreen({ navigation, route }: any) {
           <Title style={styles.sectionTitle}>Book Details</Title>
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-              <User size={20} color={designSystem.colors.primary} />
+              <Icon name="account" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Author:</Text>
               <Text style={styles.detailValue}>{book.author}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Building size={20} color={designSystem.colors.primary} />
+              <Icon name="office-building" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Publisher:</Text>
               <Text style={styles.detailValue}>{book.publisher}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Tag size={20} color={designSystem.colors.primary} />
+              <Icon name="tag" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Subject:</Text>
               <Text style={styles.detailValue}>{book.subject}</Text>
             </View>
             <View style={styles.detailItem}>
-              <GraduationCap size={20} color={designSystem.colors.primary} />
+              <Icon name="school" size={20} color={designSystem.colors.primary} />
               <Text style={styles.detailLabel}>Class:</Text>
               <Text style={styles.detailValue}>{book.class}</Text>
             </View>
             {book.isbn && (
               <View style={styles.detailItem}>
-                <Barcode size={20} color={designSystem.colors.primary} />
+                <Icon name="barcode" size={20} color={designSystem.colors.primary} />
                 <Text style={styles.detailLabel}>ISBN:</Text>
                 <Text style={styles.detailValue}>{book.isbn}</Text>
               </View>

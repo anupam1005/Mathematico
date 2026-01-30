@@ -321,7 +321,7 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color={designSystem.colors.primary} />
+            <Icon name="arrow-left" size={24} color={designSystem.colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={textStyles.heading}>User Management</Text>

@@ -9,7 +9,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { Search, X, Calendar, Clock, Users, Tag, PlayCircle } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
@@ -193,23 +193,23 @@ export default function LiveClassesScreen({ navigation }: any) {
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Calendar size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="calendar-month" size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Clock size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="clock-outline" size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>{liveClass.duration} min</Text>
             </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Users size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="account-group" size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>
                 {liveClass.enrolled_students}/{liveClass.max_students} enrolled
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Tag size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="tag" size={16} color={designSystem.colors.textSecondary} />
               <Text style={styles.metaText}>{liveClass.category || 'General'}</Text>
             </View>
           </View>
@@ -259,8 +259,8 @@ export default function LiveClassesScreen({ navigation }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={designSystem.colors.textSecondary}
-        icon={() => <Search size={24} color={designSystem.colors.primary} />}
-        clearIcon={() => <X size={24} color={designSystem.colors.textSecondary} />}
+        icon={() => <Icon name="magnify" size={24} color={designSystem.colors.primary} />}
+        clearIcon={() => <Icon name="close" size={24} color={designSystem.colors.textSecondary} />}
       />
 
       {/* Filters */}
@@ -337,7 +337,7 @@ export default function LiveClassesScreen({ navigation }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <PlayCircle size={64} color={designSystem.colors.textSecondary} />
+              <Icon name="play-circle" size={64} color={designSystem.colors.textSecondary} />
               <Text style={styles.emptyText}>No live classes found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>

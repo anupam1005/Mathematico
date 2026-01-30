@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Title, Paragraph, Chip, Searchbar } from 'react-native-paper';
-import { Search, X, UserCircle, BookOpen, Calendar, Clock, PlayCircle, GraduationCap, Book as BookIcon, Video, Users } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService } from '../services/courseService';
 import { bookService } from '../services/bookService';
@@ -290,13 +290,13 @@ export default function HomeScreen({ navigation }: any) {
         </Text>
           <View style={styles.liveClassInfo}>
             <View style={styles.liveClassMeta}>
-              <Calendar size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="calendar-month" size={16} color={designSystem.colors.textSecondary} />
               <Text style={textStyles.caption}>
                 {new Date(liveClass.scheduled_at).toLocaleDateString()}
               </Text>
             </View>
             <View style={styles.liveClassMeta}>
-              <Clock size={16} color={designSystem.colors.textSecondary} />
+              <Icon name="clock-outline" size={16} color={designSystem.colors.textSecondary} />
               <Text style={textStyles.caption}>{liveClass.duration} min</Text>
             </View>
           </View>
@@ -355,7 +355,7 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Profile')}
           style={styles.avatarContainer}
         >
-          <UserCircle size={40} color={designSystem.colors.primary} />
+          <Icon name="account-circle" size={40} color={designSystem.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -367,8 +367,8 @@ export default function HomeScreen({ navigation }: any) {
           value={searchQuery}
           onSubmitEditing={handleSearch}
           style={styles.searchBar}
-          icon={() => <Search size={24} color={designSystem.colors.textSecondary} />}
-          clearIcon={searchQuery ? () => <X size={24} color={designSystem.colors.textSecondary} /> : undefined}
+          icon={() => <Icon name="magnify" size={24} color={designSystem.colors.textSecondary} />}
+          clearIcon={searchQuery ? () => <Icon name="close" size={24} color={designSystem.colors.textSecondary} /> : undefined}
           onClearIconPress={() => setSearchQuery('')}
         />
         {searchQuery ? (
@@ -376,7 +376,7 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.clearButton}
             onPress={() => setSearchQuery('')}
           >
-            <X size={24} color={designSystem.colors.textSecondary} />
+            <Icon name="close" size={24} color={designSystem.colors.textSecondary} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -386,25 +386,25 @@ export default function HomeScreen({ navigation }: any) {
         title="Platform Statistics"
         stats={[
           {
-            icon: 'GraduationCap',
+            icon: 'school',
             value: `${stats.totalCourses}+`,
             label: 'Courses',
             color: designSystem.colors.primary,
           },
           {
-            icon: 'BookOpen',
+            icon: 'book-open-variant',
             value: `${stats.totalBooks}+`,
             label: 'Books',
             color: designSystem.colors.secondary,
           },
           {
-            icon: 'Video',
+            icon: 'video',
             value: `${stats.totalLiveClasses}+`,
             label: 'Live Classes',
             color: designSystem.colors.accent,
           },
           {
-            icon: 'Users',
+            icon: 'account-group',
             value: `${stats.totalStudents}+`,
             label: 'Students',
             color: designSystem.colors.info,
@@ -422,7 +422,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.featuresContainer}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.primary + '20' }]}>
-              <BookOpen size={24} color={designSystem.colors.primary} />
+              <Icon name="book-open-variant" size={24} color={designSystem.colors.primary} />
             </View>
             <View style={styles.featureTextContainer}>
               <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Comprehensive Courses</Text>
@@ -433,7 +433,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.secondary + '20' }]}>
-              <Calendar size={24} color={designSystem.colors.secondary} />
+              <Icon name="calendar-month" size={24} color={designSystem.colors.secondary} />
             </View>
             <View style={styles.featureTextContainer}>
               <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Live Interactive Classes</Text>
@@ -444,7 +444,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: designSystem.colors.accent + '20' }]}>
-              <GraduationCap size={24} color={designSystem.colors.accent} />
+              <Icon name="school" size={24} color={designSystem.colors.accent} />
             </View>
             <View style={styles.featureTextContainer}>
               <Text style={[textStyles.subheading, { marginBottom: designSystem.spacing.xs }]}>Expert Educators</Text>
@@ -533,21 +533,21 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Courses')}
           >
-            <GraduationCap size={24} color={designSystem.colors.primary} />
+            <Icon name="school" size={24} color={designSystem.colors.primary} />
             <Text style={styles.quickActionText}>Browse Courses</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Books')}
           >
-            <BookIcon size={24} color={designSystem.colors.primary} />
+            <Icon name="book-open-variant" size={24} color={designSystem.colors.primary} />
             <Text style={styles.quickActionText}>Browse Books</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('LiveClasses')}
             >
-              <PlayCircle size={24} color={designSystem.colors.primary} />
+              <Icon name="play-circle" size={24} color={designSystem.colors.primary} />
               <Text style={styles.quickActionText}>Live Classes</Text>
           </TouchableOpacity>
         </View>

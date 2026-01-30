@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Button, Chip, ActivityIndicator } from 'react-native-paper';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { NetworkUtils } from '../utils/networkUtils';
 import { designSystem } from '../styles/designSystem';
 import { testNetworkConnectivity } from '../utils/networkTest';
@@ -54,10 +54,10 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
     return isConnected ? 'Connected' : 'Disconnected';
   };
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): IconName => {
     if (isTesting) return 'refresh';
-    if (isConnected === null) return 'help';
-    return isConnected ? 'check-circle' : 'error';
+    if (isConnected === null) return 'help-circle';
+    return isConnected ? 'check-circle' : 'alert-circle';
   };
 
   return (

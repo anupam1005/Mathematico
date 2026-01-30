@@ -381,7 +381,7 @@ export default function AdminBooks({ navigation }: any) {
               onDismiss={() => setMenuVisible(false)}
               anchor={
                 <TouchableOpacity onPress={() => setMenuVisible(true)}>
-                  <Icon name="more-vert" size={24} color={designSystem.colors.textSecondary} />
+                  <Icon name="dots-vertical" size={24} color={designSystem.colors.textSecondary} />
                 </TouchableOpacity>
               }
             >

@@ -260,7 +260,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         <Title style={textStyles.subheading}>Database Settings</Title>
         
         <View style={styles.infoContainer}>
-          <Icon name="info" size={20} color={designSystem.colors.info} />
+          <Icon name="information" size={20} color={designSystem.colors.info} />
           <Text style={textStyles.body}>
             Database connection is managed automatically by the platform.
           </Text>
@@ -294,7 +294,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color={designSystem.colors.primary} />
+            <Icon name="arrow-left" size={24} color={designSystem.colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={textStyles.heading}>Settings</Text>

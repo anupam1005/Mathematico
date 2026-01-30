@@ -9,7 +9,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Searchbar, FAB } from 'react-native-paper';
-import { Search, X, Users, Clock, GraduationCap } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { theme } from '../styles/theme';
@@ -152,11 +152,11 @@ export default function CoursesScreen({ navigation, route }: any) {
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
-              <Users size={16} color={theme.colors.textSecondary} />
+              <Icon name="account-group" size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{course.students} students</Text>
             </View>
             <View style={styles.metaItem}>
-              <Clock size={16} color={theme.colors.textSecondary} />
+              <Icon name="clock-outline" size={16} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{course.duration}</Text>
             </View>
           </View>
@@ -206,8 +206,8 @@ export default function CoursesScreen({ navigation, route }: any) {
         style={styles.searchBar}
         inputStyle={styles.searchInput}
         placeholderTextColor={theme.colors.textSecondary}
-        icon={() => <Search size={20} color={theme.colors.primary} />}
-        clearIcon={() => <X size={20} color={theme.colors.textSecondary} />}
+        icon={() => <Icon name="magnify" size={20} color={theme.colors.primary} />}
+        clearIcon={() => <Icon name="close" size={20} color={theme.colors.textSecondary} />}
       />
 
       {/* Filters */}
@@ -265,7 +265,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <GraduationCap size={48} color={theme.colors.textSecondary} />
+              <Icon name="school" size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyText}>No courses found</Text>
               <Text style={styles.emptySubtext}>Try adjusting your search or filters</Text>
             </View>

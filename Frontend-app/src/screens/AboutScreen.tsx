@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 import { Card, Title, Paragraph, Divider } from 'react-native-paper';
-import { GraduationCap, Target, BookOpen, Users, Award, FileText, MessageCircle, Lightbulb, CheckCircle } from 'lucide-react-native';
+import Icon from '../components/Icon';
 import { designSystem } from '../styles/designSystem';
 
 export default function AboutScreen() {
@@ -27,7 +27,7 @@ export default function AboutScreen() {
           <Divider style={styles.divider} />
           
           <View style={styles.sectionHeader}>
-            <GraduationCap size={24} color={designSystem.colors.primary} />
+            <Icon name="school" size={24} color={designSystem.colors.primary} />
             <Title style={styles.subtitle}>Who We Are</Title>
           </View>
           <Paragraph style={styles.paragraph}>
@@ -43,7 +43,7 @@ export default function AboutScreen() {
           <Divider style={styles.divider} />
           
           <View style={styles.sectionHeader}>
-            <Target size={24} color={designSystem.colors.primary} />
+            <Icon name="target" size={24} color={designSystem.colors.primary} />
             <Title style={styles.subtitle}>Our Mission</Title>
           </View>
           <Paragraph style={styles.paragraph}>
@@ -56,19 +56,19 @@ export default function AboutScreen() {
           
           <View style={styles.bulletList}>
             <View style={styles.bulletItem}>
-              <CheckCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="check-circle" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Make Mathematics enjoyable and meaningful</Text>
             </View>
             <View style={styles.bulletItem}>
-              <CheckCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="check-circle" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Encourage curiosity and independent thinking</Text>
             </View>
             <View style={styles.bulletItem}>
-              <CheckCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="check-circle" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Prepare students for advanced problem-solving and competitive exams</Text>
             </View>
             <View style={styles.bulletItem}>
-              <CheckCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="check-circle" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Give personal attention and individual support to every learner</Text>
             </View>
           </View>
@@ -76,37 +76,37 @@ export default function AboutScreen() {
           <Divider style={styles.divider} />
           
           <View style={styles.sectionHeader}>
-            <BookOpen size={24} color={designSystem.colors.primary} />
+            <Icon name="book-open-variant" size={24} color={designSystem.colors.primary} />
             <Title style={styles.subtitle}>What We Do</Title>
           </View>
           
           <View style={styles.bulletList}>
             <View style={styles.bulletItem}>
-              <Users size={16} color={designSystem.colors.primary} />
+              <Icon name="account-group" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Small batch size (maximum 15 students) for personal care and focused teaching</Text>
             </View>
             <View style={styles.bulletItem}>
-              <Award size={16} color={designSystem.colors.primary} />
+              <Icon name="trophy" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Special Geometry Program for IOQM / RMO aspirants</Text>
             </View>
             <View style={styles.bulletItem}>
-              <FileText size={16} color={designSystem.colors.primary} />
+              <Icon name="file-document-outline" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Regular Monthly Exams (4 per month) to track progress and strengthen concepts</Text>
             </View>
             <View style={styles.bulletItem}>
-              <MessageCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="message-text-outline" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Doubt Clearing Support through a dedicated WhatsApp group</Text>
             </View>
             <View style={styles.bulletItem}>
-              <MessageCircle size={16} color={designSystem.colors.primary} />
+              <Icon name="message-text-outline" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Online doubt clarification for offline classroom students</Text>
             </View>
             <View style={styles.bulletItem}>
-              <BookOpen size={16} color={designSystem.colors.primary} />
+              <Icon name="book-open-variant" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Provide problem sheets and assignments from international mathematics books</Text>
             </View>
             <View style={styles.bulletItem}>
-              <Lightbulb size={16} color={designSystem.colors.primary} />
+              <Icon name="lightbulb-outline" size={16} color={designSystem.colors.primary} />
               <Text style={styles.bulletText}>Encourage puzzle-solving and logical reasoning from early levels</Text>
             </View>
           </View>

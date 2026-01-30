@@ -136,7 +136,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
   if (!stats) {
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error" size={48} color={designSystem.colors.error} />
+        <Icon name="alert-circle" size={48} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Failed to load dashboard data</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
           <Text style={styles.retryButtonText}>Retry</Text>
@@ -160,7 +160,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Icon name="arrow-back" size={24} color={designSystem.colors.primary} />
+              <Icon name="arrow-left" size={24} color={designSystem.colors.primary} />
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={textStyles.heading}>Analytics Dashboard</Text>
@@ -189,7 +189,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
                   />
                 )}
               </TouchableOpacity>
-              <Icon name="admin-panel-settings" size={48} color={designSystem.colors.primary} />
+              <Icon name="cog" size={48} color={designSystem.colors.primary} />
             </View>
           </View>
         </UnifiedCard>
@@ -198,7 +198,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
         {error && (
           <UnifiedCard variant="outlined" style={styles.errorCard}>
             <View style={styles.errorContent}>
-              <Icon name="error" size={24} color={designSystem.colors.error} />
+              <Icon name="alert-circle" size={24} color={designSystem.colors.error} />
               <View style={styles.errorTextContainer}>
                 <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
                   {error}
@@ -233,14 +233,14 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
           <StatCard
             title="Total Revenue"
             value={`₹${(stats.totalRevenue ?? 0).toLocaleString()}`}
-            icon="attach-money"
+            icon="currency-inr"
             color={designSystem.colors.warning}
             subtitle="This month"
           />
           <StatCard
             title="Live Classes"
             value={(stats.totalLiveClasses ?? 0).toString()}
-            icon="groups"
+            icon="account-group"
             color={designSystem.colors.secondary}
             subtitle={`${stats.liveClassStats?.upcoming ?? 0} upcoming`}
           />
@@ -278,7 +278,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
                   key={user.id || index}
                   title={user.name || 'Unknown User'}
                   subtitle={user.email || 'No email'}
-                  icon="person-add"
+                  icon="account-plus"
                   color={designSystem.colors.primary}
                 />
               ))
@@ -295,7 +295,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
                   key={course.id || index}
                   title={course.title || 'Unknown Course'}
                   subtitle={course.category || 'No category'}
-                  icon="add-circle"
+                  icon="plus-circle"
                   color={designSystem.colors.success}
                 />
               ))

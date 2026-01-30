@@ -1,26 +1,28 @@
 import React from 'react';
-import { TextInput } from 'react-native-paper';
 import type { ViewStyle } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+export type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
 interface IconProps {
-  name: string;
+  name: IconName;
   size?: number;
   color?: string;
   style?: ViewStyle;
 }
 
-/**
- * Uses react-native-paper's built-in icon system
- * ✔ No SVG
- * ✔ No frozen enums
- * ✔ No Android crashes
- */
-export const Icon = ({ name, size = 24, color }: IconProps) => {
+export const Icon = ({
+  name,
+  size = 24,
+  color = '#000',
+  style,
+}: IconProps) => {
   return (
-    <TextInput.Icon
-      icon={name}
+    <MaterialCommunityIcons
+      name={name}
       size={size}
       color={color}
+      style={style}
     />
   );
 };

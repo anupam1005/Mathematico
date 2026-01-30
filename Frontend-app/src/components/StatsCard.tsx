@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { UnifiedCard } from './UnifiedCard';
 import { statsStyles, textStyles, designSystem } from '../styles/designSystem';
 
 interface StatItem {
-  icon: string;
+  icon: IconName;
   value: string | number;
   label: string;
   color?: string;

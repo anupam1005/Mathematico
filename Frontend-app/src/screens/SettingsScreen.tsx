@@ -25,31 +25,7 @@ import {
   Snackbar,
   Switch,
 } from 'react-native-paper';
-import {
-  Bell,
-  Mail,
-  GraduationCap,
-  Video,
-  Moon,
-  PlayCircle,
-  Download,
-  Languages,
-  Trash2,
-  BarChart3,
-  Info,
-  FileText,
-  Shield,
-  CheckCircle,
-  ArrowLeft,
-  WifiOff,
-  Wifi,
-  CloudUpload,
-  Clock,
-  AlertCircle,
-  X,
-  Check,
-  RotateCw,
-} from 'lucide-react-native';
+import Icon from '../components/Icon';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
@@ -450,7 +426,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   if (!settings) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <AlertCircle size={48} color={colors.error} />
+        <Icon name="alert-circle" size={48} color={colors.error} />
         <Text style={[styles.loadingText, { color: colors.onSurfaceVariant, marginTop: 16 }]}>
           Failed to load settings
         </Text>
@@ -482,7 +458,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="Notifications"
-        left={(props) => <Bell {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="bell" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
@@ -523,7 +501,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="Privacy"
-        left={(props) => <Shield {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="shield" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
@@ -572,13 +552,15 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="App Preferences"
-        left={(props) => <Moon {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="weather-night" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
           title="Theme"
           description="Change the app's color scheme"
-          left={props => <Moon size={24} color={colors.onSurface} />}
+          left={props => <Icon name="weather-night" size={24} color={colors.onSurface} />}
           onPress={() => {
             const newTheme = settings.preferences.theme === 'light' ? 'dark' : 'light';
             handleSettingChange('preferences', 'theme', newTheme);
@@ -596,7 +578,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Language"
           description="Change the app's language"
-          left={props => <Languages size={24} color={colors.onSurface} />}
+          left={props => <Icon name="translate" size={24} color={colors.onSurface} />}
           onPress={() => setShowLanguageDialog(true)}
           right={props => (
             <View style={styles.settingValueContainer}>
@@ -611,7 +593,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Time Zone"
           description={settings.preferences.timezone}
-          left={props => <Clock size={24} color={colors.onSurface} />}
+          left={props => <Icon name="clock-outline" size={24} color={colors.onSurface} />}
           right={props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
@@ -629,13 +611,15 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="Learning Preferences"
-        left={(props) => <GraduationCap {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="school" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
           title="Auto-play Videos"
           description="Automatically play video lessons"
-          left={props => <PlayCircle size={24} color={colors.onSurface} />}
+          left={props => <Icon name="play-circle" size={24} color={colors.onSurface} />}
           right={props => renderSwitch(
             settings.learning.autoPlayVideos,
             (value) => handleSettingChange('learning', 'autoPlayVideos', value)
@@ -645,7 +629,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Download Over Wi-Fi Only"
           description="Only download content when connected to Wi-Fi"
-          left={props => <Wifi size={24} color={colors.onSurface} />}
+          left={props => <Icon name="wifi" size={24} color={colors.onSurface} />}
           right={props => renderSwitch(
             settings.learning.downloadOverWifi,
             (value) => handleSettingChange('learning', 'downloadOverWifi', value)
@@ -660,7 +644,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="Data Usage"
-        left={(props) => <BarChart3 {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="chart-bar" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
@@ -681,7 +667,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Clear Cache"
           description="Free up storage space"
-          left={props => <Trash2 size={24} color={colors.onSurface} />}
+          left={props => <Icon name="trash-can-outline" size={24} color={colors.onSurface} />}
           onPress={() => setShowClearCacheDialog(true)}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
@@ -694,7 +680,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     <Card style={styles.card}>
       <Card.Title
         title="About"
-        left={(props) => <Info {...props} color={colors.primary} />}
+        left={(props) => (
+          <Icon name="information" size={props.size} color={colors.primary} />
+        )}
       />
       <Card.Content>
         <List.Item
@@ -705,14 +693,14 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <Divider />
         <List.Item
           title="Terms of Service"
-          left={props => <FileText size={24} color={colors.onSurface} />}
+          left={props => <Icon name="file-document-outline" size={24} color={colors.onSurface} />}
           onPress={() => navigation.navigate('TermsOfService')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
         <Divider />
         <List.Item
           title="Privacy Policy"
-          left={props => <Shield size={24} color={colors.onSurface} />}
+          left={props => <Icon name="shield" size={24} color={colors.onSurface} />}
           onPress={() => navigation.navigate('PrivacyPolicy')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
@@ -725,7 +713,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     if (!isOnline) {
       return (
         <View style={[styles.offlineIndicator, { backgroundColor: colors.errorContainer }]}>
-          <WifiOff size={16} color={colors.onErrorContainer} />
+          <Icon name="wifi-off" size={16} color={colors.onErrorContainer} />
           <Text style={[styles.offlineText, { color: colors.onErrorContainer }]}>
             Offline - Changes will sync when online
           </Text>
@@ -736,7 +724,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     if (pendingChanges.length > 0) {
       return (
         <View style={[styles.pendingChanges, { backgroundColor: colors.primaryContainer }]}>
-          <CloudUpload size={16} color={colors.onPrimaryContainer} />
+          <Icon name="cloud-upload" size={16} color={colors.onPrimaryContainer} />
           <Text style={[styles.pendingText, { color: colors.onPrimaryContainer }]}>
             Syncing {pendingChanges.length} change{pendingChanges.length > 1 ? 's' : ''}...
           </Text>
@@ -766,7 +754,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
                   {lang.nativeName} ({lang.name})
                 </Text>
                 {settings.preferences.language === lang.code && (
-                  <Check size={24} color={colors.primary} />
+                  <Icon name="check" size={24} color={colors.primary} />
                 )}
               </TouchableOpacity>
               <Divider />
@@ -899,7 +887,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
             onPress={handleResetSettings}
             style={[styles.resetButton, { backgroundColor: colors.errorContainer }]}
             labelStyle={{ color: colors.onErrorContainer }}
-            icon={({ size, color }) => <RotateCw size={size} color={color} />}
+            icon={({ size, color }) => <Icon name="refresh" size={size} color={color} />}
             loading={isSaving}
             disabled={isSaving}
           >
@@ -912,7 +900,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
             Mathematico v{appVersion} (Build {buildNumber})
           </Text>
           <Text style={[styles.copyrightText, { color: colors.onSurfaceVariant }]}>
-            © {new Date().getFullYear()} Mathematico. All rights reserved.
+            {new Date().getFullYear()} Mathematico. All rights reserved.
           </Text>
         </View>
       </ScrollView>
@@ -944,7 +932,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         }}
       >
         <View style={styles.snackbarContent}>
-          <WifiOff size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
+          <Icon name="wifi-off" size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
           <Text style={[styles.snackbarText, { color: colors.onErrorContainer }]}>
             You are currently offline. Some features may be limited.
           </Text>
@@ -992,13 +980,13 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       >
         <View style={styles.snackbarContent}>
           {snackbarType === 'error' && (
-            <AlertCircle size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
+            <Icon name="alert-circle" size={20} color={colors.onErrorContainer} style={styles.snackbarIcon} />
           )}
           {snackbarType === 'success' && (
-            <CheckCircle size={20} color={colors.onPrimaryContainer} style={styles.snackbarIcon} />
+            <Icon name="check-circle" size={20} color={colors.onPrimaryContainer} style={styles.snackbarIcon} />
           )}
           {snackbarType === 'info' && (
-            <Info size={20} color={colors.onSurfaceVariant} style={styles.snackbarIcon} />
+            <Icon name="information" size={20} color={colors.onSurfaceVariant} style={styles.snackbarIcon} />
           )}
           <Text 
             style={[
