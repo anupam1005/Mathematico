@@ -28,7 +28,8 @@ export default {
         projectId: '48a013c9-f058-4b62-8a9f-915b4a9446d9'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
-      enableRazorpay: ENABLE_RAZORPAY
+      enableRazorpay: ENABLE_RAZORPAY,
+      apiBaseUrl: 'https://mathematico-backend-new.vercel.app'
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',

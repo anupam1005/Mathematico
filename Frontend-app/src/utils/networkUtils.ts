@@ -18,48 +18,23 @@ export class NetworkUtils {
     };
   }
 
-  // Show instructions for serverless backend
+  // Show instructions for production backend
   static showIPInstructions() {
     Alert.alert(
-      'Serverless Backend Configuration',
+      'Production Backend Configuration',
       `
-✅ No IP address needed!
+✅ Using production backend!
 
-Your app is configured to use serverless backend:
+Your app is configured to use:
 - Backend URL: https://mathematico-backend-new.vercel.app
 - No local server required
 - Works from anywhere with internet
-
-If you need to use local backend:
-1. Set REACT_NATIVE_USE_LOCAL_BACKEND=true
-2. Set REACT_NATIVE_LOCAL_BACKEND=your-ip-address
       `,
       [
         { text: 'OK' },
         { text: 'Check Config', onPress: () => console.log('Check src/config.ts for configuration') }
       ]
     );
-  }
-
-
-
-  // Get common IP addresses to try
-  static getCommonIPs(): string[] {
-    return [
-      '192.168.1.100',
-      '192.168.1.101',
-      '192.168.0.100',
-      '192.168.0.101',
-      '10.0.0.100',
-      '172.16.0.100',
-    ];
-  }
-
-  // Auto-detect working IP address (for local development only)
-  static async findWorkingIP(baseIPs: string[] = this.getCommonIPs(), port: number = 5000): Promise<string | null> {
-    // Skip IP detection for serverless backend
-    console.log('⚠️ IP detection skipped - using serverless backend');
-    return null;
   }
 
   // Show network troubleshooting
