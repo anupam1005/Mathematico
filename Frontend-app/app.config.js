@@ -16,7 +16,7 @@ export default {
     name: IS_DEV ? 'Mathematico (Dev)' : 'Mathematico',
     slug: 'mathematico-app',
     version: '8.2.0',
-    jsEngine: 'jsc',
+    jsEngine: 'hermes',
     orientation: 'portrait',
     owner: 'mathematico',
     icon: './assets/icon.png',
