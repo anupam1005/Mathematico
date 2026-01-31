@@ -1,10 +1,7 @@
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-import authService from './authService';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import ErrorHandler from '../utils/errorHandler';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createSafeError } from '../utils/safeError';
 
 // Create a service error handler for courseService
 const errorHandler = createServiceErrorHandler('courseService');
@@ -49,56 +46,13 @@ export interface UpdateCourseData extends Partial<BaseCourseData> {
   isFeatured?: boolean;
 }
 
-// Create axios instance for course endpoints
-const courseApi = axios.create({
-  baseURL: API_CONFIG.mobile, // This will be updated dynamically
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-courseApi.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await authService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
-
-// Response interceptor to handle token refresh
-courseApi.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  async (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
+const mobileApi = withBasePath(API_PATHS.mobile);
 
 class CourseService {
-  private async getAuthHeaders() {
-    let token = await authService.getToken();
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      // Use API_CONFIG directly
-      const fullUrl = `${API_CONFIG.mobile}${endpoint}`;
-      
-      console.log('CourseService: Making request to:', fullUrl);
-      
-      const response = await courseApi({
+      const response = await mobileApi.request({
         url: endpoint,
-        baseURL: API_CONFIG.mobile,
         ...options,
       });
       return response.data;

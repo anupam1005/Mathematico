@@ -1,8 +1,10 @@
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 
 // Create a service error handler for pdfService
 const errorHandler = createServiceErrorHandler('pdfService');
+const mobileApi = withBasePath(API_PATHS.mobile);
 
 export interface SecurePdfViewerResponse {
   success: boolean;
@@ -47,40 +49,17 @@ class PdfService {
    */
   async getSecurePdfViewer(bookId: string): Promise<SecurePdfViewerResponse> {
     try {
-      // Use the base URL from API_CONFIG.mobile without appending /api/v1/mobile again
-      const baseUrl = API_CONFIG.mobile.replace(/\/$/, ''); // Remove trailing slash if exists
-      
-      // Get auth token for authenticated requests
-      const { Storage } = await import('../utils/storage');
-      const token = await Storage.getItem('authToken');
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-      
-      // Add authentication header if token exists
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const requestUrl = `${baseUrl}/books/${bookId}/viewer`;
-      console.log('PdfService: Fetching PDF viewer from:', requestUrl);
-      
-      const response = await fetch(requestUrl, {
-        method: 'GET',
-        headers,
+      const response = await mobileApi.get(`/books/${bookId}/viewer`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to load PDF viewer' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to load PDF viewer');
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to load PDF viewer');
       }
 
       return data;
@@ -95,19 +74,16 @@ class PdfService {
    */
   async getBookDetails(bookId: string): Promise<BookDetailsResponse> {
     try {
-      console.log('PdfService: Fetching book details from:', `${API_CONFIG.mobile}/books/${bookId}`);
-      
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}`, {
-        method: 'GET',
+      const response = await mobileApi.get(`/books/${bookId}`, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      if (!response || response.status < 200 || response.status >= 300) {
+        throw new Error(data?.message || `HTTP error! status: ${response.status}`);
       }
 
       return data;

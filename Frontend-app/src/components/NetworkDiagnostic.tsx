@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
+import { API_BASE_URL } from '../config';
 import { testNetworkConnectivity, testBackendEndpoints } from '../utils/networkTest';
 import { safeCatch } from '../utils/safeCatch';
 
@@ -15,15 +16,12 @@ export const NetworkDiagnostic: React.FC = () => {
       const connectivityTest = await testNetworkConnectivity();
       const endpointsTest = await testBackendEndpoints();
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      
       const results = {
         timestamp: new Date().toISOString(),
         config: {
-          authUrl: `${backendUrl}/api/v1/auth`,
-          baseUrl: backendUrl,
-          isDev: __DEV__
+          authUrl: `${API_BASE_URL}/api/v1/auth`,
+          baseUrl: API_BASE_URL,
+          mode: 'Production'
         },
         connectivity: connectivityTest,
         endpoints: endpointsTest
@@ -50,7 +48,7 @@ export const NetworkDiagnostic: React.FC = () => {
         <Text style={styles.sectionTitle}>Configuration</Text>
         <Text style={styles.text}>Auth URL: {testResults?.config?.authUrl || 'Loading...'}</Text>
         <Text style={styles.text}>Base URL: {testResults?.config?.baseUrl || 'Loading...'}</Text>
-        <Text style={styles.text}>Is Dev: {testResults?.config?.isDev ? 'Yes' : 'No'}</Text>
+        <Text style={styles.text}>Mode: {testResults?.config?.mode || 'Production'}</Text>
       </View>
       
       <Button

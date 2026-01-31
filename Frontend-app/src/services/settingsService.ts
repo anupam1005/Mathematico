@@ -1,8 +1,9 @@
 // settingsService.ts
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { Platform } from 'react-native';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import { safeCatch } from '../utils/safeCatch';
 
 export interface PendingSetting {
@@ -24,20 +25,21 @@ export const getLocalSettings = async (): Promise<UserSettings> => {
   }
 };
 
+const mobileApi = withBasePath(API_PATHS.mobile);
+
 export const getServerSettings = async (): Promise<UserSettings> => {
   try {
-    const response = await fetchWithRetry(
-      `${API_CONFIG.mobile}/settings`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-      }
-    );
-    const data = await response.json();
-    return data.data || { ...DEFAULT_SETTINGS };
+    const response = await requestWithRetry({
+      method: 'GET',
+      url: '/settings',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+    });
+
+    const data = response.data as any;
+    return data?.data || { ...DEFAULT_SETTINGS };
   } catch (error: any) {
     console.error('Error getting server settings');
     throw new Error('Failed to get server settings');
@@ -162,33 +164,29 @@ const handleError = (error: any, defaultMessage: string) => {
   };
 };
 
-const fetchWithRetry = async (
-  url: string,
-  options: RequestInit,
+const requestWithRetry = async <T = any>(
+  config: AxiosRequestConfig,
   retries = 3,
   timeout = 10000
-): Promise<Response> => {
+): Promise<AxiosResponse<T>> => {
   try {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
+    const response = await mobileApi.request<T>({
+      timeout,
+      ...config,
     });
-    
-    clearTimeout(id);
-    
-    if (!response.ok) {
+
+    if (response.status < 200 || response.status >= 300) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     return response;
   } catch (error: any) {
     console.error('Error fetching with retry');
-    if (retries <= 0) throw new Error('Fetch failed after retries');
+    if (retries <= 0) {
+      throw error;
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return fetchWithRetry(url, options, retries - 1, timeout);
+    return requestWithRetry<T>(config, retries - 1, timeout);
   }
 };
 
@@ -202,20 +200,17 @@ export const SettingsService = {
       // Try to get settings from server if online
       if (isConnected) {
         try {
-          const response = await fetchWithRetry(
-            `${API_CONFIG.mobile}/settings`,
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache',
-              },
-            }
-          );
+          const response = await requestWithRetry({
+            method: 'GET',
+            url: '/settings',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+            },
+          });
 
-          const data = await response.json();
-          
-          if (data.success && data.data) {
+          const data = response.data as any;
+          if (data?.success && data?.data) {
             // Save to local storage
             await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.data));
             return {
@@ -285,20 +280,18 @@ export const SettingsService = {
 
       // Try to sync with server
       try {
-        const response = await fetchWithRetry(
-          `${API_CONFIG.mobile}/settings`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newSettings),
-          }
-        );
+        const response = await requestWithRetry({
+          method: 'PUT',
+          url: '/settings',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: newSettings,
+        });
 
-        const data = await response.json();
-        
-        if (data.success) {
+        const data = response.data as any;
+
+        if (data?.success) {
           // Clear any pending settings
           await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
           return {
@@ -349,18 +342,16 @@ export const SettingsService = {
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) return false;
 
-      const response = await fetchWithRetry(
-        `${API_CONFIG.mobile}/settings`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: pendingSettings,
-        }
-      );
+      const response = await requestWithRetry({
+        method: 'PUT',
+        url: '/settings',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        data: JSON.parse(pendingSettings),
+      });
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
         return true;
       }

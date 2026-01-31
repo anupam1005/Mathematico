@@ -1,11 +1,9 @@
 // src/services/adminService.ts
-import axios from "axios";
+import type { AxiosRequestConfig } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import authService from "./authService";
-import { API_CONFIG } from "../config";
-import { Storage } from "../utils/storage";
-import { createSafeError } from '../utils/safeError';
+import authService from './authService';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
@@ -80,42 +78,23 @@ function toSnakeCase(obj: any): any {
   return obj;
 }
 
-// ----------------- AXIOS INSTANCE -----------------
-const adminApi = axios.create({
-  baseURL: API_CONFIG.admin, // This will be updated dynamically
-  timeout: 30000, // 30 seconds timeout
-  validateStatus: (status) => status < 500,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
-});
+const baseAdminApi = withBasePath(API_PATHS.admin);
+const adminRequestConfig = {
+  validateStatus: (status: number) => status < 500,
+};
 
-// Request interceptor to add auth token
-adminApi.interceptors.request.use(
-  async (config) => {
-    try {
-      const token = await authService.getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error: any) {
-      console.log('AdminService: Error getting token');
-    }
-    return config;
-  },
-  (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
-
-// Response interceptor to handle token refresh
-adminApi.interceptors.response.use(
-  (response) => response,
-  async (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
+const adminApi = {
+  get: <T = any>(path: string, config: AxiosRequestConfig = {}) =>
+    baseAdminApi.get<T>(path, { ...adminRequestConfig, ...config }),
+  delete: <T = any>(path: string, config: AxiosRequestConfig = {}) =>
+    baseAdminApi.delete<T>(path, { ...adminRequestConfig, ...config }),
+  post: <T = any>(path: string, data?: any, config: AxiosRequestConfig = {}) =>
+    baseAdminApi.post<T>(path, data, { ...adminRequestConfig, ...config }),
+  put: <T = any>(path: string, data?: any, config: AxiosRequestConfig = {}) =>
+    baseAdminApi.put<T>(path, data, { ...adminRequestConfig, ...config }),
+  request: <T = any>(config: AxiosRequestConfig) =>
+    baseAdminApi.request<T>({ ...adminRequestConfig, ...config }),
+};
 
 // ----------------- ADMIN SERVICE CLASS -----------------
 class AdminService {
@@ -245,34 +224,15 @@ class AdminService {
 
       // Check if bookData is FormData or regular object
       const isFormData = bookData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = bookData;
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(bookData);
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.post('/books', bookData, config);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/books`, {
-        method: 'POST',
-        headers,
-        body
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Book created successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -296,34 +256,15 @@ class AdminService {
 
       // Check if bookData is FormData or regular object
       const isFormData = bookData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = bookData;
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(bookData);
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/books/${id}`, bookData, config);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/books/${id}`, {
-        method: 'PUT',
-        headers,
-        body
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Book updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -345,21 +286,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/books/${id}/status`, { status });
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/books/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Book status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -381,19 +311,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.delete(`/books/${id}`);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/books/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Book deleted successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -447,41 +368,16 @@ class AdminService {
 
       // Check if courseData is FormData or regular object
       const isFormData = courseData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = courseData;
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(courseData);
+
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.post('/courses', courseData, config);
+      const result = response.data;
       
-      errorHandler.logInfo('AdminService: Making request to:', `${adminUrl}/courses`);
-      errorHandler.logInfo('AdminService: Request headers:', headers);
-      errorHandler.logInfo('AdminService: Request body type:', typeof body);
-      
-      const response = await fetch(`${adminUrl}/courses`, {
-        method: 'POST',
-        headers,
-        body
-      });
-      
-      errorHandler.logInfo('AdminService: Response status:', response.status);
-      errorHandler.logInfo('AdminService: Response ok:', response.ok);
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Course created successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -514,34 +410,16 @@ class AdminService {
 
       // Check if courseData is FormData or regular object
       const isFormData = courseData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = courseData;
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(courseData);
+
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/courses/${id}`, courseData, config);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/courses/${id}`, {
-        method: 'PUT',
-        headers,
-        body
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Course updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -563,21 +441,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/courses/${id}/status`, { status });
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/courses/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Course status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -599,19 +466,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const backendUrl = API_CONFIG.admin.replace('/api/v1/admin', '');
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.delete(`/courses/${id}`);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/courses/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Course deleted successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -626,7 +484,6 @@ class AdminService {
 
   // Live Classes
   async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
-    // ... (rest of the code remains the same)
     try {
       const response = await adminApi.get(`/live-classes?page=${page}&limit=${limit}`);
       return {
@@ -667,39 +524,16 @@ class AdminService {
 
       // Check if liveClassData is FormData or regular object
       const isFormData = liveClassData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = liveClassData;
-        console.log('AdminService: Sending FormData to backend');
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(liveClassData);
-        console.log('AdminService: Sending JSON data to backend');
+
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const adminUrl = API_CONFIG.admin;
-      console.log('AdminService: Posting to URL:', `${adminUrl}/live-classes`);
+      const response = await adminApi.post('/live-classes', liveClassData, config);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/live-classes`, {
-        method: 'POST',
-        headers,
-        body
-      });
-
-      console.log('AdminService: Response status:', response.status, response.statusText);
-      
-      const result = await response.json();
-      console.log('AdminService: Response data:', result);
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Live class created successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -725,33 +559,16 @@ class AdminService {
 
       // Check if liveClassData is FormData or regular object
       const isFormData = liveClassData instanceof FormData;
-      
-      const headers: any = {
-        'Authorization': `Bearer ${token}`
-      };
-      
-      let body: any;
-      
-      if (isFormData) {
-        // For FormData, don't set Content-Type, let the browser set it with boundary
-        body = liveClassData;
-      } else {
-        // For JSON data
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(liveClassData);
+
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
       }
 
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/live-classes/${id}`, liveClassData, config);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/live-classes/${id}`, {
-        method: 'PUT',
-        headers,
-        body
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Live class updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -773,20 +590,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.put(`/live-classes/${id}/status`, { status });
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/live-classes/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Live class status updated successfully:', result);
         return { success: true, data: result.data };
       } else {
@@ -808,18 +615,10 @@ class AdminService {
         return { success: false, error: 'No authentication token found' };
       }
 
-      const adminUrl = API_CONFIG.admin;
+      const response = await adminApi.delete(`/live-classes/${id}`);
+      const result = response.data;
       
-      const response = await fetch(`${adminUrl}/live-classes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         errorHandler.logInfo('AdminService: Live class deleted successfully:', result);
         return { success: true, data: result.data };
       } else {

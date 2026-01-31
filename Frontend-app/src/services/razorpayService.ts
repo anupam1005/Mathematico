@@ -1,10 +1,12 @@
 // Razorpay Payment Service
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
 
 // Create a service error handler for razorpayService
 const errorHandler = createServiceErrorHandler('razorpayService');
+const mobileApi = withBasePath(API_PATHS.mobile);
 
 // LAZY LOAD: Defer native module initialization to prevent Hermes frozen object crash
 let RazorpayCheckoutNative: any = null;
@@ -66,21 +68,16 @@ class RazorpayService {
       const authToken = await this.getAuthToken();
       console.log('Auth token available:', !!authToken);
       
-      const url = `${API_CONFIG.mobile}/payments/create-order`;
-      console.log('Request URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'POST',
+      const response = await mobileApi.post('/payments/create-order', paymentOptions, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify(paymentOptions),
       });
 
       console.log('Response status:', response.status);
       
-      const data = await response.json();
+      const data = response.data;
       console.log('Response data:', data);
 
       if (data.success) {
@@ -116,16 +113,14 @@ class RazorpayService {
     try {
       errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
       
-      const response = await fetch(`${API_CONFIG.mobile}/payments/verify`, {
-        method: 'POST',
+      const response = await mobileApi.post('/payments/verify', paymentData, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`,
+          Authorization: `Bearer ${await this.getAuthToken()}`,
         },
-        body: JSON.stringify(paymentData),
       });
 
-      const data = await response.json();
+      const data = response.data;
       errorHandler.logInfo('RazorpayService: Payment verification response:', data);
 
       if (data.success) {
@@ -158,15 +153,14 @@ class RazorpayService {
     try {
       console.log('RazorpayService: Fetching payment history');
       
-      const response = await fetch(`${API_CONFIG.mobile}/payments/history`, {
-        method: 'GET',
+      const response = await mobileApi.get('/payments/history', {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`,
+          Authorization: `Bearer ${await this.getAuthToken()}`,
         },
       });
 
-      const data = await response.json();
+      const data = response.data;
       errorHandler.logInfo('RazorpayService: Payment history response:', data);
 
       if (data.success) {
@@ -203,10 +197,7 @@ class RazorpayService {
 
     try {
       console.log('RazorpayService: Fetching configuration from backend...');
-      console.log('RazorpayService: Config URL:', `${API_CONFIG.mobile}/payments/config`);
-      
-      const response = await fetch(`${API_CONFIG.mobile}/payments/config`, {
-        method: 'GET',
+      const response = await mobileApi.get('/payments/config', {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -214,7 +205,7 @@ class RazorpayService {
 
       console.log('RazorpayService: Config response status:', response.status);
       
-      const data = await response.json();
+      const data = response.data;
       console.log('RazorpayService: Config response data:', data);
       
       if (data.success && data.data) {

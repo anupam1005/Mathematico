@@ -1,57 +1,13 @@
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import { createSafeError } from '../utils/safeError';
 import type { ApiError } from '../utils/errorHandler';
-import { Storage } from '../utils/storage';
-import { safeCatch } from '../utils/safeCatch';
 
 // Create a service error handler for mobileService
 const errorHandler = createServiceErrorHandler('mobileService');
 
-// Create axios instance for mobile endpoints
-const mobileApi = axios.create({
-  baseURL: API_CONFIG.mobile, // This will be updated dynamically
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-mobileApi.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await Storage.getItem<string>('authToken', false);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error: AxiosError) => {
-    const safeError = createSafeError(error);
-    return Promise.reject(safeError);
-  }
-);
-
-// Response interceptor to handle errors
-mobileApi.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  async (error: AxiosError) => {
-    const safeError = createSafeError(error);
-    
-    if (safeError.response?.status === 401) {
-      try {
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-      } catch (cleanupError) {
-        safeCatch('mobileService.clearTokens')(cleanupError);
-      }
-    }
-    
-    return Promise.reject(safeError);
-  }
-);
+const mobileApi = withBasePath(API_PATHS.mobile);
 
 export interface MobileApiResponse<T> {
   success: boolean;

@@ -1,10 +1,7 @@
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-import authService from './authService';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import ErrorHandler from '../utils/errorHandler';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createSafeError } from '../utils/safeError';
 
 // Create a service error handler for liveClassService
 const errorHandler = createServiceErrorHandler('liveClassService');
@@ -48,62 +45,19 @@ export interface UpdateLiveClassData extends Partial<BaseLiveClassData> {
   isFeatured?: boolean;
 }
 
-// Create axios instance for live class endpoints
-const liveClassApi = axios.create({
-  baseURL: API_CONFIG.mobile, // This will be updated dynamically
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-liveClassApi.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await authService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
-
-// Response interceptor to handle token refresh
-liveClassApi.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  async (error: any) => {
-    return Promise.reject(createSafeError(error));
-  }
-);
+const mobileApi = withBasePath(API_PATHS.mobile);
 
 class LiveClassService {
-  private async getAuthHeaders() {
-    let token = await authService.getToken();
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      // Ensure we're using the correct backend URL
-      const backendUrl = API_CONFIG.mobile.replace(/\/$/, '');
-      const fullUrl = `${backendUrl}${endpoint}`;
-      
-      console.log('LiveClassService: Making request to:', fullUrl);
-      
-      const response = await liveClassApi({
+      const response = await mobileApi.request({
         url: endpoint,
-        baseURL: backendUrl,
         ...options,
       });
       return response.data;
     } catch (error) {
       console.error('LiveClassService: Request failed');
+
       throw ErrorHandler.handleApiError(error);
     }
   }

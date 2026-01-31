@@ -1,40 +1,9 @@
-import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from './apiClient';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
 
-/* ------------------------------------------------------------------ */
-/* Axios instance (NO logging, NO raw rejects)                          */
-/* ------------------------------------------------------------------ */
-
-const api: AxiosInstance = axios.create({
-  baseURL: API_CONFIG.auth,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  },
-});
-
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    try {
-      const token = await Storage.getItem('authToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch {
-      // ignore token read failures
-    }
-    return config;
-  },
-  () => Promise.reject({ message: 'Request preparation failed' })
-);
-
-api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: unknown) => Promise.reject(createSafeError(error))
-);
+const authApi = withBasePath(API_PATHS.auth);
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -65,7 +34,7 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await api.post('/login', { email, password });
+      const response = await authApi.post('/login', { email, password });
       const payload = response?.data;
 
       if (!payload?.success || !payload?.data?.accessToken) {
@@ -120,7 +89,7 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      const response = await api.post('/register', { name, email, password });
+      const response = await authApi.post('/register', { name, email, password });
       const payload = response?.data;
 
       if (!payload?.success) {
@@ -157,7 +126,7 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      await api.post('/logout');
+      await authApi.post('/logout');
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       return { success: true, message: 'Logout successful' };
@@ -196,7 +165,7 @@ const authService = {
         return { success: false, message: 'No refresh token available' };
       }
 
-      const response = await api.post('/refresh-token', { refreshToken: refreshTokenValue });
+      const response = await authApi.post('/refresh-token', { refreshToken: refreshTokenValue });
       const payload = response?.data;
 
       if (!payload?.success || !payload?.data?.accessToken) {
@@ -242,7 +211,7 @@ const authService = {
 
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const response = await api.put('/profile', data);
+      const response = await authApi.put('/profile', data);
       const payload = response?.data;
 
       if (!payload?.success) {

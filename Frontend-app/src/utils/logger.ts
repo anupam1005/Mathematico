@@ -1,23 +1,16 @@
 /**
  * Production-safe logger utility
- * Automatically disables console logs in production builds
  */
 
 import { safeCatch } from './safeCatch';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
 export const Logger = {
   log: (...args: any[]) => {
-    if (isDevelopment) {
-      console.log(...args);
-    }
+    console.log(...args);
   },
 
   info: (...args: any[]) => {
-    if (isDevelopment) {
-      console.info(...args);
-    }
+    console.info(...args);
   },
 
   warn: (...args: any[]) => {
@@ -51,9 +44,7 @@ export const Logger = {
   },
 
   debug: (...args: any[]) => {
-    if (isDevelopment) {
-      console.debug(...args);
-    }
+    console.debug(...args);
   },
 
   // For critical production errors that need tracking
@@ -67,13 +58,5 @@ export const Logger = {
     // TODO: Add error tracking service here (e.g., Sentry)
   }
 };
-
-// Disable console in production builds
-if (!isDevelopment) {
-  // Keep error and warn for critical issues
-  console.log = () => {};
-  console.debug = () => {};
-  console.info = () => {};
-}
 
 export default Logger;

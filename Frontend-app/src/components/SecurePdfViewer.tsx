@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
-import { API_CONFIG } from '../config';
+import { API_PATHS } from '../config';
+import { withBasePath } from '../services/apiClient';
 import { safeCatch } from '../utils/safeCatch';
 
 interface SecurePdfViewerProps {
@@ -14,6 +15,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
   const [viewerUrl, setViewerUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const mobileApi = withBasePath(API_PATHS.mobile);
 
   useEffect(() => {
     fetchSecureViewerUrl();
@@ -39,17 +41,8 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch(`${API_CONFIG.mobile}/books/${bookId}/viewer`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to load PDF viewer' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await mobileApi.get(`/books/${bookId}/viewer`, { headers });
+      const data = response.data;
 
       if (data.success && data.data?.viewerUrl) {
         setViewerUrl(data.data.viewerUrl);

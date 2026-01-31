@@ -8,7 +8,6 @@ export class NetworkUtils {
   static getNetworkInfo() {
     return {
       platform: Platform.OS,
-      isDev: __DEV__,
       userAgent: Platform.select({
         ios: 'iOS',
         android: 'Android',
@@ -26,7 +25,7 @@ export class NetworkUtils {
 ✅ Using production backend!
 
 Your app is configured to use:
-- Backend URL: https://mathematico-backend-new.vercel.app
+- A production HTTPS backend
 - No local server required
 - Works from anywhere with internet
       `,

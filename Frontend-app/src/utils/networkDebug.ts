@@ -1,17 +1,16 @@
 import { Platform } from 'react-native';
+import { API_BASE_URL, API_PATHS } from '../config';
 import { safeCatch } from './safeCatch';
 
 export const debugNetworkConfiguration = async () => {
   console.log('🔍 Network Configuration Debug:');
   console.log('📱 Platform:', Platform.OS);
   
-  const { getBackendUrl } = await import('../config');
-  const backendUrl = await getBackendUrl();
-  const authUrl = `${backendUrl}/api/v1/auth`;
+  const backendUrl = API_BASE_URL;
+  const authUrl = `${backendUrl}${API_PATHS.auth}`;
   
   console.log('🌐 Auth URL:', authUrl);
   console.log('🌐 Base URL:', backendUrl);
-  console.log('🌐 Is Dev:', __DEV__);
   console.log('🌐 Backend URL:', backendUrl);
   
   // Test different URL formats
@@ -20,9 +19,9 @@ export const debugNetworkConfiguration = async () => {
     `${authUrl}/health`,
     `${authUrl}/register`,
     backendUrl,
-    'https://mathematico-backend-new.vercel.app',
-    'https://mathematico-backend-new.vercel.app/api/v1/auth',
-    'https://mathematico-backend-new.vercel.app/api/v1/auth/health'
+    backendUrl,
+    `${backendUrl}${API_PATHS.auth}`,
+    `${backendUrl}${API_PATHS.auth}/health`
   ];
   
   console.log('🧪 Test URLs:');
@@ -34,7 +33,6 @@ export const debugNetworkConfiguration = async () => {
     platform: Platform.OS,
     authUrl: authUrl,
     baseUrl: backendUrl,
-    isDev: __DEV__,
     testUrls
   };
 };
@@ -51,7 +49,7 @@ export const testDirectConnection = async (): Promise<{
     
     // Test 1: Root endpoint
     try {
-      const rootResponse = await fetch('https://mathematico-backend-new.vercel.app/', {
+      const rootResponse = await fetch(`${API_BASE_URL}/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +72,7 @@ export const testDirectConnection = async (): Promise<{
     
     // Test 2: Auth health endpoint
     try {
-      const healthResponse = await fetch('https://mathematico-backend-new.vercel.app/api/v1/auth/health', {
+      const healthResponse = await fetch(`${API_BASE_URL}${API_PATHS.auth}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +95,7 @@ export const testDirectConnection = async (): Promise<{
     
     // Test 3: Auth register endpoint (without actually registering)
     try {
-      const registerResponse = await fetch('https://mathematico-backend-new.vercel.app/api/v1/auth/register', {
+      const registerResponse = await fetch(`${API_BASE_URL}${API_PATHS.auth}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

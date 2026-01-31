@@ -4,6 +4,7 @@ import { Card, Button, Chip, ActivityIndicator } from 'react-native-paper';
 import { Icon, type IconName } from './Icon';
 import { NetworkUtils } from '../utils/networkUtils';
 import { designSystem } from '../styles/designSystem';
+import { API_BASE_URL } from '../config';
 import { testNetworkConnectivity } from '../utils/networkTest';
 import { safeCatch } from '../utils/safeCatch';
 
@@ -26,13 +27,10 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
       const result = await testNetworkConnectivity();
       setIsConnected(result.success);
       
-      const { getBackendUrl } = await import('../config');
-      const backendUrl = await getBackendUrl();
-      
       setConnectionInfo({
         platform: 'React Native',
-        baseURL: backendUrl,
-        isDev: __DEV__
+        baseURL: API_BASE_URL,
+        mode: 'Production'
       });
       onConnectionChange?.(result.success);
     } catch (error) {
@@ -89,7 +87,7 @@ export default function NetworkStatus({ onConnectionChange }: NetworkStatusProps
               API URL: {connectionInfo.baseURL}
             </Text>
             <Text style={styles.infoText}>
-              Mode: {connectionInfo.isDev ? 'Development' : 'Production'}
+              Mode: {connectionInfo.mode}
             </Text>
           </View>
         )}

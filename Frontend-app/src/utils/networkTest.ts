@@ -1,9 +1,10 @@
-import axios from 'axios';
-import { API_CONFIG } from '../config';
+import { API_BASE_URL, API_PATHS } from '../config';
+import { withBasePath } from '../services/apiClient';
 import { testDirectConnection } from './networkDebug';
 import { safeCatch } from './safeCatch';
 
-const AUTH_URL = API_CONFIG.auth;
+const authApi = withBasePath(API_PATHS.auth);
+const AUTH_URL = `${API_BASE_URL}${API_PATHS.auth}`;
 
 export const testNetworkConnectivity = async (): Promise<{
   success: boolean;
@@ -37,7 +38,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('🔄 Direct test failed, trying axios...');
     
     // Test 1: Basic connectivity
-    const healthResponse = await axios.get(`${authUrl}/health`, {
+    const healthResponse = await authApi.get('/health', {
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -48,7 +49,7 @@ export const testNetworkConnectivity = async (): Promise<{
     console.log('✅ Health check successful:', healthResponse.data);
     
     // Test 2: Test registration endpoint (without actually registering)
-    const testResponse = await axios.post(`${authUrl}/register`, {
+    const testResponse = await authApi.post('/register', {
       name: 'Network Test',
       email: 'network-test@example.com',
       password: 'test123'
@@ -129,7 +130,7 @@ export const testBackendEndpoints = async (): Promise<{
     const authUrl = AUTH_URL;
     // Test health endpoint
     try {
-      const healthResponse = await axios.get(`${authUrl}/health`, { timeout: 5000 });
+      const healthResponse = await authApi.get('/health', { timeout: 5000 });
       endpoints.health = { success: true, status: healthResponse.status, data: healthResponse.data };
     } catch (error: any) {
       safeCatch('NetworkTest.testBackendEndpoints.health')(error);
@@ -138,7 +139,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test register endpoint
     try {
-      const registerResponse = await axios.post(`${authUrl}/register`, {
+      const registerResponse = await authApi.post('/register', {
         name: 'Test User',
         email: 'test@example.com',
         password: 'password123'
@@ -151,7 +152,7 @@ export const testBackendEndpoints = async (): Promise<{
     
     // Test login endpoint
     try {
-      const loginResponse = await axios.post(`${authUrl}/login`, {
+      const loginResponse = await authApi.post('/login', {
         email: 'test@example.com',
         password: 'password123'
       }, { timeout: 5000, validateStatus: (status) => status < 500 });
