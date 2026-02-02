@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import authService from '../services/authService';
 import { Storage } from '../utils/storage';
 import { safeCatch } from '../utils/safeCatch';
@@ -125,8 +125,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await Storage.setItem('refreshToken', refreshToken);
-          console.log('AuthContext: Refresh token stored after login');
+          if (Platform.OS !== 'web') {
+            await Storage.setItem('refreshToken', refreshToken);
+            console.log('AuthContext: Refresh token stored after login');
+          }
         }
         
         // Convert backend user data to our User interface
@@ -188,8 +190,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          await Storage.setItem('refreshToken', refreshToken);
-          console.log('AuthContext: Refresh token stored after registration');
+          if (Platform.OS !== 'web') {
+            await Storage.setItem('refreshToken', refreshToken);
+            console.log('AuthContext: Refresh token stored after registration');
+          }
         }
         
         // Convert backend user data to our User interface
@@ -269,11 +273,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const refreshTokenValue = await Storage.getItem('refreshToken');
-      if (!refreshTokenValue) {
-        return false;
-      }
-
       const response = await authService.refreshToken();
       
       if (response.success && response.data) {
@@ -283,7 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (newAccessToken) {
           await Storage.setItem('authToken', newAccessToken);
         }
-        if (newRefreshToken) {
+        if (newRefreshToken && Platform.OS !== 'web') {
           await Storage.setItem('refreshToken', newRefreshToken);
         }
         

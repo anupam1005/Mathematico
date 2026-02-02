@@ -378,18 +378,18 @@ paths:
                         properties:
                           user:
                             $ref: '#/components/schemas/User'
-                          tokens:
-                            type: object
-                            properties:
-                              accessToken:
-                                type: string
-                                description: JWT access token
-                              refreshToken:
-                                type: string
-                                description: JWT refresh token
-                              expiresIn:
-                                type: number
-                                description: Token expiration time in seconds
+                          accessToken:
+                            type: string
+                            description: JWT access token
+                          refreshToken:
+                            type: string
+                            description: Refresh token (may be returned for native clients)
+                          tokenType:
+                            type: string
+                            example: Bearer
+                          expiresIn:
+                            type: string
+                            description: Token expiration time (e.g., 15m)
         '400':
           description: Missing email or password
           content:

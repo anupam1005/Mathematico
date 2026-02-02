@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middlewares/auth');
 
 // Import controllers
 const mobileController = require('../controllers/mobileController');
 const paymentController = require('../controllers/paymentController');
+const profileController = require('../controllers/profileController');
+const studentController = require('../controllers/studentController');
 console.log('✅ MobileController loaded successfully');
 
 // ============= ROUTE DEFINITIONS =============
@@ -49,18 +52,7 @@ router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
 router.put('/live-classes/:id/start', mobileController.startLiveClass);
 router.put('/live-classes/:id/end', mobileController.endLiveClass);
-router.post('/live-classes/:id/join', (req, res) => {
-  const { id } = req.params;
-  console.log('📱 Student joining live class:', id);
-  res.json({
-    success: true,
-    data: {
-      joinLink: 'https://meet.google.com/sample-meeting-link',
-      message: 'Join link generated successfully'
-    },
-    message: 'Ready to join live class'
-  });
-});
+router.post('/live-classes/:id/join', authenticateToken, studentController.joinLiveClass);
 
 // Search routes
 router.get('/search', mobileController.search);
@@ -92,34 +84,9 @@ router.get('/stats', (req, res) => {
 });
 
 // Settings routes
-router.get('/settings', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      pushNotifications: true,
-      emailNotifications: true,
-      courseUpdates: true,
-      liveClassReminders: true,
-      darkMode: false,
-      autoPlayVideos: true,
-      downloadQuality: 'High',
-      language: 'en',
-      timezone: 'UTC',
-      theme: 'light'
-    },
-    message: 'Settings retrieved successfully (mock data)'
-  });
-});
+router.get('/settings', authenticateToken, profileController.getUserSettings);
 
-router.put('/settings', (req, res) => {
-  const settings = req.body;
-  console.log('📱 Mobile settings update:', settings);
-  res.json({
-    success: true,
-    message: 'Settings updated successfully (mock response)',
-    data: settings
-  });
-});
+router.put('/settings', authenticateToken, profileController.updateUserSettings);
 
 // Payment routes
 router.post('/payments/create-order', paymentController.createOrder);

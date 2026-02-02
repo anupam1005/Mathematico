@@ -2,6 +2,7 @@
 const connectDB = require('../config/database');
 const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
+const { uploadFileToCloud } = require('../utils/fileUpload');
 
 // Serverless timeout wrapper (Vercel has 30s limit)
 const withTimeout = (fn, timeoutMs = 25000) => {
@@ -26,6 +27,7 @@ const withTimeout = (fn, timeoutMs = 25000) => {
 
 // Import models
 let BookModel, UserModel, CourseModel, LiveClassModel;
+let PaymentModel;
 try {
   BookModel = require('../models/Book');
   UserModel = require('../models/User');
@@ -34,6 +36,12 @@ try {
   console.log('✅ Admin models loaded successfully');
 } catch (error) {
   console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
+}
+
+try {
+  PaymentModel = require('../models/Payment');
+} catch (_) {
+  PaymentModel = null;
 }
 
 // Configure Cloudinary (with serverless-safe initialization)
@@ -209,30 +217,241 @@ const getUserById = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'User creation is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    await connectDB();
+
+    const { name, email, password, role, isActive, isEmailVerified, isAdmin } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required'
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const existingUser = await UserModel.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+
+    let normalizedRole = 'student';
+    const candidateRole = isAdmin === true ? 'admin' : role;
+    if (['student', 'admin', 'teacher'].includes(candidateRole)) {
+      normalizedRole = candidateRole;
+    }
+
+    const user = await UserModel.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password,
+      role: normalizedRole,
+      isActive: isActive !== false,
+      isEmailVerified: isEmailVerified === true
+    });
+
+    const publicUser = user.getPublicProfile ? user.getPublicProfile() : user;
+
+    return res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: publicUser,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create user',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const updateUser = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'User update is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { name, email, password, role, isActive, isEmailVerified, isAdmin } = req.body;
+
+    const user = await UserModel.findById(id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (email) {
+      const normalizedEmail = email.toLowerCase();
+      const existing = await UserModel.findOne({ email: normalizedEmail, _id: { $ne: id } });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
+      user.email = normalizedEmail;
+    }
+
+    if (name) user.name = name.trim();
+
+    const candidateRole = isAdmin === true ? 'admin' : role;
+    if (candidateRole && ['student', 'admin', 'teacher'].includes(candidateRole)) {
+      user.role = candidateRole;
+    }
+
+    if (typeof isActive === 'boolean') {
+      user.isActive = isActive;
+    }
+
+    if (typeof isEmailVerified === 'boolean') {
+      user.isEmailVerified = isEmailVerified;
+    }
+
+    if (password) {
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 8 characters'
+        });
+      }
+      user.password = password;
+    }
+
+    user.updatedAt = new Date();
+    await user.save();
+
+    const publicUser = user.getPublicProfile ? user.getPublicProfile() : user;
+
+    return res.json({
+      success: true,
+      message: 'User updated successfully',
+      data: publicUser,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const deleteUser = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'User deletion is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    if (req.user && req.user.id && req.user.id.toString() === id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot delete your own account'
+      });
+    }
+
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role === 'admin' && user.email === (process.env.ADMIN_EMAIL || '').toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete primary admin account'
+      });
+    }
+
+    await UserModel.findByIdAndDelete(id);
+
+    return res.json({
+      success: true,
+      message: 'User deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updateUserStatus = async (req, res) => {
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { status, isActive } = req.body;
+
+    let nextStatus;
+    if (typeof isActive === 'boolean') {
+      nextStatus = isActive;
+    } else if (typeof status === 'boolean') {
+      nextStatus = status;
+    } else if (typeof status === 'string') {
+      const normalized = status.toLowerCase();
+      if (['active', 'true', '1'].includes(normalized)) {
+        nextStatus = true;
+      } else if (['inactive', 'false', '0'].includes(normalized)) {
+        nextStatus = false;
+      }
+    }
+
+    if (typeof nextStatus !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status is required'
+      });
+    }
+
+    const user = await UserModel.findByIdAndUpdate(
+      id,
+      { isActive: nextStatus, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'User status updated successfully',
+      data: user.getPublicProfile ? user.getPublicProfile() : user,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 // ============= BOOK MANAGEMENT =============
@@ -240,10 +459,7 @@ const deleteUser = async (req, res) => {
 const getAllBooks = async (req, res) => {
   try {
     if (!BookModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Book model unavailable' 
-      });
+      return res.status(503).json({ success: false, message: 'Book model unavailable' });
     }
 
     // Ensure DB is connected (serverless-safe)
@@ -265,9 +481,7 @@ const getAllBooks = async (req, res) => {
 
     // Build query
     const query = {};
-    if (status) {
-      query.status = status;
-    }
+    if (status) query.status = status;
 
     // Get books with pagination
     console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
@@ -512,7 +726,6 @@ const updateBook = async (req, res) => {
         error: dbError.message
       });
     }
-
     const { id } = req.params;
     const updateData = req.body;
 
@@ -520,6 +733,32 @@ const updateBook = async (req, res) => {
     delete updateData._id;
     delete updateData.createdBy;
     delete updateData.createdAt;
+
+    if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+      try {
+        const coverResult = await uploadFileToCloud(
+          req.files.coverImage[0],
+          'mathematico/books/covers',
+          'cloudinary'
+        );
+        updateData.coverImage = coverResult.url;
+      } catch (uploadError) {
+        console.error('Cover image upload error:', uploadError);
+      }
+    }
+
+    if (req.files && req.files.pdfFile && req.files.pdfFile[0]) {
+      try {
+        const pdfResult = await uploadFileToCloud(
+          req.files.pdfFile[0],
+          'mathematico/books/pdfs',
+          'cloudinary'
+        );
+        updateData.pdfFile = pdfResult.url;
+      } catch (uploadError) {
+        console.error('PDF upload error:', uploadError);
+      }
+    }
 
     const book = await BookModel.findByIdAndUpdate(
       id,
@@ -552,284 +791,6 @@ const updateBook = async (req, res) => {
   }
 };
 
-const updateBookStatus = async (req, res) => {
-  try {
-    if (!BookModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Book model unavailable' 
-      });
-    }
-
-    // Ensure DB is connected (serverless-safe)
-    try {
-      await connectDB();
-    } catch (dbError) {
-      console.error('❌ Database connection failed:', dbError);
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        error: dbError.message
-      });
-    }
-
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status || !['draft', 'published', 'archived'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid status (draft, published, archived) is required'
-      });
-    }
-
-    // Prepare update data
-    const updateData = { 
-      status, 
-      updatedAt: new Date() 
-    };
-    
-    // Set publishedAt when status changes to 'published'
-    if (status === 'published') {
-      updateData.publishedAt = new Date();
-    }
-
-    const book = await BookModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'name email');
-
-    if (!book) {
-      return res.status(404).json({
-        success: false,
-        message: 'Book not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `Book ${status} successfully`,
-      data: book,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Update book status error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update book status',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const deleteBook = async (req, res) => {
-  try {
-    if (!BookModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Book model unavailable' 
-      });
-    }
-
-    // Ensure DB is connected (serverless-safe)
-    try {
-      await connectDB();
-    } catch (dbError) {
-      console.error('❌ Database connection failed:', dbError);
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection failed',
-        error: dbError.message
-      });
-    }
-
-    const { id } = req.params;
-
-    const book = await BookModel.findByIdAndDelete(id);
-
-    if (!book) {
-      return res.status(404).json({
-        success: false,
-        message: 'Book not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Book deleted successfully',
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Delete book error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete book',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// ============= COURSE MANAGEMENT =============
-
-const getAllCourses = async (req, res) => {
-  try {
-    if (!CourseModel) {
-      return res.status(503).json({ success: false, message: 'Course model unavailable' });
-    }
-
-    await connectDB();
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const { status, category, subject, grade } = req.query;
-
-    const query = {};
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (subject) query.subject = subject;
-    if (grade) query.grade = grade;
-
-    const courses = await CourseModel.find(query)
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await CourseModel.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: courses,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch courses',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const getCourseById = async (req, res) => {
-  try {
-    if (!CourseModel) {
-      return res.status(503).json({ success: false, message: 'Course model unavailable' });
-    }
-
-    await connectDB();
-    const { id } = req.params;
-
-    const course = await CourseModel.findById(id)
-      .populate('createdBy', 'name email')
-      .populate('enrolledStudents.student', 'name email');
-
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    res.json({
-      success: true,
-      data: course,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error fetching course:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch course',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const createCourse = async (req, res) => {
-  try {
-    if (!CourseModel) {
-      return res.status(503).json({ success: false, message: 'Course model unavailable' });
-    }
-
-    await connectDB();
-
-    const courseData = {
-      ...req.body,
-      createdBy: req.user.id,
-      status: 'draft'
-    };
-
-    // Handle instructor data
-    if (req.body.instructorName) {
-      courseData.instructor = {
-        name: req.body.instructorName
-      };
-    }
-
-    // Handle file upload if present
-    if (req.files && req.files.image && req.files.image[0]) {
-      try {
-        const imageResult = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { 
-              resource_type: 'image', 
-              folder: 'mathematico/courses/thumbnails',
-              public_id: `course_${Date.now()}`,
-              format: 'jpg',
-              quality: 'auto'
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          uploadStream.end(req.files.image[0].buffer);
-        });
-        courseData.thumbnail = imageResult.secure_url;
-      } catch (uploadError) {
-        console.error('File upload error:', uploadError);
-      }
-    } else if (req.body.thumbnail) {
-      // Handle thumbnail URL if provided directly
-      courseData.thumbnail = req.body.thumbnail;
-    }
-
-    const course = await CourseModel.create(courseData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Course created successfully',
-      data: course,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Create course error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create course',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
 const updateCourse = async (req, res) => {
   try {
     if (!CourseModel) {
@@ -843,6 +804,29 @@ const updateCourse = async (req, res) => {
     delete updateData._id;
     delete updateData.createdBy;
     delete updateData.createdAt;
+
+    if (req.body.instructorName) {
+      updateData.instructor = {
+        ...(updateData.instructor || {}),
+        name: req.body.instructorName
+      };
+      delete updateData.instructorName;
+    }
+
+    if (req.files && req.files.image && req.files.image[0]) {
+      try {
+        const imageResult = await uploadFileToCloud(
+          req.files.image[0],
+          'mathematico/courses/thumbnails',
+          'cloudinary'
+        );
+        updateData.thumbnail = imageResult.url;
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    } else if (req.body.thumbnail) {
+      updateData.thumbnail = req.body.thumbnail;
+    }
 
     const course = await CourseModel.findByIdAndUpdate(
       id,
@@ -1440,6 +1424,99 @@ const getPaymentById = async (req, res) => {
   }
 };
 
+const updatePaymentStatus = async (req, res) => {
+  try {
+    let PaymentModel;
+    try { PaymentModel = require('../models/Payment'); } catch (_) {}
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment status is required'
+      });
+    }
+
+    await connectDB();
+
+    if (PaymentModel) {
+      const payment = await PaymentModel.findByIdAndUpdate(
+        id,
+        { status, updatedAt: new Date() },
+        { new: true }
+      );
+
+      if (!payment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Payment not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Payment status updated successfully',
+        data: payment,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Payment status updated (no model configured)',
+      data: { id, status },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update payment status error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update payment status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= FILE UPLOAD =============
+
+const uploadFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'File is required'
+      });
+    }
+
+    const folder = req.body?.folder || 'mathematico/admin/uploads';
+    const result = await uploadFileToCloud(req.file, folder, 'cloudinary');
+
+    return res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      data: {
+        url: result.url,
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        service: result.service
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Upload file error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload file',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 // ============= ADMIN INFO =============
 
 const getAdminInfo = async (req, res) => {
@@ -1483,7 +1560,7 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
-  updateUserStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  updateUserStatus,
   
   // Book Management
   getAllBooks: withTimeout(getAllBooks),
@@ -1500,8 +1577,6 @@ module.exports = {
   updateCourse,
   deleteCourse,
   updateCourseStatus: withTimeout(updateCourseStatus),
-  uploadCourseThumbnail: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
-  toggleCoursePublish: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
   
   // Live Class Management
   getAllLiveClasses,
@@ -1514,10 +1589,10 @@ module.exports = {
   // Payment Management
   getAllPayments,
   getPaymentById,
-  updatePaymentStatus: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  updatePaymentStatus: withTimeout(updatePaymentStatus),
   
   // File Upload
-  uploadFile: (req, res) => res.status(501).json({ success: false, message: 'Not implemented' }),
+  uploadFile: withTimeout(uploadFile),
   
   // Statistics
   getBookStats: (req, res) => res.json({ success: true, data: { total: 0, published: 0, draft: 0 } }),
@@ -1556,5 +1631,5 @@ module.exports = {
   },
   
   // Admin Info
-  getAdminInfo
+  getAdminInfo 
 };

@@ -1,5 +1,23 @@
 // Mobile Controller - Handles requests from React Native mobile app with MongoDB
 const connectDB = require('../config/database');
+const { Readable, pipeline } = require('stream');
+const { promisify } = require('util');
+
+const streamPipeline = promisify(pipeline);
+
+const getFetch = () => {
+  if (typeof global.fetch === 'function') {
+    return global.fetch.bind(global);
+  }
+  return (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+};
+
+const toNodeReadable = (body) => {
+  if (!body) return null;
+  if (typeof body.pipe === 'function') return body;
+  if (Readable.fromWeb) return Readable.fromWeb(body);
+  return null;
+};
 
 // Serverless timeout wrapper (Vercel has 30s limit)
 const withTimeout = (fn, timeoutMs = 25000) => {
@@ -450,17 +468,45 @@ const streamSecurePdf = async (req, res) => {
       'Referrer-Policy': 'strict-origin-when-cross-origin'
     });
 
+    const secureUrl = generateSecurePdfUrl(book.pdfFile, book.title);
+
     // For Cloudinary URLs, redirect to the secure URL
     if (book.pdfFile.includes('cloudinary.com')) {
-      const secureUrl = generateSecurePdfUrl(book.pdfFile, book.title);
       return res.redirect(secureUrl);
     }
 
-    // For other URLs, you might want to proxy the content
-    res.status(501).json({
-      success: false,
-      message: 'PDF streaming not implemented for this URL type'
-    });
+    if (!secureUrl || !secureUrl.startsWith('http')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported PDF URL'
+      });
+    }
+
+    const fetcher = getFetch();
+    const response = await fetcher(secureUrl);
+
+    if (!response || !response.ok) {
+      return res.status(response?.status || 502).json({
+        success: false,
+        message: 'Failed to fetch PDF content'
+      });
+    }
+
+    const contentType = response.headers?.get?.('content-type');
+    const contentLength = response.headers?.get?.('content-length');
+    if (contentType) res.set('Content-Type', contentType);
+    if (contentLength) res.set('Content-Length', contentLength);
+
+    const bodyStream = toNodeReadable(response.body);
+    if (!bodyStream) {
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to stream PDF content'
+      });
+    }
+
+    await streamPipeline(bodyStream, res);
+    return;
 
   } catch (error) {
     console.error('Error streaming secure PDF:', error);
@@ -671,14 +717,24 @@ const endLiveClass = async (req, res) => {
  */
 const getFeaturedContent = async (req, res) => {
   try {
-    // Return empty data since database is disabled
-    console.log('📱 Mobile featured content endpoint - database disabled');
+    if (!BookModel || !CourseModel || !LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'Content models unavailable' });
+    }
+
+    await connectDB();
+
+    const [books, courses, liveClasses] = await Promise.all([
+      BookModel.findFeatured().select('-pdfFile').limit(6).lean(),
+      CourseModel.findFeatured().limit(6).lean(),
+      LiveClassModel.findFeatured().limit(6).lean()
+    ]);
+
     res.json({
       success: true,
       data: {
-        books: [],
-        courses: [],
-        liveClasses: []
+        books: books || [],
+        courses: courses || [],
+        liveClasses: liveClasses || []
       },
       timestamp: new Date().toISOString()
     });
@@ -808,14 +864,24 @@ const getLiveClassById = async (req, res) => {
  */
 const getCategories = async (req, res) => {
   try {
-    // Return empty categories since database is disabled
-    console.log('📱 Mobile categories endpoint - database disabled');
+    if (!BookModel || !CourseModel || !LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'Content models unavailable' });
+    }
+
+    await connectDB();
+
+    const [bookCategories, courseCategories, liveClassCategories] = await Promise.all([
+      BookModel.distinct('category', { status: 'published', isAvailable: true }),
+      CourseModel.distinct('category', { status: 'published', isAvailable: true }),
+      LiveClassModel.distinct('category', { isAvailable: true })
+    ]);
+
     res.json({
       success: true,
       data: {
-        books: [],
-        courses: [],
-        liveClasses: []
+        books: (bookCategories || []).filter(Boolean),
+        courses: (courseCategories || []).filter(Boolean),
+        liveClasses: (liveClassCategories || []).filter(Boolean)
       },
       timestamp: new Date().toISOString()
     });
@@ -834,14 +900,47 @@ const getCategories = async (req, res) => {
  */
 const searchContent = async (req, res) => {
   try {
-    const { query, type } = req.query;
-    console.log('📱 Mobile search endpoint - database disabled');
-    
+    const query = (req.query.query || req.query.search || '').toString().trim();
+    const type = (req.query.type || 'all').toString().toLowerCase();
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    if (!query) {
+      return res.json({
+        success: true,
+        data: [],
+        query,
+        type,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!BookModel || !CourseModel || !LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'Content models unavailable' });
+    }
+
+    await connectDB();
+
+    const shouldSearchBooks = type === 'all' || type === 'book' || type === 'books';
+    const shouldSearchCourses = type === 'all' || type === 'course' || type === 'courses';
+    const shouldSearchLiveClasses = type === 'all' || type === 'liveclass' || type === 'liveclasses';
+
+    const [books, courses, liveClasses] = await Promise.all([
+      shouldSearchBooks ? BookModel.searchBooks(query).limit(limit).lean() : [],
+      shouldSearchCourses ? CourseModel.searchCourses(query).limit(limit).lean() : [],
+      shouldSearchLiveClasses ? LiveClassModel.searchClasses(query).limit(limit).lean() : []
+    ]);
+
+    const results = [
+      ...(books || []).map(item => ({ ...item, contentType: 'book' })),
+      ...(courses || []).map(item => ({ ...item, contentType: 'course' })),
+      ...(liveClasses || []).map(item => ({ ...item, contentType: 'liveClass' }))
+    ];
+
     res.json({
       success: true,
-      data: [],
-      query: query,
-      type: type,
+      data: results,
+      query,
+      type,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -859,20 +958,36 @@ const searchContent = async (req, res) => {
  */
 const getMobileInfo = async (req, res) => {
   try {
+    if (!BookModel || !CourseModel || !LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'Content models unavailable' });
+    }
+
+    await connectDB();
+    const [bookCount, courseCount, liveClassCount] = await Promise.all([
+      BookModel.countDocuments({ status: 'published', isAvailable: true }),
+      CourseModel.countDocuments({ status: 'published', isAvailable: true }),
+      LiveClassModel.countDocuments({ isAvailable: true })
+    ]);
+
     res.json({
       success: true,
       data: {
         appName: 'Mathematico',
         version: '2.0.0',
-        database: 'disabled',
+        database: 'connected',
         features: {
-          books: false,
-          courses: false,
-          liveClasses: false,
-          userRegistration: false,
-          userProfiles: false
+          books: bookCount > 0,
+          courses: courseCount > 0,
+          liveClasses: liveClassCount > 0,
+          userRegistration: true,
+          userProfiles: true
         },
-        message: 'Database functionality has been removed. Only admin authentication is available.'
+        counts: {
+          books: bookCount,
+          courses: courseCount,
+          liveClasses: liveClassCount
+        },
+        message: 'Mobile app info retrieved successfully.'
       },
       timestamp: new Date().toISOString()
     });

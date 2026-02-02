@@ -3,15 +3,27 @@ const { withProjectBuildGradle, withAppBuildGradle } = require('expo/config-plug
 const withRazorpay = (config) => {
   // Modify project-level build.gradle
   config = withProjectBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes('maven { url "https://jitpack.io" }')) {
+    const contents = config.modResults.contents;
+    const hasJitpack = contents.includes('maven { url "https://jitpack.io" }');
+    const hasRazorpayRepo = contents.includes('maven { url "https://maven.razorpay.com" }');
+
+    if (hasJitpack && hasRazorpayRepo) {
       return config;
     }
 
-    // Add JitPack repository for Razorpay
-    config.modResults.contents = config.modResults.contents.replace(
+    const additions = [];
+    if (!hasJitpack) {
+      additions.push('        maven { url "https://jitpack.io" }');
+    }
+    if (!hasRazorpayRepo) {
+      additions.push('        maven { url "https://maven.razorpay.com" }');
+    }
+
+    // Add repositories required for Razorpay
+    config.modResults.contents = contents.replace(
       /allprojects\s*\{[\s\S]*?repositories\s*\{/,
       (match) => `${match}
-        maven { url "https://jitpack.io" }`
+${additions.join('\n')}`
     );
 
     return config;
@@ -27,7 +39,7 @@ const withRazorpay = (config) => {
     config.modResults.contents = config.modResults.contents.replace(
       /dependencies\s*\{/,
       (match) => `${match}
-    implementation "com.razorpay:checkout:1.6.33"`
+    implementation "com.razorpay:checkout:1.6.40"`
     );
 
     return config;

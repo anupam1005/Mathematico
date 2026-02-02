@@ -168,6 +168,22 @@ const bookSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+
+  purchasedBy: [{
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    purchasedAt: {
+      
+      type: Date,
+      default: Date.now
+    },
+    paymentId: {
+      type: String
+    }
+  }],
   
   ratings: {
     average: {
@@ -352,6 +368,36 @@ bookSchema.methods.incrementDownloads = function() {
 // Instance method to increment purchases
 bookSchema.methods.incrementPurchases = function() {
   this.purchases += 1;
+  return this.save();
+};
+
+// Instance method to mark a book purchase
+bookSchema.methods.purchaseBook = async function(studentId, paymentId) {
+  const existingPurchase = this.purchasedBy.find(
+    purchase => purchase.student.toString() === studentId.toString()
+  );
+
+  if (existingPurchase) {
+    throw new Error('Book already purchased');
+  }
+
+  this.purchasedBy.push({
+    student: studentId,
+    purchasedAt: new Date(),
+    paymentId: paymentId || undefined
+  });
+
+  this.purchases += 1;
+
+  try {
+    const User = require('./User');
+    await User.findByIdAndUpdate(studentId, {
+      $addToSet: { purchasedBooks: { bookId: this._id, purchasedAt: new Date() } }
+    });
+  } catch (error) {
+    console.warn('⚠️ Failed to update user purchase history:', error.message || error);
+  }
+
   return this.save();
 };
 

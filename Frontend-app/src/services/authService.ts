@@ -61,6 +61,7 @@ const authService = {
         data: {
           user: payload.data.user,
           token: accessToken,
+          refreshToken: payload.data.refreshToken,
         },
       };
     } catch (err) {
@@ -126,7 +127,9 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      await authApi.post('/logout');
+      const refreshTokenValue = await Storage.getItem('refreshToken');
+      const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
+      await authApi.post('/logout', payloadBody);
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       return { success: true, message: 'Logout successful' };
@@ -158,14 +161,12 @@ const authService = {
 
   /* -------------------------- REFRESH TOKEN -------------------------- */
 
-  async refreshToken(): Promise<{ success: boolean; message: string; data?: { token: string; refreshToken: string } }> {
+  async refreshToken(): Promise<{ success: boolean; message: string; data?: { token: string; refreshToken?: string } }> {
     try {
       const refreshTokenValue = await Storage.getItem('refreshToken');
-      if (!refreshTokenValue) {
-        return { success: false, message: 'No refresh token available' };
-      }
+      const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
-      const response = await authApi.post('/refresh-token', { refreshToken: refreshTokenValue });
+      const response = await authApi.post('/refresh-token', payloadBody);
       const payload = response?.data;
 
       if (!payload?.success || !payload?.data?.accessToken) {
@@ -176,7 +177,7 @@ const authService = {
       }
 
       const accessToken = payload.data.accessToken;
-      const newRefreshToken = payload.data.refreshToken || refreshTokenValue;
+      const newRefreshToken = payload.data.refreshToken || refreshTokenValue || undefined;
 
       if (typeof accessToken !== 'string' || accessToken.length < 10) {
         return {
@@ -186,7 +187,7 @@ const authService = {
       }
 
       await Storage.setItem('authToken', accessToken);
-      if (newRefreshToken !== refreshTokenValue) {
+      if (newRefreshToken && newRefreshToken !== refreshTokenValue) {
         await Storage.setItem('refreshToken', newRefreshToken);
       }
 

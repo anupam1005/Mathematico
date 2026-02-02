@@ -46,6 +46,7 @@ export interface UpdateLiveClassData extends Partial<BaseLiveClassData> {
 }
 
 const mobileApi = withBasePath(API_PATHS.mobile);
+const adminApi = withBasePath(API_PATHS.admin);
 
 class LiveClassService {
   private async makeRequest(endpoint: string, options: any = {}) {
@@ -267,11 +268,10 @@ class LiveClassService {
   // Admin methods
   async createLiveClass(liveClassData: CreateLiveClassData): Promise<any> {
     try {
-      const response = await this.makeRequest('/live-classes', {
-        method: 'POST',
-        data: liveClassData
-      });
-      return response;
+      const isFormData = liveClassData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.post('/live-classes', liveClassData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error creating live class:', error);
       throw ErrorHandler.handleApiError(error);
@@ -280,11 +280,10 @@ class LiveClassService {
 
   async updateLiveClass(id: string, liveClassData: UpdateLiveClassData): Promise<any> {
     try {
-      const response = await this.makeRequest(`/live-classes/${id}`, {
-        method: 'PUT',
-        data: liveClassData
-      });
-      return response;
+      const isFormData = liveClassData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.put(`/live-classes/${id}`, liveClassData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error updating live class:', error);
       throw ErrorHandler.handleApiError(error);
@@ -293,9 +292,7 @@ class LiveClassService {
 
   async deleteLiveClass(id: string): Promise<void> {
     try {
-      await this.makeRequest(`/live-classes/${id}`, {
-        method: 'DELETE'
-      });
+      await adminApi.delete(`/live-classes/${id}`);
     } catch (error) {
       errorHandler.handleError('Error deleting live class:', error);
       throw ErrorHandler.handleApiError(error);
@@ -305,20 +302,19 @@ class LiveClassService {
   async uploadLiveClassThumbnail(liveClassId: string, imageUri: string): Promise<string> {
     try {
       const formData = new FormData();
-      formData.append('thumbnail', {
+      formData.append('image', {
         uri: imageUri,
         type: 'image/jpeg',
         name: 'thumbnail.jpg',
       } as any);
 
-      const response = await this.makeRequest(`/live-classes/${liveClassId}/thumbnail`, {
-        method: 'POST',
-        data: formData,
+      const response = await adminApi.put(`/live-classes/${liveClassId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
+        }
       });
-      return response.data.thumbnailUrl;
+      const payload = response.data;
+      return payload?.data?.thumbnail || payload?.data?.thumbnailUrl || '';
     } catch (error) {
       errorHandler.handleError('Error uploading live class thumbnail:', error);
       throw ErrorHandler.handleApiError(error);

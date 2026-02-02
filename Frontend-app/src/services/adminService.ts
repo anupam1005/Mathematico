@@ -168,19 +168,43 @@ class AdminService {
   }
 
   async createUser(userData: any): Promise<ApiResponse<any>> {
-    throw new Error('User creation is not available. Database functionality has been removed.');
+    try {
+      const response = await adminApi.post('/users', userData);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error creating user:', error);
+      return { success: false, error: 'Failed to create user' };
+    }
   }
 
   async updateUser(id: string, userData: any): Promise<ApiResponse<any>> {
-    throw new Error('User update is not available. Database functionality has been removed.');
+    try {
+      const response = await adminApi.put(`/users/${id}`, userData);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating user:', error);
+      return { success: false, error: 'Failed to update user' };
+    }
   }
 
   async updateUserStatus(id: string, status: boolean): Promise<ApiResponse<any>> {
-    throw new Error('User status update is not available. Database functionality has been removed.');
+    try {
+      const response = await adminApi.put(`/users/${id}/status`, { status });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating user status:', error);
+      return { success: false, error: 'Failed to update user status' };
+    }
   }
 
   async deleteUser(id: string): Promise<ApiResponse<any>> {
-    throw new Error('User deletion is not available. Database functionality has been removed.');
+    try {
+      const response = await adminApi.delete(`/users/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      errorHandler.handleError('Error deleting user:', error);
+      return { success: false, error: 'Failed to delete user' };
+    }
   }
 
   // Books

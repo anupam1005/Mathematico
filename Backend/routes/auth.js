@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
+const { upload } = require('../utils/fileUpload');
 
 // Import dependencies for auth logic
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
@@ -55,11 +56,14 @@ try {
   
   // Profile management routes
   router.put('/profile', authenticateToken, profileController.updateProfile);
+  router.post('/profile/picture', authenticateToken, upload.single('profilePicture'), profileController.uploadProfilePicture);
+  router.delete('/profile/picture', authenticateToken, profileController.deleteProfilePicture);
   router.put('/change-password', authenticateToken, profileController.changePassword);
   
   // User preferences routes
   router.get('/preferences', authenticateToken, profileController.getPreferences);
   router.put('/preferences', authenticateToken, profileController.updatePreferences);
+  router.delete('/account', authenticateToken, profileController.deleteAccount);
   
   console.log('✅ Profile routes loaded successfully');
 } catch (error) {

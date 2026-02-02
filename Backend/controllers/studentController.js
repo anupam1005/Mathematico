@@ -2,13 +2,14 @@
 const connectDB = require('../config/database');
 
 // Import models
-let CourseModel, BookModel, LiveClassModel;
+let CourseModel, BookModel, LiveClassModel, UserModel;
 try {
   CourseModel = require('../models/Course');
   BookModel = require('../models/Book');
   LiveClassModel = require('../models/LiveClass');
+  UserModel = require('../models/User');
 } catch (error) {
-  console.warn('⚠️ Student models not available:', error && error.message ? error.message : error);
+  console.warn(' Student models not available:', error && error.message ? error.message : error);
 }
 
 /**
@@ -438,12 +439,77 @@ const getStudentLiveClasses = async (req, res) => {
  * Join live class
  */
 const joinLiveClass = async (req, res) => {
-  return res.status(501).json({
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const studentId = req.user.id;
+
+    const liveClass = await LiveClassModel.findById(id);
+    if (!liveClass) {
+      return res.status(404).json({
         success: false,
-    error: 'Not Implemented',
-    message: 'Live class joining is not available. Database functionality has been removed.',
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (['cancelled', 'archived'].includes(liveClass.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Live class is ${liveClass.status}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollment = liveClass.enrolledStudents.find(
+      entry => entry.student.toString() === studentId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must enroll in this live class before joining',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!enrollment.joinedAt) {
+      enrollment.joinedAt = new Date();
+      await liveClass.save();
+    }
+
+    if (!liveClass.meetingLink) {
+      return res.status(409).json({
+        success: false,
+        message: 'Live class meeting link not available',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        joinLink: liveClass.meetingLink,
+        meetingId: liveClass.meetingId,
+        meetingPassword: liveClass.meetingPassword,
+        platform: liveClass.platform
+      },
+      message: 'Join link generated successfully',
       timestamp: new Date().toISOString()
     });
+  } catch (error) {
+    console.error('Error joining live class:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to join live class',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 /**

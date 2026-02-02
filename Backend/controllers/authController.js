@@ -7,14 +7,45 @@ const {
   clearRefreshTokenCookie
 } = require('../utils/jwt');
 const connectDB = require('../config/database');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 // Import User model
 let UserModel;
 try {
   UserModel = require('../models/User');
 } catch (error) {
-  console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
+  console.warn(' User model not available:', error && error.message ? error.message : error);
 }
+
+const getEmailTransporter = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+};
+
+const sendEmail = async ({ to, subject, text, html }) => {
+  const transporter = getEmailTransporter();
+  if (!transporter) {
+    throw new Error('Email service not configured');
+  }
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject,
+    text,
+    html
+  });
+};
 
 // Auth Controller - Handles authentication with secure token management
 
@@ -86,14 +117,28 @@ const login = async (req, res) => {
       await dbAdmin.save();
 
       // Generate tokens with real ObjectId
-      console.log('🔑 Generating tokens for admin user...');
-      console.log('🔑 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+      console.log(' Generating tokens for admin user...');
+      console.log(' JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
       
       const tokens = generateTokenPair(dbAdmin);
-      console.log('🔑 Tokens generated successfully');
-      console.log('🔑 Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
+      console.log(' Tokens generated successfully');
+      console.log(' Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
-      console.log('✅ Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
+      const deviceInfo = {
+        userAgent: req.headers['user-agent'],
+        ip: req.ip || req.connection.remoteAddress
+      };
+
+      await dbAdmin.addRefreshToken(
+        tokens.refreshTokenHash,
+        tokens.refreshTokenExpiry,
+        deviceInfo
+      );
+
+      // Set refresh token in HttpOnly cookie
+      setRefreshTokenCookie(res, tokens.refreshToken);
+
+      console.log(' Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
 
       // Get public profile (includes isAdmin, is_admin, etc.)
       const publicUser = dbAdmin.getPublicProfile();
@@ -104,6 +149,7 @@ const login = async (req, res) => {
         data: {
           user: publicUser,
           accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
           tokenType: 'Bearer',
           expiresIn: tokens.accessTokenExpiresIn
         },
@@ -142,12 +188,12 @@ const login = async (req, res) => {
     }
 
     // Generate token pair
-    console.log('🔑 Generating tokens for regular user...');
-    console.log('🔑 JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    console.log(' Generating tokens for regular user...');
+    console.log(' JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
     
     const tokens = generateTokenPair(user);
-    console.log('🔑 Tokens generated successfully');
-    console.log('🔑 Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
+    console.log(' Tokens generated successfully');
+    console.log(' Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
     // Store hashed refresh token in database
     const deviceInfo = {
@@ -172,7 +218,7 @@ const login = async (req, res) => {
     // Get public profile
     const publicUser = user.getPublicProfile();
 
-    console.log('✅ Login successful:', user.email);
+    console.log(' Login successful:', user.email);
 
     return res.json({
       success: true,
@@ -180,6 +226,7 @@ const login = async (req, res) => {
       data: {
         user: publicUser,
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
       },
@@ -280,7 +327,7 @@ const register = async (req, res) => {
     // Get public profile
     const publicUser = user.getPublicProfile();
 
-    console.log('✅ Registration successful:', user.email);
+    console.log(' Registration successful:', user.email);
 
     return res.status(201).json({
       success: true,
@@ -288,6 +335,7 @@ const register = async (req, res) => {
       data: {
         user: publicUser,
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
       },
@@ -324,7 +372,7 @@ const register = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (refreshToken && UserModel) {
       await connectDB();
@@ -338,7 +386,7 @@ const logout = async (req, res) => {
 
       if (user) {
         await user.removeRefreshToken(tokenHash);
-        console.log('✅ Logout successful:', user.email);
+        console.log(' Logout successful:', user.email);
       }
     }
 
@@ -402,10 +450,11 @@ const getCurrentUser = async (req, res) => {
 /**
  * Refresh access token using refresh token from HttpOnly cookie
  */
+
 const refreshToken = async (req, res) => {
   try {
-    // Get refresh token from cookie
-    const refreshToken = req.cookies.refreshToken;
+    // Get refresh token from cookie or request body
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -473,13 +522,14 @@ const refreshToken = async (req, res) => {
     // Set new refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    console.log('✅ Token refreshed:', user.email);
+    console.log(' Token refreshed:', user.email);
 
     return res.json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
       },
@@ -499,51 +549,256 @@ const refreshToken = async (req, res) => {
 };
 
 /**
- * Verify email (disabled - no database)
+ * Verify email
  */
 const verifyEmail = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Email verification is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    const token = req.body.token || req.query.token;
+    const email = req.body.email || req.query.email;
+
+    if (!token && !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification token or email is required'
+      });
+    }
+
+    await connectDB();
+
+    let user = null;
+    if (token) {
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      user = await UserModel.findOne({ emailVerificationToken: hashedToken }).select('+emailVerificationToken');
+    } else if (email) {
+      user = await UserModel.findOne({ email: email.toLowerCase() });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Verification request not found'
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.updatedAt = new Date();
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Email verified successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify email',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 /**
- * Forgot password (disabled - no database)
+ * Forgot password
  */
 const forgotPassword = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Password reset is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    await connectDB();
+    const user = await UserModel.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    const baseUrl = process.env.BACKEND_URL || '';
+    const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${resetToken}`;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset your Mathematico password',
+        text: `Use this link to reset your password: ${resetUrl}`
+      });
+    } catch (mailError) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send reset email',
+        error: mailError.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const response = {
+      success: true,
+      message: 'Password reset email sent',
+      timestamp: new Date().toISOString()
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      response.data = { resetToken, resetUrl };
+    }
+
+    return res.json(response);
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process password reset',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 /**
- * Reset password (disabled - no database)
+ * Reset password
  */
 const resetPassword = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Password reset is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    const token = req.body.token || req.query.token;
+    const newPassword = req.body.password || req.body.newPassword;
+    const confirmPassword = req.body.confirmPassword;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required'
+      });
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match'
+      });
+    }
+
+    await connectDB();
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await UserModel.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
+    }).select('+password');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is invalid or has expired'
+      });
+    }
+
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordChangedAt = new Date();
+    user.refreshTokens = [];
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to reset password',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 /**
- * Change password (disabled - no database)
+ * Change password
  */
 const changePassword = async (req, res) => {
-  return res.status(501).json({
-    success: false,
-    error: 'Not Implemented',
-    message: 'Password change is not available. Database functionality has been removed.',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    if (!UserModel) {
+      return res.status(503).json({ success: false, message: 'User model unavailable' });
+    }
+
+    const userId = req.user?.id;
+    const currentPassword = req.body.currentPassword || req.body.oldPassword;
+    const newPassword = req.body.newPassword || req.body.password;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current and new password are required'
+      });
+    }
+
+    await connectDB();
+    const user = await UserModel.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const isValid = await user.comparePassword(currentPassword);
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    user.password = newPassword;
+    user.passwordChangedAt = new Date();
+    user.refreshTokens = [];
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to change password',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 module.exports = {

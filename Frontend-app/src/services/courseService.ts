@@ -47,6 +47,7 @@ export interface UpdateCourseData extends Partial<BaseCourseData> {
 }
 
 const mobileApi = withBasePath(API_PATHS.mobile);
+const adminApi = withBasePath(API_PATHS.admin);
 
 class CourseService {
   private async makeRequest(endpoint: string, options: any = {}) {
@@ -176,11 +177,10 @@ class CourseService {
   // Admin methods
   async createCourse(courseData: CreateCourseData): Promise<any> {
     try {
-      const response = await this.makeRequest('/courses', {
-        method: 'POST',
-        data: courseData
-      });
-      return response;
+      const isFormData = courseData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.post('/courses', courseData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error creating course:', error);
       throw ErrorHandler.handleApiError(error);
@@ -189,11 +189,10 @@ class CourseService {
 
   async updateCourse(id: string, courseData: UpdateCourseData): Promise<any> {
     try {
-      const response = await this.makeRequest(`/courses/${id}`, {
-        method: 'PUT',
-        data: courseData
-      });
-      return response;
+      const isFormData = courseData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.put(`/courses/${id}`, courseData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error updating course:', error);
       throw ErrorHandler.handleApiError(error);
@@ -202,9 +201,7 @@ class CourseService {
 
   async deleteCourse(id: string): Promise<void> {
     try {
-      await this.makeRequest(`/courses/${id}`, {
-        method: 'DELETE'
-      });
+      await adminApi.delete(`/courses/${id}`);
     } catch (error) {
       errorHandler.handleError('Error deleting course:', error);
       throw ErrorHandler.handleApiError(error);
@@ -214,20 +211,21 @@ class CourseService {
   async uploadCourseThumbnail(courseId: string, imageUri: string): Promise<string> {
     try {
       const formData = new FormData();
-      formData.append('thumbnail', {
+      formData.append('courseId', courseId);
+      formData.append('image', {
         uri: imageUri,
         type: 'image/jpeg',
         name: 'thumbnail.jpg',
       } as any);
 
-      const response = await this.makeRequest(`/courses/${courseId}/thumbnail`, {
-        method: 'POST',
-        data: formData,
+      const response = await adminApi.post('/courses/upload-thumbnail', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data.thumbnailUrl;
+
+      const payload = response.data;
+      return payload?.data?.thumbnailUrl || payload?.data?.thumbnail || payload?.thumbnailUrl || '';
     } catch (error) {
       errorHandler.handleError('Error uploading course thumbnail:', error);
       throw ErrorHandler.handleApiError(error);

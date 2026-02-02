@@ -7,7 +7,7 @@ import ErrorHandler from '../utils/errorHandler';
 const errorHandler = createServiceErrorHandler('bookService');
 
 export type BookLevel = 'Foundation' | 'Intermediate' | 'Advanced' | 'Expert';
-export type BookStatus = 'draft' | 'active' | 'archived';
+export type BookStatus = 'draft' | 'published' | 'archived';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -48,6 +48,7 @@ export interface UpdateBookData extends Partial<BaseBookData> {
 }
 
 const mobileApi = withBasePath(API_PATHS.mobile);
+const adminApi = withBasePath(API_PATHS.admin);
 
 class BookService {
   private async makeRequest(endpoint: string, options: any = {}) {
@@ -144,8 +145,14 @@ class BookService {
       if (filters?.level) params.append('level', filters.level);
       
       const response = await this.makeRequest(`/books?${params.toString()}`);
-      
-      // Since database is disabled, always return empty data
+
+      if (response && response.data) {
+        return {
+          data: response.data,
+          meta: response.pagination || { total: response.data.length, page: 1, limit: 10, totalPages: 1 }
+        };
+      }
+
       return {
         data: [],
         meta: { total: 0, page: 1, limit: 10, totalPages: 0 }
@@ -188,11 +195,10 @@ class BookService {
   // Admin methods
   async createBook(bookData: CreateBookData): Promise<any> {
     try {
-      const response = await this.makeRequest('/books', {
-        method: 'POST',
-        data: bookData
-      });
-      return response;
+      const isFormData = bookData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.post('/books', bookData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error creating book:', error);
       throw ErrorHandler.handleApiError(error);
@@ -201,11 +207,10 @@ class BookService {
 
   async updateBook(id: string, bookData: UpdateBookData): Promise<any> {
     try {
-      const response = await this.makeRequest(`/books/${id}`, {
-        method: 'PUT',
-        data: bookData
-      });
-      return response;
+      const isFormData = bookData instanceof FormData;
+      const config = isFormData ? undefined : { headers: { 'Content-Type': 'application/json' } };
+      const response = await adminApi.put(`/books/${id}`, bookData, config);
+      return response.data;
     } catch (error) {
       errorHandler.handleError('Error updating book:', error);
       throw ErrorHandler.handleApiError(error);
@@ -214,9 +219,7 @@ class BookService {
 
   async deleteBook(id: string): Promise<void> {
     try {
-      await this.makeRequest(`/books/${id}`, {
-        method: 'DELETE'
-      });
+      await adminApi.delete(`/books/${id}`);
     } catch (error) {
       errorHandler.handleError('Error deleting book:', error);
       throw ErrorHandler.handleApiError(error);
@@ -226,20 +229,19 @@ class BookService {
   async uploadBookCover(bookId: string, imageUri: string): Promise<string> {
     try {
       const formData = new FormData();
-      formData.append('cover', {
+      formData.append('coverImage', {
         uri: imageUri,
         type: 'image/jpeg',
         name: 'cover.jpg',
       } as any);
 
-      const response = await this.makeRequest(`/books/${bookId}/cover`, {
-        method: 'POST',
-        data: formData,
+      const response = await adminApi.put(`/books/${bookId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
+        }
       });
-      return response.data.coverImageUrl;
+      const payload = response.data;
+      return payload?.data?.coverImage || payload?.data?.coverImageUrl || '';
     } catch (error) {
       errorHandler.handleError('Error uploading book cover:', error);
       throw ErrorHandler.handleApiError(error);
@@ -249,20 +251,19 @@ class BookService {
   async uploadBookPdf(bookId: string, pdfUri: string): Promise<string> {
     try {
       const formData = new FormData();
-      formData.append('pdf', {
+      formData.append('pdfFile', {
         uri: pdfUri,
         type: 'application/pdf',
         name: 'book.pdf',
       } as any);
 
-      const response = await this.makeRequest(`/books/${bookId}/pdf`, {
-        method: 'POST',
-        data: formData,
+      const response = await adminApi.put(`/books/${bookId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
+        }
       });
-      return response.data.pdfUrl;
+      const payload = response.data;
+      return payload?.data?.pdfFile || payload?.data?.pdfUrl || '';
     } catch (error) {
       errorHandler.handleError('Error uploading book PDF:', error);
       throw ErrorHandler.handleApiError(error);

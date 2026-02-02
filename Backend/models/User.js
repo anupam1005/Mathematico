@@ -188,6 +188,65 @@ const userSchema = new mongoose.Schema({
     timezone: {
       type: String,
       default: 'UTC'
+    },
+    theme: {
+      type: String,
+      default: 'system'
+    }
+  },
+
+  settings: {
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true
+      },
+      push: {
+        type: Boolean,
+        default: true
+      },
+      sms: {
+        type: Boolean,
+        default: false
+      }
+    },
+    privacy: {
+      profileVisibility: {
+        type: String,
+        default: 'public'
+      },
+      showEmail: {
+        type: Boolean,
+        default: true
+      },
+      showPhone: {
+        type: Boolean,
+        default: false
+      }
+    },
+    preferences: {
+      language: {
+        type: String,
+        default: 'en'
+      },
+      timezone: {
+        type: String,
+        default: 'UTC'
+      },
+      theme: {
+        type: String,
+        default: 'system'
+      }
+    },
+    learning: {
+      autoPlayVideos: {
+        type: Boolean,
+        default: true
+      },
+      downloadOverWifi: {
+        type: Boolean,
+        default: true
+      }
     }
   },
   

@@ -144,13 +144,15 @@ function decodeToken(token) {
  */
 function setRefreshTokenCookie(res, token) {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+  const sameSite = isProduction ? 'none' : 'lax';
+  const cookiePath = '/api/v1/auth/refresh-token';
+
   res.cookie('refreshToken', token, {
     httpOnly: true,        // Prevents JavaScript access
     secure: isProduction,  // HTTPS only in production
-    sameSite: 'strict',    // CSRF protection
+    sameSite,              // Allow cross-origin refresh in production
     maxAge: getTokenExpirationMs(JWT_REFRESH_EXPIRES_IN),
-    path: '/api/v1/auth/refresh' // Only send to refresh endpoint
+    path: cookiePath // Only send to refresh endpoint
   });
 }
 
@@ -159,11 +161,15 @@ function setRefreshTokenCookie(res, token) {
  * @param {Object} res - Express response object
  */
 function clearRefreshTokenCookie(res) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const sameSite = isProduction ? 'none' : 'lax';
+  const cookiePath = '/api/v1/auth/refresh-token';
+
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/api/v1/auth/refresh'
+    secure: isProduction,
+    sameSite,
+    path: cookiePath
   });
 }
 
