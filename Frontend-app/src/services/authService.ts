@@ -37,14 +37,14 @@ const authService = {
       const response = await authApi.post('/login', { email, password });
       const payload = response?.data;
 
-      if (!payload?.success || !payload?.data?.accessToken) {
+      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+
+      if (!payload?.success || !accessToken) {
         return {
           success: false,
           message: payload?.message || 'Invalid login response',
         };
       }
-
-      const accessToken = payload.data.accessToken;
 
       if (typeof accessToken !== 'string' || accessToken.length < 10) {
         return {
@@ -100,14 +100,18 @@ const authService = {
         };
       }
 
-      if (payload?.data?.accessToken) {
-        await Storage.setItem('authToken', payload.data.accessToken);
+      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+      if (accessToken) {
+        await Storage.setItem('authToken', accessToken);
       }
 
       return {
         success: true,
         message: payload.message || 'Registration successful',
-        data: payload.data,
+        data: {
+          ...payload.data,
+          token: accessToken,
+        },
       };
     } catch (err) {
       const safe = createSafeError(err);
@@ -169,14 +173,14 @@ const authService = {
       const response = await authApi.post('/refresh-token', payloadBody);
       const payload = response?.data;
 
-      if (!payload?.success || !payload?.data?.accessToken) {
+      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+
+      if (!payload?.success || !accessToken) {
         return {
           success: false,
           message: payload?.message || 'Invalid refresh response',
         };
       }
-
-      const accessToken = payload.data.accessToken;
       const newRefreshToken = payload.data.refreshToken || refreshTokenValue || undefined;
 
       if (typeof accessToken !== 'string' || accessToken.length < 10) {

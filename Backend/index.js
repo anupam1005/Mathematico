@@ -38,12 +38,7 @@ const isPortAvailable = (port) => {
     const missing = [];
     const requiredVars = [
       'JWT_SECRET',
-      'JWT_REFRESH_SECRET',
-      'CLOUDINARY_CLOUD_NAME',
-      'CLOUDINARY_API_KEY',
-      'CLOUDINARY_API_SECRET',
-      'RAZORPAY_KEY_ID',
-      'RAZORPAY_KEY_SECRET'
+      'JWT_REFRESH_SECRET'
     ];
 
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
@@ -58,10 +53,28 @@ const isPortAvailable = (port) => {
       }
     });
 
+    const optionalGroups = [
+      {
+        label: 'Cloudinary',
+        keys: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
+      },
+      {
+        label: 'Razorpay',
+        keys: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET']
+      }
+    ];
+
     if (missing.length) {
       console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
       process.exit(1);
     }
+
+    optionalGroups.forEach(({ label, keys }) => {
+      const missingOptional = keys.filter((key) => !process.env[key]);
+      if (missingOptional.length) {
+        console.warn(`⚠️ ${label} env vars missing: ${missingOptional.join(', ')}`);
+      }
+    });
 
     console.log('✅ Required environment variables present');
   } catch (e) {
