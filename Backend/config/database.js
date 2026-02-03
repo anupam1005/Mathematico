@@ -13,9 +13,9 @@ const connectDB = async () => {
   }
 
   if (!cached.promise) {
-    const mongoURI = process.env.MONGO_URI ? process.env.MONGO_URI.trim() : '';
+    const mongoURI = (process.env.MONGO_URI || process.env.MONGODB_URI || '').trim();
     if (!mongoURI) {
-      throw new Error('MONGO_URI is required for database connection');
+      throw new Error('MONGO_URI (or MONGODB_URI) is required for database connection');
     }
 
     try {

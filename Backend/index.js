@@ -37,7 +37,6 @@ const isPortAvailable = (port) => {
   try {
     const missing = [];
     const requiredVars = [
-      'MONGO_URI',
       'JWT_SECRET',
       'JWT_REFRESH_SECRET',
       'CLOUDINARY_CLOUD_NAME',
@@ -46,6 +45,11 @@ const isPortAvailable = (port) => {
       'RAZORPAY_KEY_ID',
       'RAZORPAY_KEY_SECRET'
     ];
+
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!mongoUri) {
+      missing.push('MONGO_URI (or MONGODB_URI)');
+    }
 
     // Check for required variables
     requiredVars.forEach((key) => {
