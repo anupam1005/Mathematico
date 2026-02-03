@@ -89,11 +89,11 @@ router.get('/settings', authenticateToken, profileController.getUserSettings);
 router.put('/settings', authenticateToken, profileController.updateUserSettings);
 
 // Payment routes
-router.post('/payments/create-order', paymentController.createOrder);
-router.post('/payments/verify', paymentController.verifyPayment);
 router.get('/payments/config', paymentController.getRazorpayConfig);
+router.post('/payments/create-order', authenticateToken, paymentController.createOrder);
+router.post('/payments/verify', authenticateToken, paymentController.verifyPayment);
 
 // Payment history
-router.get('/payments/history', paymentController.getPaymentHistory);
+router.get('/payments/history', authenticateToken, paymentController.getPaymentHistory);
 
 module.exports = router;

@@ -139,7 +139,22 @@ app.use(helmet({
 }));
 
 // CORS configuration
-const allowedOrigins = [process.env.APP_ORIGIN, process.env.ADMIN_ORIGIN].filter(Boolean);
+const originEnvValues = [
+  process.env.APP_ORIGIN,
+  process.env.ADMIN_ORIGIN,
+  process.env.CORS_ORIGIN
+].filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set(
+    originEnvValues.flatMap((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    )
+  )
+);
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -276,7 +291,21 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-const API_PREFIX = process.env.API_PREFIX || '/api/v1';
+const DEFAULT_API_PREFIX = '/api/v1';
+const apiPrefixEnv = (process.env.API_PREFIX || '').trim();
+const normalizedApiPrefix = apiPrefixEnv
+  ? apiPrefixEnv.startsWith('/')
+    ? apiPrefixEnv
+    : `/${apiPrefixEnv}`
+  : DEFAULT_API_PREFIX;
+
+if (normalizedApiPrefix !== DEFAULT_API_PREFIX) {
+  console.warn(
+    `⚠️ API_PREFIX "${normalizedApiPrefix}" does not match frontend (${DEFAULT_API_PREFIX}). Using ${DEFAULT_API_PREFIX}.`
+  );
+}
+
+const API_PREFIX = DEFAULT_API_PREFIX;
 
 // Import route handlers (tolerant loading per route for serverless)
  let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes, paymentRoutes;
