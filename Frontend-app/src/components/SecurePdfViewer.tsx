@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from '../services/apiClient';
 import { safeCatch } from '../utils/safeCatch';
 

@@ -82,7 +82,6 @@ export default function RegisterScreen({ navigation }: any) {
     if (success) {
       // Registration successful - user is now authenticated and will be automatically
       // redirected to the main dashboard by the AuthContext
-      console.log('Registration successful - user will be redirected to dashboard');
     }
   };
 

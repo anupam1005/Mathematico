@@ -1,5 +1,6 @@
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
+
 import { withBasePath } from './apiClient';
 import { createSafeError } from '../utils/safeError';
 import type { ApiError } from '../utils/errorHandler';

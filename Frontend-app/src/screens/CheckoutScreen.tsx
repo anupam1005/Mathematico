@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Divider, ActivityIndicator } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
-import { CURRENCY_CONFIG } from '../config';
+import { CURRENCY_CONFIG } from '../constants/currency';
 import { safeCatch } from '../utils/safeCatch';
 
 export default function CheckoutScreen({ navigation, route }: any) {

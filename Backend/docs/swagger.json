@@ -15,12 +15,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5000",
-      "description": "Development server"
-    },
-    {
-      "url": "https://mathematico-backend-new.vercel.app",
-      "description": "Production Vercel server"
+      "url": "https://api.example.com",
+      "description": "Production server"
     }
   ],
   "components": {
@@ -500,12 +496,12 @@
                   "email": {
                     "type": "string",
                     "format": "email",
-                    "example": "dc2006089@gmail.com"
+                    "example": "admin@admin.com"
                   },
                   "password": {
                     "type": "string",
                     "format": "password",
-                    "example": "Myname*321"
+                    "example": "Mypassword"
                   }
                 }
               }

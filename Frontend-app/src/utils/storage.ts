@@ -9,18 +9,12 @@ export class Storage {
       // Stringify the value if it's an object
       const valueToStore = typeof value === 'string' ? value : JSON.stringify(value);
       
-      console.log(`Storage: Setting ${key} = ${typeof value === 'string' 
-        ? value.substring(0, 20) + '...' 
-        : '[Object]'}`);
-        
       if (Platform.OS === 'web') {
         // Use localStorage for web
         localStorage.setItem(key, valueToStore);
-        console.log(`Storage: Set ${key} in localStorage`);
       } else {
         // Use SecureStore for mobile
         await SecureStore.setItemAsync(key, valueToStore);
-        console.log(`Storage: Set ${key} in SecureStore`);
       }
     } catch (error: any) {
       safeCatch('Storage.setItem')(error);
@@ -30,17 +24,14 @@ export class Storage {
 
   static async getItem<T = any>(key: string, parseJson: boolean = true): Promise<T | string | null> {
     try {
-      console.log(`Storage: Getting ${key}`);
       let result: string | null = null;
       
       if (Platform.OS === 'web') {
         // Use localStorage for web
         result = localStorage.getItem(key);
-        console.log(`Storage: Got ${key} from localStorage:`, result ? (result.length > 20 ? result.substring(0, 20) + '...' : result) : 'null');
       } else {
         // Use SecureStore for mobile
         result = await SecureStore.getItemAsync(key);
-        console.log(`Storage: Got ${key} from SecureStore:`, result ? (result.length > 20 ? result.substring(0, 20) + '...' : result) : 'null');
       }
       
       if (!result) return null;
@@ -64,15 +55,12 @@ export class Storage {
 
   static async deleteItem(key: string): Promise<void> {
     try {
-      console.log(`Storage: Deleting ${key}`);
       if (Platform.OS === 'web') {
         // Use localStorage for web
         localStorage.removeItem(key);
-        console.log(`Storage: Deleted ${key} from localStorage`);
       } else {
         // Use SecureStore for mobile
         await SecureStore.deleteItemAsync(key);
-        console.log(`Storage: Deleted ${key} from SecureStore`);
       }
     } catch (error: any) {
       safeCatch('Storage.deleteItem')(error);

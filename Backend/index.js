@@ -1,6 +1,6 @@
 // Mathematico Backend with MongoDB Database
-require('dotenv').config({ path: `${__dirname}/config.env` });
-console.log('✅ Environment variables loaded from config.env');
+require('dotenv').config();
+console.log('✅ Environment variables loaded');
 
 // Database connection
 const connectDB = require('./config/database');
@@ -37,54 +37,32 @@ const isPortAvailable = (port) => {
   try {
     const missing = [];
     const requiredVars = [
+      'MONGO_URI',
       'JWT_SECRET',
       'JWT_REFRESH_SECRET',
       'CLOUDINARY_CLOUD_NAME',
       'CLOUDINARY_API_KEY',
-      'CLOUDINARY_API_SECRET'
+      'CLOUDINARY_API_SECRET',
+      'RAZORPAY_KEY_ID',
+      'RAZORPAY_KEY_SECRET'
     ];
-
 
     // Check for required variables
     requiredVars.forEach((key) => {
-  if (!process.env[key]) {
+      if (!process.env[key]) {
         missing.push(key);
-      } else if (process.env[key].length < 32) {
-        console.warn(`⚠️ ${key} is too short (minimum 32 characters recommended)`);
       }
     });
 
-    // Security warnings
-    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 64) {
-      console.warn('⚠️ JWT_SECRET should be at least 64 characters for production');
-    }
-
-    if (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 8) {
-      console.warn('⚠️ ADMIN_PASSWORD should be at least 8 characters');
-    }
-
     if (missing.length) {
-      console.warn('⚠️ Missing required environment variables:', missing);
-      console.warn('⚠️ Some features may not work properly');
-    } else {
-      console.log('✅ Core environment variables present');
+      console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+      process.exit(1);
     }
 
-    // Email configuration validation
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-      const isGmail = /@gmail\.com$/i.test(process.env.EMAIL_USER);
-      if (!isGmail) {
-        console.warn('⚠️ EMAIL_USER is not a Gmail account. Ensure provider and credentials match.');
-      }
-    }
-
-    // CORS security check
-    if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN === '*') {
-      console.warn('⚠️ CORS_ORIGIN is set to "*" - this allows all origins (security risk)');
-    }
-
+    console.log('✅ Required environment variables present');
   } catch (e) {
-    console.warn('⚠️ Environment validation skipped:', e.message);
+    console.error('❌ Environment validation failed');
+    process.exit(1);
   }
 })();
 
@@ -144,91 +122,26 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const allowedOrigins = [process.env.APP_ORIGIN, process.env.ADMIN_ORIGIN].filter(Boolean);
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log('🌐 CORS request from origin:', origin);
-  const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5000',
-      'http://localhost:5001',
-      'http://localhost:5002',
-      'http://localhost:8081',
-      'http://localhost:8082',
-      'http://localhost:8083',
-      'http://localhost:19000',
-      'http://localhost:19001',
-      'http://localhost:19002',
-      'http://localhost:19003',
-      'http://localhost:19004',
-      'http://localhost:19005',
-      'http://localhost:19006',
-      'http://10.148.37.132:8081',
-      'http://10.148.37.132:8082',
-      'http://10.148.37.132:8083',
-      'http://10.148.37.132:19006',
-      'http://10.148.37.132:3000',
-      'http://10.148.37.132:5000',
-      'http://10.148.37.132:5001',
-      'http://10.148.37.132:5002',
-      'http://10.152.98.132:8081',
-      'http://10.152.98.132:8082',
-      'http://10.152.98.132:8083',
-      'http://10.152.98.132:19006',
-      'http://10.152.98.132:3000',
-      'http://10.152.98.132:5000',
-      'http://10.152.98.132:5001',
-     'http://10.152.98.132:5002',
-      'https://mathematico-frontend.vercel.app',
-      'https://mathematico-backend-new.vercel.app',
-      'https://mathematico-app.vercel.app',
-      'exp://192.168.1.100:8081', // Expo development
-      'exp://localhost:8081', // Expo development
-     'exp://localhost:8082', // Expo development
-      'exp://localhost:8083', // Expo development
-      'exp://10.0.2.2:8081', // Android emulator
-      'exp://10.0.2.2:8082', // Android emulator
-      'exp://10.0.2.2:8083', // Android emulator
-      'http://10.0.2.2:5002', // Android emulator backend
-      'http://10.0.2.2:5001', // Android emulator backend
-      'http://10.0.2.2:5000', // Android emulator backend
-      'exp://127.0.0.1:8081', // Local development
-      'exp://127.0.0.1:8082', // Local development
-      'exp://127.0.0.1:8083', // Local development
-     'capacitor://localhost', // Capacitor apps
-      'ionic://localhost', // Ionic apps
-      'http://localhost', // Local development
-      'https://localhost', // Local HTTPS
-      'file://', // File protocol for mobile apps
-      'app://', // App protocol for mobile apps
-      'mathematico://', // Custom app scheme
-      'com.anonymous.mathematico://' // Android app scheme
-    ];
-
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
-      console.log('✅ CORS: Allowing request with no origin (mobile app)');
       return callback(null, true);
-   }
-    // Allow all origins in development mode for easier testing
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ CORS: Development mode - allowing all origins');
-      callback(null, true);
-      return;
-     }
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('✅ CORS: Allowing origin:', origin);
-      callback(null, true);
-    } else {
-    console.log('⚠️ CORS: Origin not in allowlist, but allowing anyway:', origin);
-    callback(null, true); // Allow all origins for now to fix the issue
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
-  'Content-Type',
+    'Content-Type',
     'Authorization',
-  'X-Requested-With',
+    'X-Requested-With',
     'Accept',
     'Origin',
     'Access-Control-Request-Method',
@@ -280,10 +193,10 @@ app.get('/health', async (req, res) => {
     res.json({
       success: true,
       status: 'healthy',
-    database: {
-      status: 'connected',   
-       type: 'mongodb',
-        host: process.env.MONGODB_URI ? 'connected' : 'not configured'
+      database: {
+        status: 'connected',
+        type: 'mongodb',
+        host: process.env.MONGO_URI ? 'connected' : 'not configured'
       },
       system: systemInfo,
       environment: process.env.NODE_ENV || 'development',
@@ -566,16 +479,10 @@ if (process.env.VERCEL !== '1') {
       const server = app.listen(PORT, '0.0.0.0', () => {
         console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
         console.log(`🌐 Server running on port ${PORT}`);
-        console.log(`📊 Health check: http://localhost:${PORT}/health`);
-        console.log(`📱 Mobile health check: http://10.148.37.132:${PORT}/health`);
-        console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-        console.log(`🔗 API root: http://localhost:${PORT}/api/v1`);
-        console.log(`📱 Mobile API root: http://10.148.37.132:${PORT}/api/v1`);
-       console.log(`🗄️  Database: MongoDB Connected`);
         console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
         console.log('==========================================\n');
-     });
+      });
 
       // Handle any server errors
       server.on('error', (err) => {

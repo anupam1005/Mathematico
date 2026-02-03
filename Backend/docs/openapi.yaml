@@ -12,10 +12,8 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: http://localhost:5000
-    description: Development server
-  - url: https://mathematico-backend-new.vercel.app
-    description: Production Vercel server
+  - url: https://api.example.com
+    description: Production server
 components:
   securitySchemes:
     BearerAuth:
@@ -358,11 +356,11 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: dc2006089@gmail.com
+                  example: admin@example.com
                 password:
                   type: string
                   format: password
-                  example: Myname*321
+                  example: ExamplePassword123!
       responses:
         '200':
           description: Login successful

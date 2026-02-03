@@ -2,7 +2,8 @@
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
+
 import { withBasePath } from './apiClient';
 import { safeCatch } from '../utils/safeCatch';
 

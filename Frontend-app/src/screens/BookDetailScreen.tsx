@@ -35,7 +35,6 @@ export default function BookDetailScreen({ navigation, route }: any) {
   const loadBook = async () => {
     try {
       setLoading(true);
-      console.log('Loading book with ID:', bookId);
       if (!bookId) {
         throw new Error('Book ID is required');
       }

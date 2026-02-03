@@ -42,7 +42,6 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       if (response.success && response.data) {
         // Handle both single object and array responses
         const liveClassData = Array.isArray(response.data) ? response.data[0] : response.data;
-        console.log('Live class data received:', liveClassData);
         
         // Ensure all required properties exist with fallbacks
         const safeLiveClassData = {
@@ -111,7 +110,6 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
   const startLiveClass = async () => {
     try {
-      console.log('Starting live class with ID:', liveClassId);
       const response = await liveClassService.startLiveClass(liveClassId);
       
       if (response.success) {
@@ -130,7 +128,6 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
 
   const endLiveClass = async () => {
     try {
-      console.log('Ending live class with ID:', liveClassId);
       const response = await liveClassService.endLiveClass(liveClassId);
       
       if (response.success) {

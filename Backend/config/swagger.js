@@ -19,12 +19,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.BACKEND_URL || 'http://localhost:5000',
-        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
-      },
-      {
-        url: 'https://mathematico-backend-new.vercel.app',
-        description: 'Production Vercel server'
+        url: process.env.BACKEND_URL || 'https://api.example.com',
+        description: 'Production server'
       }
     ],
     components: {

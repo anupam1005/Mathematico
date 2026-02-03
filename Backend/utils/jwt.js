@@ -3,43 +3,21 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 // JWT Secrets - MUST be different and strong
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-
-// Fallback secrets for development (NOT for production)
-const FALLBACK_JWT_SECRET = 'ea8d2dd209821c788f00430dbada14059f8729cdb9787927fc66d4b614ce934d8a605ca223405bddd2b4c984ed8490c7c62550d579f1b245754ee2f0c6e6fe33';
-const FALLBACK_JWT_REFRESH_SECRET = '4f5093c4703da4e343a60514af3d606f885386828349a58d2cec5c6d66bb829b373361b340518abc1011e697cecd71dfcad0a32cc4a1e05a167e11076877f090';
-
-// Use environment variables or fallback to config values
-const ACTUAL_JWT_SECRET = JWT_SECRET || FALLBACK_JWT_SECRET;
-const ACTUAL_JWT_REFRESH_SECRET = JWT_REFRESH_SECRET || FALLBACK_JWT_REFRESH_SECRET;
+const ACTUAL_JWT_SECRET = process.env.JWT_SECRET;
+const ACTUAL_JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 // Validate that secrets are set and different
 if (!ACTUAL_JWT_SECRET || !ACTUAL_JWT_REFRESH_SECRET) {
-  console.error('❌ CRITICAL: JWT secrets are not available');
-  console.error('❌ JWT_SECRET:', JWT_SECRET ? 'SET' : 'NOT SET');
-  console.error('❌ JWT_REFRESH_SECRET:', JWT_REFRESH_SECRET ? 'SET' : 'NOT SET');
-  throw new Error('❌ CRITICAL: JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
 }
 
 if (ACTUAL_JWT_SECRET === ACTUAL_JWT_REFRESH_SECRET) {
   throw new Error('❌ CRITICAL: JWT_SECRET and JWT_REFRESH_SECRET must be different');
 }
 
-if (ACTUAL_JWT_SECRET.length < 64 || ACTUAL_JWT_REFRESH_SECRET.length < 64) {
-  console.warn('⚠️ WARNING: JWT secrets should be at least 64 characters long for production');
-}
-
-console.log('🔑 JWT_SECRET loaded: YES (length:', ACTUAL_JWT_SECRET.length, ')');
-console.log('🔑 JWT_REFRESH_SECRET loaded: YES (length:', ACTUAL_JWT_REFRESH_SECRET.length, ')');
-console.log('🔑 Using environment variables:', JWT_SECRET ? 'YES' : 'NO (using fallback)');
-
 // Token expiration times
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m'; // Short-lived
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // Long-lived
-
-console.log('⏱️ Access token expires in:', JWT_ACCESS_EXPIRES_IN);
-console.log('⏱️ Refresh token expires in:', JWT_REFRESH_EXPIRES_IN);
 
 /**
  * Generate access token

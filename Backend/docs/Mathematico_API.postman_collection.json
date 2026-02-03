@@ -8,12 +8,12 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://mathematico-backend-new.vercel.app",
+      "value": "https://api.example.com",
       "type": "string"
     },
     {
       "key": "localUrl",
-      "value": "http://localhost:5000",
+      "value": "https://api.example.com",
       "type": "string"
     },
     {
@@ -115,7 +115,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"dc2006089@gmail.com\",\n  \"password\": \"Myname*321\"\n}"
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"ExamplePassword123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",

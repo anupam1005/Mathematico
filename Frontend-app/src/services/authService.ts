@@ -1,4 +1,4 @@
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';

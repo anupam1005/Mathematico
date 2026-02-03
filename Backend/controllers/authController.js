@@ -1,7 +1,5 @@
 const { 
   generateTokenPair, 
-  verifyAccessToken, 
-  verifyHashedRefreshToken,
   hashRefreshToken,
   setRefreshTokenCookie,
   clearRefreshTokenCookie
@@ -49,6 +47,10 @@ const sendEmail = async ({ to, subject, text, html }) => {
 
 // Auth Controller - Handles authentication with secure token management
 
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+
 /**
  * User login with secure token management
  */
@@ -76,10 +78,15 @@ const login = async (req, res) => {
     await connectDB();
 
     // Special handling for admin user (ensure persisted DB user and real ObjectId)
-    const ADMIN_EMAIL = 'dc2006089@gmail.com';
-    const ADMIN_PASSWORD = 'Myname*321';
-    
-    if (email.toLowerCase() === ADMIN_EMAIL) {
+    if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
+      if (!ADMIN_CONFIGURED) {
+        return res.status(503).json({
+          success: false,
+          message: 'Admin credentials are not configured',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       if (password !== ADMIN_PASSWORD) {
         return res.status(401).json({
           success: false,
@@ -117,12 +124,7 @@ const login = async (req, res) => {
       await dbAdmin.save();
 
       // Generate tokens with real ObjectId
-      console.log(' Generating tokens for admin user...');
-      console.log(' JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
-      
       const tokens = generateTokenPair(dbAdmin);
-      console.log(' Tokens generated successfully');
-      console.log(' Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
       const deviceInfo = {
         userAgent: req.headers['user-agent'],
@@ -137,8 +139,6 @@ const login = async (req, res) => {
 
       // Set refresh token in HttpOnly cookie
       setRefreshTokenCookie(res, tokens.refreshToken);
-
-      console.log(' Admin login successful (DB-backed):', ADMIN_EMAIL, 'id:', dbAdmin._id.toString());
 
       // Get public profile (includes isAdmin, is_admin, etc.)
       const publicUser = dbAdmin.getPublicProfile();
@@ -188,12 +188,7 @@ const login = async (req, res) => {
     }
 
     // Generate token pair
-    console.log(' Generating tokens for regular user...');
-    console.log(' JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
-    
     const tokens = generateTokenPair(user);
-    console.log(' Tokens generated successfully');
-    console.log(' Access token length:', tokens.accessToken ? tokens.accessToken.length : 'NULL');
 
     // Store hashed refresh token in database
     const deviceInfo = {
@@ -218,8 +213,6 @@ const login = async (req, res) => {
     // Get public profile
     const publicUser = user.getPublicProfile();
 
-    console.log(' Login successful:', user.email);
-
     return res.json({
       success: true,
       message: 'Login successful',
@@ -234,9 +227,7 @@ const login = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error:', error);
-    console.error('Error type:', error.name);
-    console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    console.error('Login error');
     
     let errorMessage = 'Login failed';
     if (error.message.includes('JWT') || error.message.includes('token')) {
@@ -248,12 +239,8 @@ const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: errorMessage,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      debug: {
-        errorType: error.name,
-        jwtSecretAvailable: process.env.JWT_SECRET ? true : false
-      }
+      error: 'Internal Server Error',
+      timestamp: new Date().toISOString()
     });
   }
 };
@@ -275,8 +262,7 @@ const register = async (req, res) => {
     }
 
     // Prevent admin email registration
-    const ADMIN_EMAIL = 'dc2006089@gmail.com';
-    if (email.toLowerCase() === ADMIN_EMAIL) {
+    if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
       return res.status(403).json({
         success: false,
         message: 'This email is reserved for admin use. Please use a different email.',
@@ -327,8 +313,6 @@ const register = async (req, res) => {
     // Get public profile
     const publicUser = user.getPublicProfile();
 
-    console.log(' Registration successful:', user.email);
-
     return res.status(201).json({
       success: true,
       message: 'Registration successful',
@@ -343,9 +327,7 @@ const register = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Registration error:', error);
-    console.error('Error type:', error.name);
-    console.error('JWT_SECRET available:', process.env.JWT_SECRET ? 'YES' : 'NO');
+    console.error('Registration error');
     
     let errorMessage = 'Registration failed';
     if (error.message.includes('JWT') || error.message.includes('token')) {
@@ -357,12 +339,8 @@ const register = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: errorMessage,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      debug: {
-        errorType: error.name,
-        jwtSecretAvailable: process.env.JWT_SECRET ? true : false
-      }
+      error: 'Internal Server Error',
+      timestamp: new Date().toISOString()
     });
   }
 };
@@ -386,7 +364,6 @@ const logout = async (req, res) => {
 
       if (user) {
         await user.removeRefreshToken(tokenHash);
-        console.log(' Logout successful:', user.email);
       }
     }
 
@@ -400,7 +377,7 @@ const logout = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('Logout error');
     // Still clear cookie even if database operation fails
     clearRefreshTokenCookie(res);
     return res.json({
@@ -437,7 +414,7 @@ const getCurrentUser = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error('Get current user error');
     return res.status(500).json({
       success: false,
       error: 'Internal Server Error',
@@ -522,8 +499,6 @@ const refreshToken = async (req, res) => {
     // Set new refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    console.log(' Token refreshed:', user.email);
-
     return res.json({
       success: true,
       message: 'Token refreshed successfully',
@@ -537,12 +512,12 @@ const refreshToken = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Token refresh error:', error);
+    console.error('Token refresh error');
     clearRefreshTokenCookie(res);
     return res.status(500).json({
       success: false,
       message: 'Token refresh failed',
-      error: error.message,
+      error: 'Internal Server Error',
       timestamp: new Date().toISOString()
     });
   }
@@ -595,11 +570,11 @@ const verifyEmail = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Email verification error:', error);
+    console.error('Email verification error');
     return res.status(500).json({
       success: false,
       message: 'Failed to verify email',
-      error: error.message,
+      error: 'Internal Server Error',
       timestamp: new Date().toISOString()
     });
   }
@@ -651,7 +626,7 @@ const forgotPassword = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'Failed to send reset email',
-        error: mailError.message,
+        error: 'Internal Server Error',
         timestamp: new Date().toISOString()
       });
     }
@@ -668,11 +643,11 @@ const forgotPassword = async (req, res) => {
 
     return res.json(response);
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error('Forgot password error');
     return res.status(500).json({
       success: false,
       message: 'Failed to process password reset',
-      error: error.message,
+      error: 'Internal Server Error',
       timestamp: new Date().toISOString()
     });
   }
@@ -733,11 +708,11 @@ const resetPassword = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Reset password error');
     return res.status(500).json({
       success: false,
       message: 'Failed to reset password',
-      error: error.message,
+      error: 'Internal Server Error',
       timestamp: new Date().toISOString()
     });
   }
@@ -791,11 +766,11 @@ const changePassword = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    console.error('Change password error');
     return res.status(500).json({
       success: false,
       message: 'Failed to change password',
-      error: error.message,
+      error: 'Internal Server Error',
       timestamp: new Date().toISOString()
     });
   }
@@ -841,24 +816,15 @@ module.exports = {
         timestamp: new Date().toISOString(),
         test: {
           tokenGenerated: !!tokens.accessToken,
-          tokenLength: tokens.accessToken ? tokens.accessToken.length : 0,
-          tokenVerified: !!decoded,
-          decodedUser: decoded ? { id: decoded.id, email: decoded.email, role: decoded.role } : null,
-          jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
-          jwtRefreshSecretAvailable: process.env.JWT_REFRESH_SECRET ? true : false
+          tokenVerified: !!decoded
         }
       });
     } catch (error) {
       res.status(500).json({
         success: false,
         message: 'JWT test failed',
-        error: error.message,
-        timestamp: new Date().toISOString(),
-        debug: {
-          errorType: error.name,
-          jwtSecretAvailable: process.env.JWT_SECRET ? true : false,
-          jwtRefreshSecretAvailable: process.env.JWT_REFRESH_SECRET ? true : false
-        }
+        error: 'Internal Server Error',
+        timestamp: new Date().toISOString()
       });
     }
   }

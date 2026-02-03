@@ -1,5 +1,5 @@
 // Razorpay Payment Service
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
@@ -19,10 +19,8 @@ const getRazorpayCheckout = () => {
   
   try {
     RazorpayCheckoutNative = require('react-native-razorpay');
-    console.log('✅ RazorpayCheckout lazy-loaded successfully');
     return RazorpayCheckoutNative;
   } catch (error) {
-    errorHandler.logWarning('⚠️ RazorpayCheckout lazy-load failed. Payment module may be missing from this build.');
     RazorpayCheckoutNative = (typeof globalThis !== 'undefined' ? (globalThis as any).RazorpayCheckout : null);
     return RazorpayCheckoutNative;
   }
@@ -63,32 +61,22 @@ class RazorpayService {
    */
   async createOrder(paymentOptions: PaymentOptions): Promise<RazorpayPaymentResponse> {
     try {
-      console.log('💳 RazorpayService: Creating order with options:', paymentOptions);
-      
       const authToken = await this.getAuthToken();
-      console.log('Auth token available:', !!authToken);
-      
       const response = await mobileApi.post('/payments/create-order', paymentOptions, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
       });
-
-      console.log('Response status:', response.status);
-      
       const data = response.data;
-      console.log('Response data:', data);
 
       if (data.success) {
-        console.log('✅ RazorpayService: Order created successfully');
         return {
           success: true,
           data: data.data,
           message: 'Order created successfully',
         };
       } else {
-        console.error('❌ RazorpayService: Order creation failed:', data.message);
         return {
           success: false,
           error: data.error || data.message || 'Failed to create order',
@@ -96,7 +84,6 @@ class RazorpayService {
         };
       }
     } catch (error: any) {
-      console.error('❌ RazorpayService: Error creating order');
       errorHandler.handleError('RazorpayService: Error creating order:', error);
       return {
         success: false,
@@ -111,8 +98,6 @@ class RazorpayService {
    */
   async verifyPayment(paymentData: any): Promise<RazorpayPaymentResponse> {
     try {
-      errorHandler.logInfo('RazorpayService: Verifying payment:', paymentData);
-      
       const response = await mobileApi.post('/payments/verify', paymentData, {
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +106,6 @@ class RazorpayService {
       });
 
       const data = response.data;
-      errorHandler.logInfo('RazorpayService: Payment verification response:', data);
 
       if (data.success) {
         return {
@@ -151,8 +135,6 @@ class RazorpayService {
    */
   async getPaymentHistory(): Promise<RazorpayPaymentResponse> {
     try {
-      console.log('RazorpayService: Fetching payment history');
-      
       const response = await mobileApi.get('/payments/history', {
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +143,6 @@ class RazorpayService {
       });
 
       const data = response.data;
-      errorHandler.logInfo('RazorpayService: Payment history response:', data);
 
       if (data.success) {
         return {
@@ -191,35 +172,24 @@ class RazorpayService {
    */
   private async getConfig(): Promise<any> {
     if (this.config) {
-      console.log('RazorpayService: Using cached configuration');
       return this.config;
     }
 
     try {
-      console.log('RazorpayService: Fetching configuration from backend...');
       const response = await mobileApi.get('/payments/config', {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
-      console.log('RazorpayService: Config response status:', response.status);
-      
       const data = response.data;
-      console.log('RazorpayService: Config response data:', data);
-      
       if (data.success && data.data) {
         this.config = data.data;
-        console.log('✅ RazorpayService: Configuration loaded successfully');
-        console.log('Key ID available:', !!this.config.keyId);
         return this.config;
       } else {
-        console.error('❌ RazorpayService: Failed to load config:', data.message);
         throw new Error(data.message || 'Failed to load Razorpay configuration');
       }
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error loading configuration:', error);
-      console.error('❌ RazorpayService: Failed to load configuration from backend');
       // Don't return empty config - throw error so user knows payment won't work
       throw new Error('Payment service configuration failed. Please contact support.');
     }
@@ -258,11 +228,8 @@ class RazorpayService {
    */
   async openCheckout(options: any): Promise<RazorpayPaymentResponse> {
     try {
-      errorHandler.logInfo('RazorpayService: Opening Razorpay checkout with options:', options);
-      
       // Check if running on web platform
       if (Platform.OS === 'web') {
-        console.warn('RazorpayService: Running on web platform, payment not supported');
         return {
           success: false,
           error: 'Web platform not supported',
@@ -275,7 +242,6 @@ class RazorpayService {
       
       // Check if RazorpayCheckout is available
       if (!RazorpayCheckout || !RazorpayCheckout.open) {
-        console.error('RazorpayService: RazorpayCheckout not available');
         return {
           success: false,
           error: 'Razorpay SDK not available',
@@ -320,8 +286,6 @@ class RazorpayService {
 
       const data = await RazorpayCheckout.open(razorpayOptions);
       
-      errorHandler.logInfo('RazorpayService: Payment successful:', data);
-      
       return {
         success: true,
         data: data,
@@ -342,7 +306,6 @@ class RazorpayService {
       
       // Handle native module not available
       if (errorMsg.includes('_nativemodule')) {
-        console.error('RazorpayService: Native module not available');
         return {
           success: false,
           error: 'Payment service unavailable',

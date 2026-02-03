@@ -66,7 +66,6 @@ export default function ProfileScreen({ navigation }: any) {
   }, [user?.name]);
 
   const handleLogout = () => {
-    console.log('ProfileScreen: Logout button pressed');
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -76,10 +75,8 @@ export default function ProfileScreen({ navigation }: any) {
           text: 'Logout', 
           style: 'destructive', 
           onPress: async () => {
-            console.log('ProfileScreen: Logout confirmed, calling logout function');
             try {
               await logout();
-              console.log('ProfileScreen: Logout completed successfully');
             } catch (error) {
               safeCatch('ProfileScreen.handleLogout')(error);
             }

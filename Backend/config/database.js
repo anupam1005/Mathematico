@@ -13,47 +13,33 @@ const connectDB = async () => {
   }
 
   if (!cached.promise) {
+    const mongoURI = process.env.MONGO_URI ? process.env.MONGO_URI.trim() : '';
+    if (!mongoURI) {
+      throw new Error('MONGO_URI is required for database connection');
+    }
+
     try {
-      // Default connection string (for development)
-      const defaultMongoURI = 'mongodb+srv://smartfarm:mathematico@mathematico.sod8pgp.mongodb.net/mathematico?retryWrites=true&w=majority';
-      
-      // Use provided MONGODB_URI or fallback to default
-      let mongoURI = process.env.MONGODB_URI || defaultMongoURI;
-      mongoURI = mongoURI.trim();
-
-      // Ensure the connection string includes the database name and options
-      if (!mongoURI.includes('retryWrites')) {
-        mongoURI = mongoURI.endsWith('/') 
-          ? `${mongoURI}mathematico?retryWrites=true&w=majority`
-          : `${mongoURI}/mathematico?retryWrites=true&w=majority`;
-      }
-
       const options = {
-        dbName: process.env.MONGODB_DB || 'mathematico',
+        ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 45000,
         bufferCommands: false,
         // Removed deprecated options: useNewUrlParser and useUnifiedTopology
-        // These are no longer needed in Mongoose 6+ and cause warnings
       };
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {
         const { host, name } = mongooseInstance.connection;
         console.log(`✅ MongoDB Connected: ${host}`);
         console.log(`📊 Database: ${name}`);
-        console.log(`🔗 Connection String: ${mongoURI}`);
-        console.log(`📋 Available Collections:`, mongooseInstance.connection.db.listCollections().toArray().then(collections => {
-          console.log('Collections:', collections.map(c => c.name));
-        }));
 
         // Connection event listeners
         mongoose.connection.on('connected', () => {
           console.log('🔗 Mongoose connected to MongoDB');
         });
 
-        mongoose.connection.on('error', (err) => {
-          console.error('❌ Mongoose connection error:', err);
+        mongoose.connection.on('error', () => {
+          console.error('❌ Mongoose connection error');
         });
 
         mongoose.connection.on('disconnected', () => {
@@ -74,7 +60,7 @@ const connectDB = async () => {
         return mongooseInstance;
       });
     } catch (error) {
-      console.error('❌ Failed to initiate MongoDB connection:', error);
+      console.error('❌ Failed to initiate MongoDB connection');
       throw error;
     }
   }
@@ -83,7 +69,7 @@ const connectDB = async () => {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
-    console.error('❌ MongoDB connection failed:', error && error.message ? error.message : error);
+    console.error('❌ MongoDB connection failed');
     throw error;
   }
 

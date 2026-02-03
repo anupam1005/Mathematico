@@ -2,7 +2,8 @@
 import type { AxiosRequestConfig } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
-import { API_PATHS } from '../config';
+import { API_PATHS } from '../constants/apiPaths';
+
 import { withBasePath } from './apiClient';
 
 // Create a service error handler for adminService
