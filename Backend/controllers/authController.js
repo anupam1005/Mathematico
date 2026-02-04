@@ -227,21 +227,34 @@ const login = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error');
-    
-    let errorMessage = 'Login failed';
-    if (error.message.includes('JWT') || error.message.includes('token')) {
-      errorMessage = 'Login failed - Token generation error';
-    } else if (error.message.includes('database') || error.message.includes('connection')) {
-      errorMessage = 'Login failed - Database connection error';
+    const errorMessage = error && error.message ? String(error.message) : String(error);
+    console.error('Login error:', errorMessage);
+
+    let clientMessage = 'Login failed';
+    if (errorMessage.includes('JWT') || errorMessage.includes('token')) {
+      clientMessage = 'Login failed - Token generation error';
+    } else if (
+      errorMessage.toLowerCase().includes('mongo') ||
+      errorMessage.toLowerCase().includes('database') ||
+      errorMessage.toLowerCase().includes('connection') ||
+      errorMessage.toLowerCase().includes('ecnn')
+    ) {
+      clientMessage = 'Login failed - Database connection error';
     }
-    
-    return res.status(500).json({
+
+    const response = {
       success: false,
-      message: errorMessage,
+      message: clientMessage,
       error: 'Internal Server Error',
+      code: error && error.name ? error.name : 'LOGIN_FAILED',
       timestamp: new Date().toISOString()
-    });
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      response.details = errorMessage;
+    }
+
+    return res.status(500).json(response);
   }
 };
 
@@ -327,21 +340,54 @@ const register = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Registration error');
-    
-    let errorMessage = 'Registration failed';
-    if (error.message.includes('JWT') || error.message.includes('token')) {
-      errorMessage = 'Registration failed - Token generation error';
-    } else if (error.message.includes('database') || error.message.includes('connection')) {
-      errorMessage = 'Registration failed - Database connection error';
+    const errorMessage = error && error.message ? String(error.message) : String(error);
+    console.error('Registration error:', errorMessage);
+
+    if (error && error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+        error: 'Validation Error',
+        code: 'VALIDATION_ERROR',
+        timestamp: new Date().toISOString()
+      });
     }
-    
-    return res.status(500).json({
+
+    if (error && error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already exists',
+        error: 'Duplicate Key',
+        code: 'DUPLICATE_EMAIL',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let clientMessage = 'Registration failed';
+    if (errorMessage.includes('JWT') || errorMessage.includes('token')) {
+      clientMessage = 'Registration failed - Token generation error';
+    } else if (
+      errorMessage.toLowerCase().includes('mongo') ||
+      errorMessage.toLowerCase().includes('database') ||
+      errorMessage.toLowerCase().includes('connection') ||
+      errorMessage.toLowerCase().includes('ecnn')
+    ) {
+      clientMessage = 'Registration failed - Database connection error';
+    }
+
+    const response = {
       success: false,
-      message: errorMessage,
+      message: clientMessage,
       error: 'Internal Server Error',
+      code: error && error.name ? error.name : 'REGISTER_FAILED',
       timestamp: new Date().toISOString()
-    });
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      response.details = errorMessage;
+    }
+
+    return res.status(500).json(response);
   }
 };
 
