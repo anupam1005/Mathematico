@@ -25,6 +25,41 @@
       "key": "refreshToken",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uploadFile",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "liveClassId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -47,9 +82,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/health",
+              "raw": "{{baseUrl}}/health",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "health"]
+              "path": ["health"]
             }
           }
         },
@@ -115,7 +150,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"ExamplePassword123!\"\n}"
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
@@ -136,7 +171,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
@@ -157,7 +192,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"confirmPassword\": \"password123\"\n}"
+              "raw": "{\n  \"name\": \"New User {{$timestamp}}\",\n  \"email\": \"newuser{{$timestamp}}@example.com\",\n  \"password\": \"TestPass123!\",\n  \"confirmPassword\": \"TestPass123!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -284,6 +319,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -293,9 +332,9 @@
               "raw": "{\n  \"paymentMethod\": \"card\",\n  \"amount\": 99.99\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/mobile/courses/1/enroll",
+              "raw": "{{baseUrl}}/api/v1/student/courses/{{courseId}}/enroll",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "mobile", "courses", "1", "enroll"]
+              "path": ["api", "v1", "student", "courses", "{{courseId}}", "enroll"]
             }
           }
         },
@@ -304,6 +343,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -314,9 +357,9 @@
               "raw": "{\n  \"paymentMethod\": \"card\",\n  \"amount\": 49.99\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/mobile/books/1/purchase",
+              "raw": "{{baseUrl}}/api/v1/student/books/{{bookId}}/purchase",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "mobile", "books", "1", "purchase"]
+              "path": ["api", "v1", "student", "books", "{{bookId}}", "purchase"]
             }
           }
         },
@@ -325,6 +368,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -335,9 +382,9 @@
               "raw": "{\n  \"paymentMethod\": \"card\",\n  \"amount\": 29.99\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/mobile/live-classes/1/enroll",
+              "raw": "{{baseUrl}}/api/v1/student/live-classes/{{liveClassId}}/enroll",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "mobile", "live-classes", "1", "enroll"]
+              "path": ["api", "v1", "student", "live-classes", "{{liveClassId}}", "enroll"]
             }
           }
         }
@@ -407,6 +454,21 @@
         },
         {
           "name": "Create Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const responseJson = pm.response.json();",
+                  "  const book = responseJson.data || responseJson.book || responseJson;",
+                  "  const bookId = book && (book._id || book.id);",
+                  "  if (bookId) { pm.collectionVariables.set('bookId', bookId); }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -420,7 +482,7 @@
               "formdata": [
                 {
                   "key": "title",
-                  "value": "Test Book",
+                  "value": "Test Book {{$timestamp}}",
                   "type": "text"
                 },
                 {
@@ -445,7 +507,7 @@
                 },
                 {
                   "key": "isbn",
-                  "value": "978-1234567890",
+                  "value": "ISBN-{{$timestamp}}",
                   "type": "text"
                 },
                 {
@@ -504,15 +566,15 @@
                 },
                 {
                   "key": "status",
-                  "value": "active",
+                  "value": "published",
                   "type": "text"
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/books/1",
+              "raw": "{{baseUrl}}/api/v1/admin/books/{{bookId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "books", "1"]
+              "path": ["api", "v1", "admin", "books", "{{bookId}}"]
             }
           }
         },
@@ -532,12 +594,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"active\"\n}"
+              "raw": "{\n  \"status\": \"published\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/books/1/status",
+              "raw": "{{baseUrl}}/api/v1/admin/books/{{bookId}}/status",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "books", "1", "status"]
+              "path": ["api", "v1", "admin", "books", "{{bookId}}", "status"]
             }
           }
         },
@@ -552,9 +614,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/books/1",
+              "raw": "{{baseUrl}}/api/v1/admin/books/{{bookId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "books", "1"]
+              "path": ["api", "v1", "admin", "books", "{{bookId}}"]
             }
           }
         }
@@ -592,6 +654,21 @@
         },
         {
           "name": "Create Course",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const responseJson = pm.response.json();",
+                  "  const course = responseJson.data || responseJson.course || responseJson;",
+                  "  const courseId = course && (course._id || course.id);",
+                  "  if (courseId) { pm.collectionVariables.set('courseId', courseId); }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -605,7 +682,7 @@
               "formdata": [
                 {
                   "key": "title",
-                  "value": "Test Course",
+                  "value": "Test Course {{$timestamp}}",
                   "type": "text"
                 },
                 {
@@ -615,12 +692,37 @@
                 },
                 {
                   "key": "category",
-                  "value": "Mathematics",
+                  "value": "mathematics",
+                  "type": "text"
+                },
+                {
+                  "key": "subject",
+                  "value": "Algebra",
+                  "type": "text"
+                },
+                {
+                  "key": "grade",
+                  "value": "10",
                   "type": "text"
                 },
                 {
                   "key": "level",
-                  "value": "Foundation",
+                  "value": "beginner",
+                  "type": "text"
+                },
+                {
+                  "key": "duration",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "thumbnail",
+                  "value": "https://example.com/course-thumbnail.png",
+                  "type": "text"
+                },
+                {
+                  "key": "instructorName",
+                  "value": "Admin",
                   "type": "text"
                 },
                 {
@@ -668,12 +770,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"active\"\n}"
+              "raw": "{\n  \"status\": \"published\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/courses/1/status",
+              "raw": "{{baseUrl}}/api/v1/admin/courses/{{courseId}}/status",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "courses", "1", "status"]
+              "path": ["api", "v1", "admin", "courses", "{{courseId}}", "status"]
             }
           }
         },
@@ -688,9 +790,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/courses/1",
+              "raw": "{{baseUrl}}/api/v1/admin/courses/{{courseId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "courses", "1"]
+              "path": ["api", "v1", "admin", "courses", "{{courseId}}"]
             }
           }
         }
@@ -718,6 +820,32 @@
         },
         {
           "name": "Create Live Class",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const start = new Date(Date.now() + 60 * 60 * 1000);",
+                  "const end = new Date(Date.now() + 2 * 60 * 60 * 1000);",
+                  "pm.collectionVariables.set('liveClassStart', start.toISOString());",
+                  "pm.collectionVariables.set('liveClassEnd', end.toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const responseJson = pm.response.json();",
+                  "  const liveClass = responseJson.data || responseJson.liveClass || responseJson;",
+                  "  const liveClassId = liveClass && (liveClass._id || liveClass.id);",
+                  "  if (liveClassId) { pm.collectionVariables.set('liveClassId', liveClassId); }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -731,7 +859,7 @@
               "formdata": [
                 {
                   "key": "title",
-                  "value": "Test Live Class",
+                  "value": "Test Live Class {{$timestamp}}",
                   "type": "text"
                 },
                 {
@@ -741,12 +869,22 @@
                 },
                 {
                   "key": "category",
-                  "value": "Mathematics",
+                  "value": "mathematics",
+                  "type": "text"
+                },
+                {
+                  "key": "subject",
+                  "value": "Algebra",
+                  "type": "text"
+                },
+                {
+                  "key": "grade",
+                  "value": "10",
                   "type": "text"
                 },
                 {
                   "key": "level",
-                  "value": "Foundation",
+                  "value": "beginner",
                   "type": "text"
                 },
                 {
@@ -760,8 +898,18 @@
                   "type": "text"
                 },
                 {
+                  "key": "startTime",
+                  "value": "{{liveClassStart}}",
+                  "type": "text"
+                },
+                {
+                  "key": "endTime",
+                  "value": "{{liveClassEnd}}",
+                  "type": "text"
+                },
+                {
                   "key": "scheduledAt",
-                  "value": "2024-12-31T10:00:00Z",
+                  "value": "{{liveClassStart}}",
                   "type": "text"
                 },
                 {
@@ -771,7 +919,7 @@
                 },
                 {
                   "key": "status",
-                  "value": "draft",
+                  "value": "scheduled",
                   "type": "text"
                 }
               ]
@@ -802,9 +950,9 @@
               "raw": "{\n  \"status\": \"scheduled\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/live-classes/1/status",
+              "raw": "{{baseUrl}}/api/v1/admin/live-classes/{{liveClassId}}/status",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "live-classes", "1", "status"]
+              "path": ["api", "v1", "admin", "live-classes", "{{liveClassId}}", "status"]
             }
           }
         }
@@ -832,6 +980,21 @@
         },
         {
           "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const responseJson = pm.response.json();",
+                  "  const user = responseJson.data || responseJson.user || responseJson;",
+                  "  const userId = user && (user._id || user.id);",
+                  "  if (userId) { pm.collectionVariables.set('userId', userId); }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -846,7 +1009,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"role\": \"user\",\n  \"is_active\": true\n}"
+              "raw": "{\n  \"name\": \"Test User {{$timestamp}}\",\n  \"email\": \"testuser{{$timestamp}}@example.com\",\n  \"password\": \"TestPass123!\",\n  \"role\": \"student\",\n  \"isActive\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/users",
@@ -871,12 +1034,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated User\",\n  \"email\": \"updated@example.com\",\n  \"role\": \"user\",\n  \"is_active\": true\n}"
+              "raw": "{\n  \"name\": \"Updated User {{$timestamp}}\",\n  \"email\": \"updated{{$timestamp}}@example.com\",\n  \"role\": \"student\",\n  \"isActive\": true\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/users/1",
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "users", "1"]
+              "path": ["api", "v1", "admin", "users", "{{userId}}"]
             }
           }
         },
@@ -896,12 +1059,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"is_active\": false\n}"
+              "raw": "{\n  \"isActive\": false\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/users/1/status",
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/status",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "users", "1", "status"]
+              "path": ["api", "v1", "admin", "users", "{{userId}}", "status"]
             }
           }
         },
@@ -916,9 +1079,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/admin/users/1",
+              "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "users", "1"]
+              "path": ["api", "v1", "admin", "users", "{{userId}}"]
             }
           }
         }
@@ -943,7 +1106,7 @@
                 {
                   "key": "file",
                   "type": "file",
-                  "src": []
+                  "src": ["{{uploadFile}}"]
                 }
               ]
             },
