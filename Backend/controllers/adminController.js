@@ -791,6 +791,366 @@ const updateBook = async (req, res) => {
   }
 };
 
+const updateBookStatus = async (req, res) => {
+  try {
+    if (!BookModel) {
+      return res.status(503).json({ success: false, message: 'Book model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['draft', 'published', 'archived', 'pending_review'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status (draft, published, archived, pending_review) is required'
+      });
+    }
+
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+
+    const book = await BookModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Book not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Book ${status} successfully`,
+      data: book,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update book status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update book status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// ============= COURSE MANAGEMENT =============
+
+const getAllCourses = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const { status, category, level, subject, grade, search } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (category) query.category = category;
+    if (level) query.level = level;
+    if (subject) query.subject = subject;
+    if (grade) query.grade = grade;
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const courses = await CourseModel.find(query)
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await CourseModel.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: courses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch courses',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getCourseById = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const course = await CourseModel.findById(id)
+      .populate('createdBy', 'name email');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching course:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const createCourse = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+
+    const {
+      title,
+      description,
+      shortDescription,
+      category,
+      subject,
+      grade,
+      level,
+      price,
+      currency = 'INR',
+      isFree = false,
+      duration,
+      tags = [],
+      instructorName,
+      instructorBio,
+      instructorQualifications,
+      instructorExperience,
+      status,
+      thumbnail,
+      startDate,
+      endDate,
+      enrollmentDeadline
+    } = req.body;
+
+    const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'preparation', 'remedial'];
+    const normalizedCategory = validCategories.includes(String(category || '').toLowerCase())
+      ? String(category).toLowerCase()
+      : 'general';
+
+    const validLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
+    const normalizedLevel = validLevels.includes(String(level || '').toLowerCase())
+      ? String(level).toLowerCase()
+      : 'beginner';
+
+    const validStatuses = ['draft', 'published', 'archived', 'suspended'];
+    const normalizedStatus = validStatuses.includes(status) ? status : 'draft';
+
+    let instructorUser = null;
+    try {
+      instructorUser = await UserModel.findById(req.user.id).select('name email');
+    } catch (error) {
+      console.warn('Unable to load instructor user details:', error.message);
+    }
+
+    let thumbnailUrl = '';
+    if (req.files && req.files.image && req.files.image[0]) {
+      try {
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          console.warn('⚠️ Cloudinary credentials not configured, skipping course thumbnail upload');
+        } else {
+          const imageResult = await uploadFileToCloud(
+            req.files.image[0],
+            'mathematico/courses/thumbnails',
+            'cloudinary'
+          );
+          thumbnailUrl = imageResult.url;
+        }
+      } catch (uploadError) {
+        console.error('Course thumbnail upload error:', uploadError);
+      }
+    } else if (thumbnail) {
+      thumbnailUrl = thumbnail;
+    }
+
+    if (!thumbnailUrl) {
+      thumbnailUrl = 'https://via.placeholder.com/800x450.png?text=Course';
+    }
+
+    const isFreeNormalized = isFree === 'true' || isFree === true;
+    const numericPrice = isFreeNormalized ? 0 : parseFloat(price);
+    const normalizedPrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+
+    const numericDuration = parseInt(duration, 10);
+    const normalizedDuration = Number.isFinite(numericDuration) && numericDuration > 0 ? numericDuration : 1;
+
+    const parsedTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string'
+        ? tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        : [];
+
+    const parsedQualifications = Array.isArray(instructorQualifications)
+      ? instructorQualifications
+      : typeof instructorQualifications === 'string'
+        ? instructorQualifications.split(',').map(value => value.trim()).filter(Boolean)
+        : [];
+
+    const courseData = {
+      title: title || 'Untitled Course',
+      description: description || 'No description provided',
+      shortDescription,
+      category: normalizedCategory,
+      subject: subject || 'General',
+      grade: grade || 'All Levels',
+      level: normalizedLevel,
+      price: normalizedPrice,
+      currency,
+      isFree: isFreeNormalized,
+      duration: normalizedDuration,
+      tags: parsedTags,
+      thumbnail: thumbnailUrl,
+      instructor: {
+        name: instructorName || (instructorUser && instructorUser.name) || 'Admin',
+        bio: instructorBio || '',
+        qualifications: parsedQualifications,
+        experience: instructorExperience || ''
+      },
+      createdBy: req.user?.id,
+      status: normalizedStatus,
+      isAvailable: true,
+      startDate,
+      endDate,
+      enrollmentDeadline
+    };
+
+    const course = await CourseModel.create(courseData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Course created successfully',
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Create course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const uploadCourseThumbnail = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image uploaded' });
+    }
+
+    const imageResult = await uploadFileToCloud(
+      req.file,
+      'mathematico/courses/thumbnails',
+      'cloudinary'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        url: imageResult.url
+      },
+      message: 'Thumbnail uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Upload course thumbnail error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload course thumbnail',
+      error: error.message
+    });
+  }
+};
+
+const toggleCoursePublish = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const course = await CourseModel.findById(id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const nextStatus = course.status === 'published' ? 'draft' : 'published';
+    course.status = nextStatus;
+    if (nextStatus === 'published') {
+      course.publishedAt = new Date();
+    }
+    course.updatedAt = new Date();
+
+    await course.save();
+
+    res.json({
+      success: true,
+      message: `Course ${nextStatus} successfully`,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Toggle course publish error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle course publish status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 const updateCourse = async (req, res) => {
   try {
     if (!CourseModel) {
@@ -1577,6 +1937,8 @@ module.exports = {
   updateCourse,
   deleteCourse,
   updateCourseStatus: withTimeout(updateCourseStatus),
+  uploadCourseThumbnail,
+  toggleCoursePublish,
   
   // Live Class Management
   getAllLiveClasses,
