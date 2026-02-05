@@ -4,9 +4,21 @@ const { authenticateToken } = require('../middlewares/auth');
 const { upload } = require('../utils/fileUpload');
 const authController = require('../controllers/authController');
 
+const methodNotAllowed = (expectedMethod, path) => (req, res) => {
+  res.status(405).json({
+    success: false,
+    message: `Method ${req.method} not allowed. Use ${expectedMethod} ${path}.`,
+    expectedMethod,
+    path,
+    timestamp: new Date().toISOString()
+  });
+};
+
 // Public auth routes
 router.post('/login', authController.login);
+router.get('/login', methodNotAllowed('POST', '/login'));
 router.post('/register', authController.register);
+router.get('/register', methodNotAllowed('POST', '/register'));
 router.post('/logout', authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
