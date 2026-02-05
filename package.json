@@ -25,5 +25,8 @@
     "backend"
   ],
   "author": "Mathematico Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "reporter": "^0.1.0"
+  }
 }
