@@ -123,7 +123,23 @@ app.get('/favicon.ico', (req, res) => {
   res.status(200).end(buffer);
 });
 
+app.get('/favicon.png', (req, res) => {
+  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Length', buffer.length);
+  res.status(200).end(buffer);
+});
+
 app.head('/favicon.ico', (req, res) => {
+  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Length', buffer.length);
+  res.status(200).end();
+});
+
+app.head('/favicon.png', (req, res) => {
   const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   res.setHeader('Content-Type', 'image/png');
