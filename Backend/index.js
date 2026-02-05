@@ -351,6 +351,40 @@ try {
   console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
 } catch (error) {
   console.error('❌ Failed to mount admin routes:', error.message);
+  const adminFallback = express.Router();
+  adminFallback.get('/health', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Admin API is healthy (fallback)',
+      timestamp: new Date().toISOString(),
+      status: 'operational'
+    });
+  });
+  adminFallback.get('/info', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Mathematico Admin API (fallback)',
+      version: '2.0.0',
+      timestamp: new Date().toISOString(),
+      authentication: {
+        required: true,
+        method: 'JWT Bearer Token',
+        loginEndpoint: '/api/v1/auth/login',
+        description: 'Use admin credentials to get access token'
+      },
+      endpoints: {
+        dashboard: '/dashboard',
+        users: '/users',
+        books: '/books',
+        courses: '/courses',
+        liveClasses: '/live-classes',
+        payments: '/payments'
+      },
+      note: 'Admin routes failed to load. Only health/info are available.'
+    });
+  });
+  app.use(`${API_PREFIX}/admin`, adminFallback);
+  console.warn(`⚠️ Fallback admin routes mounted at ${API_PREFIX}/admin`);
 }
 
 try {

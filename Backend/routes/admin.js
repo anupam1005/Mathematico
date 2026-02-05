@@ -38,9 +38,25 @@ const upload = multer({
   }
 });
 
-// Import admin controller with MongoDB - NO FALLBACKS
-const adminController = require('../controllers/adminController');
-console.log('✅ MongoDB AdminController loaded successfully');
+// Import admin controller with MongoDB - tolerate failures in serverless
+let adminController = {};
+try {
+  adminController = require('../controllers/adminController');
+  console.log('✅ MongoDB AdminController loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load AdminController:', error && error.message ? error.message : error);
+}
+
+const missingHandler = (name) => (req, res) => {
+  res.status(503).json({
+    success: false,
+    message: `Admin handler unavailable: ${name}`,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const safeHandler = (handler, name) =>
+  (typeof handler === 'function' ? handler : missingHandler(name));
 
 // Public health check endpoint (no auth required)
 router.get('/health', (req, res) => {
@@ -109,58 +125,92 @@ router.get('/', (req, res) => {
 });
 
 // Dashboard routes
-router.get('/dashboard', adminController.getDashboard);
+router.get('/dashboard', safeHandler(adminController.getDashboard, 'getDashboard'));
 
 // User management routes
-router.get('/users', adminController.getAllUsers);
-router.get('/users/:id', adminController.getUserById);
-router.post('/users', adminController.createUser);
-router.put('/users/:id', adminController.updateUser);
-router.delete('/users/:id', adminController.deleteUser);
-router.put('/users/:id/status', adminController.updateUserStatus);
+router.get('/users', safeHandler(adminController.getAllUsers, 'getAllUsers'));
+router.get('/users/:id', safeHandler(adminController.getUserById, 'getUserById'));
+router.post('/users', safeHandler(adminController.createUser, 'createUser'));
+router.put('/users/:id', safeHandler(adminController.updateUser, 'updateUser'));
+router.delete('/users/:id', safeHandler(adminController.deleteUser, 'deleteUser'));
+router.put('/users/:id/status', safeHandler(adminController.updateUserStatus, 'updateUserStatus'));
 
 // Book management routes
-router.get('/books', adminController.getAllBooks);
-router.get('/books/:id', adminController.getBookById);
-router.post('/books', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.createBook);
-router.put('/books/:id', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]), adminController.updateBook);
-router.delete('/books/:id', adminController.deleteBook);
-router.put('/books/:id/status', adminController.updateBookStatus);
+router.get('/books', safeHandler(adminController.getAllBooks, 'getAllBooks'));
+router.get('/books/:id', safeHandler(adminController.getBookById, 'getBookById'));
+router.post(
+  '/books',
+  upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]),
+  safeHandler(adminController.createBook, 'createBook')
+);
+router.put(
+  '/books/:id',
+  upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'pdfFile', maxCount: 1 }]),
+  safeHandler(adminController.updateBook, 'updateBook')
+);
+router.delete('/books/:id', safeHandler(adminController.deleteBook, 'deleteBook'));
+router.put('/books/:id/status', safeHandler(adminController.updateBookStatus, 'updateBookStatus'));
 
 // Course management routes
-router.get('/courses', adminController.getAllCourses);
-router.get('/courses/:id', adminController.getCourseById);
-router.post('/courses', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), adminController.createCourse);
-router.put('/courses/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), adminController.updateCourse);
-router.delete('/courses/:id', adminController.deleteCourse);
-router.put('/courses/:id/status', adminController.updateCourseStatus);
-router.post('/courses/upload-thumbnail', upload.single('image'), adminController.uploadCourseThumbnail);
-router.patch('/courses/:id/toggle-publish', adminController.toggleCoursePublish);
+router.get('/courses', safeHandler(adminController.getAllCourses, 'getAllCourses'));
+router.get('/courses/:id', safeHandler(adminController.getCourseById, 'getCourseById'));
+router.post(
+  '/courses',
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]),
+  safeHandler(adminController.createCourse, 'createCourse')
+);
+router.put(
+  '/courses/:id',
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]),
+  safeHandler(adminController.updateCourse, 'updateCourse')
+);
+router.delete('/courses/:id', safeHandler(adminController.deleteCourse, 'deleteCourse'));
+router.put('/courses/:id/status', safeHandler(adminController.updateCourseStatus, 'updateCourseStatus'));
+router.post(
+  '/courses/upload-thumbnail',
+  upload.single('image'),
+  safeHandler(adminController.uploadCourseThumbnail, 'uploadCourseThumbnail')
+);
+router.patch(
+  '/courses/:id/toggle-publish',
+  safeHandler(adminController.toggleCoursePublish, 'toggleCoursePublish')
+);
 
 // Live class management routes
-router.get('/live-classes', adminController.getAllLiveClasses);
-router.get('/live-classes/:id', adminController.getLiveClassById);
-router.post('/live-classes', upload.single('image'), adminController.createLiveClass);
-router.put('/live-classes/:id', upload.single('image'), adminController.updateLiveClass);
-router.delete('/live-classes/:id', adminController.deleteLiveClass);
-router.put('/live-classes/:id/status', adminController.updateLiveClassStatus);
+router.get('/live-classes', safeHandler(adminController.getAllLiveClasses, 'getAllLiveClasses'));
+router.get('/live-classes/:id', safeHandler(adminController.getLiveClassById, 'getLiveClassById'));
+router.post(
+  '/live-classes',
+  upload.single('image'),
+  safeHandler(adminController.createLiveClass, 'createLiveClass')
+);
+router.put(
+  '/live-classes/:id',
+  upload.single('image'),
+  safeHandler(adminController.updateLiveClass, 'updateLiveClass')
+);
+router.delete('/live-classes/:id', safeHandler(adminController.deleteLiveClass, 'deleteLiveClass'));
+router.put(
+  '/live-classes/:id/status',
+  safeHandler(adminController.updateLiveClassStatus, 'updateLiveClassStatus')
+);
 
 // Payment management routes
-router.get('/payments', adminController.getAllPayments);
-router.get('/payments/:id', adminController.getPaymentById);
-router.put('/payments/:id/status', adminController.updatePaymentStatus);
+router.get('/payments', safeHandler(adminController.getAllPayments, 'getAllPayments'));
+router.get('/payments/:id', safeHandler(adminController.getPaymentById, 'getPaymentById'));
+router.put('/payments/:id/status', safeHandler(adminController.updatePaymentStatus, 'updatePaymentStatus'));
 
 // File upload route
-router.post('/upload', adminController.uploadFile);
+router.post('/upload', safeHandler(adminController.uploadFile, 'uploadFile'));
 
 // Statistics routes
-router.get('/stats/books', adminController.getBookStats);
-router.get('/stats/courses', adminController.getCourseStats);
-router.get('/stats/live-classes', adminController.getLiveClassStats);
+router.get('/stats/books', safeHandler(adminController.getBookStats, 'getBookStats'));
+router.get('/stats/courses', safeHandler(adminController.getCourseStats, 'getCourseStats'));
+router.get('/stats/live-classes', safeHandler(adminController.getLiveClassStats, 'getLiveClassStats'));
 
 // Settings routes
-router.get('/settings', adminController.getSettings);
-router.put('/settings', adminController.updateSettings);
+router.get('/settings', safeHandler(adminController.getSettings, 'getSettings'));
+router.put('/settings', safeHandler(adminController.updateSettings, 'updateSettings'));
 
 // Test endpoint
 router.get('/test', (req, res) => {
