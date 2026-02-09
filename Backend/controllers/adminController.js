@@ -845,6 +845,40 @@ const updateBookStatus = async (req, res) => {
   }
 };
 
+const deleteBook = async (req, res) => {
+  try {
+    if (!BookModel) {
+      return res.status(503).json({ success: false, message: 'Book model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const book = await BookModel.findByIdAndDelete(id);
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Book deleted successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Delete book error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete book',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 // ============= COURSE MANAGEMENT =============
 
 const getAllCourses = async (req, res) => {
