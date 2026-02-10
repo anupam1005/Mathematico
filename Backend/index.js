@@ -158,7 +158,10 @@ app.use(helmet({
 const originEnvValues = [
   process.env.APP_ORIGIN,
   process.env.ADMIN_ORIGIN,
-  process.env.CORS_ORIGIN
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+  process.env.WEB_URL,
+  'exp://*'
 ].filter(Boolean);
 
 const allowedOrigins = Array.from(
@@ -171,6 +174,7 @@ const allowedOrigins = Array.from(
     )
   )
 );
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -178,10 +182,20 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // Allow Expo development URLs
+    if (origin.startsWith('exp://') || origin.includes('expo')) {
+      return callback(null, true);
+    }
+
+    // Allow configured origins
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
+    // Log the blocked origin for debugging
+    console.warn('🚫 CORS blocked origin:', origin);
+    console.log('✅ Allowed origins:', allowedOrigins);
+    
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
