@@ -167,7 +167,9 @@ const originEnvValues = [
   process.env.CORS_ORIGIN,
   process.env.FRONTEND_URL,
   process.env.WEB_URL,
-  'exp://*'
+  'exp://*',
+  'capacitor://*',
+  'ionic://*'
 ].filter(Boolean);
 
 const allowedOrigins = Array.from(
@@ -190,6 +192,16 @@ const corsOptions = {
 
     // Allow Expo development URLs
     if (origin.startsWith('exp://') || origin.includes('expo')) {
+      return callback(null, true);
+    }
+
+    // Allow mobile app origins (Capacitor, Ionic, etc.)
+    if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
+      return callback(null, true);
+    }
+
+    // Allow Play Store and other mobile app requests (no origin header)
+    if (!origin || origin.includes('android') || origin.includes('playstore')) {
       return callback(null, true);
     }
 
