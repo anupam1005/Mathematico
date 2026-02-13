@@ -10,7 +10,14 @@ const requestLogger = winston.createLogger({
   ),
   defaultMeta: { service: 'mathematico-requests' },
   transports: [
-    new winston.transports.File({ filename: 'logs/requests.log' })
+    // Only add file transport in local development (not Vercel)
+    ...(process.env.VERCEL !== '1' ? [
+      new winston.transports.File({ filename: 'logs/requests.log' })
+    ] : []),
+    // Always add console transport for Vercel
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
   ],
 });
 
