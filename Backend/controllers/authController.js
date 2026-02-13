@@ -113,27 +113,25 @@ const login = async (req, res) => {
       // Upsert admin user in MongoDB to get a stable ObjectId
       let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
       if (!dbAdmin) {
+        // Create new admin user - password will be hashed automatically by pre-save middleware
         dbAdmin = new UserModel({
           name: 'Admin User',
           email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD,
+          password: ADMIN_PASSWORD, // Will be hashed by pre-save middleware
           role: 'admin',
           isAdmin: true,
           isActive: true
         });
+        await dbAdmin.save();
       } else {
-        // Ensure role flags
+        // Ensure role flags and update last login
         dbAdmin.role = 'admin';
         dbAdmin.isAdmin = true;
         dbAdmin.isActive = true;
+        dbAdmin.lastLogin = new Date();
+        dbAdmin.loginCount = (dbAdmin.loginCount || 0) + 1;
+        await dbAdmin.save();
       }
-
-      // Update last login details
-      dbAdmin.lastLogin = new Date();
-      dbAdmin.loginCount = (dbAdmin.loginCount || 0) + 1;
-      await dbAdmin.save();
-
-      // Generate tokens with real ObjectId
       const tokens = generateTokenPair(dbAdmin);
 
       const deviceInfo = {
