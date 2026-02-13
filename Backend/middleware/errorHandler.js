@@ -11,8 +11,15 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'mathematico-backend' },
   transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
+    // Only add file transports in local development (not Vercel)
+    ...(process.env.VERCEL !== '1' ? [
+      new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: 'logs/combined.log' })
+    ] : []),
+    // Always add console transport for Vercel
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
   ],
 });
 
