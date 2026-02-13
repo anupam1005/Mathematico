@@ -366,9 +366,22 @@ userSchema.methods.createEmailVerificationToken = function() {
 
 // Generate JWT token
 userSchema.methods.generateAuthToken = function() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET is required in production');
+    }
+    // Development fallback - should not be used in production
+    console.warn('⚠️ Using fallback JWT secret in User model - NOT FOR PRODUCTION');
+    return jwt.sign(
+      { id: this._id, role: this.role },
+      'temp-fallback-secret-for-testing-only',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
+    );
+  }
   return jwt.sign(
     { id: this._id, role: this.role },
-    process.env.JWT_SECRET || 'your-secret-key',
+    secret,
     { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
   );
 };

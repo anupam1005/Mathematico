@@ -19,7 +19,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.BACKEND_URL || 'https://api.example.com',
+        url: process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app',
         description: 'Production server'
       }
     ],

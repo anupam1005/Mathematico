@@ -6,7 +6,9 @@ let UserModel;
 try {
   UserModel = require('../models/User');
 } catch (error) {
-  console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
+  }
 }
 
 const { uploadFileToCloud } = require('../utils/fileUpload');

@@ -21,12 +21,33 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   static getDerivedStateFromError(error: any) {
     safeCatch('ErrorBoundary.getDerivedStateFromError')(error);
-    return { hasError: true, error: null };
+    // Store error safely
+    let errorMessage = 'An unexpected error occurred';
+    try {
+      if (error && typeof error === 'object') {
+        if (error.message) errorMessage = String(error.message);
+        else if (error.toString) errorMessage = String(error.toString());
+      } else if (error) {
+        errorMessage = String(error);
+      }
+    } catch {
+      // Keep default message if extraction fails
+    }
+    return { hasError: true, error: errorMessage };
   }
 
   componentDidCatch(error: any, errorInfo: any) {
     safeCatch('ErrorBoundary.componentDidCatch')(error);
-    this.setState({ errorInfo: null });
+    // Store error info safely
+    let errorInfoStr = '';
+    try {
+      if (errorInfo && errorInfo.componentStack) {
+        errorInfoStr = String(errorInfo.componentStack).substring(0, 500);
+      }
+    } catch {
+      // Ignore if extraction fails
+    }
+    this.setState({ errorInfo: errorInfoStr });
   }
 
   handleReload = () => {
@@ -41,9 +62,19 @@ class ErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.subtitle}>The app encountered an error</Text>
           <ScrollView style={styles.errorContainer}>
             <Text style={styles.errorLabel}>Error:</Text>
-            <Text style={styles.error}>An unexpected error occurred</Text>
-            <Text style={styles.errorLabel}>Message:</Text>
-            <Text style={styles.error}>Please restart the app</Text>
+            <Text style={styles.error}>
+              {this.state.error || 'An unexpected error occurred'}
+            </Text>
+            {this.state.errorInfo && (
+              <>
+                <Text style={styles.errorLabel}>Details:</Text>
+                <Text style={styles.stackTrace}>{this.state.errorInfo}</Text>
+              </>
+            )}
+            <Text style={styles.errorLabel}>What to do:</Text>
+            <Text style={styles.error}>
+              Please try again or restart the app. If the problem persists, contact support.
+            </Text>
           </ScrollView>
           <Button mode="contained" onPress={this.handleReload} style={styles.button}>
             Try Again

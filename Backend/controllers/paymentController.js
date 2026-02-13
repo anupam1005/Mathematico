@@ -5,14 +5,26 @@ const crypto = require('crypto');
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-if (!keyId || !keySecret) {
-  throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set');
+// Don't throw on startup - fail gracefully when payment is attempted
+let razorpay = null;
+if (keyId && keySecret) {
+  try {
+    razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Razorpay initialized successfully');
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize Razorpay:', error.message);
+    razorpay = null;
+  }
+} else {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ Razorpay credentials not configured. Payment features will be unavailable.');
+  }
 }
-
-const razorpay = new Razorpay({
-  key_id: keyId,
-  key_secret: keySecret,
-});
 
 /**
  * Create Razorpay order
@@ -31,9 +43,10 @@ const createOrder = async (req, res) => {
 
     // Verify Razorpay is initialized
     if (!razorpay || !razorpay.orders) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
-        message: 'Payment service not available. Please contact support.',
+        message: 'Payment service is not configured. Please contact support.',
+        error: 'SERVICE_UNAVAILABLE',
         timestamp: new Date().toISOString()
       });
     }
@@ -104,6 +117,16 @@ const verifyPayment = async (req, res) => {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (isAuthentic) {
+      // Verify Razorpay is initialized before fetching order
+      if (!razorpay || !razorpay.orders) {
+        return res.status(503).json({
+          success: false,
+          message: 'Payment service is not configured. Please contact support.',
+          error: 'SERVICE_UNAVAILABLE',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       // Get order details to retrieve notes (courseId, bookId, userId)
       try {
         const order = await razorpay.orders.fetch(razorpay_order_id);
@@ -220,6 +243,16 @@ const getPaymentDetails = async (req, res) => {
       });
     }
 
+    // Verify Razorpay is initialized
+    if (!razorpay || !razorpay.payments) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment service is not configured. Please contact support.',
+        error: 'SERVICE_UNAVAILABLE',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const payment = await razorpay.payments.fetch(paymentId);
     
     res.json({
@@ -254,6 +287,16 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
+    // Verify Razorpay is initialized
+    if (!razorpay || !razorpay.orders) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment service is not configured. Please contact support.',
+        error: 'SERVICE_UNAVAILABLE',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const order = await razorpay.orders.fetch(orderId);
     
     res.json({
@@ -280,6 +323,16 @@ const getPaymentHistory = async (req, res) => {
   try {
     const { count = 10, skip = 0 } = req.query;
     
+    // Verify Razorpay is initialized
+    if (!razorpay || !razorpay.payments) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment service is not configured. Please contact support.',
+        error: 'SERVICE_UNAVAILABLE',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const payments = await razorpay.payments.all({
       count: parseInt(count),
       skip: parseInt(skip)

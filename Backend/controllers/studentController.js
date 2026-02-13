@@ -9,7 +9,9 @@ try {
   LiveClassModel = require('../models/LiveClass');
   UserModel = require('../models/User');
 } catch (error) {
-  console.warn(' Student models not available:', error && error.message ? error.message : error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ Student models not available:', error && error.message ? error.message : error);
+  }
 }
 
 /**

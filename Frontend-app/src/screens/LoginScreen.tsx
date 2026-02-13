@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 import { CustomTextInput } from '../components/CustomTextInput';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
+import { debounce } from '../utils/debounce';
 
 export default function LoginScreen({ navigation }: any) {
   const { login, isLoading } = useAuth();
@@ -26,30 +27,65 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [apiError, setApiError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
+    setApiError(''); // Clear API errors on validation
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
+    } else if (trimmedEmail.length > 254) {
+      newErrors.email = 'Email is too long (max 254 characters)';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!password.trim()) {
+    if (!trimmedPassword) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
+    } else if (trimmedPassword.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (trimmedPassword.length > 128) {
+      newErrors.password = 'Password is too long (max 128 characters)';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     if (!validateForm()) return;
-    await login(email.trim(), password);
-  };
+    
+    if (isSubmitting || isLoading) return; // Prevent double submission
+    
+    setIsSubmitting(true);
+    setApiError('');
+    
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const success = await login(normalizedEmail, password);
+      
+      if (!success) {
+        setApiError('Invalid email or password. Please try again.');
+      }
+    } catch (error) {
+      setApiError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [email, password, login, isSubmitting, isLoading]);
+
+  // Debounced login handler to prevent rapid submissions
+  const debouncedLogin = useCallback(
+    debounce(() => {
+      handleLogin();
+    }, 300),
+    [handleLogin]
+  );
 
   return (
     <KeyboardAvoidingView
@@ -79,38 +115,76 @@ export default function LoginScreen({ navigation }: any) {
               <CustomTextInput
                 label="Email"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setApiError(''); // Clear API error when user types
+                  if (errors.email) {
+                    setErrors({ ...errors, email: '' });
+                  }
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                maxLength={254}
                 error={!!errors.email}
                 style={styles.input}
+                testID="login-email-input"
+                accessibilityLabel="Email input field for login"
+                leftIcon="email"
               />
               {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
+                <Text style={styles.errorText} testID="email-error">
+                  {errors.email}
+                </Text>
               )}
 
               <CustomTextInput
                 label="Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setApiError(''); // Clear API error when user types
+                  if (errors.password) {
+                    setErrors({ ...errors, password: '' });
+                  }
+                }}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
+                autoCorrect={false}
+                maxLength={128}
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
                 error={!!errors.password}
                 style={styles.input}
+                testID="login-password-input"
+                accessibilityLabel="Password input field for login"
+                leftIcon="lock"
               />
               {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
+                <Text style={styles.errorText} testID="password-error">
+                  {errors.password}
+                </Text>
+              )}
+
+              {apiError && (
+                <View style={styles.apiErrorContainer}>
+                  <Text style={styles.apiErrorText} testID="api-error">
+                    {apiError}
+                  </Text>
+                </View>
               )}
 
               <Button
                 mode="contained"
-                onPress={handleLogin}
-                disabled={isLoading}
+                onPress={debouncedLogin}
+                disabled={isLoading || isSubmitting}
                 style={styles.loginButton}
                 contentStyle={styles.buttonContent}
+                testID="login-button"
+                accessibilityLabel="Sign in button"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <ActivityIndicator color={designSystem.colors.surface} />
                 ) : (
                   'Sign In'
@@ -198,5 +272,19 @@ const styles = StyleSheet.create({
   registerText: {
     color: designSystem.colors.primary,
     fontWeight: 'bold',
+  },
+  apiErrorContainer: {
+    marginTop: designSystem.spacing.sm,
+    marginBottom: designSystem.spacing.sm,
+    padding: designSystem.spacing.sm,
+    backgroundColor: designSystem.colors.error + '15',
+    borderRadius: designSystem.borderRadius.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: designSystem.colors.error,
+  },
+  apiErrorText: {
+    color: designSystem.colors.error,
+    ...designSystem.typography.caption,
+    fontWeight: '500',
   },
 });

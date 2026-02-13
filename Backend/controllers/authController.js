@@ -48,7 +48,8 @@ const sendEmail = async ({ to, subject, text, html }) => {
 // Auth Controller - Handles authentication with secure token management
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Myname*321';
+// SECURITY: Never use default password in production
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 
 // Debug logging for environment variables (only in development or if explicitly enabled)

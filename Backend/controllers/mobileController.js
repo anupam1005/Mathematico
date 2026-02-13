@@ -46,9 +46,13 @@ try {
   BookModel = require('../models/Book');
   CourseModel = require('../models/Course');
   LiveClassModel = require('../models/LiveClass');
-  console.log('✅ Mobile models loaded successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Mobile models loaded successfully');
+  }
 } catch (error) {
-  console.warn('⚠️ Mobile models not available:', error && error.message ? error.message : error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ Mobile models not available:', error && error.message ? error.message : error);
+  }
 }
 
 /**

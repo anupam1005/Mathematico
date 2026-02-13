@@ -16,8 +16,12 @@ const seedProductionData = async () => {
     const User = require('../models/User');
     
     // Create admin user if not exists
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mathematico.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123456';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminEmail || !adminPassword) {
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in environment variables');
+    }
     
     const existingAdmin = await User.findOne({ email: adminEmail });
     

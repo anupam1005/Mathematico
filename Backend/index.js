@@ -65,7 +65,11 @@ const isPortAvailable = (port) => {
     ];
 
     if (missing.length) {
+      const isProduction = process.env.NODE_ENV === 'production';
       console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+      if (isProduction) {
+        console.error('❌ CRITICAL: Cannot start in production without required environment variables');
+      }
       process.exit(1);
     }
 
@@ -76,7 +80,10 @@ const isPortAvailable = (port) => {
       }
     });
 
-    console.log('✅ Required environment variables present');
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (!isProduction) {
+      console.log('✅ Required environment variables present');
+    }
   } catch (e) {
     console.error('❌ Environment validation failed');
     process.exit(1);
@@ -87,7 +94,9 @@ const isPortAvailable = (port) => {
 try {
   const jwtUtils = require("./utils/jwt");
   const authMiddleware = require("./middlewares/auth");
-  console.log('✅ JWT and Auth middleware loaded successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ JWT and Auth middleware loaded successfully');
+  }
 } catch (err) {
   console.error('❌ Critical middleware failed to load:', err.message);
   // These are required for the API to function
@@ -105,8 +114,11 @@ app.set('trust proxy', 1);
 (async () => {
   try {
     await connectDB();
-    console.log('✅ Database initialized');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Database initialized');
+    }
   } catch (err) {
+    // Always log database errors, even in production
     console.error('⚠️ Database initialization failed (continuing to serve requests):', err && err.message ? err.message : err);
   }
 })();
@@ -552,73 +564,117 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  // Log error but don't crash in production
+  if (process.env.NODE_ENV === 'production') {
+    // In production, log and continue
+    console.error('Unhandled rejection details:', {
+      reason: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    // In development, log full details
+    console.error('Unhandled rejection:', reason);
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Log error
+  console.error('Uncaught exception details:', {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  // In production, attempt graceful shutdown
+  if (process.env.NODE_ENV === 'production') {
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  } else {
+    // In development, exit immediately
+    process.exit(1);
+  }
+});
+
 // Export for Vercel
 module.exports = app;
 
-// Start server for local development
+// Start server for local development ONLY
+// In production (Vercel/serverless), the app is exported and handled by the platform
 if (require.main === module) {
-   // Connect to database first, then start server
-// Serverless optimization - only start server if not in Vercel environment
-if (process.env.VERCEL !== '1') {
-  const startServer = async () => {
-    try {
-      console.log('🔧 Starting server in development mode...');
-      
-      // Connect to MongoDB
-      await connectDB();
+  // Only start local server if NOT in production serverless environment
+  const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Never start local server in production serverless environment
+  if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
+    console.log('☁️ Running in serverless/production mode');
+    console.log('🔗 API endpoints will be handled by serverless functions');
+    // Don't start server, just export the app
+  } else {
+    // Local development server startup
+    const startServer = async () => {
+      try {
+        console.log('🔧 Starting server in development mode...');
+        
+        // Connect to MongoDB
+        await connectDB();
 
-      // Find an available port
-      const findAvailablePort = async () => {
-        const defaultPort = process.env.PORT || 5002;
-        const alternativePorts = [5003, 5004, 5005, 3001, 3002, 8000, 8001, 5001];
+        // Find an available port
+        const findAvailablePort = async () => {
+          const defaultPort = process.env.PORT || 5002;
+          const alternativePorts = [5003, 5004, 5005, 3001, 3002, 8000, 8001, 5001];
 
-        // Check default port first
-        if (await isPortAvailable(defaultPort)) {
-          return defaultPort;
-        }
-
-        console.log(`⚠️ Port ${defaultPort} is in use. Searching for available port...`);
-
-        // Try alternative ports
-        for (const port of alternativePorts) {
-          if (await isPortAvailable(port)) {
-            console.log(`✅ Found available port: ${port}`);
-            return port;
+          // Check default port first
+          if (await isPortAvailable(defaultPort)) {
+            return defaultPort;
           }
-        }
 
-        throw new Error('No available ports found. Please stop other services or specify a different port.');
-      };
+          console.log(`⚠️ Port ${defaultPort} is in use. Searching for available port...`);
 
-      const PORT = await findAvailablePort();
+          // Try alternative ports
+          for (const port of alternativePorts) {
+            if (await isPortAvailable(port)) {
+              console.log(`✅ Found available port: ${port}`);
+              return port;
+            }
+          }
 
-      // Start the server on all network interfaces (0.0.0.0) to allow mobile connections
-      const server = app.listen(PORT, '0.0.0.0', () => {
-        console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
-        console.log(`🌐 Server running on port ${PORT}`);
-        console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`☁️  Serverless: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
-        console.log('==========================================\n');
-      });
+          throw new Error('No available ports found. Please stop other services or specify a different port.');
+        };
 
-      // Handle any server errors
-      server.on('error', (err) => {
-        console.error('❌ Server error:', err);
+        const PORT = await findAvailablePort();
+
+        // Start the server on all network interfaces (0.0.0.0) to allow mobile connections
+        // This is safe for local development only
+        const server = app.listen(PORT, '0.0.0.0', () => {
+          console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
+          console.log(`🌐 Server running on port ${PORT}`);
+          console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+          console.log(`☁️  Serverless: ${isServerless ? 'Yes' : 'No'}`);
+          console.log('⚠️  LOCAL DEVELOPMENT SERVER ONLY - NOT FOR PRODUCTION');
+          console.log('==========================================\n');
+        });
+
+        // Handle any server errors
+        server.on('error', (err) => {
+          console.error('❌ Server error:', err);
+          process.exit(1);
+        });
+
+        // Store server reference for graceful shutdown
+        app.server = server;
+ 
+      } catch (error) {
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
-      });
-
-      // Store server reference for graceful shutdown
-      app.server = server;
+      }
+    };
  
-    } catch (error) {
-      console.error('❌ Failed to start server:', error);
-      process.exit(1);
-    }
-  };
- 
-  startServer();
-} else {
-  console.log('☁️ Running in serverless mode (Vercel)');
-  console.log('🔗 API endpoints will be handled by Vercel functions');
- }
- }
+    startServer();
+  }
+}

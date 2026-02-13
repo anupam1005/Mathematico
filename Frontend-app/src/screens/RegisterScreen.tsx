@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { CustomTextInput } from '../components/CustomTextInput';
 import { CustomCheckbox } from '../components/CustomCheckbox';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
+import { debounce } from '../utils/debounce';
 
 export default function RegisterScreen({ navigation }: any) {
   const { register, isLoading } = useAuth();
@@ -33,38 +34,59 @@ export default function RegisterScreen({ navigation }: any) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [apiError, setApiError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
+    setApiError(''); // Clear API errors on validation
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+
+    // Name validation
+    if (!trimmedName) {
       newErrors.name = 'Name is required';
-    } else if (name.trim().length < 2) {
+    } else if (trimmedName.length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
+    } else if (trimmedName.length > 100) {
+      newErrors.name = 'Name is too long (max 100 characters)';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(trimmedName)) {
+      newErrors.name = 'Name can only contain letters, spaces, hyphens, and apostrophes';
     }
 
-    if (!email.trim()) {
+    // Email validation
+    if (!trimmedEmail) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
+    } else if (trimmedEmail.length > 254) {
+      newErrors.email = 'Email is too long (max 254 characters)';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!password.trim()) {
+    // Password validation - Production level with strong requirements
+    if (!trimmedPassword) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
+    } else if (trimmedPassword.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (trimmedPassword.length > 128) {
+      newErrors.password = 'Password is too long (max 128 characters)';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(trimmedPassword)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    } else if (!/^(?=.*[@$!%*?&])/.test(trimmedPassword)) {
+      newErrors.password = 'Password must contain at least one special character (@$!%*?&)';
     }
-    // Simplified password validation for development
-    // } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
-    //   newErrors.password = 'Password must contain uppercase, lowercase, number, and special character';
-    // }
 
-    if (!confirmPassword.trim()) {
+    // Confirm password validation
+    if (!trimmedConfirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (password !== confirmPassword) {
+    } else if (trimmedPassword !== trimmedConfirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    // Terms validation
     if (!agreeToTerms) {
       newErrors.terms = 'You must agree to the terms and conditions';
     }
@@ -73,17 +95,38 @@ export default function RegisterScreen({ navigation }: any) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!validateForm()) {
       return;
     }
 
-    const success = await register(name.trim(), email.trim(), password);
-    if (success) {
-      // Registration successful - user is now authenticated and will be automatically
-      // redirected to the main dashboard by the AuthContext
+    if (isSubmitting || isLoading) return; // Prevent double submission
+    
+    setIsSubmitting(true);
+    setApiError('');
+    
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const trimmedName = name.trim();
+      const success = await register(trimmedName, normalizedEmail, password);
+      
+      if (!success) {
+        setApiError('Registration failed. Please check your information and try again.');
+      }
+    } catch (error) {
+      setApiError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [name, email, password, register, isSubmitting, isLoading]);
+
+  // Debounced register handler to prevent rapid submissions
+  const debouncedRegister = useCallback(
+    debounce(() => {
+      handleRegister();
+    }, 300),
+    [handleRegister]
+  );
 
   const handleLogin = () => {
     navigation.navigate('Login');
@@ -126,10 +169,18 @@ export default function RegisterScreen({ navigation }: any) {
               <CustomTextInput
                 label="Full Name"
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => {
+                  setName(text);
+                  setApiError('');
+                  if (errors.name) {
+                    setErrors({ ...errors, name: '' });
+                  }
+                }}
                 mode="outlined"
                 autoCapitalize="words"
                 autoComplete="name"
+                autoCorrect={false}
+                maxLength={100}
                 error={!!errors.name}
                 style={styles.input}
                 leftIcon="person"
@@ -137,17 +188,27 @@ export default function RegisterScreen({ navigation }: any) {
                 accessibilityLabel="Full name input field"
               />
               {errors.name && (
-                <Text style={styles.errorText}>{errors.name}</Text>
+                <Text style={styles.errorText} testID="name-error">
+                  {errors.name}
+                </Text>
               )}
 
               <CustomTextInput
                 label="Email"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setApiError('');
+                  if (errors.email) {
+                    setErrors({ ...errors, email: '' });
+                  }
+                }}
                 mode="outlined"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+                autoCorrect={false}
+                maxLength={254}
                 error={!!errors.email}
                 style={styles.input}
                 leftIcon="email"
@@ -155,16 +216,26 @@ export default function RegisterScreen({ navigation }: any) {
                 accessibilityLabel="Email input field"
               />
               {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
+                <Text style={styles.errorText} testID="email-error">
+                  {errors.email}
+                </Text>
               )}
 
               <CustomTextInput
                 label="Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setApiError('');
+                  if (errors.password) {
+                    setErrors({ ...errors, password: '' });
+                  }
+                }}
                 mode="outlined"
                 secureTextEntry={!showPassword}
                 autoComplete="password-new"
+                autoCorrect={false}
+                maxLength={128}
                 error={!!errors.password}
                 style={styles.input}
                 leftIcon="lock"
@@ -174,7 +245,9 @@ export default function RegisterScreen({ navigation }: any) {
                 accessibilityLabel="Password input field"
               />
               {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
+                <Text style={styles.errorText} testID="password-error">
+                  {errors.password}
+                </Text>
               )}
               
               {/* Password Requirements */}
@@ -183,18 +256,35 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={[styles.requirement, password.length >= 8 && styles.requirementMet]}>
                   • At least 8 characters
                 </Text>
-                <Text style={styles.requirement}>
-                  • Use a strong password for security
+                <Text style={[styles.requirement, /[a-z]/.test(password) && styles.requirementMet]}>
+                  • One lowercase letter
+                </Text>
+                <Text style={[styles.requirement, /[A-Z]/.test(password) && styles.requirementMet]}>
+                  • One uppercase letter
+                </Text>
+                <Text style={[styles.requirement, /\d/.test(password) && styles.requirementMet]}>
+                  • One number
+                </Text>
+                <Text style={[styles.requirement, /[@$!%*?&]/.test(password) && styles.requirementMet]}>
+                  • One special character (@$!%*?&)
                 </Text>
               </View>
 
               <CustomTextInput
                 label="Confirm Password"
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  setApiError('');
+                  if (errors.confirmPassword) {
+                    setErrors({ ...errors, confirmPassword: '' });
+                  }
+                }}
                 mode="outlined"
                 secureTextEntry={!showConfirmPassword}
                 autoComplete="password-new"
+                autoCorrect={false}
+                maxLength={128}
                 error={!!errors.confirmPassword}
                 style={styles.input}
                 leftIcon="lock"
@@ -204,7 +294,17 @@ export default function RegisterScreen({ navigation }: any) {
                 accessibilityLabel="Confirm password input field"
               />
               {errors.confirmPassword && (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                <Text style={styles.errorText} testID="confirm-password-error">
+                  {errors.confirmPassword}
+                </Text>
+              )}
+
+              {apiError && (
+                <View style={styles.apiErrorContainer}>
+                  <Text style={styles.apiErrorText} testID="api-error">
+                    {apiError}
+                  </Text>
+                </View>
               )}
 
               <View style={styles.termsContainer}>
@@ -227,14 +327,14 @@ export default function RegisterScreen({ navigation }: any) {
 
               <Button
                 mode="contained"
-                onPress={handleRegister}
+                onPress={debouncedRegister}
                 style={styles.registerButton}
                 contentStyle={styles.buttonContent}
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 testID="register-button"
                 accessibilityLabel="Create account button"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <ActivityIndicator color={designSystem.colors.surface} />
                 ) : (
                   'Create Account'
@@ -416,5 +516,19 @@ const styles = StyleSheet.create({
   requirementMet: {
     color: designSystem.colors.success || '#4CAF50',
     textDecorationLine: 'line-through',
+  },
+  apiErrorContainer: {
+    marginTop: designSystem.spacing.sm,
+    marginBottom: designSystem.spacing.sm,
+    padding: designSystem.spacing.sm,
+    backgroundColor: designSystem.colors.error + '15',
+    borderRadius: designSystem.borderRadius.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: designSystem.colors.error,
+  },
+  apiErrorText: {
+    color: designSystem.colors.error,
+    ...designSystem.typography.caption,
+    fontWeight: '500',
   },
 });

@@ -8,11 +8,15 @@ const ACTUAL_JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 // Validate that secrets are set and different
 if (!ACTUAL_JWT_SECRET || !ACTUAL_JWT_REFRESH_SECRET) {
-  console.warn('⚠️ JWT secrets not configured, using temporary fallback for testing');
-  // Don't throw error in production for now, use fallback
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    console.error('❌ CRITICAL: JWT secrets are required in production');
+    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in production environment');
+  }
+  console.warn('⚠️ JWT secrets not configured, using temporary fallback for testing only');
 }
 
-if (ACTUAL_JWT_SECRET === ACTUAL_JWT_REFRESH_SECRET) {
+if (ACTUAL_JWT_SECRET && ACTUAL_JWT_REFRESH_SECRET && ACTUAL_JWT_SECRET === ACTUAL_JWT_REFRESH_SECRET) {
   throw new Error('❌ CRITICAL: JWT_SECRET and JWT_REFRESH_SECRET must be different');
 }
 
@@ -26,7 +30,21 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // L
  * @returns {string} JWT access token
  */
 function generateAccessToken(payload) {
-  const secret = ACTUAL_JWT_SECRET || 'temp-fallback-secret-for-testing-only';
+  // In production, JWT_SECRET must be set (validated at startup)
+  // Fallback only allowed in development/testing
+  const secret = ACTUAL_JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET is required in production');
+    }
+    // Development fallback - should not be used in production
+    console.warn('⚠️ Using fallback JWT secret - NOT FOR PRODUCTION');
+    return jwt.sign(payload, 'temp-fallback-secret-for-testing-only', { 
+      expiresIn: JWT_ACCESS_EXPIRES_IN,
+      issuer: 'mathematico-backend',
+      audience: 'mathematico-frontend'
+    });
+  }
   return jwt.sign(payload, secret, { 
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     issuer: 'mathematico-backend',
@@ -71,7 +89,20 @@ function verifyHashedRefreshToken(plainToken, hashedToken) {
  * @throws {Error} If token is invalid or expired
  */
 function verifyAccessToken(token) {
-  const secret = ACTUAL_JWT_SECRET || 'temp-fallback-secret-for-testing-only';
+  // In production, JWT_SECRET must be set (validated at startup)
+  // Fallback only allowed in development/testing
+  const secret = ACTUAL_JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET is required in production');
+    }
+    // Development fallback - should not be used in production
+    console.warn('⚠️ Using fallback JWT secret - NOT FOR PRODUCTION');
+    return jwt.verify(token, 'temp-fallback-secret-for-testing-only', {
+      issuer: 'mathematico-backend',
+      audience: 'mathematico-frontend'
+    });
+  }
   return jwt.verify(token, secret, {
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend'

@@ -38,8 +38,12 @@ const connectDB = async () => {
           console.log('🔗 Mongoose connected to MongoDB');
         });
 
-        mongoose.connection.on('error', () => {
-          console.error('❌ Mongoose connection error');
+        mongoose.connection.on('error', (err) => {
+          console.error('❌ Mongoose connection error:', err?.message || 'Unknown error');
+          // Log full error in development
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Connection error details:', err);
+          }
         });
 
         mongoose.connection.on('disconnected', () => {
@@ -59,17 +63,27 @@ const connectDB = async () => {
 
         return mongooseInstance;
       });
-    } catch (error) {
-      console.error('❌ Failed to initiate MongoDB connection');
-      throw error;
+  } catch (error) {
+    const errorMessage = error?.message || 'Unknown error';
+    console.error('❌ Failed to initiate MongoDB connection:', errorMessage);
+    // Log full error in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Connection error details:', error);
     }
+    throw error;
+  }
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
-    console.error('❌ MongoDB connection failed');
+    const errorMessage = error?.message || 'Unknown error';
+    console.error('❌ MongoDB connection failed:', errorMessage);
+    // Log full error in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Connection error details:', error);
+    }
     throw error;
   }
 

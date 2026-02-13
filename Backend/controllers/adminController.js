@@ -33,9 +33,13 @@ try {
   UserModel = require('../models/User');
   CourseModel = require('../models/Course');
   LiveClassModel = require('../models/LiveClass');
-  console.log('✅ Admin models loaded successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Admin models loaded successfully');
+  }
 } catch (error) {
-  console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
+  }
 }
 
 try {
@@ -51,9 +55,13 @@ try {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
-  console.log('✅ Cloudinary configured successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Cloudinary configured successfully');
+  }
 } catch (error) {
-  console.warn('⚠️ Cloudinary configuration failed:', error && error.message ? error.message : error);
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ Cloudinary configuration failed:', error && error.message ? error.message : error);
+  }
 }
 
 /**
@@ -484,7 +492,9 @@ const getAllBooks = async (req, res) => {
     if (status) query.status = status;
 
     // Get books with pagination
-    console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
+    }
     const books = await BookModel.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
@@ -494,14 +504,16 @@ const getAllBooks = async (req, res) => {
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
     
-    console.log('📚 Found books:', books.length);
-    console.log('📚 Total books in database:', total);
-    console.log('📚 Database name:', mongoose.connection.db.databaseName);
-    console.log('📚 Collection name:', BookModel.collection.name);
-    
-    // Check if collection exists and has documents
-    const collectionStats = await mongoose.connection.db.collection(BookModel.collection.name).countDocuments();
-    console.log('📚 Direct collection count:', collectionStats);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📚 Found books:', books.length);
+      console.log('📚 Total books in database:', total);
+      console.log('📚 Database name:', mongoose.connection.db.databaseName);
+      console.log('📚 Collection name:', BookModel.collection.name);
+      
+      // Check if collection exists and has documents
+      const collectionStats = await mongoose.connection.db.collection(BookModel.collection.name).countDocuments();
+      console.log('📚 Direct collection count:', collectionStats);
+    }
 
     res.json({
       success: true,
@@ -556,10 +568,14 @@ const createBook = async (req, res) => {
 
     // Ensure DB is connected (serverless-safe)
     try {
-      console.log('🔗 Attempting to connect to database...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔗 Attempting to connect to database...');
+      }
       await connectDB();
-      console.log('✅ Database connection successful');
-      console.log('📊 Database ready state:', mongoose.connection.readyState);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Database connection successful');
+        console.log('📊 Database ready state:', mongoose.connection.readyState);
+      }
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
       return res.status(503).json({
@@ -606,7 +622,9 @@ const createBook = async (req, res) => {
         } else {
           // Upload cover image
           if (req.files.coverImage && req.files.coverImage[0]) {
-            console.log('📸 Uploading cover image to Cloudinary...');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('📸 Uploading cover image to Cloudinary...');
+            }
             const coverResult = await new Promise((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { 
@@ -624,12 +642,16 @@ const createBook = async (req, res) => {
               uploadStream.end(req.files.coverImage[0].buffer);
             });
             coverImageUrl = coverResult.secure_url;
-            console.log('✅ Cover image uploaded:', coverImageUrl);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('✅ Cover image uploaded:', coverImageUrl);
+            }
           }
 
           // Upload PDF file
           if (req.files.pdfFile && req.files.pdfFile[0]) {
-            console.log('📄 Uploading PDF to Cloudinary...');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('📄 Uploading PDF to Cloudinary...');
+            }
             const pdfResult = await new Promise((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { 
@@ -645,7 +667,9 @@ const createBook = async (req, res) => {
               uploadStream.end(req.files.pdfFile[0].buffer);
             });
             pdfFileUrl = pdfResult.secure_url;
-            console.log('✅ PDF uploaded:', pdfFileUrl);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('✅ PDF uploaded:', pdfFileUrl);
+            }
           }
         }
       } catch (uploadError) {
@@ -680,13 +704,17 @@ const createBook = async (req, res) => {
       isAvailable: true
     };
 
-    console.log('📚 Creating book with data:', JSON.stringify(bookData, null, 2));
-    console.log('📚 BookModel available:', !!BookModel);
-    console.log('📚 Database connection status:', mongoose.connection.readyState);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📚 Creating book with data:', JSON.stringify(bookData, null, 2));
+      console.log('📚 BookModel available:', !!BookModel);
+      console.log('📚 Database connection status:', mongoose.connection.readyState);
+    }
 
     // Create book in database
     const book = await BookModel.create(bookData);
-    console.log('✅ Book created successfully:', book._id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Book created successfully:', book._id);
+    }
 
     res.status(201).json({
       success: true,
@@ -1399,8 +1427,10 @@ const createLiveClass = async (req, res) => {
 
     await connectDB();
 
-    console.log('📝 Creating live class with data:', req.body);
-    console.log('📎 File uploaded:', req.file ? 'Yes' : 'No');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📝 Creating live class with data:', req.body);
+      console.log('📎 File uploaded:', req.file ? 'Yes' : 'No');
+    }
 
     // Get user information for instructor field
     const user = await UserModel.findById(req.user.id).select('name email');
@@ -1447,7 +1477,9 @@ const createLiveClass = async (req, res) => {
     // Handle file upload if present
     if (req.file) {
       try {
-        console.log('📤 Uploading thumbnail to Cloudinary...');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('📤 Uploading thumbnail to Cloudinary...');
+        }
         const imageResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
@@ -1465,7 +1497,9 @@ const createLiveClass = async (req, res) => {
           uploadStream.end(req.file.buffer);
         });
         liveClassData.thumbnail = imageResult.secure_url;
-        console.log('✅ Thumbnail uploaded:', imageResult.secure_url);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Thumbnail uploaded:', imageResult.secure_url);
+        }
       } catch (uploadError) {
         console.error('❌ File upload error:', uploadError);
         // Continue with default thumbnail
@@ -1475,12 +1509,18 @@ const createLiveClass = async (req, res) => {
     // If no thumbnail provided, use a default placeholder
     if (!liveClassData.thumbnail) {
       liveClassData.thumbnail = 'https://res.cloudinary.com/dqy2ts9h6/image/upload/v1732276800/mathematico/default-liveclass-thumbnail.jpg';
-      console.log('📷 Using default thumbnail');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📷 Using default thumbnail');
+      }
     }
 
-    console.log('💾 Saving live class to database...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('💾 Saving live class to database...');
+    }
     const liveClass = await LiveClassModel.create(liveClassData);
-    console.log('✅ Live class created successfully:', liveClass._id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Live class created successfully:', liveClass._id);
+    }
 
     res.status(201).json({
       success: true,

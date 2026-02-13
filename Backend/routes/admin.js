@@ -42,7 +42,9 @@ const upload = multer({
 let adminController = {};
 try {
   adminController = require('../controllers/adminController');
-  console.log('✅ MongoDB AdminController loaded successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ MongoDB AdminController loaded successfully');
+  }
 } catch (error) {
   console.error('❌ Failed to load AdminController:', error && error.message ? error.message : error);
 }
@@ -96,8 +98,8 @@ router.get('/info', (req, res) => {
     },
     note: 'Use your registered admin account credentials to login',
     curlExample: {
-      login: 'curl -X POST https://mathematico-backend-new.vercel.app/api/v1/auth/login -H "Content-Type: application/json" -d \'{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}\'',
-      access: 'curl -X GET https://mathematico-backend-new.vercel.app/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"'
+      login: `curl -X POST ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app'}/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'`,
+      access: `curl -X GET ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app'}/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"`
     }
   });
 });

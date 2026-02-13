@@ -50,7 +50,8 @@ Frontend-app/
 ├── src/
 │   ├── config.ts             # API configuration & environment setup
 │   │                          # - Production: https://mathematico-backend-new.vercel.app
-│   │                          # - Development: http://localhost:5002
+│   │                          # - Development: Uses EXPO_PUBLIC_API_BASE_URL env var
+│   │                          #   (localhost only for internal testing)
 │   │
 │   ├── contexts/
 │   │   └── AuthContext.tsx   # Global authentication state management
@@ -391,9 +392,10 @@ async functionName(params): Promise<ApiResponse> {
 
 ### Environment Detection
 
-The app automatically detects the environment:
-- **Development** (`__DEV__ = true`): Uses `http://localhost:5002`
-- **Production** (`__DEV__ = false`): Uses `https://mathematico-backend-new.vercel.app`
+The app uses environment variables for API configuration:
+- **Production**: Uses `EXPO_PUBLIC_API_BASE_URL` environment variable (defaults to `https://mathematico-backend-new.vercel.app`)
+- **Development/Internal Testing**: Can be configured via `EXPO_PUBLIC_API_BASE_URL` for Google Play Store internal testing
+- **Note**: No localhost references in production code - all URLs are environment-driven
 
 ### API Configuration
 
