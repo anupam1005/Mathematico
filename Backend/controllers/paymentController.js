@@ -116,27 +116,62 @@ const verifyPayment = async (req, res) => {
           // Import Course model dynamically to avoid circular dependencies
           const Course = require('../models/Course');
           const course = await Course.findById(courseId);
+          
           if (course) {
-            await course.enrollStudent(userId);
+            try {
+              await course.enrollStudent(userId);
+              console.log(`✅ Student ${userId} enrolled in course ${courseId}`);
+            } catch (enrollmentError) {
+              console.error(`❌ Enrollment failed for student ${userId} in course ${courseId}:`, enrollmentError.message);
+              
+              // Don't fail payment verification for duplicate enrollments
+              if (!enrollmentError.message.includes('already enrolled')) {
+                // Log the error but continue with payment success
+                console.warn('⚠️ Enrollment error occurred but payment is valid');
+              }
+            }
+          } else {
+            console.error(`❌ Course not found: ${courseId}`);
           }
         } else if (bookId && userId) {
           // Import Book model dynamically
           const Book = require('../models/Book');
           const book = await Book.findById(bookId);
+          
           if (book && book.purchaseBook) {
-            await book.purchaseBook(userId);
+            try {
+              await book.purchaseBook(userId);
+              console.log(`✅ Student ${userId} purchased book ${bookId}`);
+            } catch (purchaseError) {
+              console.error(`❌ Book purchase failed for student ${userId} in book ${bookId}:`, purchaseError.message);
+              console.warn('⚠️ Book purchase error occurred but payment is valid');
+            }
+          } else {
+            console.error(`❌ Book not found or purchase method missing: ${bookId}`);
           }
         } else if (liveClassId && userId) {
           // Import LiveClass model dynamically
           const LiveClass = require('../models/LiveClass');
           const liveClass = await LiveClass.findById(liveClassId);
+          
           if (liveClass && liveClass.enrollStudent) {
-            await liveClass.enrollStudent(userId);
+            try {
+              await liveClass.enrollStudent(userId);
+              console.log(`✅ Student ${userId} enrolled in live class ${liveClassId}`);
+            } catch (enrollmentError) {
+              console.error(`❌ Live class enrollment failed for student ${userId} in class ${liveClassId}:`, enrollmentError.message);
+              console.warn('⚠️ Live class enrollment error occurred but payment is valid');
+            }
+          } else {
+            console.error(`❌ Live class not found or enroll method missing: ${liveClassId}`);
           }
+        } else {
+          console.warn('⚠️ No valid enrollment information found in order notes:', order.notes);
         }
       } catch (enrollmentError) {
-        console.error('PaymentController: Enrollment error');
+        console.error('PaymentController: Error during enrollment process:', enrollmentError);
         // Don't fail the payment verification, but log the error
+        console.warn('⚠️ Enrollment process failed but payment verification succeeded');
       }
       
       res.json({
@@ -151,18 +186,20 @@ const verifyPayment = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
+      console.warn('⚠️ Payment signature verification failed');
       res.status(400).json({
         success: false,
-        message: 'Payment verification failed',
+        message: 'Payment verification failed - invalid signature',
         timestamp: new Date().toISOString()
       });
     }
 
   } catch (error) {
-    console.error('PaymentController: Error verifying payment');
+    console.error('PaymentController: Error verifying payment:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to verify payment',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }

@@ -1001,6 +1001,623 @@ const getMobileInfo = async (req, res) => {
   }
 };
 
+// ============= ENROLLMENT MANAGEMENT =============
+
+/**
+ * Enroll in a course
+ */
+const enrollInCourse = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(id);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (course.status !== 'published' || !course.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: 'Course is not available for enrollment',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      await course.enrollStudent(userId);
+      console.log(`✅ Student ${userId} enrolled in course ${id}`);
+      
+      res.json({
+        success: true,
+        message: 'Enrolled successfully',
+        data: {
+          courseId: id,
+          userId: userId,
+          enrolledAt: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (enrollmentError) {
+      if (enrollmentError.message.includes('already enrolled')) {
+        return res.status(400).json({
+          success: false,
+          message: 'You are already enrolled in this course',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      throw enrollmentError;
+    }
+  } catch (error) {
+    console.error('MobileController: Error enrolling in course:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to enroll in course',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get user enrollments
+ */
+const getEnrollments = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const userId = req.user?.id;
+    const { userId: queryUserId } = req.query;
+
+    // Allow admins to query any user's enrollments
+    const targetUserId = queryUserId && req.user?.is_admin ? queryUserId : userId;
+
+    if (!targetUserId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const courses = await CourseModel.find({
+      'enrolledStudents.student': targetUserId
+    }).populate('createdBy', 'name email');
+
+    const enrollments = courses.map(course => {
+      const enrollment = course.enrolledStudents.find(
+        e => e.student.toString() === targetUserId.toString()
+      );
+      
+      return {
+        enrollmentId: `${course._id}_${targetUserId}`,
+        courseId: course._id,
+        userId: targetUserId,
+        course: {
+          id: course._id,
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          instructor: course.instructor,
+          category: course.category,
+          level: course.level,
+          price: course.price,
+          isFree: course.isFree
+        },
+        enrolledAt: enrollment.enrolledAt,
+        progress: enrollment.progress || 0,
+        lastAccessed: enrollment.lastAccessed,
+        completedLessons: enrollment.completedLessons || [],
+        certificateIssued: enrollment.certificateIssued || false,
+        status: enrollment.progress >= 100 ? 'completed' : 'active'
+      };
+    });
+
+    res.json({
+      success: true,
+      data: enrollments,
+      message: 'Enrollments retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MobileController: Error fetching enrollments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch enrollments',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get enrollment by ID
+ */
+const getEnrollmentById = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Parse enrollment ID (format: courseId_userId)
+    const [courseId, enrollmentUserId] = id.split('_');
+    
+    if (!courseId || !enrollmentUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid enrollment ID format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if user is authorized to view this enrollment
+    if (enrollmentUserId !== userId && !req.user?.is_admin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(courseId).populate('createdBy', 'name email');
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollment = course.enrolledStudents.find(
+      e => e.student.toString() === enrollmentUserId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollmentData = {
+      enrollmentId: id,
+      courseId: course._id,
+      userId: enrollmentUserId,
+      course: {
+        id: course._id,
+        title: course.title,
+        description: course.description,
+        thumbnail: course.thumbnail,
+        instructor: course.instructor,
+        category: course.category,
+        level: course.level,
+        curriculum: course.curriculum,
+        totalLessons: course.totalLessons
+      },
+      enrolledAt: enrollment.enrolledAt,
+      progress: enrollment.progress || 0,
+      lastAccessed: enrollment.lastAccessed,
+      completedLessons: enrollment.completedLessons || [],
+      certificateIssued: enrollment.certificateIssued || false,
+      status: enrollment.progress >= 100 ? 'completed' : 'active'
+    };
+
+    res.json({
+      success: true,
+      data: enrollmentData,
+      message: 'Enrollment retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MobileController: Error fetching enrollment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch enrollment',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Update enrollment status
+ */
+const updateEnrollmentStatus = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const validStatuses = ['active', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be: active, completed, or cancelled',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [courseId, enrollmentUserId] = id.split('_');
+    
+    if (!courseId || !enrollmentUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid enrollment ID format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(courseId);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollment = course.enrolledStudents.find(
+      e => e.student.toString() === enrollmentUserId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Update enrollment status based on the status parameter
+    if (status === 'completed') {
+      enrollment.progress = 100;
+      enrollment.certificateIssued = true;
+    } else if (status === 'cancelled') {
+      // Remove from enrolled students
+      course.enrolledStudents = course.enrolledStudents.filter(
+        e => e.student.toString() !== enrollmentUserId.toString()
+      );
+      course.enrollments = Math.max(0, course.enrollments - 1);
+    }
+
+    await course.save();
+
+    res.json({
+      success: true,
+      message: 'Enrollment status updated successfully',
+      data: {
+        enrollmentId: id,
+        status: status,
+        updatedAt: new Date().toISOString()
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MobileController: Error updating enrollment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update enrollment status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Cancel enrollment
+ */
+const cancelEnrollment = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [courseId, enrollmentUserId] = id.split('_');
+    
+    if (!courseId || !enrollmentUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid enrollment ID format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(courseId);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollmentIndex = course.enrolledStudents.findIndex(
+      e => e.student.toString() === enrollmentUserId.toString()
+    );
+
+    if (enrollmentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Remove enrollment
+    course.enrolledStudents.splice(enrollmentIndex, 1);
+    course.enrollments = Math.max(0, course.enrollments - 1);
+
+    await course.save();
+
+    res.json({
+      success: true,
+      message: 'Enrollment cancelled successfully',
+      data: {
+        enrollmentId: id,
+        cancelledAt: new Date().toISOString()
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MobileController: Error cancelling enrollment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel enrollment',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Get enrollment progress
+ */
+const getEnrollmentProgress = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [courseId, enrollmentUserId] = id.split('_');
+    
+    if (!courseId || !enrollmentUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid enrollment ID format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(courseId);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollment = course.enrolledStudents.find(
+      e => e.student.toString() === enrollmentUserId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const progressData = {
+      enrollmentId: id,
+      progress: enrollment.progress || 0,
+      completedLessons: enrollment.completedLessons?.length || 0,
+      totalLessons: course.totalLessons || 0,
+      lastAccessed: enrollment.lastAccessed,
+      certificateIssued: enrollment.certificateIssued || false
+    };
+
+    res.json({
+      success: true,
+      data: progressData,
+      message: 'Progress retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MobileController: Error fetching enrollment progress:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch enrollment progress',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Mark lesson as complete
+ */
+const markLessonComplete = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Course model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id, lessonId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const [courseId, enrollmentUserId] = id.split('_');
+    
+    if (!courseId || !enrollmentUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid enrollment ID format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const course = await CourseModel.findById(courseId);
+    
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const enrollment = course.enrolledStudents.find(
+      e => e.student.toString() === enrollmentUserId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      await course.updateStudentProgress(enrollmentUserId, lessonId);
+      
+      res.json({
+        success: true,
+        message: 'Lesson marked as complete',
+        data: {
+          enrollmentId: id,
+          lessonId: lessonId,
+          completedAt: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (progressError) {
+      console.error('MobileController: Error updating student progress:', progressError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to mark lesson complete',
+        error: progressError.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('MobileController: Error marking lesson complete:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark lesson complete',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   getAllCourses: withTimeout(getAllCourses),
   getAllBooks: withTimeout(getAllBooks),
@@ -1017,5 +1634,13 @@ module.exports = {
   search: withTimeout(searchContent),
   searchContent: withTimeout(searchContent),
   getAppInfo: withTimeout(getMobileInfo),
-  getMobileInfo: withTimeout(getMobileInfo)
+  getMobileInfo: withTimeout(getMobileInfo),
+  // Enrollment methods
+  enrollInCourse: withTimeout(enrollInCourse),
+  getEnrollments: withTimeout(getEnrollments),
+  getEnrollmentById: withTimeout(getEnrollmentById),
+  updateEnrollmentStatus: withTimeout(updateEnrollmentStatus),
+  cancelEnrollment: withTimeout(cancelEnrollment),
+  getEnrollmentProgress: withTimeout(getEnrollmentProgress),
+  markLessonComplete: withTimeout(markLessonComplete)
 };

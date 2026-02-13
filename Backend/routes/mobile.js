@@ -46,6 +46,15 @@ router.get('/books/:id/stream', mobileController.streamSecurePdf);
 // Course routes
 router.get('/courses', mobileController.getAllCourses);
 router.get('/courses/:id', mobileController.getCourseById);
+router.post('/courses/:id/enroll', authenticateToken, mobileController.enrollInCourse);
+
+// Enrollment routes
+router.get('/enrollments', authenticateToken, mobileController.getEnrollments);
+router.get('/enrollments/:id', authenticateToken, mobileController.getEnrollmentById);
+router.put('/enrollments/:id', authenticateToken, mobileController.updateEnrollmentStatus);
+router.delete('/enrollments/:id', authenticateToken, mobileController.cancelEnrollment);
+router.get('/enrollments/:id/progress', authenticateToken, mobileController.getEnrollmentProgress);
+router.post('/enrollments/:id/lessons/:lessonId/complete', authenticateToken, mobileController.markLessonComplete);
 
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);

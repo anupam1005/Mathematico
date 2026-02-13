@@ -1107,12 +1107,19 @@ const createCourse = async (req, res) => {
     });
   } catch (error) {
     console.error('Create course error:', error);
-    res.status(500).json({
+    
+    // Ensure we always return JSON, even in error cases
+    const errorResponse = {
       success: false,
       message: 'Failed to create course',
-      error: error.message,
+      error: error.message || 'Unknown error occurred',
       timestamp: new Date().toISOString()
-    });
+    };
+    
+    // Check if headers already sent
+    if (!res.headersSent) {
+      res.status(500).json(errorResponse);
+    }
   }
 };
 
@@ -1186,73 +1193,6 @@ const toggleCoursePublish = async (req, res) => {
 };
 
 const updateCourse = async (req, res) => {
-  try {
-    if (!CourseModel) {
-      return res.status(503).json({ success: false, message: 'Course model unavailable' });
-    }
-
-    await connectDB();
-    const { id } = req.params;
-    const updateData = req.body;
-
-    delete updateData._id;
-    delete updateData.createdBy;
-    delete updateData.createdAt;
-
-    if (req.body.instructorName) {
-      updateData.instructor = {
-        ...(updateData.instructor || {}),
-        name: req.body.instructorName
-      };
-      delete updateData.instructorName;
-    }
-
-    if (req.files && req.files.image && req.files.image[0]) {
-      try {
-        const imageResult = await uploadFileToCloud(
-          req.files.image[0],
-          'mathematico/courses/thumbnails',
-          'cloudinary'
-        );
-        updateData.thumbnail = imageResult.url;
-      } catch (uploadError) {
-        console.error('File upload error:', uploadError);
-      }
-    } else if (req.body.thumbnail) {
-      updateData.thumbnail = req.body.thumbnail;
-    }
-
-    const course = await CourseModel.findByIdAndUpdate(
-      id,
-      { ...updateData, updatedAt: new Date() },
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'name email');
-
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Course updated successfully',
-      data: course,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Update course error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update course',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const updateCourseStatus = async (req, res) => {
   try {
     if (!CourseModel) {
       return res.status(503).json({ 
@@ -1919,10 +1859,10 @@ const getAdminInfo = async (req, res) => {
       success: true,
       data: {
         adminName: 'Admin User',
-        email: process.env.ADMIN_EMAIL || 'admin@mathematico.com',
+        email: process.env.ADMIN_EMAIL || 'dc2006089@gmail.com',
         role: 'admin',
         permissions: ['read', 'write', 'delete'],
-        database: 'disabled',
+        database: 'enabled',
         features: {
           userManagement: false,
           bookManagement: false,
@@ -1930,7 +1870,7 @@ const getAdminInfo = async (req, res) => {
           liveClassManagement: false,
           paymentManagement: false
         },
-        message: 'Database functionality has been removed. Only authentication is available.'
+        message: 'Database functionality is now enabled. Full admin management available.'
       },
       timestamp: new Date().toISOString()
     });
@@ -2007,7 +1947,7 @@ module.exports = {
       }
       return res.json({ success: true, data: {}, message: 'No settings found' });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to get settings', error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to get settings', error: error.message, timestamp: new Date().toISOString() });
     }
   },
   updateSettings: async (req, res) => {
@@ -2022,10 +1962,35 @@ module.exports = {
       }
       return res.json({ success: true, message: 'Settings saved (no model configured)', data: req.body });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Failed to update settings', error: error.message });
+      res.status(500).json({ success: false, message: 'Failed to update settings', error: error.message, timestamp: new Date().toISOString() });
     }
   },
   
   // Admin Info
-  getAdminInfo 
+  getAdminInfo: async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        data: {
+          adminName: 'Admin User',
+          email: process.env.ADMIN_EMAIL || 'c2006089@gmail.com',
+          role: 'admin',
+          permissions: ['read', 'write', 'delete'],
+          database: 'enabled',
+          features: {
+            userManagement: true,
+            bookManagement: true,
+            courseManagement: true,
+            liveClassManagement: true,
+            paymentManagement: true
+          },
+          message: 'Database functionality is now enabled. Full admin management available.'
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error getting admin info:', error);
+      res.status(500).json({ success: false, message: 'Failed to get admin info', timestamp: new Date().toISOString() });
+    }
+  }
 };

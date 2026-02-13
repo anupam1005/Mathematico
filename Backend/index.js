@@ -154,6 +154,12 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// Production monitoring and logging
+if (process.env.NODE_ENV === 'production') {
+  const requestLogger = require('./middleware/requestLogger');
+  app.use(requestLogger);
+}
+
 // CORS configuration
 const originEnvValues = [
   process.env.APP_ORIGIN,
@@ -508,19 +514,8 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((error, req, res, next) => {
-  console.error('Global error handler:', error);
-
-  // Don't leak error details in production
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-
-  res.status(error.status || 500).json({
-    success: false,
-    message: error.message || 'Internal server error',
-    ...(isDevelopment && { stack: error.stack }),
-    timestamp: new Date().toISOString()
-  });
-});
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {

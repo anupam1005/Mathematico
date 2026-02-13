@@ -400,6 +400,17 @@ class AdminService {
       }
 
       const response = await adminApi.post('/courses', courseData, config);
+      
+      // Check if response exists and has data
+      if (!response) {
+        return { success: false, error: 'No response from server' };
+      }
+
+      // Check if response.data exists and is valid JSON-like
+      if (!response.data) {
+        return { success: false, error: 'Invalid response from server' };
+      }
+
       const result = response.data;
       
       if (response.status >= 200 && response.status < 300) {
@@ -407,7 +418,7 @@ class AdminService {
         return { success: true, data: result.data };
       } else {
         errorHandler.handleError('AdminService: Course creation failed:', result);
-        return { success: false, error: 'Failed to create course' };
+        return { success: false, error: result.message || result.error || 'Failed to create course' };
       }
     } catch (error: any) {
       errorHandler.handleError('AdminService: Course creation error:', error);
@@ -420,39 +431,22 @@ class AdminService {
         };
       }
       
-      return { success: false, error: 'Failed to create course' };
-    }
-  }
-
-  async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
-    try {
-      errorHandler.logInfo('AdminService: Updating course with ID:', id, 'data:', courseData);
+      // Handle JSON parsing errors specifically
+      if (error.message && error.message.includes('JSON Parse error')) {
+        return { 
+          success: false, 
+          error: 'Server returned invalid response. Please check backend logs.' 
+        };
+      }
       
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
+      // Handle non-JSON responses
+      if (error.response && typeof error.response.data === 'string') {
+        return { 
+          success: false, 
+          error: `Server error: ${error.response.data.substring(0, 100)}` 
+        };
       }
-
-      // Check if courseData is FormData or regular object
-      const isFormData = courseData instanceof FormData;
-
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.put(`/courses/${id}`, courseData, config);
-      const result = response.data;
       
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Course updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Course update failed:', result);
-        return { success: false, error: 'Failed to update course' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Course update error:', error);
       return { success: false, error: 'Failed to update course' };
     }
   }

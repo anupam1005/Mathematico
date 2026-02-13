@@ -27,35 +27,97 @@ export default function CheckoutScreen({ navigation, route }: any) {
       const { razorpayService } =
         require('../services/razorpayService');
 
+      // Create order with proper notes for enrollment
       const order = await razorpayService.createOrder({
         amount: itemData.price || 0,
         currency: CURRENCY_CONFIG.code,
-        receipt: `${type}_${Date.now()}`,
-        notes: { itemId, userId: user?.id },
+        receipt: `${type}_${itemId}_${Date.now()}`,
+        notes: { 
+          courseId: type === 'course' ? itemId : undefined,
+          bookId: type === 'book' ? itemId : undefined,
+          liveClassId: type === 'liveClass' ? itemId : undefined,
+          userId: user?.id,
+          itemType: type
+        },
       });
 
       if (!order.success) {
-        Alert.alert('Error', order.message || 'Order failed');
+        Alert.alert('Error', order.message || 'Failed to create payment order');
         return;
       }
 
+      // Open Razorpay checkout
       const payment = await razorpayService.openCheckout({
         order_id: order.data.id,
         amount: itemData.price,
         currency: CURRENCY_CONFIG.code,
         name: user?.name || 'User',
         email: user?.email || '',
+        description: `Payment for ${itemData.title || 'item'}`,
       });
 
-      if (payment.success) {
-        Alert.alert('Success', 'Payment completed');
-        navigation.navigate('MainTabs');
+      if (payment.success && payment.data) {
+        // Verify payment with backend
+        const verification = await razorpayService.verifyPayment({
+          razorpay_order_id: order.data.id,
+          razorpay_payment_id: payment.data.razorpay_payment_id,
+          razorpay_signature: payment.data.razorpay_signature,
+        });
+
+        if (verification.success) {
+          Alert.alert(
+            'Payment Successful!', 
+            'You have been enrolled successfully.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Navigate based on type
+                  if (type === 'course') {
+                    navigation.navigate('CourseDetail', { courseId: itemId });
+                  } else {
+                    navigation.navigate('MainTabs');
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Payment Verification Failed',
+            'Payment was successful but enrollment failed. Please contact support.',
+            [
+              {
+                text: 'Contact Support',
+                onPress: () => navigation.navigate('Support')
+              },
+              {
+                text: 'OK',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
       } else {
-        Alert.alert('Payment Cancelled');
+        Alert.alert('Payment Cancelled', payment.message || 'Payment was cancelled');
       }
     } catch (error) {
       safeCatch('CheckoutScreen.handlePayment', () => {
-        Alert.alert('Error', 'Payment failed');
+        console.error('Payment error:', error);
+        Alert.alert(
+          'Payment Failed', 
+          'Unable to complete payment. Please try again or contact support if the problem persists.',
+          [
+            {
+              text: 'Try Again',
+              onPress: () => handlePayment()
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
       })(error);
     } finally {
       setLoading(false);
