@@ -22,7 +22,10 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
@@ -56,10 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('AuthContext: Checking authentication status...');
-      
-      // Clear any invalid tokens first
-      await authService.clearInvalidTokens();
-      
+
       const token = await authService.getToken();
       console.log('AuthContext: Token retrieved:', token ? 'YES' : 'NO');
       
@@ -107,7 +107,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       setIsLoading(true);
       
@@ -150,18 +153,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setUser(user);
         setIsAuthenticated(true);
-        return true;
+        return { success: true, message: response.message };
       } else {
-        Alert.alert('Login Failed', response.message || 'Invalid credentials');
-        return false;
+        // Return failure with message so UI can display appropriate error
+        return { success: false, message: response.message || 'Invalid credentials' };
       }
     } catch (error: any) {
       // NEVER access error properties - use generic message
       const errorMessage = 'An error occurred during login. Please try again.';
-      safeCatch('AuthContext.login', () => {
-        Alert.alert('Login Error', errorMessage);
-      })(error);
-      return false;
+      safeCatch('AuthContext.login')(error);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }

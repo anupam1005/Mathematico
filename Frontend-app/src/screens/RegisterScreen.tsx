@@ -310,7 +310,14 @@ export default function RegisterScreen({ navigation }: any) {
               <View style={styles.termsContainer}>
                 <CustomCheckbox
                   status={agreeToTerms ? 'checked' : 'unchecked'}
-                  onPress={() => setAgreeToTerms(!agreeToTerms)}
+                  onPress={() => {
+                    const newValue = !agreeToTerms;
+                    setAgreeToTerms(newValue);
+                    setApiError('');
+                    if (errors.terms && newValue) {
+                      setErrors({ ...errors, terms: '' });
+                    }
+                  }}
                   testID="terms-checkbox"
                   accessibilityLabel="Agree to terms and conditions checkbox"
                 />

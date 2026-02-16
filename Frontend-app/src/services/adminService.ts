@@ -447,6 +447,67 @@ class AdminService {
         };
       }
       
+      return { success: false, error: 'Failed to create course' };
+    }
+  }
+
+  async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
+    try {
+      errorHandler.logInfo('AdminService: Updating course with ID:', id, 'data:', courseData);
+
+      const token = await authService.getToken();
+      if (!token) {
+        return { success: false, error: 'No authentication token found' };
+      }
+
+      const isFormData = courseData instanceof FormData;
+      const config: AxiosRequestConfig = {};
+      if (!isFormData) {
+        config.headers = { 'Content-Type': 'application/json' };
+      }
+
+      const response = await adminApi.put(`/courses/${id}`, courseData, config);
+
+      if (!response || !response.data) {
+        return { success: false, error: 'Invalid response from server' };
+      }
+
+      const result = response.data;
+
+      if (response.status >= 200 && response.status < 300) {
+        errorHandler.logInfo('AdminService: Course updated successfully:', result);
+        return { success: true, data: result.data };
+      } else {
+        errorHandler.handleError('AdminService: Course update failed:', result);
+        return { success: false, error: result.message || result.error || 'Failed to update course' };
+      }
+    } catch (error: any) {
+      errorHandler.handleError('AdminService: Course update error:', error);
+      
+      // Handle specific network errors
+      if (error.message === 'Network request failed') {
+        return { 
+          success: false, 
+          error: 'Network connection failed. Please check if the backend server is running and accessible.' 
+        };
+      }
+      
+      // Handle JSON parsing errors specifically
+      if (error.message && error.message.includes('JSON Parse error')) {
+        return { 
+          success: false, 
+          error: 'Server returned invalid response. Please check backend logs.' 
+        };
+      }
+      
+      // Handle non-JSON responses
+      if (error.response && typeof error.response.data === 'string') {
+        return { 
+          success: false, 
+          error: `Server error: ${error.response.data.substring(0, 100)}` 
+        };
+      }
+      
       return { success: false, error: 'Failed to update course' };
     }
   }

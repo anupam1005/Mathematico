@@ -67,10 +67,10 @@ export default function LoginScreen({ navigation }: any) {
     
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const success = await login(normalizedEmail, password);
+      const result = await login(normalizedEmail, password);
       
-      if (!success) {
-        setApiError('Invalid email or password. Please try again.');
+      if (!result.success) {
+        setApiError(result.message || 'Invalid email or password. Please try again.');
       }
     } catch (error) {
       setApiError('An unexpected error occurred. Please try again.');
