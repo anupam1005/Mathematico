@@ -810,12 +810,14 @@ const updateBook = async (req, res) => {
 
   } catch (error) {
     console.error('Update book error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update book',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update book',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 
@@ -1534,16 +1536,18 @@ const createLiveClass = async (req, res) => {
     if (error.errors) {
       console.error('Validation errors:', error.errors);
     }
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create live class',
-      error: error.message,
-      validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
-        field: key,
-        message: error.errors[key].message
-      })) : undefined,
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create live class',
+        error: error.message,
+        validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
+          field: key,
+          message: error.errors[key].message
+        })) : undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 

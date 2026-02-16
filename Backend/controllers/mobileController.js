@@ -514,12 +514,14 @@ const streamSecurePdf = async (req, res) => {
 
   } catch (error) {
     console.error('Error streaming secure PDF:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to stream PDF',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to stream PDF',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 
@@ -1076,12 +1078,14 @@ const enrollInCourse = async (req, res) => {
     }
   } catch (error) {
     console.error('MobileController: Error enrolling in course:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to enroll in course',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to enroll in course',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 

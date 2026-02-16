@@ -208,7 +208,8 @@ export class ErrorHandler {
         data: response.data
       };
     } catch (error) {
-      const safeError = safeCatch('ErrorHandler.validateApiResponse')(error);
+      const safeErrorHandler = safeCatch('ErrorHandler.validateApiResponse');
+      const safeError = safeErrorHandler(error);
       return {
         success: false,
         error: {

@@ -566,36 +566,72 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Promise Rejection:', reason);
-  // Log error but don't crash in production
-  if (process.env.NODE_ENV === 'production') {
-    // In production, log and continue
-    console.error('Unhandled rejection details:', {
-      reason: reason instanceof Error ? reason.message : String(reason),
-      stack: reason instanceof Error ? reason.stack : undefined,
-      timestamp: new Date().toISOString()
-    });
-  } else {
-    // In development, log full details
-    console.error('Unhandled rejection:', reason);
+  try {
+    const errorMessage = reason instanceof Error ? reason.message : String(reason);
+    const errorStack = reason instanceof Error ? reason.stack : undefined;
+    
+    // Use logger from utils/logger.js
+    try {
+      const { logger } = require('./utils/logger');
+      logger.error('❌ Unhandled Promise Rejection:', {
+        reason: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      });
+      
+      // In development, log full details
+      if (process.env.NODE_ENV !== 'production') {
+        logger.error('Full rejection details:', reason);
+      }
+    } catch (loggerError) {
+      // Fallback to console if logger unavailable
+      console.error('❌ Unhandled Promise Rejection:', errorMessage);
+      if (errorStack) {
+        console.error('Stack:', errorStack);
+      }
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Full rejection details:', reason);
+      }
+    }
+  } catch (logError) {
+    // Ultimate fallback
+    console.error('❌ Failed to log unhandled rejection:', logError);
+    console.error('Original rejection:', reason);
   }
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  // Log error
-  console.error('Uncaught exception details:', {
-    message: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString()
-  });
-  
-  // In production, attempt graceful shutdown
-  if (process.env.NODE_ENV === 'production') {
-    gracefulShutdown('UNCAUGHT_EXCEPTION');
-  } else {
-    // In development, exit immediately
+  try {
+    const errorMessage = error && error.message ? String(error.message) : 'Unknown error';
+    const errorStack = error && error.stack ? String(error.stack) : undefined;
+    
+    // Use logger from utils/logger.js
+    try {
+      const { logger } = require('./utils/logger');
+      logger.error('❌ Uncaught Exception:', {
+        message: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      });
+    } catch (loggerError) {
+      // Fallback to console if logger unavailable
+      console.error('❌ Uncaught Exception:', errorMessage);
+      if (errorStack) {
+        console.error('Stack:', errorStack);
+      }
+    }
+    
+    // In production, attempt graceful shutdown
+    if (process.env.NODE_ENV === 'production') {
+      gracefulShutdown('UNCAUGHT_EXCEPTION');
+    } else {
+      // In development, exit immediately
+      process.exit(1);
+    }
+  } catch (logError) {
+    // Ultimate fallback - exit immediately
+    console.error('❌ Failed to handle uncaught exception:', logError);
     process.exit(1);
   }
 });

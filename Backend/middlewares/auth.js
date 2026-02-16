@@ -37,6 +37,11 @@ const authenticateToken = async (req, res, next) => {
     req.user = buildUserFromToken(decoded);
     return next();
   } catch (error) {
+    // Prevent double response
+    if (res.headersSent) {
+      return next(error);
+    }
+    
     // Provide more specific error messages
     let errorMessage = 'Invalid or expired token';
     if (error.name === 'JsonWebTokenError') {
@@ -61,21 +66,27 @@ const authenticateToken = async (req, res, next) => {
  */
 const requireAdmin = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized',
-      message: 'Authentication required',
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    return next();
   }
 
   if (!req.user.isAdmin && !req.user.is_admin) {
-    return res.status(403).json({
-      success: false,
-      error: 'Forbidden',
-      message: 'Admin access required',
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Admin access required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    return next();
   }
 
   next();
@@ -86,12 +97,15 @@ const requireAdmin = (req, res, next) => {
  */
 const requireAuth = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized',
-      message: 'Authentication required',
-      timestamp: new Date().toISOString()
-    });
+    if (!res.headersSent) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+    return next();
   }
 
   next();

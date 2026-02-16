@@ -236,6 +236,10 @@ const login = async (req, res) => {
     });
     
   } catch (error) {
+    if (res.headersSent) {
+      return;
+    }
+    
     const errorMessage = error && error.message ? String(error.message) : String(error);
     console.error('Login error:', errorMessage);
 
@@ -349,6 +353,10 @@ const register = async (req, res) => {
     });
     
   } catch (error) {
+    if (res.headersSent) {
+      return;
+    }
+    
     const errorMessage = error && error.message ? String(error.message) : String(error);
     console.error('Registration error:', errorMessage);
 
