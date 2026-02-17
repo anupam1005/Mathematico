@@ -11,6 +11,9 @@ export default function CheckoutScreen({ navigation, route }: any) {
   const { itemId, itemData, type } = route.params;
 
   const [loading, setLoading] = useState(false);
+  const subtotalAmount = Number(itemData?.price || 0);
+  // Keep UI + charged amount consistent (currently showing 18% tax in UI)
+  const totalAmount = Math.round(subtotalAmount * 1.18 * 100) / 100;
 
   useEffect(() => {
     if (!itemData) {
@@ -29,7 +32,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
       // Create order with proper notes for enrollment
       const order = await razorpayService.createOrder({
-        amount: itemData.price || 0,
+        amount: totalAmount,
         currency: CURRENCY_CONFIG.code,
         receipt: `${type}_${itemId}_${Date.now()}`,
         notes: { 
@@ -49,7 +52,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
       // Open Razorpay checkout
       const payment = await razorpayService.openCheckout({
         order_id: order.data.id,
-        amount: itemData.price,
+        amount: totalAmount,
         currency: CURRENCY_CONFIG.code,
         name: user?.name || 'User',
         email: user?.email || '',
@@ -136,7 +139,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
           <Divider style={styles.divider} />
 
           <Text style={styles.price}>
-            Total: ₹{Math.round((itemData.price || 0) * 1.18)}
+            Total: ₹{totalAmount.toFixed(2)}
           </Text>
 
           <Button

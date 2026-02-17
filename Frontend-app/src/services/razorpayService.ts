@@ -274,7 +274,7 @@ class RazorpayService {
           name: options.name || ''
         },
         theme: {
-          color: config.theme.color
+          color: config?.theme?.color || '#3399cc'
         },
         method: {
           upi: false,  // Disable UPI payment method

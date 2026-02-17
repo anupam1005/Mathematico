@@ -1,6 +1,17 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
+const normalizeServerUrl = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+};
+
+const serverUrl =
+  normalizeServerUrl(process.env.BACKEND_URL) ||
+  normalizeServerUrl(process.env.VERCEL_URL) ||
+  'https://mathematico-backend-new.vercel.app';
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -19,7 +30,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app',
+        url: serverUrl,
         description: 'Production server'
       }
     ],

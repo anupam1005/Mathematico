@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
 // Import controllers
 const mobileController = require('../controllers/mobileController');
@@ -59,8 +59,9 @@ router.post('/enrollments/:id/lessons/:lessonId/complete', authenticateToken, mo
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
-router.put('/live-classes/:id/start', mobileController.startLiveClass);
-router.put('/live-classes/:id/end', mobileController.endLiveClass);
+// Starting/ending classes is an admin action
+router.put('/live-classes/:id/start', authenticateToken, requireAdmin, mobileController.startLiveClass);
+router.put('/live-classes/:id/end', authenticateToken, requireAdmin, mobileController.endLiveClass);
 router.post('/live-classes/:id/join', authenticateToken, studentController.joinLiveClass);
 
 // Search routes

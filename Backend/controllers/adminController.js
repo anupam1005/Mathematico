@@ -89,7 +89,7 @@ const getDashboard = async (req, res) => {
       LiveClassModel ? LiveClassModel.countDocuments({}) : 0,
       CourseModel ? CourseModel.countDocuments({ status: 'published' }) : 0,
       CourseModel ? CourseModel.countDocuments({ status: 'draft' }) : 0,
-      LiveClassModel ? LiveClassModel.countDocuments({ status: 'upcoming' }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: 'scheduled' }) : 0,
       LiveClassModel ? LiveClassModel.countDocuments({ status: 'completed' }) : 0
     ]);
 
@@ -161,7 +161,14 @@ const getAllUsers = async (req, res) => {
 
     const query = {};
     if (role) query.role = role;
-    if (status) query.status = status;
+    // Normalize "status" filter to actual model fields
+    if (typeof status === 'string' && status.trim()) {
+      const normalized = status.trim().toLowerCase();
+      if (normalized === 'active') query.isActive = true;
+      else if (normalized === 'inactive' || normalized === 'deactivated') query.isActive = false;
+      else if (normalized === 'true') query.isActive = true;
+      else if (normalized === 'false') query.isActive = false;
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -170,7 +177,7 @@ const getAllUsers = async (req, res) => {
     }
 
     const users = await UserModel.find(query)
-      .select('name email role status createdAt')
+      .select('name email role isActive isEmailVerified createdAt updatedAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -180,7 +187,15 @@ const getAllUsers = async (req, res) => {
 
     res.json({
       success: true,
-      data: users,
+      data: (users || []).map(u => ({
+        ...u,
+        id: u._id?.toString?.() || u.id,
+        isAdmin: u.role === 'admin',
+        is_admin: u.role === 'admin',
+        is_active: u.isActive !== false,
+        status: u.isActive !== false ? 'active' : 'inactive',
+        email_verified: u.isEmailVerified === true,
+      })),
       pagination: {
         page,
         limit,
@@ -208,11 +223,23 @@ const getUserById = async (req, res) => {
     }
     await connectDB();
     const { id } = req.params;
-    const user = await UserModel.findById(id).select('name email role status createdAt').lean();
+    const user = await UserModel.findById(id).select('name email role isActive isEmailVerified createdAt updatedAt').lean();
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.json({ success: true, data: user, timestamp: new Date().toISOString() });
+    res.json({
+      success: true,
+      data: {
+        ...user,
+        id: user._id?.toString?.() || user.id,
+        isAdmin: user.role === 'admin',
+        is_admin: user.role === 'admin',
+        is_active: user.isActive !== false,
+        status: user.isActive !== false ? 'active' : 'inactive',
+        email_verified: user.isEmailVerified === true,
+      },
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({
@@ -539,19 +566,34 @@ const getAllBooks = async (req, res) => {
 
 const getBookById = async (req, res) => {
   try {
+    if (!BookModel) {
+      return res.status(503).json({ success: false, message: 'Book model unavailable' });
+    }
+
+    await connectDB();
     const { id } = req.params;
-    console.log('📖 Admin book by ID - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Book not found',
-      timestamp: new Date().toISOString()
+
+    const book = await BookModel.findById(id).populate('createdBy', 'name email').lean();
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: book,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error fetching book:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch book',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -1076,6 +1118,25 @@ const createCourse = async (req, res) => {
       thumbnailUrl = thumbnail;
     }
 
+    // Optional course PDF upload (field name: pdf)
+    let pdfFileUrl = '';
+    if (req.files && req.files.pdf && req.files.pdf[0]) {
+      try {
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          console.warn('⚠️ Cloudinary credentials not configured, skipping course PDF upload');
+        } else {
+          const pdfResult = await uploadFileToCloud(
+            req.files.pdf[0],
+            'mathematico/courses/pdfs',
+            'cloudinary'
+          );
+          pdfFileUrl = pdfResult.url;
+        }
+      } catch (uploadError) {
+        console.error('Course PDF upload error:', uploadError);
+      }
+    }
+
     if (!thumbnailUrl) {
       thumbnailUrl = 'https://via.placeholder.com/800x450.png?text=Course';
     }
@@ -1113,6 +1174,7 @@ const createCourse = async (req, res) => {
       duration: normalizedDuration,
       tags: parsedTags,
       thumbnail: thumbnailUrl,
+      pdfFile: pdfFileUrl || '',
       instructor: {
         name: instructorName || (instructorUser && instructorUser.name) || 'Admin',
         bio: instructorBio || '',
@@ -1233,44 +1295,72 @@ const updateCourse = async (req, res) => {
 
     // Ensure DB is connected (serverless-safe)
     try {
-      console.log('🔗 Attempting to connect to database...');
       await connectDB();
-      console.log('✅ Database connection successful');
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
       return res.status(503).json({
         success: false,
         message: 'Database connection failed',
-        error: dbError.message
+        error: dbError.message,
       });
     }
 
     const { id } = req.params;
-    const { status } = req.body;
+    const updateData = { ...(req.body || {}) };
 
-    if (!status || !['draft', 'published', 'archived'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid status (draft, published, archived) is required'
-      });
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.createdBy;
+    delete updateData.createdAt;
+    delete updateData.enrolledStudents;
+    delete updateData.reviews;
+
+    // Normalize boolean fields sent via multipart/form-data
+    if (typeof updateData.isFree === 'string') {
+      updateData.isFree = updateData.isFree === 'true';
+    }
+    if (typeof updateData.isAvailable === 'string') {
+      updateData.isAvailable = updateData.isAvailable === 'true';
     }
 
-    // Prepare update data
-    const updateData = { 
-      status, 
-      updatedAt: new Date() 
-    };
-    
-    // Set publishedAt when status changes to 'published'
-    if (status === 'published') {
+    // Handle image upload if present (field name: image)
+    if (req.files && req.files.image && req.files.image[0]) {
+      try {
+        const imageResult = await uploadFileToCloud(
+          req.files.image[0],
+          'mathematico/courses/thumbnails',
+          'cloudinary'
+        );
+        updateData.thumbnail = imageResult.url;
+      } catch (uploadError) {
+        console.error('Course thumbnail upload error:', uploadError);
+      }
+    }
+
+    // Handle PDF upload if present (field name: pdf)
+    if (req.files && req.files.pdf && req.files.pdf[0]) {
+      try {
+        const pdfResult = await uploadFileToCloud(
+          req.files.pdf[0],
+          'mathematico/courses/pdfs',
+          'cloudinary'
+        );
+        updateData.pdfFile = pdfResult.url;
+      } catch (uploadError) {
+        console.error('Course PDF upload error:', uploadError);
+      }
+    }
+
+    // Manage publishedAt automatically when status changes to published
+    if (updateData.status === 'published') {
       updateData.publishedAt = new Date();
     }
+    updateData.updatedAt = new Date();
 
-    const course = await CourseModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'name email');
+    const course = await CourseModel.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate('createdBy', 'name email');
 
     if (!course) {
       return res.status(404).json({
@@ -1281,16 +1371,16 @@ const updateCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Course ${status} successfully`,
+      message: 'Course updated successfully',
       data: course,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Update course status error:', error);
+    console.error('Update course error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update course status',
+      message: 'Failed to update course',
       error: error.message,
       timestamp: new Date().toISOString()
     });
@@ -1784,19 +1874,40 @@ const getAllPayments = async (req, res) => {
 
 const getPaymentById = async (req, res) => {
   try {
+    let PaymentModelLocal;
+    try { PaymentModelLocal = require('../models/Payment'); } catch (_) {}
+
+    if (!PaymentModelLocal) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment model unavailable',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    await connectDB();
     const { id } = req.params;
-    console.log('💰 Admin payment by ID - database disabled');
-    
-    res.status(404).json({
-      success: false,
-      message: 'Payment not found',
-      timestamp: new Date().toISOString()
+
+    const payment = await PaymentModelLocal.findById(id).lean();
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: payment,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error fetching payment:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }

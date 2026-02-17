@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { safeCatch } from './safeCatch';
 
 // Storage utility that works on both web and mobile
@@ -13,12 +14,22 @@ export class Storage {
         // Use localStorage for web
         localStorage.setItem(key, valueToStore);
       } else {
-        // Use SecureStore for mobile
-        await SecureStore.setItemAsync(key, valueToStore);
+        // Prefer SecureStore for mobile; fall back to AsyncStorage if SecureStore fails
+        try {
+          await SecureStore.setItemAsync(key, valueToStore);
+        } catch (secureStoreError: any) {
+          safeCatch('Storage.setItem.secureStore')(secureStoreError);
+          try {
+            await AsyncStorage.setItem(key, valueToStore);
+          } catch (asyncStorageError: any) {
+            safeCatch('Storage.setItem.asyncStorage')(asyncStorageError);
+            // Swallow to avoid breaking auth flows; app may run without persistence.
+          }
+        }
       }
     } catch (error: any) {
       safeCatch('Storage.setItem')(error);
-      throw new Error('Storage setItem failed');
+      // Do not throw: storage failures should not block critical flows (e.g., login/register).
     }
   }
 
@@ -30,8 +41,18 @@ export class Storage {
         // Use localStorage for web
         result = localStorage.getItem(key);
       } else {
-        // Use SecureStore for mobile
-        result = await SecureStore.getItemAsync(key);
+        // Prefer SecureStore for mobile; fall back to AsyncStorage if SecureStore fails
+        try {
+          result = await SecureStore.getItemAsync(key);
+        } catch (secureStoreError: any) {
+          safeCatch('Storage.getItem.secureStore')(secureStoreError);
+          try {
+            result = await AsyncStorage.getItem(key);
+          } catch (asyncStorageError: any) {
+            safeCatch('Storage.getItem.asyncStorage')(asyncStorageError);
+            result = null;
+          }
+        }
       }
       
       if (!result) return null;
@@ -59,12 +80,22 @@ export class Storage {
         // Use localStorage for web
         localStorage.removeItem(key);
       } else {
-        // Use SecureStore for mobile
-        await SecureStore.deleteItemAsync(key);
+        // Prefer SecureStore for mobile; fall back to AsyncStorage if SecureStore fails
+        try {
+          await SecureStore.deleteItemAsync(key);
+        } catch (secureStoreError: any) {
+          safeCatch('Storage.deleteItem.secureStore')(secureStoreError);
+          try {
+            await AsyncStorage.removeItem(key);
+          } catch (asyncStorageError: any) {
+            safeCatch('Storage.deleteItem.asyncStorage')(asyncStorageError);
+            // swallow
+          }
+        }
       }
     } catch (error: any) {
       safeCatch('Storage.deleteItem')(error);
-      throw new Error('Storage deleteItem failed');
+      // Do not throw - cleanup failure should not break logout flows.
     }
   }
 
@@ -74,14 +105,25 @@ export class Storage {
         // Clear localStorage for web
         localStorage.clear();
       } else {
-        // Clear SecureStore for mobile
-        await SecureStore.deleteItemAsync('authToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        await SecureStore.deleteItemAsync('user');
+        // Clear SecureStore / AsyncStorage for mobile
+        const keys = ['authToken', 'refreshToken', 'user'];
+
+        for (const k of keys) {
+          try {
+            await SecureStore.deleteItemAsync(k);
+          } catch (secureStoreError: any) {
+            safeCatch('Storage.clear.secureStore')(secureStoreError);
+          }
+          try {
+            await AsyncStorage.removeItem(k);
+          } catch (asyncStorageError: any) {
+            safeCatch('Storage.clear.asyncStorage')(asyncStorageError);
+          }
+        }
       }
     } catch (error: any) {
       safeCatch('Storage.clear')(error);
-      throw new Error('Storage clear failed');
+      // Do not throw - clear is best-effort.
     }
   }
 }

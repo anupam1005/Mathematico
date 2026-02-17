@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
+const connectDB = require('../config/database');
 
 // Import MongoDB models with safe fallback
 let User;
@@ -40,6 +41,7 @@ router.use(authenticateToken);
  */
 const getCurrentUser = async (req, res) => {
   try {
+    await connectDB();
     // Use DB for persistent users (both admin and students)
     const tokenUser = req.user || {};
     if (!tokenUser.id) {
@@ -66,9 +68,14 @@ const getCurrentUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        status: user.status,
-        email_verified: user.email_verified,
-        is_admin: user.is_admin,
+        // Normalize status fields for frontend compatibility
+        isActive: user.isActive !== false,
+        is_active: user.isActive !== false,
+        status: user.isActive !== false ? 'active' : 'inactive',
+        isEmailVerified: user.isEmailVerified === true,
+        email_verified: user.isEmailVerified === true,
+        isAdmin: user.role === 'admin',
+        is_admin: user.role === 'admin',
         created_at: user.createdAt,
         updated_at: user.updatedAt
       },
@@ -91,7 +98,7 @@ const getCurrentUser = async (req, res) => {
  */
 const updateCurrentUser = async (req, res) => {
   try {
-    // Database connection handled by controllers
+    await connectDB();
 
     const { name, email } = req.body;
     const updateData = {};
@@ -102,8 +109,15 @@ const updateCurrentUser = async (req, res) => {
     // Don't allow users to change their role or admin status
     delete updateData.role;
     delete updateData.is_admin;
+    delete updateData.isAdmin;
+    delete updateData.refreshTokens;
+    delete updateData.password;
 
-    const user = await User.updateUser(req.user.id, updateData);
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -119,9 +133,13 @@ const updateCurrentUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        status: user.status,
-        email_verified: user.email_verified,
-        is_admin: user.is_admin,
+        isActive: user.isActive !== false,
+        is_active: user.isActive !== false,
+        status: user.isActive !== false ? 'active' : 'inactive',
+        isEmailVerified: user.isEmailVerified === true,
+        email_verified: user.isEmailVerified === true,
+        isAdmin: user.role === 'admin',
+        is_admin: user.role === 'admin',
         updated_at: user.updatedAt
       },
       message: 'User information updated successfully',
@@ -143,6 +161,7 @@ const updateCurrentUser = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
+    await connectDB();
     // Check if user is admin
     if (!req.user.isAdmin && !req.user.is_admin) {
       return res.status(403).json({
@@ -171,9 +190,13 @@ const getUserById = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        status: user.status,
-        email_verified: user.email_verified,
-        is_admin: user.is_admin,
+        isActive: user.isActive !== false,
+        is_active: user.isActive !== false,
+        status: user.isActive !== false ? 'active' : 'inactive',
+        isEmailVerified: user.isEmailVerified === true,
+        email_verified: user.isEmailVerified === true,
+        isAdmin: user.role === 'admin',
+        is_admin: user.role === 'admin',
         created_at: user.createdAt,
         updated_at: user.updatedAt
       },
@@ -197,9 +220,6 @@ const getUserById = async (req, res) => {
 router.get('/me', getCurrentUser);
 router.put('/me', updateCurrentUser);
 
-// User by ID route (admin only)
-router.get('/:id', getUserById);
-
 // Test endpoint
 router.get('/test', (req, res) => {
   res.json({
@@ -209,5 +229,8 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// User by ID route (admin only) - keep this LAST to avoid shadowing other routes
+router.get('/:id', getUserById);
 
 module.exports = router;

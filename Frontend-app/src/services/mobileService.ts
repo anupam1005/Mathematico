@@ -325,12 +325,6 @@ class MobileService {
       const safeError = createSafeError(error);
       errorHandler.handleError('Error checking health:', safeError);
       return this.createFailureResponse(null, safeError.message || 'Failed to check health');
-      errorHandler.handleError('Error checking health:', error);
-      return {
-        success: false,
-        data: null,
-        timestamp: new Date().toISOString()
-      };
     }
   }
 }

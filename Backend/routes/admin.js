@@ -8,10 +8,19 @@ const fs = require('fs');
 // Use memory storage for serverless mode (Vercel)
 const storage = multer.memoryStorage();
 
+const getMaxUploadBytes = () => {
+  const mbRaw = (process.env.UPLOAD_MAX_FILE_SIZE_MB || '50').toString().trim();
+  const mb = Number(mbRaw);
+  const safeMb = Number.isFinite(mb) && mb > 0 ? mb : 50;
+  return Math.floor(safeMb * 1024 * 1024);
+};
+
 const upload = multer({
   storage: storage,
   limits: { 
-    fileSize: 10 * 1024 * 1024 * 1024, // 10GB for PDFs
+    // Important: memoryStorage buffers the file in RAM; keep a sane default for serverless.
+    // You can override via UPLOAD_MAX_FILE_SIZE_MB.
+    fileSize: getMaxUploadBytes(),
     files: 2 // Maximum 2 files (cover + PDF)
   },
   fileFilter: (req, file, cb) => {

@@ -501,6 +501,11 @@ liveClassSchema.virtual('thumbnail_url').get(function() {
   return this.thumbnail || '';
 });
 
+// Virtual for recording URL (frontend expects snake_case)
+liveClassSchema.virtual('recording_url').get(function() {
+  return this.recordingUrl || '';
+});
+
 // Virtual for time until class starts
 liveClassSchema.virtual('timeUntilStart').get(function() {
   const now = new Date();

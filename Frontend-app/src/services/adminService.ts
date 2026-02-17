@@ -80,9 +80,31 @@ function toSnakeCase(obj: any): any {
 }
 
 const baseAdminApi = withBasePath(API_PATHS.admin);
-const adminRequestConfig = {
-  validateStatus: (status: number) => status < 500,
+
+const getPayloadOrThrow = <T = any>(response: any): ApiResponse<T> => {
+  const status = response?.status;
+  const payload = response?.data as ApiResponse<T> | undefined;
+
+  // Axios normally throws on non-2xx; however if callers override validateStatus elsewhere,
+  // we still defensively treat non-2xx as failure.
+  if (typeof status === 'number' && (status < 200 || status >= 300)) {
+    throw new Error(payload?.message || payload?.error || `Request failed (HTTP ${status})`);
+  }
+
+  if (payload && payload.success === false) {
+    throw new Error(payload.message || payload.error || 'Request failed');
+  }
+
+  // Some endpoints (e.g. /admin/info) return a non-standard shape (no data wrapper).
+  // In that case, return an adapter object so callers can still handle it.
+  if (!payload) {
+    return { success: true } as ApiResponse<T>;
+  }
+
+  return payload;
 };
+
+const adminRequestConfig = {};
 
 const adminApi = {
   get: <T = any>(path: string, config: AxiosRequestConfig = {}) =>
@@ -103,9 +125,10 @@ class AdminService {
   async getDashboard(): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get('/dashboard');
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || {
+        data: (payload as any).data || {
           totalUsers: 0,
           totalBooks: 0,
           totalCourses: 0,
@@ -142,10 +165,11 @@ class AdminService {
   async getAllUsers(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get(`/users?page=${page}&limit=${limit}`);
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: payload.data || [],
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       errorHandler.handleError('Error fetching users:', error);
@@ -212,10 +236,11 @@ class AdminService {
   async getAllBooks(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get(`/books?page=${page}&limit=${limit}`);
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: payload.data || [],
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       errorHandler.handleError('Error fetching books:', error);
@@ -356,10 +381,11 @@ class AdminService {
   async getAllCourses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get(`/courses?page=${page}&limit=${limit}`);
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: payload.data || [],
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       errorHandler.handleError('Error fetching courses:', error);
@@ -566,10 +592,11 @@ class AdminService {
   async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get(`/live-classes?page=${page}&limit=${limit}`);
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: payload.data || [],
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       errorHandler.handleError('Error fetching live classes:', error);
@@ -715,10 +742,11 @@ class AdminService {
   async getPayments(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get(`/payments?page=${page}&limit=${limit}`);
+      const payload = getPayloadOrThrow(response);
       return {
         success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination || { total: 0, page, limit, totalPages: 0 }
+        data: payload.data || [],
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
       };
     } catch (error) {
       errorHandler.handleError('Error fetching payments:', error);
@@ -745,7 +773,14 @@ class AdminService {
   async getAdminInfo(): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get('/info');
-      return { success: true, data: response.data.data };
+
+      // /admin/info is a public endpoint and returns a non-standard shape (no data wrapper).
+      const raw = response?.data;
+      if (raw && raw.success === false) {
+        return { success: false, error: raw.message || raw.error || 'Failed to fetch admin info' };
+      }
+
+      return { success: true, data: raw?.data ?? raw };
     } catch (error) {
       errorHandler.handleError('Error fetching admin info:', error);
       return {
@@ -773,7 +808,8 @@ class AdminService {
   async getSettings(): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.get('/settings');
-      return { success: true, data: response.data.data };
+      const payload = getPayloadOrThrow(response);
+      return { success: true, data: payload.data };
     } catch (error) {
       errorHandler.handleError('Error fetching settings:', error);
       return {
@@ -794,7 +830,8 @@ class AdminService {
   async updateSettings(settings: any): Promise<ApiResponse<any>> {
     try {
       const response = await adminApi.put('/settings', settings);
-      return { success: true, data: response.data.data };
+      const payload = getPayloadOrThrow(response);
+      return { success: true, data: payload.data };
     } catch (error) {
       errorHandler.handleError('Error updating settings:', error);
       return {

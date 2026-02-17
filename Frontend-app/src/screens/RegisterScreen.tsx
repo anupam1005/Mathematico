@@ -118,7 +118,7 @@ export default function RegisterScreen({ navigation }: any) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, password, register, isSubmitting, isLoading]);
+  }, [name, email, password, confirmPassword, agreeToTerms, register, isSubmitting, isLoading]);
 
   // Debounced register handler to prevent rapid submissions
   const debouncedRegister = useCallback(
@@ -227,9 +227,12 @@ export default function RegisterScreen({ navigation }: any) {
                 onChangeText={(text) => {
                   setPassword(text);
                   setApiError('');
-                  if (errors.password) {
-                    setErrors({ ...errors, password: '' });
-                  }
+                  // Clear field errors (use functional update to avoid stale-state bugs)
+                  setErrors((prev) => ({
+                    ...prev,
+                    password: '',
+                    confirmPassword: '',
+                  }));
                 }}
                 mode="outlined"
                 secureTextEntry={!showPassword}

@@ -118,6 +118,12 @@ const courseSchema = new mongoose.Schema({
     type: String, // URL to course thumbnail
     required: [true, 'Course thumbnail is required']
   },
+
+  // Optional course PDF/materials file (uploaded by admin)
+  pdfFile: {
+    type: String, // URL to PDF file
+    default: ''
+  },
   
   previewVideo: {
     type: String // URL to preview video

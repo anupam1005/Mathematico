@@ -26,7 +26,7 @@ type RootStackParamList = {
   BookDetail: { bookId: string };
   CourseDetail: { courseId: string };
   LiveClassDetail: { classId: string };
-  Checkout: { item: any; type: 'book' | 'course' | 'liveClass' };
+  Checkout: { itemId: string; itemData: any; type: 'book' | 'course' | 'liveClass' };
   SecurePdf: { bookId: string; bookTitle?: string };
   About: undefined;
   PrivacyPolicy: undefined;

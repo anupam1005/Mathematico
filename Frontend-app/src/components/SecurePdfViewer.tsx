@@ -223,13 +223,26 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         mixedContentMode="always"
         originWhitelist={['*']}
         onShouldStartLoadWithRequest={(request: any) => {
-          // Allow Cloudinary PDFs and data URLs
+          // Allow only known-good viewer hosts/URLs used by our embedded HTML
           const url = request.url.toLowerCase();
-          if (url.includes('cloudinary.com') || 
-              url.includes('res.cloudinary.com') ||
-              url.startsWith('data:') ||
-              url.startsWith('about:blank') ||
-              url.startsWith('file://')) {
+
+          // Our iframe uses Google Docs Viewer; allow it (and its common supporting hosts).
+          if (
+            url.includes('docs.google.com') ||
+            url.includes('googleusercontent.com') ||
+            url.includes('gstatic.com')
+          ) {
+            return true;
+          }
+
+          // Allow Cloudinary PDFs and data URLs
+          if (
+            url.includes('cloudinary.com') ||
+            url.includes('res.cloudinary.com') ||
+            url.startsWith('data:') ||
+            url.startsWith('about:blank') ||
+            url.startsWith('file://')
+          ) {
             return true;
           }
           // Block other URLs for security
