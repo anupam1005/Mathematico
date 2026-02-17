@@ -514,21 +514,13 @@ app.get(`${API_PREFIX}/test`, (req, res) => {
   });
 });
 
-// Swagger documentation
+// Swagger documentation – single source of truth (config/swagger.js)
 try {
-  // Prefer generated Swagger specs (less drift), fall back to static JSON if needed.
-  try {
-    const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
-    console.log('✅ Swagger documentation (generated) available at /api-docs');
-  } catch (genErr) {
-    const swaggerUi = require('swagger-ui-express');
-    const swaggerDocument = require('./docs/swagger.json');
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-    console.log('✅ Swagger documentation (static) available at /api-docs');
-  }
+  const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
+  console.log('✅ Swagger documentation available at /api-docs');
 } catch (err) {
-  console.warn('⚠️ Swagger documentation not available:', err.message);
+  console.warn('⚠️ Swagger documentation not available:', err && err.message ? err.message : err);
 }
 
 // 404 handler

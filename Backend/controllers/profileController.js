@@ -85,10 +85,7 @@ const getProfile = async (req, res) => {
       });
     }
 
-    // Get public profile
     const publicUser = user.getPublicProfile();
-
-    console.log('✅ Profile retrieved successfully:', user.email);
 
     return res.json({
       success: true,
@@ -143,10 +140,7 @@ const updateProfile = async (req, res) => {
     
     await user.save();
 
-    // Get updated user profile
     const updatedUser = user.getPublicProfile();
-
-    console.log('✅ Profile updated successfully:', user.email);
 
     return res.json({
       success: true,

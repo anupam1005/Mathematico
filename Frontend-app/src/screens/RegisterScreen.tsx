@@ -108,12 +108,12 @@ export default function RegisterScreen({ navigation }: any) {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const trimmedName = name.trim();
-      const success = await register(trimmedName, normalizedEmail, password);
-      
-      if (!success) {
-        setApiError('Registration failed. Please check your information and try again.');
+      const result = await register(trimmedName, normalizedEmail, password);
+
+      if (!result.success) {
+        setApiError(result.message || 'Registration failed. Please check your information and try again.');
       }
-    } catch (error) {
+    } catch {
       setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);

@@ -40,37 +40,13 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     // Check if response data exists and is valid JSON-like
     if (!response.data) {
-      // Only warn in development
-      if (__DEV__) {
-        console.warn('API Client: Response has no data');
-      }
       return response;
     }
-    
-    // Log successful responses only in development
-    if (__DEV__ && response.status >= 200 && response.status < 300) {
-      console.log('API Client: Success response:', {
-        status: response.status,
-        url: response.config.url,
-        hasData: !!response.data
-      });
-    }
-    
+
     return response;
   },
   async (error: unknown) => {
     const safeError = createSafeError(error);
-    
-    // Enhanced error logging - only in development
-    if (__DEV__) {
-      console.error('API Client: Error intercepted:', {
-        message: safeError.message,
-        status: safeError.response?.status,
-        url: safeError.config?.url,
-        responseData: safeError.response?.data,
-        isString: typeof safeError.response?.data === 'string'
-      });
-    }
     
     // Handle specific JSON parsing errors
     if (safeError.message && safeError.message.includes('JSON Parse error')) {

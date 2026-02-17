@@ -26,7 +26,11 @@ interface AuthContextType {
     email: string,
     password: string
   ) => Promise<{ success: boolean; message?: string }>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
@@ -58,20 +62,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      console.log('AuthContext: Checking authentication status...');
-
       const token = await authService.getToken();
-      console.log('AuthContext: Token retrieved:', token ? 'YES' : 'NO');
       
       if (token && token.length > 10) {
         // Token is valid, try to get user data from storage
         const storedUser = await Storage.getItem<string>('user', false);
-        console.log('AuthContext: Stored user data:', storedUser ? 'YES' : 'NO');
-        
         if (storedUser) {
           try {
             const userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
-            console.log('AuthContext: User data parsed successfully');
             setUser(userData);
             setIsAuthenticated(true);
           } catch (parseError: any) {
@@ -84,13 +82,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else {
           // If no user data, clear token and logout
-          console.log('AuthContext: No user data found, clearing tokens');
           await Storage.deleteItem('authToken');
           setUser(null);
           setIsAuthenticated(false);
         }
       } else {
-        console.log('AuthContext: No valid token found');
         setUser(null);
         setIsAuthenticated(false);
       }
@@ -113,28 +109,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       setIsLoading(true);
-      
-      // Use the real backend authentication
       const response = await authService.login(email, password);
       
       if (response.success && response.data) {
         const { user: userData, token: accessToken, refreshToken } = response.data;
         
-        // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
           await Storage.setItem('authToken', accessToken);
-          console.log('AuthContext: Access token stored after login');
         }
         
-        // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
           if (Platform.OS !== 'web') {
             await Storage.setItem('refreshToken', refreshToken);
-            console.log('AuthContext: Refresh token stored after login');
           }
         }
         
-        // Convert backend user data to our User interface
         const user: User = {
           id: userData.id?.toString() || userData._id?.toString() || 'unknown',
           name: userData.name || userData.email?.split('@')[0] || 'User',
@@ -148,7 +137,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
         };
         
-        // Store user data in SecureStore
         await Storage.setItem('user', JSON.stringify(user));
         
         setUser(user);
@@ -159,7 +147,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, message: response.message || 'Invalid credentials' };
       }
     } catch (error: any) {
-      // NEVER access error properties - use generic message
       const errorMessage = 'An error occurred during login. Please try again.';
       safeCatch('AuthContext.login')(error);
       return { success: false, message: errorMessage };
@@ -168,36 +155,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       setIsLoading(true);
-      
-      // Use the real backend authentication
       const response = await authService.register(name, email, password);
       
       if (response.success && response.data) {
-        console.log('AuthContext: Registration response data:', response.data);
         const { user: userData, token, refreshToken } = response.data;
         
         // Extract the access token from the response
         const accessToken = token;
-        console.log('AuthContext: Extracted access token:', accessToken ? accessToken.substring(0, 20) + '...' : 'null');
-        
-        // Store the real JWT token only if it exists
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
           await Storage.setItem('authToken', accessToken);
-          console.log('AuthContext: Access token stored after registration');
         }
         
-        // Store refresh token if available
         if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
           if (Platform.OS !== 'web') {
             await Storage.setItem('refreshToken', refreshToken);
-            console.log('AuthContext: Refresh token stored after registration');
           }
         }
         
-        // Convert backend user data to our User interface
         const user: User = {
           id: userData.id?.toString() || userData._id?.toString() || 'unknown',
           name: userData.name || userData.email?.split('@')[0] || 'User',
@@ -211,13 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
         };
         
-        // Store user data in SecureStore
-        console.log('AuthContext: Storing user data:', user);
         await Storage.setItem('user', JSON.stringify(user));
-        
-        // Verify user data was stored
-        const storedUser = await Storage.getItem('user');
-        console.log('AuthContext: Verification - stored user:', storedUser ? 'YES' : 'NO');
         
         setUser(user);
         setIsAuthenticated(true);
@@ -227,18 +202,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Welcome to Mathematico! You are now logged in.',
           [{ text: 'OK' }]
         );
-        return true;
+        return { success: true, message: response.message };
       } else {
-        Alert.alert('Registration Failed', response.message || 'Registration failed. Please try again.');
-        return false;
+        const message = response.message || 'Registration failed. Please try again.';
+        Alert.alert('Registration Failed', message);
+        return { success: false, message };
       }
     } catch (error: any) {
-      // NEVER access error properties - use generic message
       const errorMessage = 'An error occurred during registration. Please try again.';
       safeCatch('AuthContext.register', () => {
         Alert.alert('Registration Error', errorMessage);
       })(error);
-      return false;
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
@@ -246,29 +221,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     try {
-      console.log('AuthContext: Starting logout process');
-      // Call logout API to invalidate tokens
-      console.log('AuthContext: Calling authService.logout()');
       await authService.logout();
-      console.log('AuthContext: Backend logout successful');
     } catch (error: any) {
       safeCatch('AuthContext.logout')(error);
     } finally {
-      console.log('AuthContext: Clearing local storage');
-      // Clear all local storage
-      console.log('AuthContext: Deleting user from storage');
       await Storage.deleteItem('user');
-      console.log('AuthContext: Deleting authToken from storage');
       await Storage.deleteItem('authToken');
-      console.log('AuthContext: Deleting refreshToken from storage');
       await Storage.deleteItem('refreshToken');
-      
-      console.log('AuthContext: Updating state - setting user to null');
-      // Update state
       setUser(null);
       setIsAuthenticated(false);
-      console.log('AuthContext: State updated - user:', null, 'isAuthenticated:', false);
-      console.log('AuthContext: Logout process completed');
     }
   };
 
@@ -302,9 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     try {
-      console.log('AuthContext: Starting profile update with data:', data);
       const response = await authService.updateProfile(data);
-      console.log('AuthContext: Profile update response:', response);
       
       if (response.success) {
         // Merge the update data with current user and response data
@@ -319,15 +278,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           is_admin: response.data?.isAdmin || response.data?.role === 'admin' || user?.is_admin || false,
         };
         
-        console.log('AuthContext: Updated user object:', updatedUser);
-        
         // Update state immediately
         setUser(updatedUser);
-        console.log('AuthContext: User state updated');
-        
         // Persist to SecureStore
         await Storage.setItem('user', JSON.stringify(updatedUser));
-        console.log('AuthContext: User data persisted to storage');
         
         return true;
       } else {
