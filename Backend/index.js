@@ -127,11 +127,11 @@ app.use(cookieParser());
 
 // PHASE 9: CORS configuration
 const originEnvValues = [
-  process.env.APP_ORIGIN,
-  process.env.ADMIN_ORIGIN,
-  process.env.CORS_ORIGIN,
-  process.env.FRONTEND_URL,
-  process.env.WEB_URL,
+  process.env.APP_ORIGIN || '',
+  process.env.ADMIN_ORIGIN || '',
+  process.env.CORS_ORIGIN || '',
+  process.env.FRONTEND_URL || '',
+  process.env.WEB_URL || '',
   'exp://*',
   'capacitor://*',
   'ionic://*'
@@ -242,7 +242,7 @@ app.use('/api/*', async (req, res, next) => {
   }
 });
 
-// PHASE 11: Rate limiting with Redis store
+// PHASE 11: Rate limiting with memory store (avoid Redis dependency for root routes)
 const createRateLimiter = (windowMs, max, message) => {
   return rateLimit({
     windowMs,
@@ -250,7 +250,8 @@ const createRateLimiter = (windowMs, max, message) => {
     message: { success: false, message },
     standardHeaders: true,
     legacyHeaders: false,
-    store: require('./middleware/rateLimitStore')
+    // Use memory store for now to avoid Redis dependency issues
+    store: undefined
   });
 };
 

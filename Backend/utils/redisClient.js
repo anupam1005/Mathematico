@@ -71,8 +71,8 @@ const connectRedis = () => {
   }
 };
 
-// Initialize Redis connection
-redisClient = connectRedis();
+// Redis connection will be initialized lazily when needed
+// redisClient = connectRedis();
 
 // Health check function with connection testing and ping
 const checkRedisHealth = async () => {
@@ -107,10 +107,10 @@ const checkRedisHealth = async () => {
   }
 };
 
-// Get Redis client with connection validation
+// Get Redis client with lazy initialization and connection validation
 const getRedisClient = () => {
   if (!redisClient) {
-    throw new Error('Redis client not available');
+    redisClient = connectRedis();
   }
   
   if (!isConnected) {
@@ -126,9 +126,8 @@ const getRedisKey = (key) => {
   return `${env}:${key}`;
 };
 
-// Export singleton instance
+// Export functions without immediate initialization
 module.exports = {
-  redisClient: getRedisClient(),
   connectRedis,
   checkRedisHealth,
   getRedisClient,
