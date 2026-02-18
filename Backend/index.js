@@ -262,8 +262,8 @@ app.get('/health', async (req, res) => {
 const DEFAULT_API_PREFIX = '/api/v1';
 const API_PREFIX = DEFAULT_API_PREFIX;
 
-// Initialize services before rate limiting
-app.use(async (req, res, next) => {
+// Initialize services before rate limiting (only for API routes)
+app.use(`${API_PREFIX}/*`, async (req, res, next) => {
   try {
     if (!dbInitialized || !redisInitialized) {
       await initializeServices();
