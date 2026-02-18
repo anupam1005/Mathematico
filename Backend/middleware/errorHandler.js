@@ -1,7 +1,7 @@
-// Production Error Handler Middleware
+// Production Error Handler Middleware - Vercel Serverless Compatible
 const winston = require('winston');
 
-// Configure logger for production
+// Configure logger for serverless (no file operations)
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -11,24 +11,33 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'mathematico-backend' },
   transports: [
-    // Only add file transports in local development (not Vercel)
-    ...(process.env.VERCEL !== '1' ? [
-      new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-      new winston.transports.File({ filename: 'logs/combined.log' })
-    ] : []),
-    // Always add console transport for Vercel
+    // Console transport only for Vercel serverless
     new winston.transports.Console({
-      format: winston.format.simple()
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
     })
   ],
+  // Handle exceptions in serverless
+  exceptionHandlers: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
+  ],
+  // Handle rejections in serverless
+  rejectionHandlers: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
+  ]
 });
-
-// Add console transport for development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
-}
 
 const errorHandler = (err, req, res, next) => {
   // Prevent double response sending
