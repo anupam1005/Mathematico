@@ -45,36 +45,19 @@ app.get("/", (req, res) => {
 
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-// PHASE 2: Load environment variables and validate format (but don't crash yet)
+// PHASE 2: Load environment variables and validate format (non-blocking for root routes)
 (function validateEnvironmentFormat() {
   try {
-    const missing = [];
-    const requiredVars = [
-      'JWT_SECRET',
-      'JWT_REFRESH_SECRET',
-      'MONGO_URI',
-      'REDIS_URL'
-    ];
-
-    // Check for required variables
-    requiredVars.forEach((key) => {
-      if (!process.env[key]) {
-        missing.push(key);
-      }
-    });
-
-    // Validate Redis URL format for production
-    if (process.env.NODE_ENV === 'production') {
+    // Only validate format, don't check for presence yet
+    // This allows root routes to work even if env vars are missing
+    
+    // Validate Redis URL format for production (if present)
+    if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
       const redisUrl = process.env.REDIS_URL;
-      if (redisUrl && !redisUrl.startsWith('rediss://')) {
+      if (!redisUrl.startsWith('rediss://')) {
         console.error('❌ REDIS_URL must use rediss:// (TLS) in production');
         process.exit(1);
       }
-    }
-
-    if (missing.length) {
-      console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-      process.exit(1);
     }
 
     console.log('✅ Environment format validation passed');
@@ -217,6 +200,27 @@ if (process.env.NODE_ENV === 'production') {
 
 // PHASE 10: Initialize services for API routes
 const initializeServices = async () => {
+  // Check for required environment variables before initializing services
+  const missing = [];
+  const requiredVars = [
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+    'MONGO_URI',
+    'REDIS_URL'
+  ];
+
+  requiredVars.forEach((key) => {
+    if (!process.env[key]) {
+      missing.push(key);
+    }
+  });
+
+  if (missing.length) {
+    const errorMsg = `Missing required environment variables: ${missing.join(', ')}`;
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
+  }
+
   await initializeDatabase();
   await initializeRedis();
 };
