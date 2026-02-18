@@ -1,18 +1,16 @@
-// Mathematico Backend with MongoDB Database
+// Mathematico Backend - Production Hardened
 require('dotenv').config();
-console.log('✅ Environment variables loaded');
-
-// Database connection
-const connectDB = require('./config/database');
 
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const path = require("path");
-const fs = require("fs");
+const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const os = require("os");
-const jwt = require("jsonwebtoken");const net = require("net");
+const mongoose = require('mongoose');
+const net = require("net");
+
+// Database connection
+const connectDB = require('./config/database');
 
 // Utility function to check if a port is available
 const isPortAvailable = (port) => {
@@ -32,19 +30,16 @@ const isPortAvailable = (port) => {
   });
 }; 
 
-// Startup environment validation with enhanced security checks
+// Startup environment validation with hard failures
 (function validateEnvironment() {
   try {
     const missing = [];
     const requiredVars = [
       'JWT_SECRET',
-      'JWT_REFRESH_SECRET'
+      'JWT_REFRESH_SECRET',
+      'MONGO_URI',
+      'REDIS_URL'
     ];
-
-    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
-    if (!mongoUri) {
-      missing.push('MONGO_URI (or MONGODB_URI)');
-    }
 
     // Check for required variables
     requiredVars.forEach((key) => {
@@ -53,39 +48,23 @@ const isPortAvailable = (port) => {
       }
     });
 
-    const optionalGroups = [
-      {
-        label: 'Cloudinary',
-        keys: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
-      },
-      {
-        label: 'Razorpay',
-        keys: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET']
-      }
-    ];
-
     if (missing.length) {
-      const isProduction = process.env.NODE_ENV === 'production';
       console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-      if (isProduction) {
-        console.error('❌ CRITICAL: Cannot start in production without required environment variables');
-      }
       process.exit(1);
     }
 
-    optionalGroups.forEach(({ label, keys }) => {
-      const missingOptional = keys.filter((key) => !process.env[key]);
-      if (missingOptional.length) {
-        console.warn(`⚠️ ${label} env vars missing: ${missingOptional.join(', ')}`);
+    // Validate Redis URL format for production
+    if (process.env.NODE_ENV === 'production') {
+      const redisUrl = process.env.REDIS_URL;
+      if (!redisUrl.startsWith('rediss://')) {
+        console.error('❌ REDIS_URL must use rediss:// (TLS) in production');
+        process.exit(1);
       }
-    });
-
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (!isProduction) {
-      console.log('✅ Required environment variables present');
     }
+
+    console.log('✅ Environment validation passed');
   } catch (e) {
-    console.error('❌ Environment validation failed');
+    console.error('❌ Environment validation failed:', e.message);
     process.exit(1);
   }
 })();
@@ -283,6 +262,23 @@ app.get('/health', async (req, res) => {
 const DEFAULT_API_PREFIX = '/api/v1';
 const API_PREFIX = DEFAULT_API_PREFIX;
 
+// Initialize services before rate limiting
+app.use(async (req, res, next) => {
+  try {
+    if (!dbInitialized || !redisInitialized) {
+      await initializeServices();
+    }
+    next();
+  } catch (error) {
+    console.error('Service initialization failed:', error.message);
+    res.status(503).json({
+      success: false,
+      message: 'Service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 10. Rate limiting with Redis store
 const createRateLimiter = (windowMs, max, message) => {
   return rateLimit({
@@ -315,23 +311,6 @@ const mountRoute = (routePath, routeLabel) => {
     }
   }
 };
-
-// Initialize services before mounting routes
-app.use(async (req, res, next) => {
-  try {
-    if (!dbInitialized || !redisInitialized) {
-      await initializeServices();
-    }
-    next();
-  } catch (error) {
-    console.error('Service initialization failed:', error.message);
-    res.status(503).json({
-      success: false,
-      message: 'Service unavailable',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
 
 // Mount API routes
 mountRoute('./routes/auth', 'auth');
