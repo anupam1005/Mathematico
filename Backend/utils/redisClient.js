@@ -17,7 +17,7 @@ const connectRedis = () => {
     }
   }
 
-  // Validate Redis URL format
+  // Strict Redis URL format validation
   if (!redisUrl.startsWith('redis://') && !redisUrl.startsWith('rediss://')) {
     throw new Error('REDIS_URL must be in format: redis://user:pass@host:port or rediss://user:pass@host:port');
   }
@@ -67,15 +67,28 @@ const connectRedis = () => {
 // Initialize Redis connection
 redisClient = connectRedis();
 
-// Health check function
+// Health check function with connection testing
 const checkRedisHealth = async () => {
   if (!redisClient) {
     return false;
   }
   
   try {
-    const result = await redisClient.ping();
-    return result === 'PONG';
+    // Test connection with PING
+    const pingResult = await redisClient.ping();
+    if (pingResult !== 'PONG') {
+      return false;
+    }
+    
+    // Test write operation with SET/DEL
+    const testKey = getRedisKey('health:test');
+    const testValue = Date.now().toString();
+    
+    await redisClient.setex(testKey, 10, testValue);
+    const retrievedValue = await redisClient.get(testKey);
+    await redisClient.del(testKey);
+    
+    return retrievedValue === testValue;
   } catch (error) {
     console.error('❌ Redis health check failed:', error.message);
     return false;

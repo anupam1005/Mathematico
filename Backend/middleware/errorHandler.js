@@ -124,6 +124,23 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Handle Redis connection errors
+  if (errorMessage && errorMessage.toLowerCase().includes('redis')) {
+    return res.status(503).json({
+      ...errorResponse,
+      message: 'Service temporarily unavailable'
+    });
+  }
+
+  // Handle rate limit errors
+  if (errorCode === 429 || errorMessage.toLowerCase().includes('rate limit')) {
+    return res.status(429).json({
+      ...errorResponse,
+      message: 'Too many requests. Please try again later.',
+      retryAfter: 60
+    });
+  }
+
   // Default error response
   const statusCode = (err && (err.statusCode || err.status)) || 500;
   res.status(statusCode).json(errorResponse);

@@ -106,9 +106,42 @@ try {
 // Initialize Express app
 const app = express();
 
-// Trust proxy for Vercel (production-safe)
+// Trust proxy for Vercel (production-safe) - MUST be first
 const configureTrustProxy = require('./config/trustProxy');
 configureTrustProxy(app);
+
+// Safe root route - BEFORE security middleware
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    message: 'Mathematico Backend API is running',
+    version: '2.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    serverless: process.env.VERCEL === '1',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle favicon requests explicitly to avoid 500s in serverless - BEFORE security middleware
+const TINY_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
+
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+app.get('/favicon.png', (req, res) => {
+  res.status(204).end();
+});
+
+app.head('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+app.head('/favicon.png', (req, res) => {
+  res.status(204).end();
+});
 
 // Initialize database connection in serverless and local environments
 // Fire-and-forget to avoid blocking cold starts; connection is cached
@@ -124,6 +157,28 @@ configureTrustProxy(app);
   }
 })();
 
+// Validate Redis connection in production with fatal error handling
+(async () => {
+  try {
+    const { checkRedisHealth } = require('./utils/redisClient');
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isProduction) {
+      const redisHealthy = await checkRedisHealth();
+      if (!redisHealthy) {
+        throw new Error('Redis health check failed - Redis is required in production');
+      }
+      console.log('✅ Redis health check passed - connection validated');
+    }
+  } catch (err) {
+    console.error('❌ Redis validation failed:', err && err.message ? err.message : err);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 FATAL: Redis is required for production deployment');
+      process.exit(1);
+    }
+  }
+})();
+
 // Validate security middleware in production
 (async () => {
   try {
@@ -136,42 +191,6 @@ configureTrustProxy(app);
     }
   }
 })();
-
-// Handle favicon requests explicitly to avoid 500s in serverless
-const TINY_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
-
-app.get('/favicon.ico', (req, res) => {
-  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Content-Length', buffer.length);
-  res.status(200).end(buffer);
-});
-
-app.get('/favicon.png', (req, res) => {
-  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Content-Length', buffer.length);
-  res.status(200).end(buffer);
-});
-
-app.head('/favicon.ico', (req, res) => {
-  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Content-Length', buffer.length);
-  res.status(200).end();
-});
-
-app.head('/favicon.png', (req, res) => {
-  const buffer = Buffer.from(TINY_PNG_BASE64, 'base64');
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  res.setHeader('Content-Type', 'image/png');
-  res.setHeader('Content-Length', buffer.length);
-  res.status(200).end();
-});
 
 // Security middleware
 const helmet = require('helmet');
@@ -257,23 +276,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting - optimized for production
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // Reasonable limit for production
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.',
-    timestamp: new Date().toISOString()
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Apply rate limiting to all requests
-app.use(limiter);
-
-// Body parsing middleware
+// Body parsing middleware - BEFORE routes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -314,50 +317,6 @@ app.get('/health', async (req, res) => {
     res.status(500).json({
       success: false,
       status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
-  try {
-    res.json({
-      success: true,
-      message: 'Mathematico Backend API is running',
-      version: '2.0.0',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: {
-        connected: true,
-        readyState: 1,
-        host: 'mongodb'
-      },
-      endpoints: {
-        auth: '/api/v1/auth',
-        admin: '/api/v1/admin',
-        mobile: '/api/v1/mobile',
-        student: '/api/v1/student',
-        users: '/api/v1/users',
-        health: '/health'
-      },
-      documentation: {
-        info: 'Visit /api/v1/admin/info for admin API documentation',
-        auth: 'Visit /api/v1/auth for authentication endpoints',
-        health: 'Visit /health for system health check'
-      },
-      quickStart: {
-        step1: 'Test health: GET /health',
-        step2: 'Get auth info: GET /api/v1/auth',
-        step3: 'Login: POST /api/v1/auth/login',
-        step4: 'Access admin: GET /api/v1/admin (with Bearer token)'
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
       error: error.message,
       timestamp: new Date().toISOString()
     });
