@@ -112,6 +112,23 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   
+  // Security Fields for Account Lockout
+  loginAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  },
+  
+  lockUntil: {
+    type: Date,
+    select: false
+  },
+  
+  lastFailedLogin: {
+    type: Date,
+    select: false
+  },
+  
   // Refresh Token Management (for secure authentication)
   refreshTokens: [{
     tokenHash: {
@@ -404,9 +421,9 @@ userSchema.methods.incrementLoginAttempts = async function() {
   // Otherwise we're incrementing
   const updates = { $inc: { loginAttempts: 1 } };
   
-  // Lock the account if we've reached max attempts and it's not locked already
+  // Lock account if we've reached max attempts and it's not locked already
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 3600000 }; // 1 hour
+    updates.$set = { lockUntil: Date.now() + 900000 }; // 15 minutes
   }
   
   return await this.updateOne(updates);

@@ -106,8 +106,9 @@ try {
 // Initialize Express app
 const app = express();
 
-// Trust proxy for Vercel
-app.set('trust proxy', 1);
+// Trust proxy for Vercel (production-safe)
+const configureTrustProxy = require('./config/trustProxy');
+configureTrustProxy(app);
 
 // Initialize database connection in serverless and local environments
 // Fire-and-forget to avoid blocking cold starts; connection is cached
@@ -120,6 +121,19 @@ app.set('trust proxy', 1);
   } catch (err) {
     // Always log database errors, even in production
     console.error('⚠️ Database initialization failed (continuing to serve requests):', err && err.message ? err.message : err);
+  }
+})();
+
+// Validate security middleware in production
+(async () => {
+  try {
+    const { validateSecurityMiddleware } = require('./middleware/securityMiddlewareFixed');
+    await validateSecurityMiddleware();
+  } catch (err) {
+    console.error('❌ Security middleware validation failed:', err && err.message ? err.message : err);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 })();
 

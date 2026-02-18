@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 const { upload } = require('../utils/fileUpload');
 const authController = require('../controllers/authController');
+const { loginWithRateLimit } = require('../controllers/authControllerValidated');
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
   res.status(405).json({
@@ -15,7 +16,7 @@ const methodNotAllowed = (expectedMethod, path) => (req, res) => {
 };
 
 // Public auth routes
-router.post('/login', authController.login);
+router.post('/login', loginWithRateLimit);
 router.get('/login', methodNotAllowed('POST', '/login'));
 router.post('/register', authController.register);
 router.get('/register', methodNotAllowed('POST', '/register'));
