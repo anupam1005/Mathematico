@@ -1,9 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middlewares/auth');
-const { upload } = require('../utils/fileUpload');
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
-const { loginWithRateLimit } = require('../controllers/authControllerValidated');
+const { upload } = require('../utils/fileUpload');
+const { authenticateToken } = require('../utils/jwt');
+
+// Login rate limiting - stricter than global limit
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 login attempts per windowMs
+  message: { 
+    success: false, 
+    message: 'Too many login attempts, please try again later.' 
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: require('../utils/rateLimitStore')
+});
+
+// Auth rate limiting for other endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 requests per windowMs
+  message: { 
+    success: false, 
+    message: 'Too many requests, please try again later.' 
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: require('../utils/rateLimitStore')
+});
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
   res.status(405).json({
@@ -16,27 +42,18 @@ const methodNotAllowed = (expectedMethod, path) => (req, res) => {
 };
 
 // Public auth routes
-router.post('/login', loginWithRateLimit);
+router.post('/login', loginLimiter, authController.login);
 router.get('/login', methodNotAllowed('POST', '/login'));
-router.post('/register', authController.register);
+router.post('/register', authLimiter, authController.register);
 router.get('/register', methodNotAllowed('POST', '/register'));
-router.post('/logout', authController.logout);
-router.post('/refresh-token', authController.refreshToken);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
-router.post('/verify-email', authController.verifyEmail);
+router.post('/logout', authLimiter, authController.logout);
+router.post('/refresh-token', authLimiter, authController.refreshToken);
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
+router.post('/reset-password', authLimiter, authController.resetPassword);
+router.post('/verify-email', authLimiter, authController.verifyEmail);
 
 // Health check route
 router.get('/health', authController.healthCheck);
-
-// Database test route
-router.get('/test-database', authController.testDatabase);
-
-// Users collection verification route
-router.get('/verify-users', authController.verifyUsersCollection);
-
-// JWT test route
-router.get('/test-jwt', authController.testJWT);
 
 // Protected auth routes
 router.get('/profile', authenticateToken, authController.getProfile);

@@ -9,58 +9,65 @@ const connectRedis = () => {
   const redisUrl = process.env.REDIS_URL;
   
   if (!redisUrl) {
-    if (isProduction) {
-      throw new Error('REDIS_URL environment variable is required in production');
-    } else {
-      console.warn('⚠️ REDIS_URL not configured, Redis features disabled');
-      return null;
-    }
+    throw new Error('REDIS_URL environment variable is required');
   }
 
-  // Strict Redis URL format validation
+  // Strict Redis URL format validation - require rediss:// in production
+  if (isProduction && !redisUrl.startsWith('rediss://')) {
+    throw new Error('REDIS_URL must use rediss:// (TLS) in production');
+  }
+  
   if (!redisUrl.startsWith('redis://') && !redisUrl.startsWith('rediss://')) {
     throw new Error('REDIS_URL must be in format: redis://user:pass@host:port or rediss://user:pass@host:port');
   }
 
   try {
-    redisClient = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
+    const redisOptions = {
       maxRetriesPerRequest: 3,
-      lazyConnect: true,
+      lazyConnect: false, // No lazy connection in production
       connectTimeout: 5000,
       commandTimeout: 3000,
       enableReadyCheck: true,
       maxLoadingTimeout: 3000,
-    });
+    };
+    
+    // Add TLS for rediss:// URLs
+    if (redisUrl.startsWith('rediss://')) {
+      redisOptions.tls = {};
+    }
+
+    redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('connect', () => {
       isConnected = true;
-      console.log('✅ Redis connected successfully');
+      if (!isProduction) {
+        console.log('✅ Redis connected successfully');
+      }
     });
 
     redisClient.on('error', (error) => {
       isConnected = false;
-      console.error('❌ Redis connection error:', error.message);
+      const errorMsg = `Redis connection failed: ${error.message}`;
+      console.error('❌', errorMsg);
       if (isProduction) {
-        throw new Error(`Redis connection failed in production: ${error.message}`);
+        throw new Error(errorMsg);
       }
     });
 
     redisClient.on('close', () => {
       isConnected = false;
-      console.warn('⚠️ Redis connection closed');
+      const errorMsg = 'Redis connection closed';
+      console.warn('⚠️', errorMsg);
       if (isProduction) {
-        throw new Error('Redis connection closed in production');
+        throw new Error(errorMsg);
       }
     });
 
     return redisClient;
   } catch (error) {
-    console.error('❌ Failed to initialize Redis:', error.message);
-    if (isProduction) {
-      throw new Error(`Redis initialization failed in production: ${error.message}`);
-    }
-    return null;
+    const errorMsg = `Redis initialization failed: ${error.message}`;
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
   }
 };
 
@@ -70,14 +77,14 @@ redisClient = connectRedis();
 // Health check function with connection testing
 const checkRedisHealth = async () => {
   if (!redisClient) {
-    return false;
+    throw new Error('Redis client not initialized');
   }
   
   try {
     // Test connection with PING
     const pingResult = await redisClient.ping();
     if (pingResult !== 'PONG') {
-      return false;
+      throw new Error('Redis PING test failed');
     }
     
     // Test write operation with SET/DEL
@@ -88,23 +95,26 @@ const checkRedisHealth = async () => {
     const retrievedValue = await redisClient.get(testKey);
     await redisClient.del(testKey);
     
-    return retrievedValue === testValue;
+    if (retrievedValue !== testValue) {
+      throw new Error('Redis read/write test failed');
+    }
+    
+    return true;
   } catch (error) {
-    console.error('❌ Redis health check failed:', error.message);
-    return false;
+    const errorMsg = `Redis health check failed: ${error.message}`;
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
   }
 };
 
 // Get Redis client with connection validation
 const getRedisClient = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  if (!redisClient && isProduction) {
-    throw new Error('Redis client not available in production');
+  if (!redisClient) {
+    throw new Error('Redis client not available');
   }
   
-  if (!isConnected && isProduction) {
-    throw new Error('Redis not connected in production');
+  if (!isConnected) {
+    throw new Error('Redis not connected');
   }
   
   return redisClient;

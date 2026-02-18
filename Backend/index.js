@@ -90,123 +90,27 @@ const isPortAvailable = (port) => {
   }
 })();
 
-// JWT and Auth middleware imports (required for serverless)
-try {
-  const jwtUtils = require("./utils/jwt");
-  const authMiddleware = require("./middlewares/auth");
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('✅ JWT and Auth middleware loaded successfully');
-  }
-} catch (err) {
-  console.error('❌ Critical middleware failed to load:', err.message);
-  // These are required for the API to function
-  process.exit(1);
-}
-
 // Initialize Express app
 const app = express();
 
-// Trust proxy for Vercel (production-safe) - MUST be first
+// 1. Trust proxy for Vercel (MUST be first)
 const configureTrustProxy = require('./config/trustProxy');
 configureTrustProxy(app);
 
-// Safe root route - BEFORE security middleware
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    status: 'healthy',
-    message: 'Mathematico Backend API is running',
-    version: '2.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    serverless: process.env.VERCEL === '1',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Handle favicon requests explicitly to avoid 500s in serverless - BEFORE security middleware
-const TINY_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Uo9F3kAAAAASUVORK5CYII='; // 1x1 transparent PNG
-
-app.get('/favicon.ico', (req, res) => {
-  res.status(204).end();
-});
-
-app.get('/favicon.png', (req, res) => {
-  res.status(204).end();
-});
-
-app.head('/favicon.ico', (req, res) => {
-  res.status(204).end();
-});
-
-app.head('/favicon.png', (req, res) => {
-  res.status(204).end();
-});
-
-// Initialize database connection in serverless and local environments
-// Fire-and-forget to avoid blocking cold starts; connection is cached
-(async () => {
-  try {
-    await connectDB();
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Database initialized');
-    }
-  } catch (err) {
-    // Always log database errors, even in production
-    console.error('⚠️ Database initialization failed (continuing to serve requests):', err && err.message ? err.message : err);
-  }
-})();
-
-// Validate Redis connection in production with fatal error handling - moved after app initialization
-// This will run asynchronously and not block startup
-setTimeout(async () => {
-  try {
-    const { checkRedisHealth } = require('./utils/redisClient');
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    if (isProduction) {
-      const redisHealthy = await checkRedisHealth();
-      if (!redisHealthy) {
-        console.error('❌ Redis health check failed - Redis is required for full functionality');
-        // Don't exit, just log error - let API serve with degraded functionality
-      } else {
-        console.log('✅ Redis health check passed - connection validated');
-      }
-    }
-  } catch (err) {
-    console.error('❌ Redis validation failed:', err && err.message ? err.message : err);
-    // Don't exit in production - allow API to serve with degraded functionality
-  }
-}, 1000); // Delay to allow app to start
-
-// Validate security middleware in production - non-blocking
-setTimeout(async () => {
-  try {
-    const { validateSecurityMiddleware } = require('./middleware/securityMiddlewareFixed');
-    await validateSecurityMiddleware();
-  } catch (err) {
-    console.error('❌ Security middleware validation failed:', err && err.message ? err.message : err);
-    if (process.env.NODE_ENV === 'production') {
-      console.error('⚠️ Security middleware validation failed - API may have reduced security');
-      // Don't exit - allow API to serve with warnings
-    }
-  }
-}, 2000); // Delay after Redis validation
-
-// Security middleware
-const helmet = require('helmet');
+// 2. Security headers (helmet)
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for API
   crossOriginEmbedderPolicy: false
 }));
 
-// Production monitoring and logging
-if (process.env.NODE_ENV === 'production') {
-  const requestLogger = require('./middleware/requestLogger');
-  app.use(requestLogger);
-}
+// 3. Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS configuration
+// 4. Cookie parser middleware
+app.use(cookieParser());
+
+// 5. CORS configuration
 const originEnvValues = [
   process.env.APP_ORIGIN,
   process.env.ADMIN_ORIGIN,
@@ -256,10 +160,6 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // Log the blocked origin for debugging
-    console.warn('🚫 CORS blocked origin:', origin);
-    console.log('✅ Allowed origins:', allowedOrigins);
-    
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -277,48 +177,103 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Body parsing middleware - BEFORE routes
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Production monitoring and logging
+if (process.env.NODE_ENV === 'production') {
+  const requestLogger = require('./middleware/requestLogger');
+  app.use(requestLogger);
+}
 
-// Cookie parser middleware (for secure refresh tokens)
-app.use(cookieParser());
+// 6. Health route (GET /)
+app.get('/', (req, res) => {
+  res.json({
+    status: "ok",
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
 
-// Static file serving - disabled for serverless mode
-// In serverless mode, files should be served from Cloudinary or CDN
-console.log('⚠️ Static file serving disabled for serverless mode - use Cloudinary for file storage');
+// 7. Favicon route (GET /favicon.ico)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+app.get('/favicon.png', (req, res) => {
+  res.status(204).end();
+});
+
+app.head('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+app.head('/favicon.png', (req, res) => {
+  res.status(204).end();
+});
+
+// 8. Initialize database connection with hard failure
+let dbInitialized = false;
+const initializeDatabase = async () => {
+  if (dbInitialized) return;
+  
+  try {
+    await connectDB();
+    dbInitialized = true;
+    console.log('✅ Database connected successfully');
+  } catch (err) {
+    console.error('❌ Database connection failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+    throw err;
+  }
+};
+
+// 9. Initialize Redis connection with hard failure
+let redisInitialized = false;
+const initializeRedis = async () => {
+  if (redisInitialized) return;
+  
+  try {
+    const { checkRedisHealth } = require('./utils/redisClient');
+    await checkRedisHealth();
+    redisInitialized = true;
+    console.log('✅ Redis connected successfully');
+  } catch (err) {
+    console.error('❌ Redis connection failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+    throw err;
+  }
+};
+
+// Initialize both connections before starting API
+const initializeServices = async () => {
+  await initializeDatabase();
+  await initializeRedis();
+};
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const systemInfo = {
-      platform: os.platform(),
-      arch: os.arch(),
-      nodeVersion: process.version,
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      timestamp: new Date().toISOString()
-    };
-
+    await initializeServices();
+    
     res.json({
-      success: true,
-      status: 'healthy',
+      status: "ok",
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString(),
       database: {
-        status: 'connected',
-        type: 'mongodb',
-        host: process.env.MONGO_URI ? 'connected' : 'not configured'
+        status: "connected",
+        type: "mongodb"
       },
-      system: systemInfo,
-      environment: process.env.NODE_ENV || 'development',
-      serverless: process.env.VERCEL === '1',
-      timestamp: new Date().toISOString()
+      redis: {
+        status: "connected"
+      }
     });
   } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({
-      success: false,
-      status: 'unhealthy',
-      error: error.message,
+    console.error('Health check failed:', error.message);
+    res.status(503).json({
+      status: "error",
+      message: error.message,
       timestamp: new Date().toISOString()
     });
   }
@@ -326,146 +281,74 @@ app.get('/health', async (req, res) => {
 
 // API Routes
 const DEFAULT_API_PREFIX = '/api/v1';
-const apiPrefixEnv = (process.env.API_PREFIX || '').trim();
-const normalizedApiPrefix = apiPrefixEnv
-  ? apiPrefixEnv.startsWith('/')
-    ? apiPrefixEnv
-    : `/${apiPrefixEnv}`
-  : DEFAULT_API_PREFIX;
-
-if (normalizedApiPrefix !== DEFAULT_API_PREFIX) {
-  console.warn(
-    `⚠️ API_PREFIX "${normalizedApiPrefix}" does not match frontend (${DEFAULT_API_PREFIX}). Using ${DEFAULT_API_PREFIX}.`
-  );
-}
-
 const API_PREFIX = DEFAULT_API_PREFIX;
 
-// Import route handlers (tolerant loading per route for serverless)
- let authRoutes, adminRoutes, mobileRoutes, studentRoutes, usersRoutes, paymentRoutes;
+// 10. Rate limiting with Redis store
+const createRateLimiter = (windowMs, max, message) => {
+  return rateLimit({
+    windowMs,
+    max,
+    message: { success: false, message },
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: require('./utils/rateLimitStore')
+  });
+};
 
-const safeRequire = (modulePath, label) => {
+// Global rate limit
+app.use(createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  1000, // limit each IP to 1000 requests per windowMs
+  'Too many requests from this IP, please try again later.'
+));
+
+// Mount routes with error handling
+const mountRoute = (routePath, routeLabel) => {
   try {
-    const mod = require(modulePath);
-    console.log(`✅ Route loaded: ${label}`);
-    return mod;
-  } catch (err) {
-    console.warn(`⚠️ Route failed to load (${label}):`, err && err.message ? err.message : err);
-    return null;
+    const routes = require(routePath);
+    app.use(`${API_PREFIX}/${routeLabel}`, routes);
+    console.log(`✅ ${routeLabel} routes mounted at ${API_PREFIX}/${routeLabel}`);
+  } catch (error) {
+    console.error(`❌ Failed to mount ${routeLabel} routes:`, error.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`Critical route ${routeLabel} failed to load`);
+    }
   }
 };
 
-authRoutes = safeRequire('./routes/auth', 'auth');
- if (!authRoutes) {
-  console.log('🔄 Attempting to load simple auth routes...');
-  authRoutes = safeRequire('./routes/auth-simple', 'auth-simple');
-}
- adminRoutes = safeRequire('./routes/admin', 'admin');
-mobileRoutes = safeRequire('./routes/mobile', 'mobile');
-studentRoutes = safeRequire('./routes/student', 'student');
-usersRoutes = safeRequire('./routes/users', 'users');
- paymentRoutes = safeRequire('./routes/payment', 'payment');
-
-// Mount routes
-console.log('🔗 Mounting API routes...');
- // Force mount all routes for serverless deployment
-try {
-  // Auth routes
-  const authRoutes = require('./routes/auth');
-  app.use(`${API_PREFIX}/auth`, authRoutes);
-  console.log(`✅ Auth routes mounted at ${API_PREFIX}/auth`);
-} catch (error) {
-  console.error('❌ Failed to mount auth routes:', error.message);
-}
-
-try {
-  // Admin routes
-  const adminRoutes = require('./routes/admin');
-  app.use(`${API_PREFIX}/admin`, adminRoutes);
-  console.log(`✅ Admin routes mounted at ${API_PREFIX}/admin`);
-} catch (error) {
-  console.error('❌ Failed to mount admin routes:', error.message);
-  const adminFallback = express.Router();
-  adminFallback.get('/health', (req, res) => {
-    res.json({
-      success: true,
-      message: 'Admin API is healthy (fallback)',
-      timestamp: new Date().toISOString(),
-      status: 'operational'
+// Initialize services before mounting routes
+app.use(async (req, res, next) => {
+  try {
+    if (!dbInitialized || !redisInitialized) {
+      await initializeServices();
+    }
+    next();
+  } catch (error) {
+    console.error('Service initialization failed:', error.message);
+    res.status(503).json({
+      success: false,
+      message: 'Service unavailable',
+      timestamp: new Date().toISOString()
     });
-  });
-  adminFallback.get('/info', (req, res) => {
-    res.json({
-      success: true,
-      message: 'Mathematico Admin API (fallback)',
-      version: '2.0.0',
-      timestamp: new Date().toISOString(),
-      authentication: {
-        required: true,
-        method: 'JWT Bearer Token',
-        loginEndpoint: '/api/v1/auth/login',
-        description: 'Use admin credentials to get access token'
-      },
-      endpoints: {
-        dashboard: '/dashboard',
-        users: '/users',
-        books: '/books',
-        courses: '/courses',
-        liveClasses: '/live-classes',
-        payments: '/payments'
-      },
-      note: 'Admin routes failed to load. Only health/info are available.'
-    });
-  });
-  app.use(`${API_PREFIX}/admin`, adminFallback);
-  console.warn(`⚠️ Fallback admin routes mounted at ${API_PREFIX}/admin`);
-}
+  }
+});
 
-try {
-  // Mobile routes
-  const mobileRoutes = require('./routes/mobile');
-  app.use(`${API_PREFIX}/mobile`, mobileRoutes);
-  console.log(`✅ Mobile routes mounted at ${API_PREFIX}/mobile`);
-} catch (error) {
-  console.error('❌ Failed to mount mobile routes:', error.message);
-}
-
-try {
-  // Student routes
-  const studentRoutes = require('./routes/student');
-  app.use(`${API_PREFIX}/student`, studentRoutes);
-  console.log(`✅ Student routes mounted at ${API_PREFIX}/student`);
-} catch (error) {
-  console.error('❌ Failed to mount student routes:', error.message);
-}
-
-try {
-  // Users routes
-  const usersRoutes = require('./routes/users');
-  app.use(`${API_PREFIX}/users`, usersRoutes);
-  console.log(`✅ Users routes mounted at ${API_PREFIX}/users`);
-} catch (error) {
-  console.error('❌ Failed to mount users routes:', error.message);
-}
-
-try {
-  // Payment routes
-  const paymentRoutes = require('./routes/payment');
-  app.use(`${API_PREFIX}/payments`, paymentRoutes);
-  console.log(`✅ Payment routes mounted at ${API_PREFIX}/payments`);
-} catch (error) {
- console.error('❌ Failed to mount payment routes:', error.message);
-}
+// Mount API routes
+mountRoute('./routes/auth', 'auth');
+mountRoute('./routes/admin', 'admin');
+mountRoute('./routes/mobile', 'mobile');
+mountRoute('./routes/student', 'student');
+mountRoute('./routes/users', 'users');
+mountRoute('./routes/payment', 'payments');
 
 // Root API endpoint
 app.get(`${API_PREFIX}`, (req, res) => {
   res.json({
     success: true,
-    message: 'Mathematico API - MongoDB Version',
+    message: 'Mathematico API - Production Hardened',
     version: '2.0.0',
     database: 'MongoDB',
-    environment: process.env.NODE_ENV || 'development',
-    serverless: process.env.VERCEL === '1',
+    environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: `${API_PREFIX}/auth`,
@@ -478,28 +361,17 @@ app.get(`${API_PREFIX}`, (req, res) => {
   });
 });
 
-// Test route to verify routing is working
-app.get(`${API_PREFIX}/test`, (req, res) => {
-  console.log('🧪 Test endpoint requested');
-  res.json({
-    success: true,
-    message: 'API routing is working ✅',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Swagger documentation – single source of truth (config/swagger.js)
+// Swagger documentation
 try {
   const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
   console.log('✅ Swagger documentation available at /api-docs');
 } catch (err) {
-  console.warn('⚠️ Swagger documentation not available:', err && err.message ? err.message : err);
+  console.warn('⚠️ Swagger documentation not available:', err.message);
 }
 
 // 404 handler
 app.use('*', (req, res) => {
-  console.log('❌ 404 - Endpoint not found:', req.method, req.originalUrl);
   res.status(404).json({
     success: false,
     message: 'Endpoint not found',
@@ -518,6 +390,24 @@ const gracefulShutdown = async (signal) => {
   console.log(`🛑 ${signal} received, shutting down gracefully`);
 
   try {
+    // Close MongoDB connection
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+      console.log('✅ MongoDB connection closed');
+    }
+
+    // Close Redis connection
+    try {
+      const { getRedisClient } = require('./utils/redisClient');
+      const redis = getRedisClient();
+      if (redis) {
+        await redis.quit();
+        console.log('✅ Redis connection closed');
+      }
+    } catch (err) {
+      console.warn('⚠️ Error closing Redis connection:', err.message);
+    }
+
     // Close server if running locally
     if (require.main === module && app.server) {
       app.server.close(() => {
@@ -538,72 +428,20 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  try {
-    const errorMessage = reason instanceof Error ? reason.message : String(reason);
-    const errorStack = reason instanceof Error ? reason.stack : undefined;
-    
-    // Use logger from utils/logger.js
-    try {
-      const { logger } = require('./utils/logger');
-      logger.error('❌ Unhandled Promise Rejection:', {
-        reason: errorMessage,
-        stack: errorStack,
-        timestamp: new Date().toISOString()
-      });
-      
-      // In development, log full details
-      if (process.env.NODE_ENV !== 'production') {
-        logger.error('Full rejection details:', reason);
-      }
-    } catch (loggerError) {
-      // Fallback to console if logger unavailable
-      console.error('❌ Unhandled Promise Rejection:', errorMessage);
-      if (errorStack) {
-        console.error('Stack:', errorStack);
-      }
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Full rejection details:', reason);
-      }
-    }
-  } catch (logError) {
-    // Ultimate fallback
-    console.error('❌ Failed to log unhandled rejection:', logError);
-    console.error('Original rejection:', reason);
+  console.error('❌ Unhandled Promise Rejection:', reason instanceof Error ? reason.message : String(reason));
+  if (process.env.NODE_ENV === 'production') {
+    gracefulShutdown('UNHANDLED_REJECTION');
+  } else {
+    process.exit(1);
   }
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  try {
-    const errorMessage = error && error.message ? String(error.message) : 'Unknown error';
-    const errorStack = error && error.stack ? String(error.stack) : undefined;
-    
-    // Use logger from utils/logger.js
-    try {
-      const { logger } = require('./utils/logger');
-      logger.error('❌ Uncaught Exception:', {
-        message: errorMessage,
-        stack: errorStack,
-        timestamp: new Date().toISOString()
-      });
-    } catch (loggerError) {
-      // Fallback to console if logger unavailable
-      console.error('❌ Uncaught Exception:', errorMessage);
-      if (errorStack) {
-        console.error('Stack:', errorStack);
-      }
-    }
-    
-    // In production, attempt graceful shutdown
-    if (process.env.NODE_ENV === 'production') {
-      gracefulShutdown('UNCAUGHT_EXCEPTION');
-    } else {
-      // In development, exit immediately
-      process.exit(1);
-    }
-  } catch (logError) {
-    // Ultimate fallback - exit immediately
-    console.error('❌ Failed to handle uncaught exception:', logError);
+  console.error('❌ Uncaught Exception:', error.message);
+  if (process.env.NODE_ENV === 'production') {
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  } else {
     process.exit(1);
   }
 });
@@ -612,39 +450,32 @@ process.on('uncaughtException', (error) => {
 module.exports = app;
 
 // Start server for local development ONLY
-// In production (Vercel/serverless), the app is exported and handled by the platform
 if (require.main === module) {
-  // Only start local server if NOT in production serverless environment
   const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // Never start local server in production serverless environment
   if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
     console.log('☁️ Running in serverless/production mode');
     console.log('🔗 API endpoints will be handled by serverless functions');
-    // Don't start server, just export the app
   } else {
-    // Local development server startup
     const startServer = async () => {
       try {
         console.log('🔧 Starting server in development mode...');
         
-        // Connect to MongoDB
-        await connectDB();
+        // Initialize services
+        await initializeServices();
 
         // Find an available port
         const findAvailablePort = async () => {
           const defaultPort = process.env.PORT || 5002;
           const alternativePorts = [5003, 5004, 5005, 3001, 3002, 8000, 8001, 5001];
 
-          // Check default port first
           if (await isPortAvailable(defaultPort)) {
             return defaultPort;
           }
 
           console.log(`⚠️ Port ${defaultPort} is in use. Searching for available port...`);
 
-          // Try alternative ports
           for (const port of alternativePorts) {
             if (await isPortAvailable(port)) {
               console.log(`✅ Found available port: ${port}`);
@@ -657,32 +488,27 @@ if (require.main === module) {
 
         const PORT = await findAvailablePort();
 
-        // Start the server on all network interfaces (0.0.0.0) to allow mobile connections
-        // This is safe for local development only
+        // Start the server on all network interfaces
         const server = app.listen(PORT, '0.0.0.0', () => {
           console.log('\n🚀 ===== MATHEMATICO BACKEND STARTED =====');
           console.log(`🌐 Server running on port ${PORT}`);
           console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
-          console.log(`☁️  Serverless: ${isServerless ? 'Yes' : 'No'}`);
           console.log('⚠️  LOCAL DEVELOPMENT SERVER ONLY - NOT FOR PRODUCTION');
           console.log('==========================================\n');
         });
 
-        // Handle any server errors
         server.on('error', (err) => {
           console.error('❌ Server error:', err);
           process.exit(1);
         });
 
-        // Store server reference for graceful shutdown
         app.server = server;
- 
       } catch (error) {
         console.error('❌ Failed to start server:', error);
         process.exit(1);
       }
     };
- 
+
     startServer();
   }
 }

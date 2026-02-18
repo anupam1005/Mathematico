@@ -8,6 +8,8 @@ if (!cached) {
 
 // MongoDB connection configuration
 const connectDB = async () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   if (cached.conn) {
     return cached.conn;
   }
@@ -30,61 +32,64 @@ const connectDB = async () => {
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {
         const { host, name } = mongooseInstance.connection;
-        console.log(`✅ MongoDB Connected: ${host}`);
-        console.log(`📊 Database: ${name}`);
+        
+        if (!isProduction) {
+          console.log(`✅ MongoDB Connected: ${host}`);
+          console.log(`📊 Database: ${name}`);
+        }
 
         // Connection event listeners
         mongoose.connection.on('connected', () => {
-          console.log('🔗 Mongoose connected to MongoDB');
+          if (!isProduction) {
+            console.log('🔗 Mongoose connected to MongoDB');
+          }
         });
 
         mongoose.connection.on('error', (err) => {
-          console.error('❌ Mongoose connection error:', err?.message || 'Unknown error');
-          // Log full error in development
-          if (process.env.NODE_ENV !== 'production') {
-            console.error('Connection error details:', err);
+          const errorMsg = `Mongoose connection error: ${err?.message || 'Unknown error'}`;
+          console.error('❌', errorMsg);
+          if (isProduction) {
+            throw new Error(errorMsg);
           }
         });
 
         mongoose.connection.on('disconnected', () => {
-          console.log('🔌 Mongoose disconnected from MongoDB');
-        });
-
-        // Graceful shutdown (local/dev)
-        process.on('SIGINT', async () => {
-          try {
-            await mongoose.connection.close();
-            console.log('🛑 MongoDB connection closed through app termination');
-            process.exit(0);
-          } catch (e) {
-            process.exit(1);
+          const errorMsg = 'Mongoose disconnected from MongoDB';
+          console.warn('⚠️', errorMsg);
+          if (isProduction) {
+            throw new Error(errorMsg);
           }
         });
 
+        // Graceful shutdown (local/dev)
+        if (!isProduction) {
+          process.on('SIGINT', async () => {
+            try {
+              await mongoose.connection.close();
+              console.log('🛑 MongoDB connection closed through app termination');
+              process.exit(0);
+            } catch (e) {
+              process.exit(1);
+            }
+          });
+        }
+
         return mongooseInstance;
       });
-  } catch (error) {
-    const errorMessage = error?.message || 'Unknown error';
-    console.error('❌ Failed to initiate MongoDB connection:', errorMessage);
-    // Log full error in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Connection error details:', error);
+    } catch (error) {
+      const errorMessage = `Failed to initiate MongoDB connection: ${error?.message || 'Unknown error'}`;
+      console.error('❌', errorMessage);
+      throw new Error(errorMessage);
     }
-    throw error;
-  }
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
-    const errorMessage = error?.message || 'Unknown error';
-    console.error('❌ MongoDB connection failed:', errorMessage);
-    // Log full error in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Connection error details:', error);
-    }
-    throw error;
+    const errorMessage = `MongoDB connection failed: ${error?.message || 'Unknown error'}`;
+    console.error('❌', errorMessage);
+    throw new Error(errorMessage);
   }
 
   return cached.conn;
