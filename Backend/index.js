@@ -30,8 +30,23 @@ const isPortAvailable = (port) => {
   });
 }; 
 
-// Startup environment validation with hard failures
-(function validateEnvironment() {
+// Initialize Express app
+const app = express();
+
+// PHASE 1: Register root and favicon routes FIRST (before any validation)
+app.get("/", (req, res) => {
+  return res.status(200).json({
+    status: "ok",
+    service: "mathematico-backend",
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
+// PHASE 2: Load environment variables and validate format (but don't crash yet)
+(function validateEnvironmentFormat() {
   try {
     const missing = [];
     const requiredVars = [
@@ -48,48 +63,86 @@ const isPortAvailable = (port) => {
       }
     });
 
-    if (missing.length) {
-      console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-      process.exit(1);
-    }
-
     // Validate Redis URL format for production
     if (process.env.NODE_ENV === 'production') {
       const redisUrl = process.env.REDIS_URL;
-      if (!redisUrl.startsWith('rediss://')) {
+      if (redisUrl && !redisUrl.startsWith('rediss://')) {
         console.error('❌ REDIS_URL must use rediss:// (TLS) in production');
         process.exit(1);
       }
     }
 
-    console.log('✅ Environment validation passed');
+    if (missing.length) {
+      console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+      process.exit(1);
+    }
+
+    console.log('✅ Environment format validation passed');
   } catch (e) {
     console.error('❌ Environment validation failed:', e.message);
     process.exit(1);
   }
 })();
 
-// Initialize Express app
-const app = express();
+// PHASE 3: Initialize Redis connection with strict validation
+let redisInitialized = false;
+const initializeRedis = async () => {
+  if (redisInitialized) return;
+  
+  try {
+    const { checkRedisHealth } = require('./utils/redisClient');
+    await checkRedisHealth();
+    redisInitialized = true;
+    console.log('✅ Redis connected successfully');
+  } catch (err) {
+    console.error('❌ Redis connection failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('⚠️ Development mode: continuing without Redis');
+    }
+    throw err;
+  }
+};
 
-// 1. Trust proxy for Vercel (MUST be first)
+// PHASE 4: Initialize database connection with strict validation
+let dbInitialized = false;
+const initializeDatabase = async () => {
+  if (dbInitialized) return;
+  
+  try {
+    await connectDB();
+    dbInitialized = true;
+    console.log('✅ Database connected successfully');
+  } catch (err) {
+    console.error('❌ Database connection failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('⚠️ Development mode: continuing without database');
+    }
+    throw err;
+  }
+};
+
+// PHASE 5: Configure trust proxy (before security middleware)
 const configureTrustProxy = require('./config/trustProxy');
 configureTrustProxy(app);
 
-// 2. Security headers (helmet)
+// PHASE 6: Security headers (helmet)
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for API
   crossOriginEmbedderPolicy: false
 }));
 
-// 3. Body parsing middleware
+// PHASE 7: Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. Cookie parser middleware
+// PHASE 8: Cookie parser middleware
 app.use(cookieParser());
 
-// 5. CORS configuration
+// PHASE 9: CORS configuration
 const originEnvValues = [
   process.env.APP_ORIGIN,
   process.env.ADMIN_ORIGIN,
@@ -162,76 +215,49 @@ if (process.env.NODE_ENV === 'production') {
   app.use(requestLogger);
 }
 
-// 6. Health route (GET /)
-app.get('/', (req, res) => {
-  res.json({
-    status: "ok",
-    environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 7. Favicon route (GET /favicon.ico)
-app.get('/favicon.ico', (req, res) => {
-  res.status(204).end();
-});
-
-app.get('/favicon.png', (req, res) => {
-  res.status(204).end();
-});
-
-app.head('/favicon.ico', (req, res) => {
-  res.status(204).end();
-});
-
-app.head('/favicon.png', (req, res) => {
-  res.status(204).end();
-});
-
-// 8. Initialize database connection with hard failure
-let dbInitialized = false;
-const initializeDatabase = async () => {
-  if (dbInitialized) return;
-  
-  try {
-    await connectDB();
-    dbInitialized = true;
-    console.log('✅ Database connected successfully');
-  } catch (err) {
-    console.error('❌ Database connection failed:', err.message);
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
-    throw err;
-  }
-};
-
-// 9. Initialize Redis connection with hard failure
-let redisInitialized = false;
-const initializeRedis = async () => {
-  if (redisInitialized) return;
-  
-  try {
-    const { checkRedisHealth } = require('./utils/redisClient');
-    await checkRedisHealth();
-    redisInitialized = true;
-    console.log('✅ Redis connected successfully');
-  } catch (err) {
-    console.error('❌ Redis connection failed:', err.message);
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
-    throw err;
-  }
-};
-
-// Initialize both connections before starting API
+// PHASE 10: Initialize services for API routes
 const initializeServices = async () => {
   await initializeDatabase();
   await initializeRedis();
 };
 
-// Health check endpoint
+// Initialize services before rate limiting (only for API routes)
+app.use('/api/*', async (req, res, next) => {
+  try {
+    if (!dbInitialized || !redisInitialized) {
+      await initializeServices();
+    }
+    next();
+  } catch (error) {
+    console.error('Service initialization failed:', error.message);
+    res.status(503).json({
+      success: false,
+      message: 'Service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// PHASE 11: Rate limiting with Redis store
+const createRateLimiter = (windowMs, max, message) => {
+  return rateLimit({
+    windowMs,
+    max,
+    message: { success: false, message },
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: require('./middleware/rateLimitStore')
+  });
+};
+
+// Global rate limit
+app.use(createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  1000, // limit each IP to 1000 requests per windowMs
+  'Too many requests from this IP, please try again later.'
+));
+
+// PHASE 12: Health check endpoint
 app.get('/health', async (req, res) => {
   try {
     await initializeServices();
@@ -258,45 +284,9 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API Routes
+// PHASE 13: API Routes
 const DEFAULT_API_PREFIX = '/api/v1';
 const API_PREFIX = DEFAULT_API_PREFIX;
-
-// Initialize services before rate limiting (only for API routes)
-app.use(`${API_PREFIX}/*`, async (req, res, next) => {
-  try {
-    if (!dbInitialized || !redisInitialized) {
-      await initializeServices();
-    }
-    next();
-  } catch (error) {
-    console.error('Service initialization failed:', error.message);
-    res.status(503).json({
-      success: false,
-      message: 'Service unavailable',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// 10. Rate limiting with Redis store
-const createRateLimiter = (windowMs, max, message) => {
-  return rateLimit({
-    windowMs,
-    max,
-    message: { success: false, message },
-    standardHeaders: true,
-    legacyHeaders: false,
-    store: require('./utils/rateLimitStore')
-  });
-};
-
-// Global rate limit
-app.use(createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  1000, // limit each IP to 1000 requests per windowMs
-  'Too many requests from this IP, please try again later.'
-));
 
 // Mount routes with error handling
 const mountRoute = (routePath, routeLabel) => {
@@ -349,7 +339,7 @@ try {
   console.warn('⚠️ Swagger documentation not available:', err.message);
 }
 
-// 404 handler
+// PHASE 14: 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -360,9 +350,20 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler
+// PHASE 15: Global error handler
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
+
+// Final catch-all error handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err.message);
+
+  if (process.env.NODE_ENV === "production") {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  return res.status(500).json({ error: err.message, stack: err.stack });
+});
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {

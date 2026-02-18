@@ -6,7 +6,7 @@ if (!cached) {
   cached = global._mongooseConnection = { conn: null, promise: null };
 }
 
-// MongoDB connection configuration
+// MongoDB connection configuration with strict error handling
 const connectDB = async () => {
   const isProduction = process.env.NODE_ENV === 'production';
   
@@ -79,6 +79,13 @@ const connectDB = async () => {
     } catch (error) {
       const errorMessage = `Failed to initiate MongoDB connection: ${error?.message || 'Unknown error'}`;
       console.error('❌', errorMessage);
+      
+      // In production, exit immediately on connection failure
+      if (isProduction) {
+        console.error('❌ Production database connection failed - exiting');
+        process.exit(1);
+      }
+      
       throw new Error(errorMessage);
     }
   }
@@ -89,6 +96,13 @@ const connectDB = async () => {
     cached.promise = null;
     const errorMessage = `MongoDB connection failed: ${error?.message || 'Unknown error'}`;
     console.error('❌', errorMessage);
+    
+    // In production, exit immediately on connection failure
+    if (isProduction) {
+      console.error('❌ Production database connection failed - exiting');
+      process.exit(1);
+    }
+    
     throw new Error(errorMessage);
   }
 

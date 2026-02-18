@@ -3,7 +3,7 @@ const Redis = require('ioredis');
 let redisClient = null;
 let isConnected = false;
 
-// Production Redis connection with validation
+// Production Redis connection with strict validation
 const connectRedis = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const redisUrl = process.env.REDIS_URL;
@@ -23,11 +23,11 @@ const connectRedis = () => {
 
   try {
     const redisOptions = {
+      enableReadyCheck: true,
       maxRetriesPerRequest: 3,
       lazyConnect: false, // No lazy connection in production
       connectTimeout: 5000,
       commandTimeout: 3000,
-      enableReadyCheck: true,
       maxLoadingTimeout: 3000,
     };
     
@@ -74,7 +74,7 @@ const connectRedis = () => {
 // Initialize Redis connection
 redisClient = connectRedis();
 
-// Health check function with connection testing
+// Health check function with connection testing and ping
 const checkRedisHealth = async () => {
   if (!redisClient) {
     throw new Error('Redis client not initialized');
@@ -126,6 +126,7 @@ const getRedisKey = (key) => {
   return `${env}:${key}`;
 };
 
+// Export singleton instance
 module.exports = {
   redisClient: getRedisClient(),
   connectRedis,
