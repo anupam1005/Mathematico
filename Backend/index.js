@@ -5,15 +5,12 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const net = require('net');
 
 const connectMongo = require('./config/database');
 const configureTrustProxy = require('./config/trustProxy');
-const { connectRedis, checkRedisHealth } = require('./utils/redisClient');
 const { validateJwtConfig } = require('./utils/jwt');
-const createRateLimitStore = require('./utils/rateLimitStore');
 
 // Utility function to check if a port is available (local/dev only)
 const isPortAvailable = (port) => {
@@ -139,20 +136,6 @@ function registerSecurityMiddleware() {
   }
 }
 
-function registerRateLimitMiddleware() {
-  // Global rate limit (Redis-backed; no memory fallback)
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 1000,
-      message: { success: false, message: 'Too many requests from this IP, please try again later.' },
-      standardHeaders: true,
-      legacyHeaders: false,
-      store: createRateLimitStore()
-    })
-  );
-}
-
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
 
@@ -163,8 +146,7 @@ function registerRoutes() {
         status: 'ok',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        database: { status: mongoose.connection.readyState === 1 ? 'connected' : 'unknown', type: 'mongodb' },
-        redis: { status: 'ready' }
+        database: { status: mongoose.connection.readyState === 1 ? 'connected' : 'unknown', type: 'mongodb' }
       });
     } catch (error) {
       res.status(503).json({
@@ -247,23 +229,14 @@ async function startServer() {
 
   // Strict env validation (no partial startup). Keep root route independent.
   const missing = [];
-  ['MONGO_URI', 'REDIS_URL'].forEach((key) => {
+  ['MONGO_URI'].forEach((key) => {
     if (!process.env[key]) missing.push(key);
   });
   if (missing.length) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  // Redis first
-  try {
-    await connectRedis();
-    await checkRedisHealth();
-  } catch (err) {
-    console.error('❌ Redis startup failure:', err && err.message ? err.message : err);
-    process.exit(1);
-  }
-
-  // Mongo second
+  // Mongo
   try {
     await connectMongo();
   } catch (err) {
@@ -271,15 +244,13 @@ async function startServer() {
     process.exit(1);
   }
 
-  // Only after successful Redis + Mongo connection:
+  // Only after successful Mongo connection:
   // - Register security middleware
-  // - Register rate limit middleware
   // - Register auth routes
   // - Register API routes
   try {
     validateJwtConfig();
     registerSecurityMiddleware();
-    registerRateLimitMiddleware();
     registerRoutes();
     registerErrorHandling();
     bootstrapped = true;
