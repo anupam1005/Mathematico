@@ -3,7 +3,8 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const { upload } = require('../utils/fileUpload');
-const { authenticateToken } = require('../utils/jwt');
+const { authenticateToken } = require('../middlewares/auth');
+const createRateLimitStore = require('../utils/rateLimitStore');
 
 // Login rate limiting - stricter than global limit
 const loginLimiter = rateLimit({
@@ -15,7 +16,7 @@ const loginLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  store: require('../utils/rateLimitStore')
+  store: createRateLimitStore()
 });
 
 // Auth rate limiting for other endpoints
@@ -28,7 +29,7 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  store: require('../utils/rateLimitStore')
+  store: createRateLimitStore()
 });
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {

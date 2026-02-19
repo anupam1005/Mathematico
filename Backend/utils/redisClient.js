@@ -2,9 +2,10 @@ const Redis = require('ioredis');
 
 let redisClient = null;
 let isConnected = false;
+let isConnecting = false;
 
-// Production Redis connection with strict validation
-const connectRedis = () => {
+// Production Redis connection with strict validation (no side effects until called)
+const connectRedis = async () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const redisUrl = process.env.REDIS_URL;
   
@@ -25,7 +26,8 @@ const connectRedis = () => {
     const redisOptions = {
       enableReadyCheck: true,
       maxRetriesPerRequest: 3,
-      lazyConnect: false, // No lazy connection in production
+      // We intentionally control connection timing so startup failures happen inside `startServer()`.
+      lazyConnect: true,
       connectTimeout: 5000,
       commandTimeout: 3000,
       maxLoadingTimeout: 3000,
@@ -36,32 +38,37 @@ const connectRedis = () => {
       redisOptions.tls = {};
     }
 
-    redisClient = new Redis(redisUrl, redisOptions);
+    if (!redisClient) {
+      redisClient = new Redis(redisUrl, redisOptions);
 
-    redisClient.on('connect', () => {
-      isConnected = true;
-      if (!isProduction) {
-        console.log('✅ Redis connected successfully');
-      }
-    });
+      // Never throw synchronously from event handlers; surface fatal errors via explicit health checks.
+      redisClient.on('connect', () => {
+        if (!isProduction) console.log('✅ Redis TCP connected');
+      });
 
-    redisClient.on('error', (error) => {
-      isConnected = false;
-      const errorMsg = `Redis connection failed: ${error.message}`;
-      console.error('❌', errorMsg);
-      if (isProduction) {
-        throw new Error(errorMsg);
-      }
-    });
+      redisClient.on('ready', () => {
+        isConnected = true;
+        isConnecting = false;
+        if (!isProduction) console.log('✅ Redis ready');
+      });
 
-    redisClient.on('close', () => {
-      isConnected = false;
-      const errorMsg = 'Redis connection closed';
-      console.warn('⚠️', errorMsg);
-      if (isProduction) {
-        throw new Error(errorMsg);
-      }
-    });
+      redisClient.on('error', (error) => {
+        isConnected = false;
+        isConnecting = false;
+        console.error('❌ Redis error:', error && error.message ? error.message : error);
+      });
+
+      redisClient.on('close', () => {
+        isConnected = false;
+        isConnecting = false;
+        console.warn('⚠️ Redis connection closed');
+      });
+    }
+
+    if (!isConnected && !isConnecting) {
+      isConnecting = true;
+      await redisClient.connect();
+    }
 
     return redisClient;
   } catch (error) {
@@ -110,7 +117,7 @@ const checkRedisHealth = async () => {
 // Get Redis client with lazy initialization and connection validation
 const getRedisClient = () => {
   if (!redisClient) {
-    redisClient = connectRedis();
+    throw new Error('Redis client not initialized');
   }
   
   if (!isConnected) {

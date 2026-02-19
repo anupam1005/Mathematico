@@ -1,22 +1,29 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-// JWT Secrets - MUST be provided via environment and must be different
-const ACTUAL_JWT_SECRET = (process.env.JWT_SECRET || '').trim();
-const ACTUAL_JWT_REFRESH_SECRET = (process.env.JWT_REFRESH_SECRET || '').trim();
-
-// Validate that secrets are set and different – this module must not load without them
-if (!ACTUAL_JWT_SECRET || !ACTUAL_JWT_REFRESH_SECRET) {
-  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required');
-}
-
-if (ACTUAL_JWT_SECRET === ACTUAL_JWT_REFRESH_SECRET) {
-  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be different values');
-}
-
 // Token expiration times
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m'; // Short-lived
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // Long-lived
+
+function getJwtSecrets() {
+  const jwtSecret = (process.env.JWT_SECRET || '').trim();
+  const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
+
+  if (!jwtSecret || !jwtRefreshSecret) {
+    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required');
+  }
+
+  if (jwtSecret === jwtRefreshSecret) {
+    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be different values');
+  }
+
+  return { jwtSecret, jwtRefreshSecret };
+}
+
+function validateJwtConfig() {
+  // Throws if invalid. Intentionally no return value.
+  getJwtSecrets();
+}
 
 /**
  * Generate access token
@@ -24,7 +31,9 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // L
  * @returns {string} JWT access token
  */
 function generateAccessToken(payload) {
-  return jwt.sign(payload, ACTUAL_JWT_SECRET, { 
+  const { jwtSecret } = getJwtSecrets();
+
+  return jwt.sign(payload, jwtSecret, { 
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend'
@@ -68,7 +77,9 @@ function verifyHashedRefreshToken(plainToken, hashedToken) {
  * @throws {Error} If token is invalid or expired
  */
 function verifyAccessToken(token) {
-  return jwt.verify(token, ACTUAL_JWT_SECRET, {
+  const { jwtSecret } = getJwtSecrets();
+
+  return jwt.verify(token, jwtSecret, {
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend'
   });
@@ -195,6 +206,9 @@ module.exports = {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   
+  // Validation (call during startup)
+  validateJwtConfig,
+
   // Utilities
   decodeToken,
   calculateTokenExpiration,

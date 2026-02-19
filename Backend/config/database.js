@@ -38,7 +38,7 @@ const connectDB = async () => {
           console.log(`📊 Database: ${name}`);
         }
 
-        // Connection event listeners
+        // Connection event listeners (never throw from event handlers in serverless)
         mongoose.connection.on('connected', () => {
           if (!isProduction) {
             console.log('🔗 Mongoose connected to MongoDB');
@@ -48,17 +48,11 @@ const connectDB = async () => {
         mongoose.connection.on('error', (err) => {
           const errorMsg = `Mongoose connection error: ${err?.message || 'Unknown error'}`;
           console.error('❌', errorMsg);
-          if (isProduction) {
-            throw new Error(errorMsg);
-          }
         });
 
         mongoose.connection.on('disconnected', () => {
           const errorMsg = 'Mongoose disconnected from MongoDB';
           console.warn('⚠️', errorMsg);
-          if (isProduction) {
-            throw new Error(errorMsg);
-          }
         });
 
         // Graceful shutdown (local/dev)
@@ -80,12 +74,6 @@ const connectDB = async () => {
       const errorMessage = `Failed to initiate MongoDB connection: ${error?.message || 'Unknown error'}`;
       console.error('❌', errorMessage);
       
-      // In production, exit immediately on connection failure
-      if (isProduction) {
-        console.error('❌ Production database connection failed - exiting');
-        process.exit(1);
-      }
-      
       throw new Error(errorMessage);
     }
   }
@@ -96,12 +84,6 @@ const connectDB = async () => {
     cached.promise = null;
     const errorMessage = `MongoDB connection failed: ${error?.message || 'Unknown error'}`;
     console.error('❌', errorMessage);
-    
-    // In production, exit immediately on connection failure
-    if (isProduction) {
-      console.error('❌ Production database connection failed - exiting');
-      process.exit(1);
-    }
     
     throw new Error(errorMessage);
   }

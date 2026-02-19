@@ -15,8 +15,7 @@
     "submit:ios": "cd Frontend-app && npm run submit:ios"
   },
   "engines": {
-    "node": ">=20.19.4",
-    "npm": ">=10.0.0"
+    "node": "18.x"
   },
   "keywords": [
     "mathematico",
