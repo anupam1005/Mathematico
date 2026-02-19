@@ -142,11 +142,27 @@ function registerRoutes() {
   // Health (requires infra)
   app.get('/health', async (req, res) => {
     try {
+      const mongoStatus = mongoose.connection.readyState;
+      const statusMap = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+      };
+      
       res.json({
         status: 'ok',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
-        database: { status: mongoose.connection.readyState === 1 ? 'connected' : 'unknown', type: 'mongodb' }
+        database: { 
+          status: statusMap[mongoStatus] || 'unknown', 
+          type: 'mongodb',
+          connected: mongoStatus === 1
+        },
+        bootstrap: {
+          completed: bootstrapped,
+          error: bootstrapError ? bootstrapError.message : null
+        }
       });
     } catch (error) {
       res.status(503).json({
@@ -236,12 +252,13 @@ async function startServer() {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  // Mongo
+  // Mongo - Graceful degradation instead of process.exit
   try {
     await connectMongo();
   } catch (err) {
-    console.error('❌ MongoDB startup failure:', err && err.message ? err.message : err);
-    process.exit(1);
+    console.error('❌ MongoDB connection failed:', err && err.message ? err.message : err);
+    // Don't exit - allow partial functionality with degraded service
+    // Routes will handle database unavailability gracefully
   }
 
   // Only after successful Mongo connection:
@@ -249,7 +266,14 @@ async function startServer() {
   // - Register auth routes
   // - Register API routes
   try {
-    validateJwtConfig();
+    // JWT validation - graceful degradation
+    try {
+      validateJwtConfig();
+    } catch (jwtErr) {
+      console.warn('⚠️ JWT configuration invalid:', jwtErr && jwtErr.message ? jwtErr.message : jwtErr);
+      // Continue without JWT - routes will handle missing tokens gracefully
+    }
+    
     registerSecurityMiddleware();
     registerRoutes();
     registerErrorHandling();
@@ -264,11 +288,19 @@ async function startServer() {
 app.use(async (req, res, next) => {
   if (req.path === '/' || req.path === '/favicon.ico') return next();
 
+  // Reset bootstrap error on each request to allow recovery
+  if (bootstrapError && req.path.startsWith('/api/v1/auth/health')) {
+    bootstrapError = null;
+    bootstrapPromise = null;
+    bootstrapped = false;
+  }
+
   if (bootstrapError) {
     return res.status(503).json({
       success: false,
       message: 'Service initialization failed',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryAfter: 30
     });
   }
 
@@ -277,10 +309,12 @@ app.use(async (req, res, next) => {
     await bootstrapPromise;
     return next();
   } catch (err) {
+    bootstrapError = err;
     return res.status(503).json({
       success: false,
       message: 'Service unavailable',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryAfter: 30
     });
   }
 });

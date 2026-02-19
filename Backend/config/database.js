@@ -11,7 +11,14 @@ const connectDB = async () => {
   const isProduction = process.env.NODE_ENV === 'production';
   
   if (cached.conn) {
-    return cached.conn;
+    // Verify connection is still alive
+    if (mongoose.connection.readyState === 1) {
+      return cached.conn;
+    } else {
+      // Connection lost, reset cache
+      cached.conn = null;
+      cached.promise = null;
+    }
   }
 
   if (!cached.promise) {
@@ -24,10 +31,13 @@ const connectDB = async () => {
       const options = {
         ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 15000, // Increased for M0 free tier
         socketTimeoutMS: 45000,
         bufferCommands: false,
-        // Removed deprecated options: useNewUrlParser and useUnifiedTopology
+        connectTimeoutMS: 10000, // Added for better timeout handling
+        heartbeatFrequencyMS: 10000, // Added for M0 compatibility
+        retryWrites: true, // Added for reliability
+        w: 'majority' // Added for data safety
       };
 
       cached.promise = mongoose.connect(mongoURI, options).then((mongooseInstance) => {
@@ -48,11 +58,21 @@ const connectDB = async () => {
         mongoose.connection.on('error', (err) => {
           const errorMsg = `Mongoose connection error: ${err?.message || 'Unknown error'}`;
           console.error('❌', errorMsg);
+          // Reset cache on connection error to allow reconnection
+          if (cached.conn === mongooseInstance.connection) {
+            cached.conn = null;
+            cached.promise = null;
+          }
         });
 
         mongoose.connection.on('disconnected', () => {
           const errorMsg = 'Mongoose disconnected from MongoDB';
           console.warn('⚠️', errorMsg);
+          // Reset cache on disconnect to allow reconnection
+          if (cached.conn === mongooseInstance.connection) {
+            cached.conn = null;
+            cached.promise = null;
+          }
         });
 
         // Graceful shutdown (local/dev)
@@ -68,6 +88,7 @@ const connectDB = async () => {
           });
         }
 
+        cached.conn = mongooseInstance.connection;
         return mongooseInstance;
       });
     } catch (error) {
@@ -79,7 +100,9 @@ const connectDB = async () => {
   }
 
   try {
-    cached.conn = await cached.promise;
+    const mongooseInstance = await cached.promise;
+    cached.conn = mongooseInstance.connection;
+    return mongooseInstance;
   } catch (error) {
     cached.promise = null;
     const errorMessage = `MongoDB connection failed: ${error?.message || 'Unknown error'}`;
@@ -87,8 +110,6 @@ const connectDB = async () => {
     
     throw new Error(errorMessage);
   }
-
-  return cached.conn;
 };
 
 module.exports = connectDB;
