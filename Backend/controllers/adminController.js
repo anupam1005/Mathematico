@@ -33,9 +33,6 @@ try {
   UserModel = require('../models/User');
   CourseModel = require('../models/Course');
   LiveClassModel = require('../models/LiveClass');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('✅ Admin models loaded successfully');
-  }
 } catch (error) {
   if (process.env.NODE_ENV !== 'production') {
     console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
@@ -55,9 +52,6 @@ try {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('✅ Cloudinary configured successfully');
-  }
 } catch (error) {
   if (process.env.NODE_ENV !== 'production') {
     console.warn('⚠️ Cloudinary configuration failed:', error && error.message ? error.message : error);
@@ -519,9 +513,6 @@ const getAllBooks = async (req, res) => {
     if (status) query.status = status;
 
     // Get books with pagination
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📚 Querying books with query:', JSON.stringify(query, null, 2));
-    }
     const books = await BookModel.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
@@ -530,17 +521,6 @@ const getAllBooks = async (req, res) => {
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
-    
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📚 Found books:', books.length);
-      console.log('📚 Total books in database:', total);
-      console.log('📚 Database name:', mongoose.connection.db.databaseName);
-      console.log('📚 Collection name:', BookModel.collection.name);
-      
-      // Check if collection exists and has documents
-      const collectionStats = await mongoose.connection.db.collection(BookModel.collection.name).countDocuments();
-      console.log('📚 Direct collection count:', collectionStats);
-    }
 
     res.json({
       success: true,

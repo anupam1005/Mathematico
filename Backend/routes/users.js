@@ -7,7 +7,9 @@ const connectDB = require('../config/database');
 let User;
 try {
   User = require('../models/User');
-  console.log('✅ MongoDB models loaded for users routes');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ MongoDB models loaded for users routes');
+  }
 } catch (error) {
   console.warn('⚠️ User model not available, using fallback user store');
   User = {
@@ -219,16 +221,6 @@ const getUserById = async (req, res) => {
 // Current user routes
 router.get('/me', getCurrentUser);
 router.put('/me', updateCurrentUser);
-
-// Test endpoint
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Users routes are working ✅',
-    user: req.user,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // User by ID route (admin only) - keep this LAST to avoid shadowing other routes
 router.get('/:id', getUserById);

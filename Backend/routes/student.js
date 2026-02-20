@@ -4,7 +4,9 @@ const { authenticateToken } = require('../middlewares/auth');
 
 // Import student controller
 const studentController = require('../controllers/studentController');
-console.log('✅ StudentController loaded successfully');
+if (process.env.NODE_ENV !== 'production') {
+  console.log('✅ StudentController loaded successfully');
+}
 
 // Root endpoint (public info)
 router.get('/', (req, res) => {
@@ -103,15 +105,5 @@ const getStudentStats = async (req, res) => {
 router.get('/profile', studentController.getProfile);
 router.put('/profile', studentController.updateProfile);
 router.get('/stats', getStudentStats);
-
-// Test endpoint
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Student routes are working ✅',
-    user: req.user,
-    timestamp: new Date().toISOString()
-  });
-});
 
 module.exports = router;

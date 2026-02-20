@@ -60,6 +60,9 @@ function validateEnvironmentFormat() {
 }
 
 function registerSecurityMiddleware() {
+  // Disable x-powered-by header
+  app.disable('x-powered-by');
+  
   // Helmet first
   app.use(
     helmet({
@@ -173,6 +176,31 @@ function registerRoutes() {
     }
   });
 
+  // Redis health check route
+  app.get('/api/v1/health/redis', async (req, res) => {
+    try {
+      const { redisHealthCheck } = require('./middleware/upstashLoginRateLimiter');
+      const redisStatus = await redisHealthCheck();
+      
+      const statusCode = redisStatus.healthy ? 200 : 503;
+      
+      res.status(statusCode).json({
+        service: 'redis',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        ...redisStatus
+      });
+    } catch (error) {
+      res.status(503).json({
+        service: 'redis',
+        status: 'error',
+        message: error && error.message ? error.message : 'Redis health check failed',
+        healthy: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // API routes
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
   app.use(`${API_PREFIX}/admin`, require('./routes/admin'));
@@ -196,7 +224,8 @@ function registerRoutes() {
         mobile: `${API_PREFIX}/mobile`,
         student: `${API_PREFIX}/student`,
         users: `${API_PREFIX}/users`,
-        health: '/health'
+        health: '/health',
+        redisHealth: '/api/v1/health/redis'
       }
     });
   });
@@ -328,14 +357,16 @@ bootstrapPromise = startServer().catch((err) => {
 // Export for Vercel
 module.exports = app;
 
-// Local development server only
-if (require.main === module) {
-  const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Local development server only
+  if (require.main === module) {
+    const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
+    const isProduction = process.env.NODE_ENV === 'production';
 
-  if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
-    console.log('☁️ Running in serverless/production mode');
-  } else {
+    if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('☁️ Running in serverless/production mode');
+      }
+    } else {
     (async () => {
       try {
         await bootstrapPromise;
@@ -355,7 +386,9 @@ if (require.main === module) {
 
         const PORT = await findAvailablePort();
         const server = app.listen(PORT, '0.0.0.0', () => {
-          console.log(`🚀 Mathematico backend listening on ${PORT}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`🚀 Mathematico backend listening on ${PORT}`);
+          }
         });
         app.server = server;
       } catch (error) {

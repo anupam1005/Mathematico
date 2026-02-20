@@ -50,9 +50,7 @@ try {
     console.log('✅ Mobile models loaded successfully');
   }
 } catch (error) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️ Mobile models not available:', error && error.message ? error.message : error);
-  }
+  console.warn('⚠️ Mobile models not available:', error && error.message ? error.message : error);
 }
 
 /**
@@ -64,7 +62,9 @@ const getAllCourses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'Course model unavailable' });
     }
 
-    console.log('📱 Mobile: Fetching courses...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Fetching courses...');
+    }
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
@@ -101,12 +101,14 @@ const getAllCourses = async (req, res) => {
       ];
     }
 
-    console.log('📱 Mobile: Querying courses with filters:', { 
-      query,
-      page, 
-      limit, 
-      skip 
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Querying courses with filters:', { 
+        query,
+        page, 
+        limit, 
+        skip 
+      });
+    }
 
     const courses = await CourseModel.find(query)
       .select('-enrolledStudents -reviews -curriculum')
@@ -115,7 +117,9 @@ const getAllCourses = async (req, res) => {
       .limit(limit)
       .lean(); // Use lean() to get plain JavaScript objects without virtuals
 
-    console.log('📱 Mobile: Found courses:', courses.length);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Found courses:', courses.length);
+    }
 
     const total = await CourseModel.countDocuments(query);
 
@@ -297,7 +301,9 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     const { id } = req.params;
-    console.log('📖 Fetching PDF viewer for book:', id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📖 Fetching PDF viewer for book:', id);
+    }
 
     // Get book with PDF URL - check both published and draft for debugging
     let book = await BookModel.findOne({
@@ -310,7 +316,9 @@ const getSecurePdfViewer = async (req, res) => {
     if (!book) {
       book = await BookModel.findById(id).select('title pdfFile status isAvailable');
       if (book) {
-        console.log('⚠️ Book found but not published:', { status: book.status, isAvailable: book.isAvailable });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('⚠️ Book found but not published:', { status: book.status, isAvailable: book.isAvailable });
+        }
         return res.status(403).json({
           success: false,
           message: `Book is not available (status: ${book.status}, available: ${book.isAvailable})`
@@ -319,7 +327,9 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     if (!book) {
+      if (process.env.NODE_ENV !== 'production') {
       console.log('❌ Book not found:', id);
+    }
       return res.status(404).json({
         success: false,
         message: 'Book not found'
@@ -327,27 +337,35 @@ const getSecurePdfViewer = async (req, res) => {
     }
 
     if (!book.pdfFile) {
+      if (process.env.NODE_ENV !== 'production') {
       console.log('❌ PDF file not found for book:', id);
+    }
       return res.status(404).json({
         success: false,
         message: 'PDF file not available for this book'
       });
     }
 
-    console.log('📄 Book PDF URL:', book.pdfFile);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📄 Book PDF URL:', book.pdfFile);
+    }
 
     // Generate secure viewer URL with restrictions
     const secureViewerUrl = generateSecurePdfUrl(book.pdfFile, book.title);
     
     if (!secureViewerUrl) {
+      if (process.env.NODE_ENV !== 'production') {
       console.log('❌ Failed to generate secure viewer URL');
+    }
       return res.status(500).json({
         success: false,
         message: 'Failed to generate PDF viewer URL'
       });
     }
 
-    console.log('✅ Secure viewer URL generated:', secureViewerUrl);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Secure viewer URL generated:', secureViewerUrl);
+    }
 
     res.json({
       success: true,
@@ -534,7 +552,9 @@ const getAllLiveClasses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
     }
 
-    console.log('📱 Mobile: Fetching live classes...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Fetching live classes...');
+    }
     await connectDB();
 
     const page = parseInt(req.query.page) || 1;
@@ -581,12 +601,14 @@ const getAllLiveClasses = async (req, res) => {
       ];
     }
 
-    console.log('📱 Mobile: Querying live classes with filters:', { 
-      query,
-      page, 
-      limit, 
-      skip 
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Querying live classes with filters:', { 
+        query,
+        page, 
+        limit, 
+        skip 
+      });
+    }
 
     const liveClasses = await LiveClassModel.find(query)
       .select('-enrolledStudents -reviews')
@@ -595,7 +617,9 @@ const getAllLiveClasses = async (req, res) => {
       .limit(limit)
       .lean(); // Use lean() to get plain JavaScript objects without virtuals
 
-    console.log('📱 Mobile: Found live classes:', liveClasses.length);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Found live classes:', liveClasses.length);
+    }
 
     const total = await LiveClassModel.countDocuments(query);
 
@@ -631,11 +655,15 @@ const startLiveClass = async (req, res) => {
       return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
     }
 
-    console.log('📱 Mobile: Starting live class...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Starting live class...');
+    }
     await connectDB();
 
     const { id } = req.params;
-    console.log('📱 Mobile: Live class ID:', id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Live class ID:', id);
+    }
 
     const liveClass = await LiveClassModel.findById(id);
 
@@ -650,7 +678,9 @@ const startLiveClass = async (req, res) => {
     // Use the model method to start the class
     await liveClass.startClass();
 
-    console.log('📱 Mobile: Live class started successfully:', liveClass.title);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Live class started successfully:', liveClass.title);
+    }
 
     res.json({
       success: true,
@@ -679,11 +709,15 @@ const endLiveClass = async (req, res) => {
       return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
     }
 
-    console.log('📱 Mobile: Ending live class...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Ending live class...');
+    }
     await connectDB();
 
     const { id } = req.params;
-    console.log('📱 Mobile: Live class ID:', id);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Live class ID:', id);
+    }
 
     const liveClass = await LiveClassModel.findById(id);
 
@@ -698,7 +732,9 @@ const endLiveClass = async (req, res) => {
     // Use the model method to end the class
     await liveClass.endClass();
 
-    console.log('📱 Mobile: Live class ended successfully:', liveClass.title);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Mobile: Live class ended successfully:', liveClass.title);
+    }
 
     res.json({
       success: true,
@@ -1053,7 +1089,9 @@ const enrollInCourse = async (req, res) => {
 
     try {
       await course.enrollStudent(userId);
-      console.log(`✅ Student ${userId} enrolled in course ${id}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`✅ Student ${userId} enrolled in course ${id}`);
+      }
       
       res.json({
         success: true,

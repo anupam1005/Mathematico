@@ -61,19 +61,9 @@ router.get('/', (req, res) => {
       register: '/register',
       logout: '/logout',
       refresh: '/refresh-token',
-      test: '/test',
       health: '/health'
     },
     authController: authController ? 'loaded' : 'fallback',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Test endpoint
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Auth routes are working',
     timestamp: new Date().toISOString()
   });
 });

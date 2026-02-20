@@ -52,8 +52,8 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 
-// Debug logging for environment variables (only in development or if explicitly enabled)
-if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_ENV === 'true') {
+// Debug logging for environment variables (development only)
+if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_ENV === 'true') {
   console.log(' Admin Credentials Debug:');
   console.log('  ADMIN_EMAIL configured:', Boolean(ADMIN_EMAIL));
   console.log('  ADMIN_PASSWORD configured:', Boolean(ADMIN_PASSWORD));

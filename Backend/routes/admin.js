@@ -223,14 +223,4 @@ router.get('/stats/live-classes', safeHandler(adminController.getLiveClassStats,
 router.get('/settings', safeHandler(adminController.getSettings, 'getSettings'));
 router.put('/settings', safeHandler(adminController.updateSettings, 'updateSettings'));
 
-// Test endpoint
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'MongoDB Admin routes are working ✅',
-    user: req.user,
-    timestamp: new Date().toISOString()
-  });
-});
-
 module.exports = router;

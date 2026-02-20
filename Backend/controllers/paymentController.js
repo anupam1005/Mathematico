@@ -143,7 +143,9 @@ const verifyPayment = async (req, res) => {
           if (course) {
             try {
               await course.enrollStudent(userId);
-              console.log(`✅ Student ${userId} enrolled in course ${courseId}`);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`✅ Student ${userId} enrolled in course ${courseId}`);
+              }
             } catch (enrollmentError) {
               console.error(`❌ Enrollment failed for student ${userId} in course ${courseId}:`, enrollmentError.message);
               
@@ -164,7 +166,9 @@ const verifyPayment = async (req, res) => {
           if (book && book.purchaseBook) {
             try {
               await book.purchaseBook(userId);
-              console.log(`✅ Student ${userId} purchased book ${bookId}`);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`✅ Student ${userId} purchased book ${bookId}`);
+              }
             } catch (purchaseError) {
               console.error(`❌ Book purchase failed for student ${userId} in book ${bookId}:`, purchaseError.message);
               console.warn('⚠️ Book purchase error occurred but payment is valid');
@@ -180,7 +184,9 @@ const verifyPayment = async (req, res) => {
           if (liveClass && liveClass.enrollStudent) {
             try {
               await liveClass.enrollStudent(userId);
-              console.log(`✅ Student ${userId} enrolled in live class ${liveClassId}`);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`✅ Student ${userId} enrolled in live class ${liveClassId}`);
+              }
             } catch (enrollmentError) {
               console.error(`❌ Live class enrollment failed for student ${userId} in class ${liveClassId}:`, enrollmentError.message);
               console.warn('⚠️ Live class enrollment error occurred but payment is valid');

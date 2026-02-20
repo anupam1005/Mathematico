@@ -7,7 +7,9 @@ const mobileController = require('../controllers/mobileController');
 const paymentController = require('../controllers/paymentController');
 const profileController = require('../controllers/profileController');
 const studentController = require('../controllers/studentController');
-console.log('✅ MobileController loaded successfully');
+if (process.env.NODE_ENV !== 'production') {
+  console.log('✅ MobileController loaded successfully');
+}
 
 // ============= ROUTE DEFINITIONS =============
 
