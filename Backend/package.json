@@ -31,7 +31,7 @@
     "nodemon": "^3.1.9"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "keywords": [
     "mathematico",
@@ -48,11 +48,5 @@
     "android"
   ],
   "author": "Mathematico Development Team",
-  "license": "MIT",
-  "overrides": {
-    "@rollup/rollup-linux-x64-gnu": "npm:rollup",
-    "@rollup/rollup-linux-x64-musl": "npm:rollup",
-    "@rollup/rollup-darwin-x64": "npm:rollup",
-    "@rollup/rollup-darwin-arm64": "npm:rollup"
-  }
+  "license": "MIT"
 }
