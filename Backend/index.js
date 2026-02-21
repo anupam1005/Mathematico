@@ -42,8 +42,11 @@ app.get("/", (req, res) => {
   });
 });
 
-// 4) Register favicon route immediately (must never depend on Redis/Mongo)
+// 4) Register favicon routes immediately (must never depend on Redis/Mongo)
+// Handle common favicon requests to prevent 404s
 app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.get("/favicon.png", (req, res) => res.status(204).end());
+app.get("/favicon", (req, res) => res.status(204).end());
 
 let bootstrapped = false;
 let bootstrapPromise = null;
@@ -358,9 +361,9 @@ async function startServer() {
   }
 }
 
-// Bootstrap gate: never block `/` and `/favicon.ico`
+// Bootstrap gate: never block `/` and favicon routes
 app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/favicon.ico') return next();
+  if (req.path === '/' || req.path === '/favicon.ico' || req.path === '/favicon.png' || req.path === '/favicon') return next();
 
   // Reset bootstrap error on each request to allow recovery
   if (bootstrapError && req.path.startsWith('/api/v1/auth/health')) {

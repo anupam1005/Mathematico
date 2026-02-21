@@ -14,19 +14,15 @@ const requestLogger = winston.createLogger({
     ...(process.env.VERCEL !== '1' ? [
       new winston.transports.File({ filename: 'logs/requests.log' })
     ] : []),
-    // Always add console transport for Vercel
+    // Always add console transport for Vercel - use JSON format to properly stringify objects
     new winston.transports.Console({
-      format: winston.format.simple()
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
     })
   ],
 });
-
-// Add console transport for development
-if (process.env.NODE_ENV !== 'production') {
-  requestLogger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
-}
 
 const logRequest = (req, res, next) => {
   const startTime = Date.now();
