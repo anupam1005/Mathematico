@@ -20,6 +20,22 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // Log final resolved URL for production debugging
+    const finalUrl = config.url?.startsWith('http') 
+      ? config.url 
+      : `${config.baseURL || API_BASE_URL}${config.url || ''}`;
+    
+    // Critical: Log full URL before API call for production debugging
+    if (config.url?.includes('/login') || config.url?.includes('/register')) {
+      console.log('[AUTH API] Full URL:', finalUrl);
+      console.log('[AUTH API] Method:', config.method?.toUpperCase());
+      console.log('[AUTH API] Headers:', {
+        'Content-Type': config.headers?.['Content-Type'],
+        'Accept': config.headers?.['Accept'],
+        'Authorization': config.headers?.['Authorization'] ? 'Bearer ***' : 'none'
+      });
+    }
+    
     try {
       const token = await Storage.getItem('authToken');
       if (token) {

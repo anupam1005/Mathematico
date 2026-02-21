@@ -1,4 +1,5 @@
 import { API_PATHS } from '../constants/apiPaths';
+import { API_BASE_URL } from '../config';
 import { withBasePath } from './apiClient';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
@@ -34,8 +35,17 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
+      // Log the exact endpoint being called
+      const loginUrl = `${API_BASE_URL}/auth/login`;
+      console.log('[AUTH SERVICE] Login URL:', loginUrl);
+      
       const response = await authApi.post('/login', { email, password });
       const payload = response?.data;
+      
+      // Log response structure for debugging
+      console.log('[AUTH SERVICE] Login response success:', payload?.success);
+      console.log('[AUTH SERVICE] Login response has accessToken:', !!payload?.data?.accessToken);
+      console.log('[AUTH SERVICE] Login response has token:', !!payload?.data?.token);
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token;
 
@@ -67,13 +77,25 @@ const authService = {
     } catch (err) {
       const safe = createSafeError(err);
 
+      // Log error details for production debugging
+      console.error('[AUTH SERVICE] Login error:', {
+        status: safe.response?.status,
+        message: safe.message,
+        responseData: safe.response?.data,
+        url: safe.config?.url || safe.request?.url
+      });
+
       let message = 'Login failed';
       const msg = String(safe.message || '');
 
-      if (msg.includes('Network')) {
+      if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
         message = 'Network error. Please check your internet connection.';
       } else if (safe.response?.status === 401) {
-        message = 'Invalid email or password';
+        message = safe.response?.data?.message || 'Invalid email or password';
+      } else if (safe.response?.status === 429) {
+        message = safe.response?.data?.message || 'Too many login attempts. Please try again later.';
+      } else if (safe.response?.status === 503) {
+        message = safe.response?.data?.message || 'Service temporarily unavailable. Please try again later.';
       } else if (safe.response?.data?.message) {
         message = safe.response.data.message;
       }
@@ -90,8 +112,17 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
+      // Log the exact endpoint being called
+      const registerUrl = `${API_BASE_URL}/auth/register`;
+      console.log('[AUTH SERVICE] Register URL:', registerUrl);
+      
       const response = await authApi.post('/register', { name, email, password });
       const payload = response?.data;
+      
+      // Log response structure for debugging
+      console.log('[AUTH SERVICE] Register response success:', payload?.success);
+      console.log('[AUTH SERVICE] Register response has accessToken:', !!payload?.data?.accessToken);
+      console.log('[AUTH SERVICE] Register response has token:', !!payload?.data?.token);
 
       if (!payload?.success) {
         return {
@@ -116,11 +147,27 @@ const authService = {
     } catch (err) {
       const safe = createSafeError(err);
 
+      // Log error details for production debugging
+      console.error('[AUTH SERVICE] Register error:', {
+        status: safe.response?.status,
+        message: safe.message,
+        responseData: safe.response?.data,
+        url: safe.config?.url || safe.request?.url
+      });
+
       let message = 'Registration failed';
-      if (safe.response?.status === 409) {
-        message = 'Email already exists';
+      if (safe.response?.status === 400) {
+        message = safe.response?.data?.message || 'Invalid registration data';
+      } else if (safe.response?.status === 409) {
+        message = safe.response?.data?.message || 'Email already exists';
+      } else if (safe.response?.status === 429) {
+        message = safe.response?.data?.message || 'Too many registration attempts. Please try again later.';
+      } else if (safe.response?.status === 503) {
+        message = safe.response?.data?.message || 'Service temporarily unavailable. Please try again later.';
       } else if (safe.response?.data?.message) {
         message = safe.response.data.message;
+      } else if (safe.message?.includes('Network') || safe.message?.includes('ECONNREFUSED') || safe.message?.includes('timeout')) {
+        message = 'Network error. Please check your internet connection.';
       }
 
       return { success: false, message };

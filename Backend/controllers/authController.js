@@ -69,6 +69,15 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    // Log request for production debugging (sanitized)
+    console.log('[AUTH] Login attempt:', {
+      email: email ? `${email.substring(0, 3)}***` : 'missing',
+      hasPassword: !!password,
+      ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown',
+      userAgent: req.headers['user-agent']?.substring(0, 50) || 'unknown',
+      timestamp: new Date().toISOString()
+    });
+    
     // Validation
     if (!email || !password) {
       return res.status(400).json({
@@ -158,6 +167,7 @@ const login = async (req, res) => {
         data: {
           user: publicUser,
           accessToken: tokens.accessToken,
+          token: tokens.accessToken, // Alias for frontend compatibility
           refreshToken: tokens.refreshToken,
           tokenType: 'Bearer',
           expiresIn: tokens.accessTokenExpiresIn
@@ -228,6 +238,7 @@ const login = async (req, res) => {
       data: {
         user: publicUser,
         accessToken: tokens.accessToken,
+        token: tokens.accessToken, // Alias for frontend compatibility
         refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
@@ -243,31 +254,38 @@ const login = async (req, res) => {
     const errorMessage = error && error.message ? String(error.message) : String(error);
     console.error('Login error:', errorMessage);
 
+    // Determine appropriate status code and message
+    let statusCode = 500;
     let clientMessage = 'Login failed';
+    
     if (errorMessage.includes('JWT') || errorMessage.includes('token')) {
+      statusCode = 500;
       clientMessage = 'Login failed - Token generation error';
     } else if (
       errorMessage.toLowerCase().includes('mongo') ||
       errorMessage.toLowerCase().includes('database') ||
       errorMessage.toLowerCase().includes('connection') ||
-      errorMessage.toLowerCase().includes('ecnn')
+      errorMessage.toLowerCase().includes('ecnn') ||
+      errorMessage.toLowerCase().includes('timeout')
     ) {
-      clientMessage = 'Login failed - Database connection error';
+      statusCode = 503; // Service Unavailable for DB errors
+      clientMessage = 'Service temporarily unavailable. Please try again later.';
     }
 
     const response = {
       success: false,
       message: clientMessage,
-      error: 'Internal Server Error',
-      code: error && error.name ? error.name : 'LOGIN_FAILED',
       timestamp: new Date().toISOString()
     };
 
+    // Only include error details in non-production
     if (process.env.NODE_ENV !== 'production') {
+      response.error = 'Internal Server Error';
+      response.code = error && error.name ? error.name : 'LOGIN_FAILED';
       response.details = errorMessage;
     }
 
-    return res.status(500).json(response);
+    return res.status(statusCode).json(response);
   }
 };
 
@@ -277,6 +295,16 @@ const login = async (req, res) => {
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Log request for production debugging (sanitized)
+    console.log('[AUTH] Register attempt:', {
+      email: email ? `${email.substring(0, 3)}***` : 'missing',
+      hasName: !!name,
+      hasPassword: !!password,
+      ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown',
+      userAgent: req.headers['user-agent']?.substring(0, 50) || 'unknown',
+      timestamp: new Date().toISOString()
+    });
 
     // Validation
     if (!name || !email || !password) {
@@ -345,6 +373,7 @@ const register = async (req, res) => {
       data: {
         user: publicUser,
         accessToken: tokens.accessToken,
+        token: tokens.accessToken, // Alias for frontend compatibility
         refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
@@ -380,31 +409,38 @@ const register = async (req, res) => {
       });
     }
 
+    // Determine appropriate status code and message
+    let statusCode = 500;
     let clientMessage = 'Registration failed';
+    
     if (errorMessage.includes('JWT') || errorMessage.includes('token')) {
+      statusCode = 500;
       clientMessage = 'Registration failed - Token generation error';
     } else if (
       errorMessage.toLowerCase().includes('mongo') ||
       errorMessage.toLowerCase().includes('database') ||
       errorMessage.toLowerCase().includes('connection') ||
-      errorMessage.toLowerCase().includes('ecnn')
+      errorMessage.toLowerCase().includes('ecnn') ||
+      errorMessage.toLowerCase().includes('timeout')
     ) {
-      clientMessage = 'Registration failed - Database connection error';
+      statusCode = 503; // Service Unavailable for DB errors
+      clientMessage = 'Service temporarily unavailable. Please try again later.';
     }
 
     const response = {
       success: false,
       message: clientMessage,
-      error: 'Internal Server Error',
-      code: error && error.name ? error.name : 'REGISTER_FAILED',
       timestamp: new Date().toISOString()
     };
 
+    // Only include error details in non-production
     if (process.env.NODE_ENV !== 'production') {
+      response.error = 'Internal Server Error';
+      response.code = error && error.name ? error.name : 'REGISTER_FAILED';
       response.details = errorMessage;
     }
 
-    return res.status(500).json(response);
+    return res.status(statusCode).json(response);
   }
 };
 
