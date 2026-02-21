@@ -15,8 +15,20 @@ export interface LoginResponse {
   message: string;
   data?: {
     user: any;
-    token: string;
+    accessToken: string;
+    tokenType: string;
+    expiresIn: number;
     refreshToken?: string;
+  };
+}
+
+export interface RefreshTokenResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    accessToken: string;
+    tokenType: string;
+    expiresIn: number;
   };
 }
 
@@ -70,7 +82,9 @@ const authService = {
         message: payload.message || 'Login successful',
         data: {
           user: payload.data.user,
-          token: accessToken,
+          accessToken: accessToken,
+          tokenType: payload.data.tokenType || 'Bearer',
+          expiresIn: payload.data.expiresIn || 900,
           refreshToken: payload.data.refreshToken,
         },
       };
@@ -141,7 +155,7 @@ const authService = {
         message: payload.message || 'Registration successful',
         data: {
           ...payload.data,
-          token: accessToken,
+          accessToken: accessToken,
         },
       };
     } catch (err) {
@@ -212,7 +226,7 @@ const authService = {
 
   /* -------------------------- REFRESH TOKEN -------------------------- */
 
-  async refreshToken(): Promise<{ success: boolean; message: string; data?: { token: string; refreshToken?: string } }> {
+  async refreshToken(): Promise<{ success: boolean; message: string; data?: { accessToken: string; tokenType: string; expiresIn: number } }> {
     try {
       const refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
@@ -228,7 +242,6 @@ const authService = {
           message: payload?.message || 'Invalid refresh response',
         };
       }
-      const newRefreshToken = payload.data.refreshToken || refreshTokenValue || undefined;
 
       if (typeof accessToken !== 'string' || accessToken.length < 10) {
         return {
@@ -238,16 +251,14 @@ const authService = {
       }
 
       await Storage.setItem('authToken', accessToken);
-      if (newRefreshToken && newRefreshToken !== refreshTokenValue) {
-        await Storage.setItem('refreshToken', newRefreshToken);
-      }
 
       return {
         success: true,
         message: 'Token refreshed successfully',
         data: {
-          token: accessToken,
-          refreshToken: newRefreshToken,
+          accessToken: accessToken,
+          tokenType: payload.data.tokenType || 'Bearer',
+          expiresIn: payload.data.expiresIn || 900,
         },
       };
     } catch (err) {

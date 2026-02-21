@@ -103,7 +103,8 @@ const strictAuthenticateToken = async (req, res, next) => {
     const passwordChangedAfter = await checkPasswordChangedAfter(decoded, decoded.iat);
     if (passwordChangedAfter) {
       // Log token invalidation due to password change
-      logTokenInvalidation(decoded.id, 'password_change', req);
+      const userId = decoded.id || decoded.sub;
+      logTokenInvalidation(userId, 'password_change', req);
       
       return res.status(401).json({
         success: false,
@@ -113,12 +114,17 @@ const strictAuthenticateToken = async (req, res, next) => {
       });
     }
 
-    // Additional security: Validate token structure
-    if (!decoded.id || !decoded.email || !decoded.role) {
+    // Additional security: Validate token structure for new minimal payload
+    // Support both old format (id, email, role) and new format (sub, role, tokenVersion)
+    const hasValidStructure = 
+      (decoded.id && decoded.email && decoded.role) || // Old format
+      (decoded.sub && decoded.role); // New minimal format
+    
+    if (!hasValidStructure) {
       logSuspiciousActivity(
         'Invalid token structure: missing required fields',
         'high',
-        decoded.id,
+        decoded.id || decoded.sub,
         req
       );
       
@@ -130,6 +136,9 @@ const strictAuthenticateToken = async (req, res, next) => {
       });
     }
 
+    // Normalize user ID for compatibility (support both id and sub)
+    const userId = decoded.id || decoded.sub;
+    
     // Validate token age (additional security check)
     const now = Math.floor(Date.now() / 1000);
     const tokenAge = now - decoded.iat;
@@ -139,7 +148,7 @@ const strictAuthenticateToken = async (req, res, next) => {
       logSuspiciousActivity(
         `Token too old: ${tokenAge} seconds`,
         'medium',
-        decoded.id,
+        userId,
         req
       );
       
@@ -151,8 +160,11 @@ const strictAuthenticateToken = async (req, res, next) => {
       });
     }
 
-    // Populate req.user with decoded token
-    req.user = decoded;
+    // Populate req.user with normalized token payload
+    req.user = {
+      ...decoded,
+      id: userId // Ensure id field is always present for backward compatibility
+    };
     return next();
     
   } catch (err) {

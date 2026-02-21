@@ -87,6 +87,13 @@ const userSchema = new mongoose.Schema({
     default: 'student'
   },
   
+  // Token version for replay detection and token invalidation
+  tokenVersion: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  
   isActive: {
     type: Boolean,
     default: true
@@ -511,6 +518,7 @@ userSchema.methods.getPublicProfile = function() {
   delete userObject.deactivated;
   delete userObject.__v;
   delete userObject.passwordChangedAt;
+  delete userObject.tokenVersion;
   
   // Ensure isAdmin field is set based on role
   userObject.isAdmin = this.role === 'admin';
@@ -529,6 +537,17 @@ userSchema.methods.getPublicProfile = function() {
   }
   
   return userObject;
+};
+
+// Instance method to get safe user profile (minimal response)
+userSchema.methods.getSafeProfile = function() {
+  return {
+    id: this._id.toString(),
+    name: this.name,
+    email: this.email,
+    role: this.role,
+    profilePicture: this.profilePicture || null
+  };
 };
 
 // Static method to find user by email

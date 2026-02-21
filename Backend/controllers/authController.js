@@ -2,7 +2,8 @@ const {
   generateTokenPair, 
   hashRefreshToken,
   setRefreshTokenCookie,
-  clearRefreshTokenCookie
+  clearRefreshTokenCookie,
+  getTokenExpirationMs
 } = require('../utils/jwt');
 const connectDB = require('../config/database');
 const crypto = require('crypto');
@@ -163,19 +164,17 @@ const login = async (req, res) => {
       // Set refresh token in HttpOnly cookie
       setRefreshTokenCookie(res, tokens.refreshToken);
 
-      // Get public profile (includes isAdmin, is_admin, etc.)
-      const publicUser = dbAdmin.getPublicProfile();
+      // Get safe user profile (minimal response)
+      const safeUser = dbAdmin.getSafeProfile();
 
       return res.json({
         success: true,
         message: 'Admin login successful',
         data: {
-          user: publicUser,
+          user: safeUser,
           accessToken: tokens.accessToken,
-          token: tokens.accessToken, // Alias for frontend compatibility
           tokenType: 'Bearer',
-          expiresIn: tokens.accessTokenExpiresIn
-          // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
+          expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
         },
         timestamp: new Date().toISOString()
       });
@@ -259,19 +258,17 @@ const login = async (req, res) => {
     // Set refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Get public profile (secure serialization)
-    const publicUser = user.getPublicProfile();
+    // Get safe user profile (minimal response)
+    const safeUser = user.getSafeProfile();
 
     return res.json({
       success: true,
       message: 'Login successful',
       data: {
-        user: publicUser,
+        user: safeUser,
         accessToken: tokens.accessToken,
-        token: tokens.accessToken, // Alias for frontend compatibility
         tokenType: 'Bearer',
-        expiresIn: tokens.accessTokenExpiresIn
-        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
+        expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
       },
       timestamp: new Date().toISOString()
     });
@@ -398,19 +395,17 @@ const register = async (req, res) => {
     // Set refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Get public profile
-    const publicUser = user.getPublicProfile();
+    // Get safe user profile (minimal response)
+    const safeUser = user.getSafeProfile();
 
     return res.status(201).json({
       success: true,
       message: 'Registration successful',
       data: {
-        user: publicUser,
+        user: safeUser,
         accessToken: tokens.accessToken,
-        token: tokens.accessToken, // Alias for frontend compatibility
         tokenType: 'Bearer',
-        expiresIn: tokens.accessTokenExpiresIn
-        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
+        expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
       },
       timestamp: new Date().toISOString()
     });

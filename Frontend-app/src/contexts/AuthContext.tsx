@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.login(email, password);
       
       if (response.success && response.data) {
-        const { user: userData, token: accessToken, refreshToken } = response.data;
+        const { user: userData, accessToken, refreshToken } = response.data;
         
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
           await Storage.setItem('authToken', accessToken);
@@ -165,10 +165,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(name, email, password);
       
       if (response.success && response.data) {
-        const { user: userData, token, refreshToken } = response.data;
+        const { user: userData, accessToken, refreshToken } = response.data;
         
         // Extract the access token from the response
-        const accessToken = token;
         if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
           await Storage.setItem('authToken', accessToken);
         }
@@ -238,14 +237,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.refreshToken();
       
       if (response.success && response.data) {
-        const { token: newAccessToken, refreshToken: newRefreshToken } = response.data;
+        const { accessToken } = response.data;
         
-        // Update tokens
-        if (newAccessToken) {
-          await Storage.setItem('authToken', newAccessToken);
-        }
-        if (newRefreshToken && Platform.OS !== 'web') {
-          await Storage.setItem('refreshToken', newRefreshToken);
+        // Update access token
+        if (accessToken) {
+          await Storage.setItem('authToken', accessToken);
         }
         
         return true;

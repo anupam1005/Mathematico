@@ -65,6 +65,30 @@ function generateAccessToken(payload) {
 }
 
 /**
+ * Generate access token with minimal secure payload
+ * @param {Object} user - User object
+ * @returns {string} JWT access token
+ */
+function generateMinimalAccessToken(user) {
+  const { jwtSecret } = getJwtSecrets();
+  
+  // Minimal secure payload with tokenVersion for replay detection
+  const payload = {
+    sub: user._id || user.id,
+    role: user.role,
+    tokenVersion: user.tokenVersion || 0
+  };
+
+  return jwt.sign(payload, jwtSecret, { 
+    expiresIn: JWT_ACCESS_EXPIRES_IN,
+    algorithm: 'HS256',
+    issuer: 'mathematico-backend',
+    audience: 'mathematico-frontend',
+    keyid: 'access-key-v2' // Updated key ID for new payload format
+  });
+}
+
+/**
  * Generate refresh token (random string, not JWT)
  * This creates a cryptographically secure random token
  * @returns {string} Random refresh token
@@ -194,11 +218,34 @@ function clearRefreshTokenCookie(res) {
 }
 
 /**
- * Generate token pair (access + refresh)
+ * Generate token pair (access + refresh) with minimal secure payload
  * @param {Object} user - User object
  * @returns {Object} Token pair with expiration info
  */
 function generateTokenPair(user) {
+  // Use minimal secure payload for access token
+  const accessToken = generateMinimalAccessToken(user);
+  
+  const refreshToken = generateRefreshToken();
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+  const refreshTokenExpiry = calculateTokenExpiration(JWT_REFRESH_EXPIRES_IN);
+  
+  return {
+    accessToken,
+    refreshToken,
+    refreshTokenHash,
+    refreshTokenExpiry,
+    accessTokenExpiresIn: JWT_ACCESS_EXPIRES_IN,
+    refreshTokenExpiresIn: JWT_REFRESH_EXPIRES_IN
+  };
+}
+
+/**
+ * Legacy token pair generation for backward compatibility
+ * @param {Object} user - User object
+ * @returns {Object} Token pair with full payload (deprecated)
+ */
+function generateLegacyTokenPair(user) {
   const accessToken = generateAccessToken({
     id: user._id || user.id,
     email: user.email,
@@ -224,8 +271,10 @@ function generateTokenPair(user) {
 module.exports = {
   // Token generation
   generateAccessToken,
+  generateMinimalAccessToken,
   generateRefreshToken,
   generateTokenPair,
+  generateLegacyTokenPair, // For backward compatibility
   
   // Token verification
   verifyAccessToken,
