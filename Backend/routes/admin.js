@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireAdmin } = require('../middlewares/auth');
+const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -114,8 +114,8 @@ router.get('/info', (req, res) => {
 });
 
 // Apply auth middleware to all other admin routes
-router.use(authenticateToken);
-router.use(requireAdmin);
+router.use(strictAuthenticateToken);
+router.use(strictRequireAdmin);
 
 // Root admin endpoint (requires authentication)
 router.get('/', (req, res) => {

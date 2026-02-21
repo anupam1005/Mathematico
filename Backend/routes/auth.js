@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { upload } = require('../utils/fileUpload');
-const { authenticateToken } = require('../middlewares/auth');
-const loginRateLimiter = require('../middleware/upstashLoginRateLimiter');
+const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
+const enhancedRateLimiter = require('../middleware/enhancedRateLimiter');
 const ensureDatabase = require('../middleware/ensureDatabase');
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
@@ -17,37 +17,37 @@ const methodNotAllowed = (expectedMethod, path) => (req, res) => {
 };
 
 // Public auth routes - all require database connection
-router.post('/login', loginRateLimiter, ensureDatabase, authController.login);
+router.post('/login', enhancedRateLimiter, ensureDatabase, authController.login);
 router.get('/login', methodNotAllowed('POST', '/login'));
-router.post('/register', ensureDatabase, authController.register);
+router.post('/register', enhancedRateLimiter, ensureDatabase, authController.register);
 router.get('/register', methodNotAllowed('POST', '/register'));
 router.post('/logout', ensureDatabase, authController.logout);
 router.post('/refresh-token', ensureDatabase, authController.refreshToken);
-router.post('/forgot-password', ensureDatabase, authController.forgotPassword);
+router.post('/forgot-password', enhancedRateLimiter, ensureDatabase, authController.forgotPassword);
 router.post('/reset-password', ensureDatabase, authController.resetPassword);
 router.post('/verify-email', ensureDatabase, authController.verifyEmail);
 
 // Health check route
 router.get('/health', authController.healthCheck);
 
-// Protected auth routes - require both database and authentication
-router.get('/profile', ensureDatabase, authenticateToken, authController.getProfile);
+// Protected auth routes - require both database and strict authentication
+router.get('/profile', ensureDatabase, strictAuthenticateToken, authController.getProfile);
 
 // Import profile controller
 let profileController;
 try {
   profileController = require('../controllers/profileController');
 
-  // Profile management routes - require both database and authentication
-  router.put('/profile', ensureDatabase, authenticateToken, profileController.updateProfile);
-  router.post('/profile/picture', ensureDatabase, authenticateToken, upload.single('profilePicture'), profileController.uploadProfilePicture);
-  router.delete('/profile/picture', ensureDatabase, authenticateToken, profileController.deleteProfilePicture);
-  router.put('/change-password', ensureDatabase, authenticateToken, profileController.changePassword);
+  // Profile management routes - require both database and strict authentication
+  router.put('/profile', ensureDatabase, strictAuthenticateToken, profileController.updateProfile);
+  router.post('/profile/picture', ensureDatabase, strictAuthenticateToken, upload.single('profilePicture'), profileController.uploadProfilePicture);
+  router.delete('/profile/picture', ensureDatabase, strictAuthenticateToken, profileController.deleteProfilePicture);
+  router.put('/change-password', ensureDatabase, strictAuthenticateToken, profileController.changePassword);
 
-  // User preferences routes - require both database and authentication
-  router.get('/preferences', ensureDatabase, authenticateToken, profileController.getPreferences);
-  router.put('/preferences', ensureDatabase, authenticateToken, profileController.updatePreferences);
-  router.delete('/account', ensureDatabase, authenticateToken, profileController.deleteAccount);
+  // User preferences routes - require both database and strict authentication
+  router.get('/preferences', ensureDatabase, strictAuthenticateToken, profileController.getPreferences);
+  router.put('/preferences', ensureDatabase, strictAuthenticateToken, profileController.updatePreferences);
+  router.delete('/account', ensureDatabase, strictAuthenticateToken, profileController.deleteAccount);
 
 } catch (error) {
 }

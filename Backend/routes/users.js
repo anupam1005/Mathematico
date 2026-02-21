@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middlewares/auth');
+const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
 const connectDB = require('../config/database');
 
 // Import User model - serverless-safe direct import
@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
 });
 
 // Apply authentication middleware to all protected routes
-router.use(authenticateToken);
+router.use(strictAuthenticateToken);
 
 // ============= USER MANAGEMENT =============
 

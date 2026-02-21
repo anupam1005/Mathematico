@@ -210,15 +210,25 @@ function registerRoutes() {
   app.get('/api/v1/health/redis', async (req, res) => {
     try {
       const { redisHealthCheck } = require('./middleware/upstashLoginRateLimiter');
-      const redisStatus = await redisHealthCheck();
+      const { redisHealthCheck: enhancedHealthCheck } = require('./middleware/enhancedRateLimiter');
       
-      const statusCode = redisStatus.healthy ? 200 : 503;
+      const [legacyStatus, enhancedStatus] = await Promise.all([
+        redisHealthCheck(),
+        enhancedHealthCheck()
+      ]);
+      
+      const statusCode = (legacyStatus.healthy && enhancedStatus.healthy) ? 200 : 503;
       
       res.status(statusCode).json({
         service: 'redis',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
-        ...redisStatus
+        legacy: legacyStatus,
+        enhanced: enhancedStatus,
+        overall: {
+          healthy: legacyStatus.healthy && enhancedStatus.healthy,
+          status: (legacyStatus.healthy && enhancedStatus.healthy) ? 'healthy' : 'degraded'
+        }
       });
     } catch (error) {
       res.status(503).json({

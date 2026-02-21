@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middlewares/auth');
+const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
 
 // Import student controller
 const studentController = require('../controllers/studentController');
@@ -27,7 +27,7 @@ router.get('/', (req, res) => {
 });
 
 // Apply auth middleware to all protected student routes
-router.use(authenticateToken);
+router.use(strictAuthenticateToken);
 
 // Student dashboard route
 router.get('/dashboard', studentController.getDashboard);

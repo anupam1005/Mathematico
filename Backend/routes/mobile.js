@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireAdmin } = require('../middlewares/auth');
+const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
 
 // Import controllers
 const mobileController = require('../controllers/mobileController');
@@ -48,23 +48,23 @@ router.get('/books/:id/stream', mobileController.streamSecurePdf);
 // Course routes
 router.get('/courses', mobileController.getAllCourses);
 router.get('/courses/:id', mobileController.getCourseById);
-router.post('/courses/:id/enroll', authenticateToken, mobileController.enrollInCourse);
+router.post('/courses/:id/enroll', strictAuthenticateToken, mobileController.enrollInCourse);
 
 // Enrollment routes
-router.get('/enrollments', authenticateToken, mobileController.getEnrollments);
-router.get('/enrollments/:id', authenticateToken, mobileController.getEnrollmentById);
-router.put('/enrollments/:id', authenticateToken, mobileController.updateEnrollmentStatus);
-router.delete('/enrollments/:id', authenticateToken, mobileController.cancelEnrollment);
-router.get('/enrollments/:id/progress', authenticateToken, mobileController.getEnrollmentProgress);
-router.post('/enrollments/:id/lessons/:lessonId/complete', authenticateToken, mobileController.markLessonComplete);
+router.get('/enrollments', strictAuthenticateToken, mobileController.getEnrollments);
+router.get('/enrollments/:id', strictAuthenticateToken, mobileController.getEnrollmentById);
+router.put('/enrollments/:id', strictAuthenticateToken, mobileController.updateEnrollmentStatus);
+router.delete('/enrollments/:id', strictAuthenticateToken, mobileController.cancelEnrollment);
+router.get('/enrollments/:id/progress', strictAuthenticateToken, mobileController.getEnrollmentProgress);
+router.post('/enrollments/:id/lessons/:lessonId/complete', strictAuthenticateToken, mobileController.markLessonComplete);
 
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
 // Starting/ending classes is an admin action
-router.put('/live-classes/:id/start', authenticateToken, requireAdmin, mobileController.startLiveClass);
-router.put('/live-classes/:id/end', authenticateToken, requireAdmin, mobileController.endLiveClass);
-router.post('/live-classes/:id/join', authenticateToken, studentController.joinLiveClass);
+router.put('/live-classes/:id/start', strictAuthenticateToken, strictRequireAdmin, mobileController.startLiveClass);
+router.put('/live-classes/:id/end', strictAuthenticateToken, strictRequireAdmin, mobileController.endLiveClass);
+router.post('/live-classes/:id/join', strictAuthenticateToken, studentController.joinLiveClass);
 
 // Search routes
 router.get('/search', mobileController.search);
@@ -96,16 +96,16 @@ router.get('/stats', (req, res) => {
 });
 
 // Settings routes
-router.get('/settings', authenticateToken, profileController.getUserSettings);
+router.get('/settings', strictAuthenticateToken, profileController.getUserSettings);
 
-router.put('/settings', authenticateToken, profileController.updateUserSettings);
+router.put('/settings', strictAuthenticateToken, profileController.updateUserSettings);
 
 // Payment routes
 router.get('/payments/config', paymentController.getRazorpayConfig);
-router.post('/payments/create-order', authenticateToken, paymentController.createOrder);
-router.post('/payments/verify', authenticateToken, paymentController.verifyPayment);
+router.post('/payments/create-order', strictAuthenticateToken, paymentController.createOrder);
+router.post('/payments/verify', strictAuthenticateToken, paymentController.verifyPayment);
 
 // Payment history
-router.get('/payments/history', authenticateToken, paymentController.getPaymentHistory);
+router.get('/payments/history', strictAuthenticateToken, paymentController.getPaymentHistory);
 
 module.exports = router;

@@ -7,6 +7,15 @@ const {
 const connectDB = require('../config/database');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const {
+  logFailedLogin,
+  logAccountLock,
+  logTokenRefresh,
+  logPasswordChange,
+  logSuspiciousActivity,
+  logReplayAttack,
+  logTokenInvalidation
+} = require('../utils/securityLogger');
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern
@@ -164,16 +173,17 @@ const login = async (req, res) => {
           user: publicUser,
           accessToken: tokens.accessToken,
           token: tokens.accessToken, // Alias for frontend compatibility
-          refreshToken: tokens.refreshToken,
           tokenType: 'Bearer',
           expiresIn: tokens.accessTokenExpiresIn
+          // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
         },
         timestamp: new Date().toISOString()
       });
     }
 
-    // Regular user login - find user in database
-    const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+password');
+    // Regular user login - find user in database with explicit password selection
+    const user = await UserModel.findOne({ email: email.toLowerCase() })
+      .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive');
     
     if (!user) {
       return res.status(401).json({
@@ -192,15 +202,39 @@ const login = async (req, res) => {
       });
     }
 
-    // Verify password
+    // Check account lockout status
+    if (user.isLocked) {
+      // Log exact lock duration internally for audit
+      const lockTimeRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      logAccountLock(email, lockTimeRemaining, req);
+      
+      // Return generic message - no timing or existence information leaked
+      return res.status(429).json({
+        success: false,
+        message: 'Too many login attempts. Please try again later.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Verify password with timing-safe comparison
     const isPasswordValid = await user.comparePassword(password);
+    
     if (!isPasswordValid) {
+      // Increment failed login attempts
+      await user.incrementLoginAttempts();
+      
+      // Log failed attempt for security monitoring
+      logFailedLogin(email, 'invalid_credentials', req);
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
         timestamp: new Date().toISOString()
       });
     }
+
+    // Reset login attempts on successful authentication
+    await user.resetLoginAttempts();
 
     // Generate token pair
     const tokens = generateTokenPair(user);
@@ -217,7 +251,7 @@ const login = async (req, res) => {
       deviceInfo
     );
 
-    // Update last login
+    // Update last login and login count
     user.lastLogin = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
     await user.save();
@@ -225,7 +259,7 @@ const login = async (req, res) => {
     // Set refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Get public profile
+    // Get public profile (secure serialization)
     const publicUser = user.getPublicProfile();
 
     return res.json({
@@ -235,9 +269,9 @@ const login = async (req, res) => {
         user: publicUser,
         accessToken: tokens.accessToken,
         token: tokens.accessToken, // Alias for frontend compatibility
-        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
+        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
       },
       timestamp: new Date().toISOString()
     });
@@ -374,9 +408,9 @@ const register = async (req, res) => {
         user: publicUser,
         accessToken: tokens.accessToken,
         token: tokens.accessToken, // Alias for frontend compatibility
-        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
+        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
       },
       timestamp: new Date().toISOString()
     });
@@ -563,11 +597,27 @@ const refreshToken = async (req, res) => {
       'refreshTokens.expiresAt': { $gt: new Date() }
     });
 
+    // REPLAY DETECTION: If tokenHash NOT found in user's refreshTokens
+    // This indicates a replay attack - someone is trying to reuse an already-rotated token
     if (!user) {
+      // Try to find any user that might have had this token before (for logging)
+      const potentialUser = await UserModel.findOne({
+        'refreshTokens.tokenHash': tokenHash
+      });
+      
+      if (potentialUser) {
+        // This is definitely a replay attack - token was rotated but reused
+        logReplayAttack(potentialUser._id.toString(), req);
+        logTokenInvalidation(potentialUser._id.toString(), 'replay_attack', req);
+        
+        // Immediately clear ALL refreshTokens for that user
+        await potentialUser.clearAllRefreshTokens();
+      }
+      
       clearRefreshTokenCookie(res);
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired refresh token',
+        message: 'Invalid session. Please login again.',
         timestamp: new Date().toISOString()
       });
     }
@@ -602,14 +652,17 @@ const refreshToken = async (req, res) => {
     // Set new refresh token in HttpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
+    // Log successful token refresh
+    logTokenRefresh(user._id.toString(), true, req);
+
     return res.json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: tokens.accessTokenExpiresIn
+        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
       },
       timestamp: new Date().toISOString()
     });
@@ -793,6 +846,9 @@ const resetPassword = async (req, res) => {
     user.refreshTokens = [];
     await user.save();
 
+    // Log password change for security monitoring
+    logPasswordChange(user._id.toString(), req);
+
     return res.json({
       success: true,
       message: 'Password reset successfully',
@@ -846,6 +902,9 @@ const changePassword = async (req, res) => {
     user.passwordChangedAt = new Date();
     user.refreshTokens = [];
     await user.save();
+
+    // Log password change for security monitoring
+    logPasswordChange(userId, req);
 
     return res.json({
       success: true,

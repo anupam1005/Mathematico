@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const { authenticateToken } = require('../middlewares/auth');
+const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
 
 // Root endpoint
 router.get('/', (req, res) => {
@@ -22,7 +22,7 @@ router.get('/', (req, res) => {
 router.get('/config', paymentController.getRazorpayConfig);
 
 // Apply authentication middleware to protected payment routes
-router.use(authenticateToken);
+router.use(strictAuthenticateToken);
 
 // Create Razorpay order
 router.post('/create-order', paymentController.createOrder);

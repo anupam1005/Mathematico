@@ -1,37 +1,14 @@
 // Request Logger Middleware for Production
-const winston = require('winston');
-
-// Configure request logger
-const requestLogger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'mathematico-requests' },
-  transports: [
-    // Only add file transport in local development (not Vercel)
-    ...(process.env.VERCEL !== '1' ? [
-      new winston.transports.File({ filename: 'logs/requests.log' })
-    ] : []),
-    // Always add console transport for Vercel - use JSON format to properly stringify objects
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    })
-  ],
-});
+const { logger } = require('../utils/logger');
 
 const logRequest = (req, res, next) => {
   const startTime = Date.now();
   
   // Log request
-  requestLogger.info({
+  logger.http(`${req.method} ${req.originalUrl}`, {
     type: 'request',
     method: req.method,
-    url: req.url,
+    url: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     timestamp: new Date().toISOString()
@@ -42,10 +19,10 @@ const logRequest = (req, res, next) => {
   res.end = function(chunk, encoding) {
     const duration = Date.now() - startTime;
     
-    requestLogger.info({
+    logger.http(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`, {
       type: 'response',
       method: req.method,
-      url: req.url,
+      url: req.originalUrl,
       statusCode: res.statusCode,
       duration: `${duration}ms`,
       timestamp: new Date().toISOString()

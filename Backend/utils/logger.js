@@ -91,39 +91,6 @@ const logger = winston.createLogger({
   exitOnError: false
 });
 
-// Create HTTP request logger middleware
-const httpLogger = (req, res, next) => {
-  const start = Date.now();
-  
-  // Log request
-  logger.http(`${req.method} ${req.originalUrl}`, {
-    method: req.method,
-    url: req.originalUrl,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString()
-  });
-
-  // Override res.end to log response
-  const originalEnd = res.end;
-  res.end = function(chunk, encoding) {
-    const duration = Date.now() - start;
-    
-    logger.http(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`, {
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      responseTime: duration,
-      ip: req.ip,
-      timestamp: new Date().toISOString()
-    });
-
-    originalEnd.call(this, chunk, encoding);
-  };
-
-  next();
-};
-
 // Helper functions for structured logging
 const logWithContext = (level, message, context = {}) => {
   logger.log(level, message, {
@@ -136,7 +103,6 @@ const logWithContext = (level, message, context = {}) => {
 // Export logger and utilities
 module.exports = {
   logger,
-  httpLogger,
   logWithContext,
   
   // Convenience methods

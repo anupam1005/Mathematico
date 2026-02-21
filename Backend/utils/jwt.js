@@ -9,12 +9,34 @@ function getJwtSecrets() {
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
   const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
 
+  // Production security checks
+  if (process.env.NODE_ENV === 'production') {
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is required in production');
+    }
+    if (!jwtRefreshSecret) {
+      throw new Error('JWT_REFRESH_SECRET environment variable is required in production');
+    }
+    if (jwtSecret.length < 32) {
+      throw new Error('JWT_SECRET must be at least 32 characters long in production');
+    }
+    if (jwtRefreshSecret.length < 32) {
+      throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long in production');
+    }
+  }
+
   if (!jwtSecret || !jwtRefreshSecret) {
     throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required');
   }
 
   if (jwtSecret === jwtRefreshSecret) {
     throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be different values');
+  }
+
+  // Check for weak/default secrets
+  const weakSecrets = ['secret', 'jwt-secret', 'default-secret', 'test-secret', '123456', 'password'];
+  if (weakSecrets.includes(jwtSecret.toLowerCase()) || weakSecrets.includes(jwtRefreshSecret.toLowerCase())) {
+    throw new Error('JWT secrets cannot use weak/default values');
   }
 
   return { jwtSecret, jwtRefreshSecret };
@@ -35,8 +57,10 @@ function generateAccessToken(payload) {
 
   return jwt.sign(payload, jwtSecret, { 
     expiresIn: JWT_ACCESS_EXPIRES_IN,
+    algorithm: 'HS256',
     issuer: 'mathematico-backend',
-    audience: 'mathematico-frontend'
+    audience: 'mathematico-frontend',
+    keyid: 'access-key-v1' // Key ID for rotation support
   });
 }
 
@@ -46,8 +70,9 @@ function generateAccessToken(payload) {
  * @returns {string} Random refresh token
  */
 function generateRefreshToken() {
-  // Generate 32 bytes of random data and convert to hex (64 characters)
-  return crypto.randomBytes(32).toString('hex');
+  // Generate 64 bytes of random data for enhanced security (512 bits)
+  // This exceeds the minimum 256-bit requirement
+  return crypto.randomBytes(64).toString('hex');
 }
 
 /**
@@ -80,8 +105,10 @@ function verifyAccessToken(token) {
   const { jwtSecret } = getJwtSecrets();
 
   return jwt.verify(token, jwtSecret, {
+    algorithms: ['HS256'], // Explicitly allow only HS256
     issuer: 'mathematico-backend',
-    audience: 'mathematico-frontend'
+    audience: 'mathematico-frontend',
+    clockTolerance: 30 // Allow 30 seconds clock skew
   });
 }
 
@@ -140,7 +167,10 @@ function setRefreshTokenCookie(res, token) {
     secure: isProduction,  // HTTPS only in production
     sameSite,              // Allow cross-origin refresh in production
     maxAge: getTokenExpirationMs(JWT_REFRESH_EXPIRES_IN),
-    path: cookiePath // Only send to refresh endpoint
+    path: cookiePath,      // Only send to refresh endpoint
+    // Additional security attributes
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    partitioned: true      // Enable partitioned cookies for better privacy
   });
 }
 
@@ -157,7 +187,9 @@ function clearRefreshTokenCookie(res) {
     httpOnly: true,
     secure: isProduction,
     sameSite,
-    path: cookiePath
+    path: cookiePath,
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    partitioned: true
   });
 }
 

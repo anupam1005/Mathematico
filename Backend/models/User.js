@@ -295,19 +295,40 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   
-  // Account lockout
-  loginAttempts: {
-    type: Number,
-    default: 0,
-    select: false
-  },
-  lockUntil: {
-    type: Date,
-    select: false
-  }
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
+  toJSON: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      // Remove ALL sensitive fields that must never be exposed to clients
+      delete ret.password;
+      delete ret.refreshTokens;
+      delete ret.tokenHash;
+      delete ret.emailVerificationToken;
+      delete ret.passwordResetToken;
+      delete ret.passwordResetExpires;
+      delete ret.loginAttempts;
+      delete ret.lockUntil;
+      delete ret.lastFailedLogin;
+      delete ret.deactivated;
+      delete ret.__v;
+      delete ret.passwordChangedAt;
+      
+      // Ensure consistent boolean fields for frontend compatibility
+      ret.isAdmin = ret.role === 'admin';
+      ret.is_admin = ret.role === 'admin';
+      ret.isActive = ret.isActive !== false;
+      ret.is_active = ret.isActive !== false;
+      ret.email_verified = ret.isEmailVerified || false;
+      
+      // Map _id to id for frontend compatibility
+      if (ret._id) {
+        ret.id = ret._id.toString();
+      }
+      
+      return ret;
+    }
+  },
   toObject: { virtuals: true },
   id: false
 });
@@ -328,9 +349,15 @@ userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    // Hash password with cost of 12
+    // Enforce bcrypt cost of 12 for security
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
+    
+    // Update passwordChangedAt for token invalidation
+    if (!this.isNew) {
+      this.passwordChangedAt = new Date();
+    }
+    
     next();
   } catch (error) {
     next(error);
@@ -381,7 +408,7 @@ userSchema.methods.createEmailVerificationToken = function() {
   return verificationToken;
 };
 
-// Generate JWT token
+// Generate JWT token with enhanced security
 userSchema.methods.generateAuthToken = function() {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
@@ -391,15 +418,35 @@ userSchema.methods.generateAuthToken = function() {
     // Development fallback - should not be used in production
     console.warn('⚠️ Using fallback JWT secret in User model - NOT FOR PRODUCTION');
     return jwt.sign(
-      { id: this._id, role: this.role },
+      { 
+        id: this._id, 
+        role: this.role,
+        iss: 'mathematico-backend',
+        aud: 'mathematico-frontend'
+      },
       'temp-fallback-secret-for-testing-only',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
+      { 
+        expiresIn: process.env.JWT_EXPIRES_IN || '90d',
+        algorithm: 'HS256',
+        issuer: 'mathematico-backend',
+        audience: 'mathematico-frontend'
+      }
     );
   }
   return jwt.sign(
-    { id: this._id, role: this.role },
+    { 
+      id: this._id, 
+      role: this.role,
+      iss: 'mathematico-backend',
+      aud: 'mathematico-frontend'
+    },
     secret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '90d' }
+    { 
+      expiresIn: process.env.JWT_EXPIRES_IN || '90d',
+      algorithm: 'HS256',
+      issuer: 'mathematico-backend',
+      audience: 'mathematico-frontend'
+    }
   );
 };
 
@@ -437,9 +484,15 @@ userSchema.methods.resetLoginAttempts = async function() {
   });
 };
 
-// Instance method to check password
+// Instance method to check password with timing-safe comparison
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  try {
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    return isMatch;
+  } catch (error) {
+    // In case of error, return false to prevent timing attacks
+    return false;
+  }
 };
 
 // Instance method to get public profile
