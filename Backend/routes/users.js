@@ -3,20 +3,9 @@ const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 const connectDB = require('../config/database');
 
-// Import MongoDB models with safe fallback
-let User;
-try {
-  User = require('../models/User');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('✅ MongoDB models loaded for users routes');
-  }
-} catch (error) {
-  console.warn('⚠️ User model not available, using fallback user store');
-  User = {
-    findById: async () => null,
-    updateUser: async () => null
-  };
-}
+// Import User model - serverless-safe direct import
+// The User model uses mongoose.models.User || mongoose.model() pattern
+const User = require('../models/User');
 
 // Root endpoint (public info)
 router.get('/', (req, res) => {

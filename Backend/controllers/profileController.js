@@ -1,15 +1,9 @@
 // Profile Controller - Handles user profile operations
 const connectDB = require('../config/database');
 
-// Import User model
-let UserModel;
-try {
-  UserModel = require('../models/User');
-} catch (error) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️ User model not available:', error && error.message ? error.message : error);
-  }
-}
+// Import User model - serverless-safe direct import
+// The User model uses mongoose.models.User || mongoose.model() pattern
+const UserModel = require('../models/User');
 
 const { uploadFileToCloud } = require('../utils/fileUpload');
 

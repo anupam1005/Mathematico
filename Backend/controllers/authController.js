@@ -8,54 +8,10 @@ const connectDB = require('../config/database');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Import User model - ensure it's always available
-// Use mongoose.model() to get or create the model (handles serverless cold starts)
-let UserModel;
-try {
-  const mongoose = require('mongoose');
-  // Check if model already exists (from previous invocation)
-  if (mongoose.models.User) {
-    UserModel = mongoose.models.User;
-  } else {
-    // Import and register the model
-    UserModel = require('../models/User');
-  }
-  
-  // Validate model is actually available
-  if (!UserModel) {
-    throw new Error('User model failed to load');
-  }
-} catch (error) {
-  console.error('MONGO_MODEL_ERROR', {
-    message: error?.message || 'Unknown error',
-    name: error?.name || 'ModelError',
-    code: 'USER_MODEL_LOAD_FAILED',
-    stack: error?.stack
-  });
-  // In production, we should fail fast if model can't be loaded
-  // But we'll let the individual route handlers check and return 503
-  UserModel = null;
-}
-
-/**
- * Helper function to ensure User model is available
- * Returns 503 if model is not available
- */
-const ensureUserModel = (res) => {
-  if (!UserModel) {
-    console.error('MONGO_MODEL_ERROR', {
-      message: 'User model unavailable at runtime',
-      code: 'USER_MODEL_UNAVAILABLE'
-    });
-    return res.status(503).json({
-      success: false,
-      message: 'User model unavailable',
-      error: 'Service Unavailable',
-      timestamp: new Date().toISOString()
-    });
-  }
-  return null; // Model is available
-};
+// Import User model - serverless-safe direct import
+// The User model uses mongoose.models.User || mongoose.model() pattern
+// which ensures it works correctly in serverless cold-start scenarios
+const UserModel = require('../models/User');
 
 const getEmailTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -128,10 +84,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     // Connect to database (ensureDatabase middleware should handle this, but double-check)
     await connectDB();
     
@@ -163,10 +115,6 @@ const login = async (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
-
-      // Ensure User model is available
-      const modelCheck = ensureUserModel(res);
-      if (modelCheck) return modelCheck;
 
       // Upsert admin user in MongoDB to get a stable ObjectId
       let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
@@ -371,10 +319,6 @@ const register = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
 
     // Connect to database (ensureDatabase middleware should handle this, but double-check)
     await connectDB();
@@ -596,10 +540,6 @@ const refreshToken = async (req, res) => {
       });
     }
 
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     // Connect to database (ensureDatabase middleware should handle this, but double-check)
     await connectDB();
     
@@ -691,10 +631,6 @@ const refreshToken = async (req, res) => {
  */
 const verifyEmail = async (req, res) => {
   try {
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     const token = req.body.token || req.query.token;
     const email = req.body.email || req.query.email;
 
@@ -748,10 +684,6 @@ const verifyEmail = async (req, res) => {
  */
 const forgotPassword = async (req, res) => {
   try {
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({
@@ -821,10 +753,6 @@ const forgotPassword = async (req, res) => {
  */
 const resetPassword = async (req, res) => {
   try {
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     const token = req.body.token || req.query.token;
     const newPassword = req.body.password || req.body.newPassword;
     const confirmPassword = req.body.confirmPassword;
@@ -886,10 +814,6 @@ const resetPassword = async (req, res) => {
  */
 const changePassword = async (req, res) => {
   try {
-    // Ensure User model is available
-    const modelCheck = ensureUserModel(res);
-    if (modelCheck) return modelCheck;
-
     const userId = req.user?.id;
     const currentPassword = req.body.currentPassword || req.body.oldPassword;
     const newPassword = req.body.newPassword || req.body.password;

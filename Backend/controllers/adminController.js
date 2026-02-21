@@ -25,20 +25,15 @@ const withTimeout = (fn, timeoutMs = 25000) => {
   };
 };
 
-// Import models
-let BookModel, UserModel, CourseModel, LiveClassModel;
-let PaymentModel;
-try {
-  BookModel = require('../models/Book');
-  UserModel = require('../models/User');
-  CourseModel = require('../models/Course');
-  LiveClassModel = require('../models/LiveClass');
-} catch (error) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️ Admin models not available:', error && error.message ? error.message : error);
-  }
-}
+// Import models - serverless-safe direct imports
+// Models use mongoose.models.ModelName || mongoose.model() pattern
+const BookModel = require('../models/Book');
+const UserModel = require('../models/User');
+const CourseModel = require('../models/Course');
+const LiveClassModel = require('../models/LiveClass');
 
+// Payment model is optional
+let PaymentModel;
 try {
   PaymentModel = require('../models/Payment');
 } catch (_) {

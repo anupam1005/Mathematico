@@ -1,18 +1,12 @@
 // Student Controller - Handles student operations with MongoDB
 const connectDB = require('../config/database');
 
-// Import models
-let CourseModel, BookModel, LiveClassModel, UserModel;
-try {
-  CourseModel = require('../models/Course');
-  BookModel = require('../models/Book');
-  LiveClassModel = require('../models/LiveClass');
-  UserModel = require('../models/User');
-} catch (error) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️ Student models not available:', error && error.message ? error.message : error);
-  }
-}
+// Import models - serverless-safe direct imports
+// Models use mongoose.models.ModelName || mongoose.model() pattern
+const CourseModel = require('../models/Course');
+const BookModel = require('../models/Book');
+const LiveClassModel = require('../models/LiveClass');
+const UserModel = require('../models/User');
 
 /**
  * Get student dashboard

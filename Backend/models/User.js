@@ -527,4 +527,7 @@ userSchema.methods.hasValidRefreshToken = function(tokenHash) {
   return true;
 };
 
-module.exports = mongoose.model('User', userSchema);
+// Serverless-safe model export pattern
+// In serverless environments (Vercel), models may persist across invocations
+// This pattern prevents "Cannot overwrite model User" errors
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
