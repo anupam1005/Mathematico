@@ -445,10 +445,19 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 // Instance method to get public profile
 userSchema.methods.getPublicProfile = function() {
   const userObject = this.toObject();
+  
+  // Remove ALL sensitive fields that must never be exposed to clients
   delete userObject.password;
+  delete userObject.refreshTokens;
   delete userObject.emailVerificationToken;
   delete userObject.passwordResetToken;
   delete userObject.passwordResetExpires;
+  delete userObject.loginAttempts;
+  delete userObject.lockUntil;
+  delete userObject.lastFailedLogin;
+  delete userObject.deactivated;
+  delete userObject.__v;
+  delete userObject.passwordChangedAt;
   
   // Ensure isAdmin field is set based on role
   userObject.isAdmin = this.role === 'admin';

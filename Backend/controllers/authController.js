@@ -507,7 +507,7 @@ const getCurrentUser = async (req, res) => {
     return res.json({
       success: true,
       data: {
-        user: user
+        user: user.getPublicProfile()
       },
       timestamp: new Date().toISOString()
     });

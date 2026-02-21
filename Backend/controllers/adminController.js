@@ -177,8 +177,14 @@ const getAllUsers = async (req, res) => {
     res.json({
       success: true,
       data: (users || []).map(u => ({
-        ...u,
         id: u._id?.toString?.() || u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        isActive: u.isActive,
+        isEmailVerified: u.isEmailVerified,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
         isAdmin: u.role === 'admin',
         is_admin: u.role === 'admin',
         is_active: u.isActive !== false,
@@ -216,17 +222,24 @@ const getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+    const sanitizedUser = {
+      id: user._id?.toString?.() || user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      isEmailVerified: user.isEmailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      isAdmin: user.role === 'admin',
+      is_admin: user.role === 'admin',
+      is_active: user.isActive !== false,
+      status: user.isActive !== false ? 'active' : 'inactive',
+      email_verified: user.isEmailVerified === true,
+    };
     res.json({
       success: true,
-      data: {
-        ...user,
-        id: user._id?.toString?.() || user.id,
-        isAdmin: user.role === 'admin',
-        is_admin: user.role === 'admin',
-        is_active: user.isActive !== false,
-        status: user.isActive !== false ? 'active' : 'inactive',
-        email_verified: user.isEmailVerified === true,
-      },
+      data: sanitizedUser,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
