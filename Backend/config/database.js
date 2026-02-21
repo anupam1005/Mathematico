@@ -278,46 +278,4 @@ const attemptConnection = async (isProduction) => {
     });
   }
 
-  // Await the connection promise
-  try {
-    const mongooseInstance = await cached.promise;
-    
-    // Final validation: ensure connection is actually connected
-    const readyState = mongooseInstance.connection.readyState;
-    if (readyState !== 1) {
-      const error = new Error(`MongoDB connection readyState is ${readyState}, expected 1 (connected)`);
-      console.error('MONGO_CONNECTION_ERROR', {
-        message: error.message,
-        name: error.name,
-        code: 'NOT_CONNECTED',
-        readyState,
-        stack: error.stack
-      });
-      cached.conn = null;
-      cached.promise = null;
-      throw error;
-    }
-    
-    cached.conn = mongooseInstance.connection;
-    return mongooseInstance;
-  } catch (error) {
-    // Clear promise on error to allow retry
-    cached.promise = null;
-    
-    // Structured error logging
-    console.error('MONGO_CONNECTION_ERROR', {
-      message: error?.message || 'Unknown error',
-      name: error?.name || 'MongoError',
-      code: error?.code || 'AWAIT_FAILED',
-      stack: error?.stack
-    });
-    
-    // Re-throw with explicit error message
-    const connectionError = new Error(
-      `MongoDB connection failed: ${error?.message || 'Unknown error'}`
-    );
-    connectionError.originalError = error;
-    throw connectionError;
-  }
-
 module.exports = connectDB;

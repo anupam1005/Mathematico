@@ -357,10 +357,11 @@ async function startServer() {
     
     // FAIL FAST: Do not allow bootstrap to complete if DB connection fails
     bootstrapError = err;
-    throw err; // This will prevent bootstrapped from being set to true
+    // Don't throw error - allow server to start with degraded functionality
+    console.error('❌ Database connection failed during bootstrap, server starting in degraded mode');
   }
 
-  // Only after successful Mongo connection, mark bootstrap as completed
+  // Mark bootstrap as completed (even if DB connection failed)
   // Routes are already registered outside, so we only track bootstrap status
   bootstrapped = true;
 }
