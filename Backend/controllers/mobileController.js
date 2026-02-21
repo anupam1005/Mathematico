@@ -46,8 +46,9 @@ try {
   BookModel = require('../models/Book');
   CourseModel = require('../models/Course');
   LiveClassModel = require('../models/LiveClass');
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !global.modelsLoaded) {
     console.log('✅ Mobile models loaded successfully');
+    global.modelsLoaded = true;
   }
 } catch (error) {
   console.warn('⚠️ Mobile models not available:', error && error.message ? error.message : error);
@@ -62,8 +63,9 @@ const getAllCourses = async (req, res) => {
       return res.status(503).json({ success: false, message: 'Course model unavailable' });
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !global.mobileDebugLogged) {
       console.log('📱 Mobile: Fetching courses...');
+      global.mobileDebugLogged = true;
     }
     await connectDB();
 
@@ -101,7 +103,7 @@ const getAllCourses = async (req, res) => {
       ];
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) { // Only log 10% of requests
       console.log('📱 Mobile: Querying courses with filters:', { 
         query,
         page, 
@@ -117,7 +119,7 @@ const getAllCourses = async (req, res) => {
       .limit(limit)
       .lean(); // Use lean() to get plain JavaScript objects without virtuals
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) { // Only log 10% of requests
       console.log('📱 Mobile: Found courses:', courses.length);
     }
 

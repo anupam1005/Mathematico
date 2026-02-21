@@ -51,8 +51,9 @@ const upload = multer({
 let adminController = {};
 try {
   adminController = require('../controllers/adminController');
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !global.controllersLoaded) {
     console.log('✅ MongoDB AdminController loaded successfully');
+    global.controllersLoaded = true;
   }
 } catch (error) {
   console.error('❌ Failed to load AdminController:', error && error.message ? error.message : error);

@@ -4,8 +4,9 @@ const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
 
 // Import student controller
 const studentController = require('../controllers/studentController');
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !global.controllersLoaded) {
   console.log('✅ StudentController loaded successfully');
+  global.controllersLoaded = true;
 }
 
 // Root endpoint (public info)
