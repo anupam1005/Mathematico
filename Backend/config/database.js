@@ -16,6 +16,8 @@ if (!cached) {
  */
 const connectDB = async () => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const maxRetries = isProduction ? 3 : 2;
+  const retryDelay = isProduction ? 2000 : 1000; // 2s delay in production, 1s in dev
   
   // Check if we have a cached connection that's still alive
   if (cached.conn) {
@@ -32,6 +34,95 @@ const connectDB = async () => {
 
   // Create new connection promise if one doesn't exist
   if (!cached.promise) {
+    let lastError = null;
+    
+    // Retry connection logic
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`MONGO_CONNECTION_ATTEMPT`, {
+          attempt,
+          maxRetries,
+          timestamp: new Date().toISOString()
+        });
+        
+        cached.promise = attemptConnection(isProduction);
+        const mongooseInstance = await cached.promise;
+        return mongooseInstance;
+        
+      } catch (error) {
+        lastError = error;
+        console.error(`MONGO_CONNECTION_ATTEMPT_${attempt}_FAILED`, {
+          attempt,
+          maxRetries,
+          message: error?.message || 'Unknown error',
+          code: error?.code || 'UNKNOWN',
+          willRetry: attempt < maxRetries
+        });
+        
+        // Reset promise on failed attempt
+        cached.promise = null;
+        
+        if (attempt < maxRetries) {
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt)); // Exponential backoff
+        }
+      }
+    }
+    
+    // All retries failed
+    const connectionError = new Error(
+      `MongoDB connection failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
+    );
+    connectionError.originalError = lastError;
+    connectionError.code = 'CONNECTION_FAILED';
+    throw connectionError;
+  }
+
+  // Await existing connection promise
+  try {
+    const mongooseInstance = await cached.promise;
+    
+    // Final validation: ensure connection is actually connected
+    const readyState = mongooseInstance.connection.readyState;
+    if (readyState !== 1) {
+      const error = new Error(`MongoDB connection readyState is ${readyState}, expected 1 (connected)`);
+      console.error('MONGO_CONNECTION_ERROR', {
+        message: error.message,
+        name: error.name,
+        code: 'NOT_CONNECTED',
+        readyState,
+        stack: error.stack
+      });
+      cached.conn = null;
+      cached.promise = null;
+      throw error;
+    }
+    
+    cached.conn = mongooseInstance.connection;
+    return mongooseInstance;
+  } catch (error) {
+    // Clear promise on error to allow retry
+    cached.promise = null;
+    
+    // Structured error logging
+    console.error('MONGO_CONNECTION_ERROR', {
+      message: error?.message || 'Unknown error',
+      name: error?.name || 'MongoError',
+      code: error?.code || 'AWAIT_FAILED',
+      stack: error?.stack
+    });
+    
+    // Re-throw with explicit error message
+    const connectionError = new Error(
+      `MongoDB connection failed: ${error?.message || 'Unknown error'}`
+    );
+    connectionError.originalError = error;
+    throw connectionError;
+  }
+};
+
+// Helper function to attempt connection
+const attemptConnection = async (isProduction) => {
     // STRICT: Fail fast if MONGO_URI is missing
     // In production, ONLY read from Vercel environment variables
     const mongoURI = (process.env.MONGO_URI || process.env.MONGODB_URI || '').trim();
@@ -71,14 +162,17 @@ const connectDB = async () => {
     // Create connection promise
     cached.promise = mongoose.connect(finalURI, {
       ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 15000, // 15 seconds timeout
-      socketTimeoutMS: 45000,
+      maxPoolSize: isProduction ? 5 : 10, // Reduced pool for serverless
+      serverSelectionTimeoutMS: isProduction ? 30000 : 15000, // Increased timeout for production
+      socketTimeoutMS: isProduction ? 60000 : 45000, // Increased socket timeout
       bufferCommands: false, // Disable mongoose buffering
-      connectTimeoutMS: 10000,
-      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: isProduction ? 20000 : 10000, // Increased connect timeout
+      heartbeatFrequencyMS: isProduction ? 30000 : 10000, // Increased heartbeat for serverless
       retryWrites: true,
-      w: 'majority'
+      w: 'majority',
+      // Serverless-specific options
+      maxIdleTimeMS: isProduction ? 10000 : 30000, // Close idle connections faster in serverless
+      waitQueueTimeoutMS: isProduction ? 5000 : 10000 // Reduce wait time
     }).then((mongooseInstance) => {
       // Validate connection actually succeeded
       const readyState = mongooseInstance.connection.readyState;
@@ -225,6 +319,5 @@ const connectDB = async () => {
     connectionError.originalError = error;
     throw connectionError;
   }
-};
 
 module.exports = connectDB;
