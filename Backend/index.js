@@ -48,6 +48,21 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/favicon.png", (req, res) => res.status(204).end());
 app.get("/favicon", (req, res) => res.status(204).end());
 
+// 5) Register security middleware, routes, and error handling IMMEDIATELY after app creation
+// This ensures routes are ALWAYS available, regardless of DB connection status
+registerSecurityMiddleware();
+
+// JWT validation - graceful degradation (non-critical)
+try {
+  validateJwtConfig();
+} catch (jwtErr) {
+  console.warn('⚠️ JWT configuration invalid:', jwtErr && jwtErr.message ? jwtErr.message : jwtErr);
+  // Continue without JWT - routes will handle missing tokens gracefully
+}
+
+registerRoutes();
+registerErrorHandling();
+
 let bootstrapped = false;
 let bootstrapPromise = null;
 let bootstrapError = null;
@@ -335,66 +350,10 @@ async function startServer() {
     throw err; // This will prevent bootstrapped from being set to true
   }
 
-  // Only after successful Mongo connection:
-  // - Register security middleware
-  // - Register auth routes
-  // - Register API routes
-  try {
-    // JWT validation - graceful degradation (non-critical)
-    try {
-      validateJwtConfig();
-    } catch (jwtErr) {
-      console.warn('⚠️ JWT configuration invalid:', jwtErr && jwtErr.message ? jwtErr.message : jwtErr);
-      // Continue without JWT - routes will handle missing tokens gracefully
-    }
-    
-    registerSecurityMiddleware();
-    registerRoutes();
-    registerErrorHandling();
-    
-    // Only mark bootstrap as completed if we got here without errors
-    // This ensures DB connection is required for bootstrap completion
-    bootstrapped = true;
-  } catch (err) {
-    bootstrapError = err;
-    throw err;
-  }
+  // Only after successful Mongo connection, mark bootstrap as completed
+  // Routes are already registered outside, so we only track bootstrap status
+  bootstrapped = true;
 }
-
-// Bootstrap gate: never block `/` and favicon routes
-app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/favicon.ico' || req.path === '/favicon.png' || req.path === '/favicon') return next();
-
-  // Reset bootstrap error on each request to allow recovery
-  if (bootstrapError && req.path.startsWith('/api/v1/auth/health')) {
-    bootstrapError = null;
-    bootstrapPromise = null;
-    bootstrapped = false;
-  }
-
-  if (bootstrapError) {
-    return res.status(503).json({
-      success: false,
-      message: 'Service initialization failed',
-      timestamp: new Date().toISOString(),
-      retryAfter: 30
-    });
-  }
-
-  try {
-    if (!bootstrapPromise) bootstrapPromise = startServer();
-    await bootstrapPromise;
-    return next();
-  } catch (err) {
-    bootstrapError = err;
-    return res.status(503).json({
-      success: false,
-      message: 'Service unavailable',
-      timestamp: new Date().toISOString(),
-      retryAfter: 30
-    });
-  }
-});
 
 // Kick off initialization on cold start (non-blocking for `/`)
 bootstrapPromise = startServer().catch((err) => {
