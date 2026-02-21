@@ -1396,6 +1396,60 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+const updateCourseStatus = async (req, res) => {
+  try {
+    if (!CourseModel) {
+      return res.status(503).json({ success: false, message: 'Course model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['draft', 'published', 'archived', 'suspended'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status (draft, published, archived, suspended) is required'
+      });
+    }
+
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+
+    const course = await CourseModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Course ${status} successfully`,
+      data: course,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update course status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update course status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 // ============= LIVE CLASS MANAGEMENT =============
 
 const getAllLiveClasses = async (req, res) => {
