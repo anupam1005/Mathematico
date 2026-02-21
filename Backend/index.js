@@ -142,7 +142,7 @@ function registerSecurityMiddleware() {
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
 
-  // Health (requires infra)
+  // Health endpoint - returns 503 if DB is disconnected
   app.get('/health', async (req, res) => {
     try {
       const mongoStatus = mongoose.connection.readyState;
@@ -153,14 +153,22 @@ function registerRoutes() {
         3: 'disconnecting'
       };
       
-      res.json({
-        status: 'ok',
+      const isConnected = mongoStatus === 1;
+      const status = isConnected ? 'ok' : 'error';
+      const statusCode = isConnected ? 200 : 503;
+      
+      // Return 503 if database is not connected
+      return res.status(statusCode).json({
+        status,
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
         database: { 
-          status: statusMap[mongoStatus] || 'unknown', 
+          status: statusMap[mongoStatus] || 'unknown',
+          readyState: mongoStatus, // Include actual readyState value (0-3)
           type: 'mongodb',
-          connected: mongoStatus === 1
+          connected: isConnected,
+          host: mongoose.connection.host || null,
+          name: mongoose.connection.name || null
         },
         bootstrap: {
           completed: bootstrapped,
@@ -171,7 +179,11 @@ function registerRoutes() {
       res.status(503).json({
         status: 'error',
         message: error && error.message ? error.message : 'Health check failed',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        database: {
+          connected: false,
+          readyState: mongoose.connection.readyState || 0
+        }
       });
     }
   });
@@ -281,13 +293,43 @@ async function startServer() {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  // Mongo - Graceful degradation instead of process.exit
+  // STRICT: MongoDB connection is REQUIRED - fail fast if connection fails
+  // Do NOT allow server to run in disconnected state
   try {
     await connectMongo();
+    
+    // Validate connection state after connection attempt
+    const readyState = mongoose.connection.readyState;
+    if (readyState !== 1) {
+      const error = new Error(`MongoDB connection failed: readyState is ${readyState}, expected 1 (connected)`);
+      console.error('MONGO_CONNECTION_ERROR', {
+        message: error.message,
+        name: error.name,
+        code: 'BOOTSTRAP_CONNECTION_FAILED',
+        readyState,
+        stack: error.stack
+      });
+      throw error;
+    }
+    
+    console.log('MONGO_BOOTSTRAP_SUCCESS', {
+      message: 'MongoDB connection established during bootstrap',
+      readyState: 1,
+      host: mongoose.connection.host,
+      database: mongoose.connection.name
+    });
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err && err.message ? err.message : err);
-    // Don't exit - allow partial functionality with degraded service
-    // Routes will handle database unavailability gracefully
+    // Log structured error
+    console.error('MONGO_CONNECTION_ERROR', {
+      message: err?.message || 'Unknown error',
+      name: err?.name || 'MongoError',
+      code: err?.code || 'BOOTSTRAP_FAILED',
+      stack: err?.stack
+    });
+    
+    // FAIL FAST: Do not allow bootstrap to complete if DB connection fails
+    bootstrapError = err;
+    throw err; // This will prevent bootstrapped from being set to true
   }
 
   // Only after successful Mongo connection:
@@ -295,7 +337,7 @@ async function startServer() {
   // - Register auth routes
   // - Register API routes
   try {
-    // JWT validation - graceful degradation
+    // JWT validation - graceful degradation (non-critical)
     try {
       validateJwtConfig();
     } catch (jwtErr) {
@@ -306,6 +348,9 @@ async function startServer() {
     registerSecurityMiddleware();
     registerRoutes();
     registerErrorHandling();
+    
+    // Only mark bootstrap as completed if we got here without errors
+    // This ensures DB connection is required for bootstrap completion
     bootstrapped = true;
   } catch (err) {
     bootstrapError = err;

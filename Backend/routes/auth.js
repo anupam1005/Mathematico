@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const { upload } = require('../utils/fileUpload');
 const { authenticateToken } = require('../middlewares/auth');
 const loginRateLimiter = require('../middleware/upstashLoginRateLimiter');
+const ensureDatabase = require('../middleware/ensureDatabase');
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
   res.status(405).json({
@@ -15,38 +16,38 @@ const methodNotAllowed = (expectedMethod, path) => (req, res) => {
   });
 };
 
-// Public auth routes
-router.post('/login', loginRateLimiter, authController.login);
+// Public auth routes - all require database connection
+router.post('/login', loginRateLimiter, ensureDatabase, authController.login);
 router.get('/login', methodNotAllowed('POST', '/login'));
-router.post('/register', authController.register);
+router.post('/register', ensureDatabase, authController.register);
 router.get('/register', methodNotAllowed('POST', '/register'));
-router.post('/logout', authController.logout);
-router.post('/refresh-token', authController.refreshToken);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
-router.post('/verify-email', authController.verifyEmail);
+router.post('/logout', ensureDatabase, authController.logout);
+router.post('/refresh-token', ensureDatabase, authController.refreshToken);
+router.post('/forgot-password', ensureDatabase, authController.forgotPassword);
+router.post('/reset-password', ensureDatabase, authController.resetPassword);
+router.post('/verify-email', ensureDatabase, authController.verifyEmail);
 
 // Health check route
 router.get('/health', authController.healthCheck);
 
-// Protected auth routes
-router.get('/profile', authenticateToken, authController.getProfile);
+// Protected auth routes - require both database and authentication
+router.get('/profile', ensureDatabase, authenticateToken, authController.getProfile);
 
 // Import profile controller
 let profileController;
 try {
   profileController = require('../controllers/profileController');
 
-  // Profile management routes
-  router.put('/profile', authenticateToken, profileController.updateProfile);
-  router.post('/profile/picture', authenticateToken, upload.single('profilePicture'), profileController.uploadProfilePicture);
-  router.delete('/profile/picture', authenticateToken, profileController.deleteProfilePicture);
-  router.put('/change-password', authenticateToken, profileController.changePassword);
+  // Profile management routes - require both database and authentication
+  router.put('/profile', ensureDatabase, authenticateToken, profileController.updateProfile);
+  router.post('/profile/picture', ensureDatabase, authenticateToken, upload.single('profilePicture'), profileController.uploadProfilePicture);
+  router.delete('/profile/picture', ensureDatabase, authenticateToken, profileController.deleteProfilePicture);
+  router.put('/change-password', ensureDatabase, authenticateToken, profileController.changePassword);
 
-  // User preferences routes
-  router.get('/preferences', authenticateToken, profileController.getPreferences);
-  router.put('/preferences', authenticateToken, profileController.updatePreferences);
-  router.delete('/account', authenticateToken, profileController.deleteAccount);
+  // User preferences routes - require both database and authentication
+  router.get('/preferences', ensureDatabase, authenticateToken, profileController.getPreferences);
+  router.put('/preferences', ensureDatabase, authenticateToken, profileController.updatePreferences);
+  router.delete('/account', ensureDatabase, authenticateToken, profileController.deleteAccount);
 
 } catch (error) {
 }

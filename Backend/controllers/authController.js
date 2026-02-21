@@ -8,13 +8,54 @@ const connectDB = require('../config/database');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Import User model
+// Import User model - ensure it's always available
+// Use mongoose.model() to get or create the model (handles serverless cold starts)
 let UserModel;
 try {
-  UserModel = require('../models/User');
+  const mongoose = require('mongoose');
+  // Check if model already exists (from previous invocation)
+  if (mongoose.models.User) {
+    UserModel = mongoose.models.User;
+  } else {
+    // Import and register the model
+    UserModel = require('../models/User');
+  }
+  
+  // Validate model is actually available
+  if (!UserModel) {
+    throw new Error('User model failed to load');
+  }
 } catch (error) {
-  console.warn(' User model not available:', error && error.message ? error.message : error);
+  console.error('MONGO_MODEL_ERROR', {
+    message: error?.message || 'Unknown error',
+    name: error?.name || 'ModelError',
+    code: 'USER_MODEL_LOAD_FAILED',
+    stack: error?.stack
+  });
+  // In production, we should fail fast if model can't be loaded
+  // But we'll let the individual route handlers check and return 503
+  UserModel = null;
 }
+
+/**
+ * Helper function to ensure User model is available
+ * Returns 503 if model is not available
+ */
+const ensureUserModel = (res) => {
+  if (!UserModel) {
+    console.error('MONGO_MODEL_ERROR', {
+      message: 'User model unavailable at runtime',
+      code: 'USER_MODEL_UNAVAILABLE'
+    });
+    return res.status(503).json({
+      success: false,
+      message: 'User model unavailable',
+      error: 'Service Unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+  return null; // Model is available
+};
 
 const getEmailTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -87,15 +128,23 @@ const login = async (req, res) => {
       });
     }
 
-    if (!UserModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'User model unavailable' 
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
+
+    // Connect to database (ensureDatabase middleware should handle this, but double-check)
+    await connectDB();
+    
+    // Final validation: ensure connection is actually established
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable',
+        error: 'Service Unavailable',
+        timestamp: new Date().toISOString()
       });
     }
-
-    // Connect to database
-    await connectDB();
 
     // Special handling for admin user (ensure persisted DB user and real ObjectId)
     if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
@@ -116,9 +165,8 @@ const login = async (req, res) => {
       }
 
       // Ensure User model is available
-      if (!UserModel) {
-        return res.status(503).json({ success: false, message: 'User model unavailable' });
-      }
+      const modelCheck = ensureUserModel(res);
+      if (modelCheck) return modelCheck;
 
       // Upsert admin user in MongoDB to get a stable ObjectId
       let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
@@ -324,15 +372,23 @@ const register = async (req, res) => {
       });
     }
 
-    if (!UserModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'User model unavailable' 
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
+
+    // Connect to database (ensureDatabase middleware should handle this, but double-check)
+    await connectDB();
+    
+    // Final validation: ensure connection is actually established
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable',
+        error: 'Service Unavailable',
+        timestamp: new Date().toISOString()
       });
     }
-
-    // Connect to database
-    await connectDB();
 
     // Check for existing user
     const existing = await UserModel.findOne({ email: email.toLowerCase() });
@@ -540,15 +596,23 @@ const refreshToken = async (req, res) => {
       });
     }
 
-    if (!UserModel) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'User model unavailable' 
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
+
+    // Connect to database (ensureDatabase middleware should handle this, but double-check)
+    await connectDB();
+    
+    // Final validation: ensure connection is actually established
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable',
+        error: 'Service Unavailable',
+        timestamp: new Date().toISOString()
       });
     }
-
-    // Connect to database
-    await connectDB();
 
     // Hash the refresh token to compare with database
     const tokenHash = hashRefreshToken(refreshToken);
@@ -627,9 +691,9 @@ const refreshToken = async (req, res) => {
  */
 const verifyEmail = async (req, res) => {
   try {
-    if (!UserModel) {
-      return res.status(503).json({ success: false, message: 'User model unavailable' });
-    }
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
 
     const token = req.body.token || req.query.token;
     const email = req.body.email || req.query.email;
@@ -684,9 +748,9 @@ const verifyEmail = async (req, res) => {
  */
 const forgotPassword = async (req, res) => {
   try {
-    if (!UserModel) {
-      return res.status(503).json({ success: false, message: 'User model unavailable' });
-    }
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
 
     const { email } = req.body;
     if (!email) {
@@ -757,9 +821,9 @@ const forgotPassword = async (req, res) => {
  */
 const resetPassword = async (req, res) => {
   try {
-    if (!UserModel) {
-      return res.status(503).json({ success: false, message: 'User model unavailable' });
-    }
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
 
     const token = req.body.token || req.query.token;
     const newPassword = req.body.password || req.body.newPassword;
@@ -822,9 +886,9 @@ const resetPassword = async (req, res) => {
  */
 const changePassword = async (req, res) => {
   try {
-    if (!UserModel) {
-      return res.status(503).json({ success: false, message: 'User model unavailable' });
-    }
+    // Ensure User model is available
+    const modelCheck = ensureUserModel(res);
+    if (modelCheck) return modelCheck;
 
     const userId = req.user?.id;
     const currentPassword = req.body.currentPassword || req.body.oldPassword;
