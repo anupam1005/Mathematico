@@ -1,5 +1,5 @@
 // Student Controller - Handles student operations with MongoDB
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 
 // Import models - serverless-safe direct imports
 // Models use mongoose.models.ModelName || mongoose.model() pattern

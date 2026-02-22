@@ -1,5 +1,5 @@
 // Admin Controller - Handles admin panel operations with MongoDB
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 const { uploadFileToCloud } = require('../utils/fileUpload');

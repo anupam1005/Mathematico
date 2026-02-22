@@ -5,7 +5,7 @@ const {
   clearRefreshTokenCookie,
   getTokenExpirationMs
 } = require('../utils/jwt');
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const {

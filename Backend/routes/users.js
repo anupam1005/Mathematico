@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern

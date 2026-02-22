@@ -1,5 +1,5 @@
 // Mobile Controller - Handles requests from React Native mobile app with MongoDB
-const connectDB = require('../config/database');
+const { connectDB } = require('../config/database');
 const { Readable, pipeline } = require('stream');
 const { promisify } = require('util');
 
