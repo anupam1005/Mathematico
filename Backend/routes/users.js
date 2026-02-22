@@ -91,31 +91,55 @@ const updateCurrentUser = async (req, res) => {
   try {
     await connectDB();
 
-    const { name, email } = req.body;
+    // Validate authenticated user exists
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { name } = req.body;
     const updateData = {};
     
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    // Only allow name field updates
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name must be a non-empty string',
+          timestamp: new Date().toISOString()
+        });
+      }
+      updateData.name = name.trim();
+    }
 
-    // Don't allow users to change their role or admin status
-    delete updateData.role;
-    delete updateData.is_admin;
-    delete updateData.isAdmin;
-    delete updateData.refreshTokens;
-    delete updateData.password;
+    // Ensure no data to update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update',
+        timestamp: new Date().toISOString()
+      });
+    }
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
-    if (!user) {
+    // Verify user exists before update
+    const existingUser = await User.findById(req.user.id);
+    if (!existingUser) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
         timestamp: new Date().toISOString()
       });
     }
+
+    // Update user with only allowed fields
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
     res.json({
       success: true,
