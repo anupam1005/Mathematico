@@ -66,6 +66,7 @@ registerErrorHandling();
 let bootstrapped = false;
 let bootstrapPromise = null;
 let bootstrapError = null;
+let lastSuccessfulConnection = null;
 
 function validateEnvironmentFormat() {
   // Strict formatting checks that are safe to run synchronously and won't break `/`.
@@ -183,7 +184,8 @@ function registerRoutes() {
         },
         bootstrap: {
           completed: bootstrapped,
-          error: bootstrapError ? bootstrapError.message : null
+          error: bootstrapError ? bootstrapError.message : null,
+          lastSuccessfulConnection: lastSuccessfulConnection || null
         }
       });
     } catch (error) {
@@ -203,7 +205,8 @@ function registerRoutes() {
         },
         bootstrap: {
           completed: bootstrapped,
-          error: bootstrapError ? bootstrapError.message : null
+          error: bootstrapError ? bootstrapError.message : null,
+          lastSuccessfulConnection: lastSuccessfulConnection || null
         },
         error: error.message
       });
@@ -311,51 +314,71 @@ function registerErrorHandling() {
 
 // 5) THEN perform async infrastructure initialization
 async function startServer() {
-  if (bootstrapped) return;
-
-  // All fatal errors must happen inside startServer()
-  validateEnvironmentFormat();
-
-  // Strict env validation (no partial startup). Keep root route independent.
-  const missing = [];
-  ['MONGO_URI'].forEach((key) => {
-    if (!process.env[key]) missing.push(key);
-  });
-  if (missing.length) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-
-  // STRICT: MongoDB connection is REQUIRED - fail fast if connection fails
-  // Use cached connection to prevent multiple connections
+  // Always check current DB state first - don't rely on stale bootstrap state
   try {
-    await connectDB();
+    const connection = await connectDB();
     
-    console.log('MONGO_BOOTSTRAP_SUCCESS', {
-      message: 'MongoDB connection established during bootstrap',
-      readyState: 1
-    });
+    // Verify connection is actually working with ping
+    await connection.db.admin().ping();
+    
+    // Clear any stale bootstrap errors on successful connection
+    if (bootstrapError || !bootstrapped) {
+      bootstrapError = null;
+      bootstrapped = true;
+      lastSuccessfulConnection = new Date().toISOString();
+      
+      console.log('MONGO_BOOTSTRAP_SUCCESS', {
+        message: 'MongoDB connection established during bootstrap',
+        readyState: connection.readyState,
+        host: connection.host,
+        database: connection.name,
+        timestamp: lastSuccessfulConnection
+      });
+    }
+    
+    return;
   } catch (err) {
-    // Log structured error
-    console.error('MONGO_CONNECTION_ERROR', {
-      message: err?.message || 'Unknown error',
-      name: err?.name || 'MongoError',
-      code: err?.code || 'BOOTSTRAP_FAILED',
-      stack: err?.stack
-    });
+    // Only set bootstrap error if we don't have a working connection
+    const currentConnection = mongoose.connection;
+    const isActuallyConnected = currentConnection.readyState === 1;
     
-    // FAIL FAST: Do not allow bootstrap to complete if DB connection fails
-    bootstrapError = err;
-    throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
+    if (!isActuallyConnected) {
+      bootstrapError = err;
+      bootstrapped = false;
+      
+      console.error('MONGO_CONNECTION_ERROR', {
+        message: err?.message || 'Unknown error',
+        name: err?.name || 'MongoError',
+        code: err?.code || 'BOOTSTRAP_FAILED',
+        stack: err?.stack,
+        readyState: currentConnection.readyState
+      });
+      
+      throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
+    } else {
+      // Connection is actually working despite bootstrap error - clear the stale error
+      bootstrapError = null;
+      bootstrapped = true;
+      lastSuccessfulConnection = new Date().toISOString();
+      
+      console.log('MONGO_BOOTSTRAP_SELF_HEAL', {
+        message: 'Bootstrap error cleared - connection is working',
+        readyState: currentConnection.readyState,
+        host: currentConnection.host,
+        database: currentConnection.name,
+        timestamp: lastSuccessfulConnection
+      });
+    }
   }
-
-  // Mark bootstrap as completed (only successful if DB connection succeeded)
-  // Routes are already registered outside, so we only track bootstrap status
-  bootstrapped = true;
 }
 
 // Kick off initialization on cold start (non-blocking for `/`)
 bootstrapPromise = startServer().catch((err) => {
-  bootstrapError = err;
+  // Only set bootstrap error if database is actually disconnected
+  const currentConnection = mongoose.connection;
+  if (currentConnection.readyState !== 1) {
+    bootstrapError = err;
+  }
   console.error('❌ Startup error:', err && err.message ? err.message : err);
 });
 
