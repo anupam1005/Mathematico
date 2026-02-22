@@ -8,7 +8,7 @@ const helmet = require('helmet');
 const mongoose = require('mongoose');
 const net = require('net');
 
-const connectMongo = require('./config/database');
+const { connectDB } = require('./config/database');
 const configureTrustProxy = require('./config/trustProxy');
 const { validateJwtConfig } = require('./utils/jwt');
 
@@ -160,33 +160,26 @@ function registerSecurityMiddleware() {
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
 
-  // Health endpoint - returns 503 if DB is disconnected
+  // Health endpoint - performs actual connection and ping test
   app.get('/health', async (req, res) => {
     try {
-      const mongoStatus = mongoose.connection.readyState;
-      const statusMap = {
-        0: 'disconnected',
-        1: 'connected',
-        2: 'connecting',
-        3: 'disconnecting'
-      };
+      const { performHealthCheck } = require('./config/database');
       
-      const isConnected = mongoStatus === 1;
-      const status = isConnected ? 'ok' : 'error';
-      const statusCode = isConnected ? 200 : 503;
+      // Perform actual health check with connection and ping
+      const healthData = await performHealthCheck();
       
-      // Return 503 if database is not connected
-      return res.status(statusCode).json({
-        status,
+      return res.status(200).json({
+        status: 'ok',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
         database: { 
-          status: statusMap[mongoStatus] || 'unknown',
-          readyState: mongoStatus, // Include actual readyState value (0-3)
+          status: 'connected',
+          readyState: healthData.readyState,
           type: 'mongodb',
-          connected: isConnected,
-          host: mongoose.connection.host || null,
-          name: mongoose.connection.name || null
+          connected: healthData.connected,
+          host: healthData.host,
+          name: healthData.name,
+          ping: healthData.ping
         },
         bootstrap: {
           completed: bootstrapped,
@@ -194,14 +187,25 @@ function registerRoutes() {
         }
       });
     } catch (error) {
-      res.status(503).json({
+      // Health check failed - return 503 with detailed error
+      return res.status(503).json({
         status: 'error',
-        message: error && error.message ? error.message : 'Health check failed',
+        environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
         database: {
+          status: 'disconnected',
+          readyState: mongoose.connection.readyState || 0,
+          type: 'mongodb',
           connected: false,
-          readyState: mongoose.connection.readyState || 0
-        }
+          host: null,
+          name: null,
+          error: error.message
+        },
+        bootstrap: {
+          completed: bootstrapped,
+          error: bootstrapError ? bootstrapError.message : null
+        },
+        error: error.message
       });
     }
   });
@@ -322,29 +326,13 @@ async function startServer() {
   }
 
   // STRICT: MongoDB connection is REQUIRED - fail fast if connection fails
-  // Do NOT allow server to run in disconnected state
+  // Use cached connection to prevent multiple connections
   try {
-    await connectMongo();
-    
-    // Validate connection state after connection attempt
-    const readyState = mongoose.connection.readyState;
-    if (readyState !== 1) {
-      const error = new Error(`MongoDB connection failed: readyState is ${readyState}, expected 1 (connected)`);
-      console.error('MONGO_CONNECTION_ERROR', {
-        message: error.message,
-        name: error.name,
-        code: 'BOOTSTRAP_CONNECTION_FAILED',
-        readyState,
-        stack: error.stack
-      });
-      throw error;
-    }
+    await connectDB();
     
     console.log('MONGO_BOOTSTRAP_SUCCESS', {
       message: 'MongoDB connection established during bootstrap',
-      readyState: 1,
-      host: mongoose.connection.host,
-      database: mongoose.connection.name
+      readyState: 1
     });
   } catch (err) {
     // Log structured error
