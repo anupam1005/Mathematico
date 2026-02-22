@@ -7,7 +7,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "vercel-build": "echo '✅ Build complete'",
-    "postinstall": "echo '📦 Dependencies installed successfully'"
+    "postinstall": "echo '📦 Dependencies installed successfully'",
+    "mongo-diagnostic": "node scripts/mongo-diagnostic.js",
+    "validate-mongo": "node scripts/validate-mongo-uri.js"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.1",
