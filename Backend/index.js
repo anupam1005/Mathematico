@@ -248,9 +248,6 @@ function registerRoutes() {
   app.use(`${API_PREFIX}/student`, require('./routes/student'));
   app.use(`${API_PREFIX}/users`, require('./routes/users'));
   app.use(`${API_PREFIX}/payments`, require('./routes/payment'));
-  
-  // MongoDB test endpoint (for debugging - remove in production)
-  app.use(`${API_PREFIX}/test/mongo`, require('./routes/test-mongo'));
 
   // Root API endpoint
   app.get(`${API_PREFIX}`, (req, res) => {
@@ -268,8 +265,7 @@ function registerRoutes() {
         student: `${API_PREFIX}/student`,
         users: `${API_PREFIX}/users`,
         health: '/health',
-        redisHealth: '/api/v1/health/redis',
-        mongoTest: `${API_PREFIX}/test/mongo`
+        redisHealth: '/api/v1/health/redis'
       }
     });
   });
