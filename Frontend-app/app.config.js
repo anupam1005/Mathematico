@@ -22,7 +22,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 23,
+      versionCode: 24,
       usesCleartextTraffic: false,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',

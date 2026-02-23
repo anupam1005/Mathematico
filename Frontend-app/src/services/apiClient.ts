@@ -34,6 +34,8 @@ api.interceptors.request.use(
         'Accept': config.headers?.['Accept'],
         'Authorization': config.headers?.['Authorization'] ? 'Bearer ***' : 'none'
       });
+      console.log('[AUTH API] Base URL:', config.baseURL || API_BASE_URL);
+      console.log('[AUTH API] Relative URL:', config.url);
     }
     
     try {
@@ -43,12 +45,15 @@ api.interceptors.request.use(
         headers.set('Authorization', `Bearer ${token}`);
         config.headers = headers;
       }
-    } catch {
-      // ignore token read failures
+    } catch (error) {
+      console.error('[AUTH API] Token retrieval failed:', error);
     }
     return config;
   },
-  () => Promise.reject({ message: 'Request preparation failed' })
+  (error) => {
+    console.error('[AUTH API] Request interceptor error:', error);
+    return Promise.reject({ message: 'Request preparation failed' });
+  }
 );
 
 api.interceptors.response.use(
@@ -88,12 +93,29 @@ api.interceptors.response.use(
   }
 );
 
-const normalizePath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+const normalizePath = (path: string) => {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return normalized;
+};
 
 const buildUrl = (basePath: string, path?: string) => {
+  // Remove trailing slash from base path
   const normalizedBase = basePath.replace(/\/$/, '');
+  
+  // If no path provided, return just the base
   if (!path) return normalizedBase;
-  return `${normalizedBase}${normalizePath(path)}`;
+  
+  // Normalize the path to ensure it starts with /
+  const normalizedPath = normalizePath(path);
+  
+  // CRITICAL FIX: Prevent double path concatenation
+  // If basePath already contains the path, don't append it again
+  if (normalizedBase.endsWith(normalizedPath)) {
+    return normalizedBase;
+  }
+  
+  // Concatenate base and path
+  return `${normalizedBase}${normalizedPath}`;
 };
 
 export const withBasePath = (basePath: string) => ({

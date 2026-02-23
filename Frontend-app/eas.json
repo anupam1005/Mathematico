@@ -4,15 +4,21 @@
     "appVersionSource": "local"
   },
   "build": {
-    "preview": {
-      "android": {
-        "buildType": "apk"
-      }
-    },
     "production": {
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://mathematico-backend-new.vercel.app/api/v1",
+        "EXPO_PUBLIC_ENV": "production"
+      },
+      "channel": "production"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "preview"
     }
   }
 }
