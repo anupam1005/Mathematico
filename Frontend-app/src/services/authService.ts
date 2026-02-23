@@ -1,6 +1,7 @@
 import { API_PATHS } from '../constants/apiPaths';
 import { API_BASE_URL } from '../config';
 import { withBasePath } from './apiClient';
+import api from './apiClient';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
 
@@ -47,17 +48,21 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      // Log the exact endpoint being called
-      const loginUrl = `${API_BASE_URL}/auth/login`;
+      // CRITICAL FIX: Use direct API call instead of withBasePath to avoid duplication
+      const loginUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('[AUTH SERVICE] Login URL:', loginUrl);
+      console.log('[AUTH SERVICE] API_BASE_URL:', API_BASE_URL);
+      console.log('[AUTH SERVICE] API_PATHS.auth:', API_PATHS.auth);
       
-      const response = await authApi.post('/login', { email, password });
+      // Direct API call to prevent path duplication
+      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
       const payload = response?.data;
       
       // Log response structure for debugging
       console.log('[AUTH SERVICE] Login response success:', payload?.success);
       console.log('[AUTH SERVICE] Login response has accessToken:', !!payload?.data?.accessToken);
       console.log('[AUTH SERVICE] Login response has token:', !!payload?.data?.token);
+      console.log('[AUTH SERVICE] Full response payload:', JSON.stringify(payload, null, 2));
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token;
 
@@ -96,7 +101,8 @@ const authService = {
         status: safe.response?.status,
         message: safe.message,
         responseData: safe.response?.data,
-        url: safe.config?.url || safe.request?.url
+        url: safe.config?.url || safe.request?.url,
+        fullError: err
       });
 
       let message = 'Login failed';
@@ -126,17 +132,21 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      // Log the exact endpoint being called
-      const registerUrl = `${API_BASE_URL}/auth/register`;
+      // CRITICAL FIX: Use direct API call instead of withBasePath to avoid duplication
+      const registerUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('[AUTH SERVICE] Register URL:', registerUrl);
+      console.log('[AUTH SERVICE] API_BASE_URL:', API_BASE_URL);
+      console.log('[AUTH SERVICE] API_PATHS.auth:', API_PATHS.auth);
       
-      const response = await authApi.post('/register', { name, email, password });
+      // Direct API call to prevent path duplication
+      const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
       const payload = response?.data;
       
       // Log response structure for debugging
       console.log('[AUTH SERVICE] Register response success:', payload?.success);
       console.log('[AUTH SERVICE] Register response has accessToken:', !!payload?.data?.accessToken);
       console.log('[AUTH SERVICE] Register response has token:', !!payload?.data?.token);
+      console.log('[AUTH SERVICE] Full response payload:', JSON.stringify(payload, null, 2));
 
       if (!payload?.success) {
         return {
@@ -166,7 +176,8 @@ const authService = {
         status: safe.response?.status,
         message: safe.message,
         responseData: safe.response?.data,
-        url: safe.config?.url || safe.request?.url
+        url: safe.config?.url || safe.request?.url,
+        fullError: err
       });
 
       let message = 'Registration failed';
@@ -194,11 +205,28 @@ const authService = {
     try {
       const refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
-      await authApi.post('/logout', payloadBody);
+      // CRITICAL FIX: Use direct API call to prevent path duplication
+      await api.post(`${API_PATHS.auth}/logout`, payloadBody);
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       return { success: true, message: 'Logout successful' };
-    } catch {
+    } catch (err) {
+      const safe = createSafeError(err);
+      console.error('[AUTH SERVICE] Logout error:', {
+        status: safe.response?.status,
+        message: safe.message,
+        responseData: safe.response?.data,
+        url: safe.config?.url || safe.request?.url
+      });
+      
+      // Still clear local tokens even if logout API fails
+      try {
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('refreshToken');
+      } catch (storageError) {
+        console.error('[AUTH SERVICE] Token cleanup error:', storageError);
+      }
+      
       return { success: false, message: 'Logout failed' };
     }
   },
@@ -208,19 +236,24 @@ const authService = {
   async getToken(): Promise<string | null> {
     try {
       const token = await Storage.getItem('authToken');
-      return typeof token === 'string' && token.length > 10 ? token : null;
-    } catch {
+      const isValidToken = typeof token === 'string' && token.length > 10;
+      console.log('[AUTH SERVICE] Token retrieval:', { hasToken: !!token, isValid: isValidToken, tokenLength: token?.length });
+      return isValidToken ? token : null;
+    } catch (err) {
+      console.error('[AUTH SERVICE] Token retrieval error:', err);
       return null;
     }
   },
 
   async clearInvalidTokens(): Promise<void> {
     try {
+      console.log('[AUTH SERVICE] Clearing invalid tokens');
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       await Storage.deleteItem('user');
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('[AUTH SERVICE] Token cleanup error:', err);
+      // Don't throw - cleanup failures should not break auth flows
     }
   },
 
@@ -231,7 +264,8 @@ const authService = {
       const refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
-      const response = await authApi.post('/refresh-token', payloadBody);
+      // CRITICAL FIX: Use direct API call to prevent path duplication
+      const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
       const payload = response?.data;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token;
@@ -274,7 +308,8 @@ const authService = {
 
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const response = await authApi.put('/profile', data);
+      // CRITICAL FIX: Use direct API call to prevent path duplication
+      const response = await api.put(`${API_PATHS.auth}/profile`, data);
       const payload = response?.data;
 
       if (!payload?.success) {
