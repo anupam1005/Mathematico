@@ -7,7 +7,6 @@
 export const createSafeError = (error: any) => {
   const safe: any = { 
     message: 'Request failed', 
-    code: 'UNKNOWN', 
     response: null, 
     config: null 
   };

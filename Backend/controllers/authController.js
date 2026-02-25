@@ -111,6 +111,7 @@ const login = async (req, res) => {
     // Special handling for admin user (ensure persisted DB user and real ObjectId)
     if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
       if (!ADMIN_CONFIGURED) {
+        console.error('[AUTH] Admin credentials not configured - missing ADMIN_EMAIL or ADMIN_PASSWORD');
         return res.status(503).json({
           success: false,
           message: 'Admin credentials are not configured',
@@ -118,17 +119,10 @@ const login = async (req, res) => {
         });
       }
 
-      if (password !== ADMIN_PASSWORD) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid admin credentials',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Upsert admin user in MongoDB to get a stable ObjectId
+      // Find or create admin user in MongoDB
       let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
       if (!dbAdmin) {
+        console.log('[AUTH] Creating admin user in database');
         // Create new admin user - password will be hashed automatically by pre-save middleware
         dbAdmin = new UserModel({
           name: 'Admin User',
@@ -136,17 +130,31 @@ const login = async (req, res) => {
           password: ADMIN_PASSWORD, // Will be hashed by pre-save middleware
           role: 'admin',
           isAdmin: true,
-          isActive: true
+          isActive: true,
+          isEmailVerified: true
         });
         await dbAdmin.save();
+        console.log('[AUTH] Admin user created successfully');
       } else {
         // Ensure role flags and update last login
         dbAdmin.role = 'admin';
         dbAdmin.isAdmin = true;
         dbAdmin.isActive = true;
+        dbAdmin.isEmailVerified = true;
         dbAdmin.lastLogin = new Date();
         dbAdmin.loginCount = (dbAdmin.loginCount || 0) + 1;
         await dbAdmin.save();
+      }
+
+      // Verify the provided password matches the stored hash using the same comparison method as regular users
+      const isPasswordValid = await dbAdmin.comparePassword(password);
+      if (!isPasswordValid) {
+        console.log('[AUTH] Admin login password verification failed');
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin credentials',
+          timestamp: new Date().toISOString()
+        });
       }
       const tokens = generateTokenPair(dbAdmin);
 

@@ -8,6 +8,7 @@ import axios, {
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
+import Constants from 'expo-constants';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -70,7 +71,17 @@ api.interceptors.response.use(
     
     // Handle specific JSON parsing errors
     if (safeError.message && safeError.message.includes('JSON Parse error')) {
-      if (__DEV__) {
+      // PRODUCTION FIX: Safe Constants.expoConfig access to prevent Hermes crashes
+      let isProduction = false;
+      try {
+        const extraConfig = Constants?.expoConfig?.extra;
+        isProduction = !!(extraConfig && typeof extraConfig === 'object' && 'EXPO_PUBLIC_ENV' in extraConfig && extraConfig.EXPO_PUBLIC_ENV === 'production');
+      } catch (error) {
+        // Assume production if Constants access fails
+        isProduction = true;
+      }
+      
+      if (!isProduction) {
         console.error('API Client: JSON parsing error detected');
       }
       return Promise.reject({

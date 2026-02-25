@@ -19,7 +19,14 @@ export interface Settings extends UserSettings {}
 export const getLocalSettings = async (): Promise<UserSettings> => {
   try {
     const settings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
-    return settings ? JSON.parse(settings) : { ...DEFAULT_SETTINGS };
+    if (!settings) return { ...DEFAULT_SETTINGS };
+    
+    try {
+      return JSON.parse(settings);
+    } catch (parseError) {
+      console.error('Settings parse error, using defaults:', parseError);
+      return { ...DEFAULT_SETTINGS };
+    }
   } catch (error: any) {
     console.error('Error getting local settings');
     return { ...DEFAULT_SETTINGS };
@@ -50,7 +57,14 @@ export const getServerSettings = async (): Promise<UserSettings> => {
 export const getPendingSettings = async (): Promise<PendingSetting[]> => {
   try {
     const pending = await AsyncStorage.getItem(PENDING_SETTINGS_KEY);
-    return pending ? JSON.parse(pending) : [];
+    if (!pending) return [];
+    
+    try {
+      return JSON.parse(pending);
+    } catch (parseError) {
+      console.error('Pending settings parse error:', parseError);
+      return [];
+    }
   } catch (error: any) {
     console.error('Error getting pending settings');
     return [];
@@ -228,12 +242,24 @@ export const SettingsService = {
       // Fall back to local storage
       const localSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (localSettings) {
-        return {
-          success: true,
-          message: 'Settings loaded from local storage',
-          data: JSON.parse(localSettings),
-          isOffline: !isConnected,
-        };
+        try {
+          const parsedSettings = JSON.parse(localSettings);
+          return {
+            success: true,
+            message: 'Settings loaded from local storage',
+            data: parsedSettings,
+            isOffline: !isConnected,
+          };
+        } catch (parseError) {
+          console.error('Local settings parse error:', parseError);
+          // Fall back to defaults if parse fails
+          return {
+            success: true,
+            message: 'Using default settings (local data corrupted)',
+            data: DEFAULT_SETTINGS,
+            isOffline: !isConnected,
+          };
+        }
       }
 
       // Return default settings if nothing is found
@@ -343,13 +369,23 @@ export const SettingsService = {
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) return false;
 
+      let parsedSettings;
+      try {
+        parsedSettings = JSON.parse(pendingSettings);
+      } catch (parseError) {
+        console.error('Pending settings parse error during sync:', parseError);
+        // Clear corrupted data
+        await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
+        return true;
+      }
+
       const response = await requestWithRetry({
         method: 'PUT',
         url: '/settings',
         headers: {
           'Content-Type': 'application/json',
         },
-        data: JSON.parse(pendingSettings),
+        data: parsedSettings,
       });
 
       if (response.status >= 200 && response.status < 300) {

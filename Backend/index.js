@@ -76,6 +76,34 @@ function validateEnvironmentFormat() {
       throw new Error('REDIS_URL must use rediss:// (TLS) in production');
     }
   }
+
+  // Validate admin credentials in production
+  if (process.env.NODE_ENV === 'production') {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminEmail || !adminPassword) {
+      console.error('FATAL: Missing admin credentials in production');
+      console.error('Required environment variables:');
+      console.error('- ADMIN_EMAIL:', adminEmail ? 'SET' : 'MISSING');
+      console.error('- ADMIN_PASSWORD:', adminPassword ? 'SET' : 'MISSING');
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in production');
+    }
+    
+    if (!adminEmail.includes('@') || adminEmail.length < 5) {
+      console.error('FATAL: Invalid ADMIN_EMAIL format:', adminEmail);
+      throw new Error('ADMIN_EMAIL must be a valid email address');
+    }
+    
+    if (adminPassword.length < 8) {
+      console.error('FATAL: ADMIN_PASSWORD too short (min 8 characters)');
+      throw new Error('ADMIN_PASSWORD must be at least 8 characters long');
+    }
+    
+    console.log('[ENV] Admin credentials validated successfully');
+    console.log('[ENV] ADMIN_EMAIL:', adminEmail.toLowerCase().trim());
+    console.log('[ENV] ADMIN_PASSWORD length:', adminPassword.length, 'characters');
+  }
 }
 
 function registerSecurityMiddleware() {
@@ -313,6 +341,60 @@ function registerErrorHandling() {
 }
 
 // 5) THEN perform async infrastructure initialization
+// Validate environment variables first
+validateEnvironmentFormat();
+
+async function bootstrapAdminUser() {
+  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+
+  if (!ADMIN_CONFIGURED) {
+    console.error('FATAL: Admin credentials not configured in environment variables');
+    console.error('Required: ADMIN_EMAIL and ADMIN_PASSWORD');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Admin credentials must be configured in production');
+    }
+    return;
+  }
+
+  try {
+    const connection = await connectDB();
+    const UserModel = require('./models/User');
+    
+    // Check if admin user exists
+    let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
+    
+    if (!adminUser) {
+      console.log('[BOOTSTRAP] Creating admin user...');
+      adminUser = new UserModel({
+        name: 'Admin User',
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD, // Will be hashed by pre-save middleware
+        role: 'admin',
+        isAdmin: true,
+        isActive: true,
+        isEmailVerified: true
+      });
+      await adminUser.save();
+      console.log('[BOOTSTRAP] Admin user created successfully');
+    } else {
+      // Ensure existing admin user has correct properties
+      adminUser.role = 'admin';
+      adminUser.isAdmin = true;
+      adminUser.isActive = true;
+      adminUser.isEmailVerified = true;
+      await adminUser.save();
+      console.log('[BOOTSTRAP] Admin user verified and updated');
+    }
+    
+    console.log('[BOOTSTRAP] Admin bootstrap completed for:', ADMIN_EMAIL);
+  } catch (error) {
+    console.error('[BOOTSTRAP] Failed to bootstrap admin user:', error?.message || error);
+    throw error;
+  }
+}
+
 async function startServer() {
   // Always check current DB state first - don't rely on stale bootstrap state
   try {
@@ -320,6 +402,9 @@ async function startServer() {
     
     // Verify connection is actually working with ping
     await connection.db.admin().ping();
+    
+    // Bootstrap admin user after successful DB connection
+    await bootstrapAdminUser();
     
     // Clear any stale bootstrap errors on successful connection
     if (bootstrapError || !bootstrapped) {

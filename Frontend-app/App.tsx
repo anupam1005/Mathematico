@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Icon } from './src/components/Icon';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { safeCatch } from './src/utils/safeCatch';
+import { PRODUCTION_DEBUG, CRASH_DETECTION } from './src/utils/productionDebug';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Import theme
@@ -262,13 +263,20 @@ function AppContent() {
 
     const prepareApp = async () => {
       try {
+        PRODUCTION_DEBUG.log('APP', 'Starting app preparation');
+        
+        // NEW: Log Constants state for crash detection
+        CRASH_DETECTION.logConstantsState();
+        
         try {
           await SplashScreen.preventAutoHideAsync();
         } catch (error) {
+          CRASH_DETECTION.detectInitError(error);
           safeCatch('AppContent.SplashScreen.preventAutoHideAsync')(error);
         }
         // Skip custom font loading to avoid ExpoFontLoader issues
       } catch (error) {
+        CRASH_DETECTION.detectInitError(error);
         safeCatch('AppContent.prepareFonts')(error);
       } finally {
         if (isMounted) {

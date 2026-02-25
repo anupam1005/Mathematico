@@ -113,10 +113,10 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   const [settings, setSettings] = useState<Settings>(settingsRef.current);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Get app version from expo-constants
-  const appVersion = Constants.expoConfig?.version || '7.0.0';
+  // Get app version from expo-constants with safe null checking
+  const appVersion = Constants.expoConfig?.version || '8.3.0';
   const buildNumber = Constants.expoConfig?.ios?.buildNumber || 
-                     Constants.expoConfig?.android?.versionCode?.toString() || '7';
+                     (Constants.expoConfig?.android?.versionCode?.toString?.() || '25');
 
   // Show snackbar message
   const showSnackbar = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -177,7 +177,19 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     try {
       const usage = await AsyncStorage.getItem(DATA_USAGE_KEY);
       if (usage) {
-        setDataUsage(JSON.parse(usage));
+        try {
+          setDataUsage(JSON.parse(usage));
+        } catch (parseError) {
+          console.error('Data usage parse error:', parseError);
+          // Initialize fresh data if corrupted
+          const initialData: DataUsage = {
+            totalMB: 0,
+            lastReset: new Date().toISOString(),
+            sessions: [],
+          };
+          setDataUsage(initialData);
+          await AsyncStorage.setItem(DATA_USAGE_KEY, JSON.stringify(initialData));
+        }
         return;
       }
       // Initialize data usage if not exists

@@ -48,13 +48,11 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      // CRITICAL FIX: Use direct API call instead of withBasePath to avoid duplication
-      const loginUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
-      console.log('[AUTH SERVICE] Login URL:', loginUrl);
       console.log('[AUTH SERVICE] API_BASE_URL:', API_BASE_URL);
       console.log('[AUTH SERVICE] API_PATHS.auth:', API_PATHS.auth);
+      console.log('[AUTH SERVICE] Final endpoint:', `${API_PATHS.auth}/login`);
       
-      // Direct API call to prevent path duplication
+      // Use relative path - api client already has the full base URL
       const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
       const payload = response?.data;
       
