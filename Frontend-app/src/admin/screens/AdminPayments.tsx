@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   Searchbar,
   Chip,
   FAB,
-  Card,
   Title,
   Paragraph,
   Button,
@@ -47,7 +46,7 @@ interface PaymentFilters {
 }
 
 export default function AdminPayments({ navigation }: { navigation: any }) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,7 +136,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
     }
   };
 
-  const handlePaymentAction = (payment: Payment, action: string) => {
+  const handlePaymentAction = (_payment: Payment, action: string) => {
     Alert.alert(
       `${action} Payment`,
       `Are you sure you want to ${action ? action?.toLowerCase() ?? 'process' : 'process'} this payment?`,
@@ -147,7 +146,6 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
           text: action,
           onPress: () => {
             // Implement payment action logic here
-            console.log(`${action} payment:`, payment.id);
             Alert.alert('Success', `Payment ${action ? action?.toLowerCase() ?? 'processed' : 'processed'}d successfully.`);
           },
         },

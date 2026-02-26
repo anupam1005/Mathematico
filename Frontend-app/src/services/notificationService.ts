@@ -18,7 +18,7 @@ export interface NotificationResponse {
 }
 
 class NotificationService {
-  async getNotifications(userId?: string): Promise<NotificationResponse> {
+  async getNotifications(_userId?: string): Promise<NotificationResponse> {
     return {
       success: true,
       data: [],
@@ -26,23 +26,23 @@ class NotificationService {
     };
   }
 
-  async markAsRead(notificationId: string): Promise<NotificationResponse> {
+  async markAsRead(_notificationId: string): Promise<NotificationResponse> {
     throw new Error('Notification marking is not available. Database functionality has been removed.');
   }
 
-  async markAllAsRead(userId: string): Promise<NotificationResponse> {
+  async markAllAsRead(_userId: string): Promise<NotificationResponse> {
     throw new Error('Notification marking is not available. Database functionality has been removed.');
   }
 
-  async deleteNotification(notificationId: string): Promise<NotificationResponse> {
+  async deleteNotification(_notificationId: string): Promise<NotificationResponse> {
     throw new Error('Notification deletion is not available. Database functionality has been removed.');
   }
 
-  async sendNotification(userId: string, notification: Omit<NotificationData, 'id' | 'timestamp' | 'read'>): Promise<NotificationResponse> {
+  async sendNotification(_userId: string, _notification: Omit<NotificationData, 'id' | 'timestamp' | 'read'>): Promise<NotificationResponse> {
     throw new Error('Notification sending is not available. Database functionality has been removed.');
   }
 
-  async getUnreadCount(userId: string): Promise<NotificationResponse> {
+  async getUnreadCount(_userId: string): Promise<NotificationResponse> {
     return {
       success: true,
       data: { count: 0 },
@@ -67,7 +67,7 @@ class NotificationService {
     };
   }
 
-  async updatePushToken(token: string): Promise<NotificationResponse> {
+  async updatePushToken(_token: string): Promise<NotificationResponse> {
     throw new Error('Push token update is not available. Database functionality has been removed.');
   }
 }

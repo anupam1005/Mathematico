@@ -12,7 +12,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Icon } from './src/components/Icon';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { safeCatch } from './src/utils/safeCatch';
-import { PRODUCTION_DEBUG, CRASH_DETECTION } from './src/utils/productionDebug';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Import theme
@@ -80,7 +79,7 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }: any) => ({
-        tabBarIcon: ({ focused, color, size }: any) => {
+        tabBarIcon: ({ color, size }: any) => {
           let iconName: any;
 
           if (route.name === 'Home') {
@@ -155,7 +154,7 @@ function MainTabs() {
 }
 
 function AppNavigator() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return (
@@ -263,20 +262,13 @@ function AppContent() {
 
     const prepareApp = async () => {
       try {
-        PRODUCTION_DEBUG.log('APP', 'Starting app preparation');
-        
-        // NEW: Log Constants state for crash detection
-        CRASH_DETECTION.logConstantsState();
-        
         try {
           await SplashScreen.preventAutoHideAsync();
         } catch (error) {
-          CRASH_DETECTION.detectInitError(error);
           safeCatch('AppContent.SplashScreen.preventAutoHideAsync')(error);
         }
         // Skip custom font loading to avoid ExpoFontLoader issues
       } catch (error) {
-        CRASH_DETECTION.detectInitError(error);
         safeCatch('AppContent.prepareFonts')(error);
       } finally {
         if (isMounted) {

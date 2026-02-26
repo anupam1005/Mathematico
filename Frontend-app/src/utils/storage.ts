@@ -10,23 +10,18 @@ export class Storage {
       // Stringify the value if it's an object
       const valueToStore = typeof value === 'string' ? value : JSON.stringify(value);
       
-      console.log(`[STORAGE] Setting item for key: ${key}, value length: ${valueToStore.length}`);
       
       if (Platform.OS === 'web') {
         // Use localStorage for web
         localStorage.setItem(key, valueToStore);
-        console.log(`[STORAGE] localStorage success for key: ${key}`);
       } else {
         // Prefer SecureStore for mobile; fall back to AsyncStorage if SecureStore fails
         try {
           await SecureStore.setItemAsync(key, valueToStore);
-          console.log(`[STORAGE] SecureStore success for key: ${key}`);
         } catch (secureStoreError: any) {
           safeCatch('Storage.setItem.secureStore')(secureStoreError);
-          console.log(`[STORAGE] SecureStore failed for key: ${key}, falling back to AsyncStorage`);
           try {
             await AsyncStorage.setItem(key, valueToStore);
-            console.log(`[STORAGE] AsyncStorage fallback success for key: ${key}`);
           } catch (asyncStorageError: any) {
             safeCatch('Storage.setItem.asyncStorage')(asyncStorageError);
             // Swallow to avoid breaking auth flows; app may run without persistence.
@@ -52,15 +47,12 @@ export class Storage {
           result = await SecureStore.getItemAsync(key);
           // Validate SecureStore result in production
           if (result && typeof result === 'string' && result.length > 0) {
-            console.log(`[STORAGE] SecureStore success for key: ${key}`);
           }
         } catch (secureStoreError: any) {
           safeCatch('Storage.getItem.secureStore')(secureStoreError);
-          console.log(`[STORAGE] SecureStore failed for key: ${key}, falling back to AsyncStorage`);
           try {
             result = await AsyncStorage.getItem(key);
             if (result) {
-              console.log(`[STORAGE] AsyncStorage fallback success for key: ${key}`);
             }
           } catch (asyncStorageError: any) {
             safeCatch('Storage.getItem.asyncStorage')(asyncStorageError);
@@ -70,7 +62,6 @@ export class Storage {
       }
       
       if (!result) {
-        console.log(`[STORAGE] No value found for key: ${key}`);
         return null;
       }
       

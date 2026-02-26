@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Linking,
 } from 'react-native';
@@ -20,13 +19,13 @@ import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
-import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
 import { safeCatch } from '../utils/safeCatch';
 
-export default function LiveClassDetailScreen({ navigation, route }: any) {
+export default function LiveClassDetailScreen({ route }: any) {
   const { user } = useAuth();
   const { liveClassId } = route.params;
+  const navigationHook = useNavigation(); // Use useNavigation hook properly
   const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,12 +68,12 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
         setLiveClass(safeLiveClassData);
       } else {
         Alert.alert('Error', response.message || 'Failed to load live class');
-        navigation.goBack();
+        navigationHook.goBack();
       }
     } catch (error) {
       safeCatch('LiveClassDetailScreen.loadLiveClass', () => {
         Alert.alert('Error', 'Failed to load live class');
-        navigation.goBack();
+        navigationHook.goBack();
       })(error);
     } finally {
       setLoading(false);
@@ -228,7 +227,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
     }
   };
 
-  const isUpcoming = (dateString: string) => {
+  const _isUpcoming = (dateString: string) => {
     if (!dateString) return false;
     try {
       const date = new Date(dateString);
@@ -262,7 +261,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       <View style={styles.errorContainer}>
         <Icon name="alert-circle" size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Live class not found</Text>
-        <Button mode="contained" onPress={() => navigation.goBack()}>
+        <Button mode="contained" onPress={() => navigationHook.goBack()}>
           Go Back
         </Button>
       </View>
@@ -293,6 +292,13 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
               {(liveClass.status || 'unknown').toUpperCase()}
             </Chip>
           </View>
+          {/* Use _isUpcoming for conditional UI rendering */}
+          {liveClass.scheduled_at && _isUpcoming(liveClass.scheduled_at) && (
+            <View style={styles.upcomingBadge}>
+              <Icon name="calendar-clock" size={16} color={designSystem.colors.info} />
+              <Text style={styles.upcomingText}>UPCOMING</Text>
+            </View>
+          )}
           <View style={styles.metaContainer}>
             <Chip
               mode="flat"
@@ -499,7 +505,7 @@ export default function LiveClassDetailScreen({ navigation, route }: any) {
       <View style={styles.errorContainer}>
         <Icon name="alert-circle" size={64} color={designSystem.colors.error} />
         <Text style={styles.errorText}>Error loading live class details</Text>
-        <Button mode="contained" onPress={() => navigation.goBack()}>
+        <Button mode="contained" onPress={() => navigationHook.goBack()}>
           Go Back
         </Button>
       </View>
@@ -705,5 +711,21 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textPrimary,
     marginLeft: designSystem.spacing.sm,
     textAlign: 'center',
+  },
+  upcomingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: designSystem.colors.info + '20',
+    paddingHorizontal: designSystem.spacing.sm,
+    paddingVertical: designSystem.spacing.xs,
+    borderRadius: designSystem.borderRadius.sm,
+    marginTop: designSystem.spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  upcomingText: {
+    ...designSystem.typography.label,
+    color: designSystem.colors.info,
+    marginLeft: designSystem.spacing.xs,
+    fontWeight: '600',
   },
 });

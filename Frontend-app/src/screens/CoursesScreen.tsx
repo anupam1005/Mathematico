@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,6 @@ import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { theme } from '../styles/theme';
-import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { safeCatch } from '../utils/safeCatch';
 
 export default function CoursesScreen({ navigation, route }: any) {
@@ -95,6 +93,19 @@ export default function CoursesScreen({ navigation, route }: any) {
     setSearchQuery('');
   };
 
+  // Helper function to check if course is upcoming
+  const _isUpcoming = (dateString: string) => {
+    if (!dateString) return false;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return false;
+      return date > new Date();
+    } catch (error) {
+      safeCatch('CoursesScreen._isUpcoming')(error);
+      return false;
+    }
+  };
+
   const getLevelColor = (level: string) => {
     if (!level || typeof level !== 'string') {
       return theme.colors.primary;
@@ -113,57 +124,69 @@ export default function CoursesScreen({ navigation, route }: any) {
     }
   };
 
-  const renderCourseCard = ({ item: course }: { item: Course }) => (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('CourseDetail', { courseId: course._id || course.id })}
-      style={styles.cardContainer}
-    >
-      <Card style={styles.card}>
-        <Card.Cover
-          source={
-            course.thumbnail_url || course.thumbnailUrl
-              ? { uri: course.thumbnail_url || course.thumbnailUrl }
-              : require('../../assets/icon.png')
-          }
-          style={styles.cardImage}
-        />
-        <Card.Content style={styles.cardContent}>
-          <Title numberOfLines={2} style={styles.cardTitle}>
-            {course.title}
-          </Title>
-          <Paragraph numberOfLines={3} style={styles.cardDescription}>
-            {course.description}
-          </Paragraph>
-          <View style={styles.cardFooter}>
-            <Chip
-              mode="outlined"
-              compact
-              style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
-              textStyle={styles.levelChipText}
-            >
-              {(course.level || 'Unknown').toUpperCase()}
-            </Chip>
-            <View style={styles.priceContainer}>
-              {course.original_price && course.price && course.original_price > course.price && (
-                <Text style={styles.originalPrice}>₹{course.original_price}</Text>
+  const renderCourseCard = ({ item: course }: { item: Course }) => {
+    // Use _isUpcoming for rendering logic (badge / conditional UI)
+    const isUpcoming = course.createdAt ? _isUpcoming(course.createdAt) : false;
+    
+    return (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CourseDetail', { courseId: course._id || course.id })}
+        style={styles.cardContainer}
+      >
+        <Card style={styles.card}>
+          <Card.Cover
+            source={
+              course.thumbnail_url || course.thumbnailUrl
+                ? { uri: course.thumbnail_url || course.thumbnailUrl }
+                : require('../../assets/icon.png')
+            }
+            style={styles.cardImage}
+          />
+          <Card.Content style={styles.cardContent}>
+            <View style={styles.cardFooter}>
+              <Title numberOfLines={2} style={styles.cardTitle}>
+                {course.title}
+              </Title>
+              {isUpcoming && (
+                <Chip mode="flat" style={styles.levelChip}>
+                  UPCOMING
+                </Chip>
               )}
-              <Text style={styles.price}>₹{course.price || 0}</Text>
             </View>
-          </View>
-          <View style={styles.cardMeta}>
-            <View style={styles.metaItem}>
-              <Icon name="account-group" size={16} color={theme.colors.textSecondary} />
-              <Text style={styles.metaText}>{course.students} students</Text>
+            <Paragraph numberOfLines={3} style={styles.cardDescription}>
+              {course.description}
+            </Paragraph>
+            <View style={styles.cardFooter}>
+              <Chip
+                mode="outlined"
+                compact
+                style={[styles.levelChip, { backgroundColor: getLevelColor(course.level || '') }]}
+                textStyle={styles.levelChipText}
+              >
+                {(course.level || 'Unknown').toUpperCase()}
+              </Chip>
+              <View style={styles.priceContainer}>
+                {course.original_price && course.price && course.original_price > course.price && (
+                  <Text style={styles.originalPrice}>₹{course.original_price}</Text>
+                )}
+                <Text style={styles.price}>₹{course.price || 0}</Text>
+              </View>
             </View>
-            <View style={styles.metaItem}>
-              <Icon name="clock-outline" size={16} color={theme.colors.textSecondary} />
-              <Text style={styles.metaText}>{course.duration}</Text>
+            <View style={styles.cardMeta}>
+              <View style={styles.metaItem}>
+                <Icon name="account-group" size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.metaText}>{course.students} students</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Icon name="clock-outline" size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.metaText}>{course.duration}</Text>
+              </View>
             </View>
-          </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
-  );
+          </Card.Content>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   const renderFilterChip = (label: string, value: string, onPress: () => void) => (
     <TouchableOpacity key={label} onPress={onPress} style={styles.filterChip}>

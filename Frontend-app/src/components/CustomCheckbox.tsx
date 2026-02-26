@@ -1,5 +1,4 @@
-import React from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { Icon } from './Icon';
 import { designSystem } from '../styles/designSystem';
 
@@ -12,14 +11,14 @@ interface CustomCheckboxProps {
   size?: number;
 }
 
-export const CustomCheckbox = ({
+export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
   status,
   onPress,
   testID,
   accessibilityLabel,
   color = designSystem.colors.primary,
   size = 24,
-}: any) => {
+}) => {
   return (
     <TouchableOpacity
       onPress={onPress}

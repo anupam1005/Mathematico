@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Icon } from './Icon';
 import { UnifiedButton } from './UnifiedButton';
-import { emptyStateStyles, textStyles, designSystem } from '../styles/designSystem';
+import { emptyStateStyles, designSystem } from '../styles/designSystem';
 
 interface EmptyStateProps {
   icon: any;

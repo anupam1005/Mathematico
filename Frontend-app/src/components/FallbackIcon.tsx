@@ -1,5 +1,4 @@
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, ViewStyle } from 'react-native';
 
 interface FallbackIconProps {
   name: string;

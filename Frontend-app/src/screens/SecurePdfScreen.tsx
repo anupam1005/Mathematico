@@ -14,39 +14,34 @@ interface SecurePdfScreenProps {
 }
 
 const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) => {
-  const { bookId, bookTitle } = route.params;
+  const { bookId } = route.params;
 
   const {
     viewerUrl,
-    bookDetails,
     loading,
     error,
-    restrictions,
     loadPdfViewer,
     loadBookDetails,
     clearError,
     reset,
   } = useSecurePdf();
 
-  useEffect(() => {
-    let mounted = true;
+    useEffect(() => {
+      (async () => {
+        try {
+          await Promise.all([
+            loadBookDetails(bookId),
+            loadPdfViewer(bookId),
+          ]);
+        } catch {
+          // handled internally by hook
+        }
+      })();
 
-    (async () => {
-      try {
-        await Promise.all([
-          loadBookDetails(bookId),
-          loadPdfViewer(bookId),
-        ]);
-      } catch {
-        // handled internally by hook
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      reset();
-    };
-  }, [bookId, loadBookDetails, loadPdfViewer, reset]);
+      return () => {
+        reset();
+      };
+    }, [bookId, loadBookDetails, loadPdfViewer, reset]);
 
   const handleRetry = () => {
     clearError();

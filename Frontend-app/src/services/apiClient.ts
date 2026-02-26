@@ -21,24 +21,6 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // Log final resolved URL for production debugging
-    const finalUrl = config.url?.startsWith('http') 
-      ? config.url 
-      : `${config.baseURL || API_BASE_URL}${config.url || ''}`;
-    
-    // Critical: Log full URL before API call for production debugging
-    if (config.url?.includes('/login') || config.url?.includes('/register')) {
-      console.log('[AUTH API] Full URL:', finalUrl);
-      console.log('[AUTH API] Method:', config.method?.toUpperCase());
-      console.log('[AUTH API] Headers:', {
-        'Content-Type': config.headers?.['Content-Type'],
-        'Accept': config.headers?.['Accept'],
-        'Authorization': config.headers?.['Authorization'] ? 'Bearer ***' : 'none'
-      });
-      console.log('[AUTH API] Base URL:', config.baseURL || API_BASE_URL);
-      console.log('[AUTH API] Relative URL:', config.url);
-    }
-    
     try {
       const token = await Storage.getItem('authToken');
       if (token) {
@@ -47,12 +29,11 @@ api.interceptors.request.use(
         config.headers = headers;
       }
     } catch (error) {
-      console.error('[AUTH API] Token retrieval failed:', error);
+      // Token retrieval failed
     }
     return config;
   },
-  (error) => {
-    console.error('[AUTH API] Request interceptor error:', error);
+  (_error) => {
     return Promise.reject({ message: 'Request preparation failed' });
   }
 );
@@ -71,19 +52,15 @@ api.interceptors.response.use(
     
     // Handle specific JSON parsing errors
     if (safeError.message && safeError.message.includes('JSON Parse error')) {
-      // PRODUCTION FIX: Safe Constants.expoConfig access to prevent Hermes crashes
-      let isProduction = false;
+      // Constants.expoConfig access to prevent Hermes crashes
       try {
         const extraConfig = Constants?.expoConfig?.extra;
-        isProduction = !!(extraConfig && typeof extraConfig === 'object' && 'EXPO_PUBLIC_ENV' in extraConfig && extraConfig.EXPO_PUBLIC_ENV === 'production');
-      } catch (error) {
+        void !!(extraConfig && typeof extraConfig === 'object' && 'EXPO_PUBLIC_ENV' in extraConfig && extraConfig.EXPO_PUBLIC_ENV === 'production');
+      } catch (_error) {
         // Assume production if Constants access fails
-        isProduction = true;
       }
       
-      if (!isProduction) {
-        console.error('API Client: JSON parsing error detected');
-      }
+      // JSON parsing error detected in non-production
       return Promise.reject({
         ...safeError,
         message: 'Server returned invalid response. Please check backend logs.',

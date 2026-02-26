@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
 import {
   ActivityIndicator,
   FAB,
-  Chip,
 } from 'react-native-paper';
 import { Icon } from '../../components/Icon';
 // import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
@@ -21,12 +19,11 @@ import { designSystem, layoutStyles, textStyles } from '../../styles/designSyste
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { safeCatch } from '../../utils/safeCatch';
 
-const { width } = Dimensions.get('window');
 
 // Chart configuration removed - charts temporarily disabled to prevent rendering errors
 
 export default function AdminDashboard({ navigation }: { navigation: any }) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -312,7 +309,6 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
         icon="plus"
         onPress={() => {
           // Navigate to create course or show action sheet
-          console.log('Quick add pressed');
         }}
       />
     </View>

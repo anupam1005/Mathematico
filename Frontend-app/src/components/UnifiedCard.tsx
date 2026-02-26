@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, TouchableOpacity, ViewStyle } from 'react-native';
+import { TouchableOpacity, ViewStyle } from 'react-native';
 import { Card as PaperCard, CardProps } from 'react-native-paper';
-import { cardStyles, designSystem } from '../styles/designSystem';
+import { cardStyles } from '../styles/designSystem';
 
 interface UnifiedCardProps extends Omit<CardProps, 'style' | 'mode' | 'elevation'> {
   variant?: 'base' | 'elevated' | 'outlined';

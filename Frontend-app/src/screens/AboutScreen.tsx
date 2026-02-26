@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 import { Card, Title, Paragraph, Divider } from 'react-native-paper';
 import Icon from '../components/Icon';

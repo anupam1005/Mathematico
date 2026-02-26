@@ -43,7 +43,7 @@ interface Course {
 }
 
 export default function AdminCourses({ navigation }: any) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,7 +68,6 @@ export default function AdminCourses({ navigation }: any) {
       setIsLoading(true);
       const response = await adminService.getAllCourses();
 
-      console.log('Courses response:', response);
 
       // Handle the response structure correctly
       if (response && response.success && response.data) {
@@ -95,7 +94,6 @@ export default function AdminCourses({ navigation }: any) {
 
   const handleDelete = (course: Course) => {
     const id = getCourseId(course);
-    console.log('AdminCourses: Delete button clicked for course ID:', id);
     if (!id) {
       Alert.alert('Error', 'Invalid course ID');
       return;
@@ -111,9 +109,7 @@ export default function AdminCourses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('AdminCourses: Attempting to delete course with ID:', id);
               const result = await adminService.deleteCourse(id);
-              console.log('AdminCourses: Delete result:', result);
               
               if (result.success) {
                 await loadCourses();

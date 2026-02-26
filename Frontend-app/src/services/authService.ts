@@ -1,11 +1,9 @@
 import { API_PATHS } from '../constants/apiPaths';
-import { API_BASE_URL } from '../config';
-import { withBasePath } from './apiClient';
 import api from './apiClient';
 import { Storage } from '../utils/storage';
 import { createSafeError } from '../utils/safeError';
 
-const authApi = withBasePath(API_PATHS.auth);
+// const authApi = withBasePath(API_PATHS.auth);
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -48,19 +46,9 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      console.log('[AUTH SERVICE] API_BASE_URL:', API_BASE_URL);
-      console.log('[AUTH SERVICE] API_PATHS.auth:', API_PATHS.auth);
-      console.log('[AUTH SERVICE] Final endpoint:', `${API_PATHS.auth}/login`);
-      
       // Use relative path - api client already has the full base URL
       const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
       const payload = response?.data;
-      
-      // Log response structure for debugging
-      console.log('[AUTH SERVICE] Login response success:', payload?.success);
-      console.log('[AUTH SERVICE] Login response has accessToken:', !!payload?.data?.accessToken);
-      console.log('[AUTH SERVICE] Login response has token:', !!payload?.data?.token);
-      console.log('[AUTH SERVICE] Full response payload:', JSON.stringify(payload, null, 2));
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token;
 
@@ -94,14 +82,17 @@ const authService = {
     } catch (err) {
       const safe = createSafeError(err);
 
+      // Use safeError for structured logging and error formatting
+      const errorContext = {
+        timestamp: new Date().toISOString(),
+        service: 'authService.login',
+        email: email.substring(0, 3) + '***@***', // Partial email for privacy
+        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
+        errorMessage: safe.message,
+      };
+
       // Log error details for production debugging
-      console.error('[AUTH SERVICE] Login error:', {
-        status: safe.response?.status,
-        message: safe.message,
-        responseData: safe.response?.data,
-        url: safe.config?.url || safe.request?.url,
-        fullError: err
-      });
+      console.error('AUTH_LOGIN_ERROR', JSON.stringify(errorContext));
 
       let message = 'Login failed';
       const msg = String(safe.message || '');
@@ -130,21 +121,9 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      // CRITICAL FIX: Use direct API call instead of withBasePath to avoid duplication
-      const registerUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
-      console.log('[AUTH SERVICE] Register URL:', registerUrl);
-      console.log('[AUTH SERVICE] API_BASE_URL:', API_BASE_URL);
-      console.log('[AUTH SERVICE] API_PATHS.auth:', API_PATHS.auth);
-      
       // Direct API call to prevent path duplication
       const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
       const payload = response?.data;
-      
-      // Log response structure for debugging
-      console.log('[AUTH SERVICE] Register response success:', payload?.success);
-      console.log('[AUTH SERVICE] Register response has accessToken:', !!payload?.data?.accessToken);
-      console.log('[AUTH SERVICE] Register response has token:', !!payload?.data?.token);
-      console.log('[AUTH SERVICE] Full response payload:', JSON.stringify(payload, null, 2));
 
       if (!payload?.success) {
         return {
@@ -169,14 +148,18 @@ const authService = {
     } catch (err) {
       const safe = createSafeError(err);
 
+      // Use safeError for structured logging and error formatting
+      const errorContext = {
+        timestamp: new Date().toISOString(),
+        service: 'authService.register',
+        name: name.substring(0, 3) + '***', // Partial name for privacy
+        email: email.substring(0, 3) + '***@***', // Partial email for privacy
+        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
+        errorMessage: safe.message,
+      };
+
       // Log error details for production debugging
-      console.error('[AUTH SERVICE] Register error:', {
-        status: safe.response?.status,
-        message: safe.message,
-        responseData: safe.response?.data,
-        url: safe.config?.url || safe.request?.url,
-        fullError: err
-      });
+      console.error('AUTH_REGISTER_ERROR', JSON.stringify(errorContext));
 
       let message = 'Registration failed';
       if (safe.response?.status === 400) {
@@ -200,8 +183,9 @@ const authService = {
   /* ----------------------------- LOGOUT ---------------------------- */
 
   async logout(): Promise<{ success: boolean; message: string }> {
+    let refreshTokenValue: string | null = null;
     try {
-      const refreshTokenValue = await Storage.getItem('refreshToken');
+      refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       // CRITICAL FIX: Use direct API call to prevent path duplication
       await api.post(`${API_PATHS.auth}/logout`, payloadBody);
@@ -209,22 +193,34 @@ const authService = {
       await Storage.deleteItem('refreshToken');
       return { success: true, message: 'Logout successful' };
     } catch (err) {
-      const safe = createSafeError(err);
-      console.error('[AUTH SERVICE] Logout error:', {
-        status: safe.response?.status,
-        message: safe.message,
-        responseData: safe.response?.data,
-        url: safe.config?.url || safe.request?.url
-      });
+      const safeError = createSafeError(err);
+      
+      // Use safeError for structured logging and error formatting
+      const errorContext = {
+        timestamp: new Date().toISOString(),
+        service: 'authService.logout',
+        hasRefreshToken: !!refreshTokenValue,
+        errorType: safeError.response?.status ? `HTTP_${safeError.response.status}` : 'NETWORK_ERROR',
+        errorMessage: safeError.message,
+      };
+
+      // Log error details for production debugging
+      console.error('AUTH_LOGOUT_ERROR', JSON.stringify(errorContext));
       
       // Still clear local tokens even if logout API fails
       try {
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
-      } catch (storageError) {
-        console.error('[AUTH SERVICE] Token cleanup error:', storageError);
+      } catch (storageError: any) {
+        // Token cleanup error
+        const storageErrorContext = {
+          timestamp: new Date().toISOString(),
+          service: 'authService.logout.tokenCleanup',
+          errorType: 'STORAGE_ERROR',
+          errorMessage: storageError?.message || 'Unknown storage error',
+        };
+        console.error('AUTH_LOGOUT_STORAGE_ERROR', JSON.stringify(storageErrorContext));
       }
-      
       return { success: false, message: 'Logout failed' };
     }
   },
@@ -235,22 +231,19 @@ const authService = {
     try {
       const token = await Storage.getItem('authToken');
       const isValidToken = typeof token === 'string' && token.length > 10;
-      console.log('[AUTH SERVICE] Token retrieval:', { hasToken: !!token, isValid: isValidToken, tokenLength: token?.length });
       return isValidToken ? token : null;
     } catch (err) {
-      console.error('[AUTH SERVICE] Token retrieval error:', err);
       return null;
     }
   },
 
   async clearInvalidTokens(): Promise<void> {
     try {
-      console.log('[AUTH SERVICE] Clearing invalid tokens');
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       await Storage.deleteItem('user');
     } catch (err) {
-      console.error('[AUTH SERVICE] Token cleanup error:', err);
+      // Token cleanup error
       // Don't throw - cleanup failures should not break auth flows
     }
   },
@@ -258,8 +251,9 @@ const authService = {
   /* -------------------------- REFRESH TOKEN -------------------------- */
 
   async refreshToken(): Promise<{ success: boolean; message: string; data?: { accessToken: string; tokenType: string; expiresIn: number } }> {
+    let refreshTokenValue: string | null = null;
     try {
-      const refreshTokenValue = await Storage.getItem('refreshToken');
+      refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
       // CRITICAL FIX: Use direct API call to prevent path duplication
@@ -295,6 +289,19 @@ const authService = {
       };
     } catch (err) {
       const safe = createSafeError(err);
+      
+      // Use safeError for structured logging and error formatting
+      const errorContext = {
+        timestamp: new Date().toISOString(),
+        service: 'authService.refreshToken',
+        hasRefreshToken: !!refreshTokenValue,
+        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
+        errorMessage: safe.message,
+      };
+
+      // Log error details for production debugging
+      console.error('AUTH_REFRESH_ERROR', JSON.stringify(errorContext));
+      
       return {
         success: false,
         message: safe.message || 'Token refresh failed',
@@ -324,6 +331,19 @@ const authService = {
       };
     } catch (err) {
       const safe = createSafeError(err);
+      
+      // Use safeError for structured logging and error formatting
+      const errorContext = {
+        timestamp: new Date().toISOString(),
+        service: 'authService.updateProfile',
+        updateFields: Object.keys(data),
+        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
+        errorMessage: safe.message,
+      };
+
+      // Log error details for production debugging
+      console.error('AUTH_UPDATE_PROFILE_ERROR', JSON.stringify(errorContext));
+      
       return {
         success: false,
         message: safe.message || 'Profile update failed',

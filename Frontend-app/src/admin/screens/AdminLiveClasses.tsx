@@ -8,9 +8,6 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  ScrollView,
-  Image,
-  Platform,
 } from 'react-native';
 import {
   Button,
@@ -47,7 +44,7 @@ interface LiveClass {
 }
 
 export default function AdminLiveClasses({ navigation }: any) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +69,6 @@ export default function AdminLiveClasses({ navigation }: any) {
       setIsLoading(true);
       const response = await adminService.getAllLiveClasses();
 
-      console.log('Live classes response:', response);
 
       // Handle the response structure correctly
       if (response && response.success && response.data) {
@@ -99,7 +95,6 @@ export default function AdminLiveClasses({ navigation }: any) {
 
   const handleDelete = (liveClass: LiveClass) => {
     const id = getLiveClassId(liveClass);
-    console.log('AdminLiveClasses: Delete button clicked for live class ID:', id);
     if (!id) {
       Alert.alert('Error', 'Invalid live class ID');
       return;
@@ -115,9 +110,7 @@ export default function AdminLiveClasses({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('AdminLiveClasses: Attempting to delete live class with ID:', id);
               const result = await adminService.deleteLiveClass(id);
-              console.log('AdminLiveClasses: Delete result:', result);
               
               if (result.success) {
                 await loadLiveClasses();

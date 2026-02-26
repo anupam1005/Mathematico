@@ -58,7 +58,6 @@ class CourseService {
       });
       return response.data;
     } catch (error) {
-      console.error('CourseService: Request failed');
       throw ErrorHandler.handleApiError(error);
     }
   }

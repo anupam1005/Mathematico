@@ -9,12 +9,11 @@ export type SafeCatchHandler = (safeError: SafeError) => void;
  *        try { ... } catch (error) { const safe = handleError(error); }
  */
 export const safeCatch = (
-  scope: string,
+  _scope: string,
   handler?: SafeCatchHandler,
 ) => {
   return (error: unknown): SafeError => {
     const safeError = createSafeError(error);
-    console.error(`[${scope}]`, safeError);
     handler?.(safeError);
     return safeError;
   };

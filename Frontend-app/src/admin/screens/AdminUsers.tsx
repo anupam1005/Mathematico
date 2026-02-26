@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,19 @@ import {
 } from 'react-native';
 import {
   Searchbar,
-  Card,
   Title,
   Button,
   Switch,
   Chip,
   ActivityIndicator,
-  FAB,
   Portal,
   Modal,
-
-  HelperText,
 } from 'react-native-paper';
 import { Icon } from '../../components/Icon';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
-import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
+import { designSystem, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
 import { safeCatch } from '../../utils/safeCatch';
@@ -43,7 +39,7 @@ interface User {
 }
 
 export default function AdminUsers({ navigation }: { navigation: any }) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setIsLoading] = useState(true);
@@ -68,7 +64,6 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
     try {
       setIsLoading(true);
       const response = await adminService.getAllUsers();
-      console.log('Users response:', response);
       
       // Handle the response structure correctly
       let users = [];

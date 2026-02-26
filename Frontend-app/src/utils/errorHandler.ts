@@ -25,23 +25,17 @@ export const Logger = {
     }
     safeCatch(scope)(new Error(message));
   },
-  info: (message: string, ...args: any[]) => {
-    console.info(message, ...args);
-  },
+  info: () => {},
   warn: (message: string, error?: unknown) => {
     const scope = `ErrorHandler.Logger.warn ${message}`;
     if (error !== undefined) {
       safeCatch(scope)(error);
       return;
     }
-    console.warn(message);
+    safeCatch(scope)(new Error(message));
   },
-  log: (message: string, ...args: any[]) => {
-    console.log(message, ...args);
-  },
-  debug: (message: string, ...args: any[]) => {
-    console.debug(message, ...args);
-  }
+  log: () => {},
+  debug: () => {},
 };
 
 export class ErrorHandler {
@@ -221,7 +215,7 @@ export class ErrorHandler {
     }
   }
 
-  static createFallbackData<T>(type: 'courses' | 'books' | 'liveClasses' | 'users'): T[] {
+  static createFallbackData<T>(_type: 'courses' | 'books' | 'liveClasses' | 'users'): T[] {
     // Return empty arrays - no fallback data needed
     return [] as T[];
   }

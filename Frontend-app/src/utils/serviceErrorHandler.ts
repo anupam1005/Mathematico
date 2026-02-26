@@ -22,12 +22,8 @@ export const createServiceErrorHandler = (serviceName: string): ServiceLogger =>
         safeCatch(scope)(new Error(message));
       }
     },
-    logInfo: (message: string, ...args: any[]) => {
-      console.log(`${prefix} ${message}`, ...args);
-    },
-    logWarning: (message: string, ...args: any[]) => {
-      console.warn(`${prefix} ${message}`, ...args);
-    },
+    logInfo: () => {},
+    logWarning: () => {},
   };
 };
 

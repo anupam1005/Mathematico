@@ -1,11 +1,10 @@
 // src/admin/screens/CourseForm.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
 import { CustomTextInput } from "../../components/CustomTextInput";
-import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
 import { safeCatch } from '../../utils/safeCatch';
 
 interface CourseFormProps {
@@ -67,15 +66,12 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   };
 
   const handleSubmit = async () => {
-    console.log('CourseForm: Submit button clicked');
-    console.log('CourseForm: Form data:', formData);
     
     // Enhanced validation
     const requiredFields = ['title', 'description', 'price', 'level', 'category', 'subject', 'grade', 'duration', 'instructorName'];
     const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
     
     if (missingFields.length > 0) {
-      console.log('CourseForm: Validation failed - missing required fields:', missingFields);
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
     }
     
@@ -119,7 +115,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
 
     setLoading(true);
     try {
-      console.log('CourseForm: Creating FormData...');
       const data = new FormData();
       
       // Prepare the data object with proper formatting
@@ -141,7 +136,6 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         isAvailable: true
       };
       
-      console.log('CourseForm: Processed data:', processedData);
       
       // Add all fields to FormData
       Object.entries(processedData).forEach(([key, value]) => {
@@ -169,21 +163,16 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         }
       }
 
-      console.log('CourseForm: FormData created, submitting...');
       
       if (courseId) {
-        console.log('CourseForm: Updating course with ID:', courseId);
         const result = await adminService.updateCourse(courseId, data);
-        console.log('CourseForm: Update result:', result);
         if (result.success) {
           Alert.alert("Success", "Course updated successfully");
         } else {
           Alert.alert("Error", result.error || "Failed to update course");
         }
       } else {
-        console.log('CourseForm: Creating new course...');
         const result = await adminService.createCourse(data);
-        console.log('CourseForm: Create result:', result);
         if (result.success) {
           Alert.alert("Success", "Course created successfully");
         } else {

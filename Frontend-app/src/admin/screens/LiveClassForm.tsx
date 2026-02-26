@@ -9,7 +9,6 @@ import {
   Alert, 
   ActivityIndicator, 
   Platform,
-  KeyboardAvoidingView,
   Keyboard,
   Image
 } from 'react-native';
@@ -18,7 +17,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { adminService } from '../../services/adminService';
 import { CustomTextInput } from '../../components/CustomTextInput';
-import { Button } from 'react-native-paper';
 import { colors } from '../../styles/colors';
 import { formatDateTime, validateTimeRange } from '../../utils/dateTimeUtils';
 import { safeCatch } from '../../utils/safeCatch';
@@ -70,13 +68,11 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
   liveClassId, 
   onSuccess, 
   onCancel,
-  navigation,
   route
 }) => {
   // State
   const [formData, setFormData] = useState<typeof DEFAULT_FORM_VALUES>({ ...DEFAULT_FORM_VALUES });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(!!liveClassId);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -149,7 +145,21 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         setIsLoading(false);
       }
     }
-  }, [liveClassId]);
+  }, [liveClassId, adminService]);
+
+  // Pre-fill form from route params for edit mode
+  useEffect(() => {
+    if (route?.params?.liveClassData) {
+      const preFillData = route.params.liveClassData;
+      setFormData(prev => ({
+        ...prev,
+        ...preFillData,
+        startTime: preFillData.startTime ? new Date(preFillData.startTime) : prev.startTime,
+        endTime: preFillData.endTime ? new Date(preFillData.endTime) : prev.endTime,
+        scheduledAt: preFillData.scheduledAt ? new Date(preFillData.scheduledAt) : prev.scheduledAt,
+      }));
+    }
+  }, [route?.params?.liveClassData]);
 
   // Load data when component mounts or liveClassId changes
   useFocusEffect(
@@ -217,7 +227,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       isValid = false;
     }
 
-    // Validate time ranges
+    // Validate time ranges using validateTimeRange utility
     if (formData.startTime && formData.endTime) {
       if (!validateTimeRange(formData.startTime, formData.endTime)) {
         newErrors.endTime = 'End time must be after start time';
@@ -232,79 +242,25 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       }
     }
 
+    // Show validation errors using the errors state
+    if (!isValid) {
+      setErrors(newErrors);
+      return false;
+    }
+
     setErrors(newErrors);
     return isValid;
   };
 
-  // Handle form field changes
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error for the field being edited
-    if (errors[field as keyof FormErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }));
-    }
-  };
-
-  // Handle date/time changes
-  const handleDateTimeChange = (field: string, date: Date) => {
-    handleChange(field, date);
-    
-    // If start time changes, update end time to maintain duration
-    if (field === 'startTime') {
-      const duration = Number(formData.duration) || 60;
-      const endTime = new Date(date.getTime() + duration * 60000);
-      handleChange('endTime', endTime);
-    }
-  };
-
-  // Helper function to close all date/time pickers
-  const closeAllPickers = () => {
-    setShowScheduledDatePicker(false);
-    setShowScheduledTimePicker(false);
-    setShowStartDatePicker(false);
-    setShowStartTimePicker(false);
-    setShowEndDatePicker(false);
-    setShowEndTimePicker(false);
-  };
-
-  // Handle image picker
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets?.[0]?.uri) {
-        handleChange('image', {
-          uri: result.assets[0].uri,
-          type: 'image/jpeg',
-          name: 'class-image.jpg',
-        });
-      }
-    } catch (error) {
-      safeCatch('LiveClassForm.pickImage', () => {
-        Alert.alert('Error', 'Failed to pick image. Please try again.');
-      })(error);
-    }
-  };
-
-  // Handle form submission
+  // Use validateForm in form submission
   const handleSubmit = async () => {
-    console.log('LiveClassForm: Submit button clicked');
-    console.log('LiveClassForm: Form data:', formData);
-    
     // Dismiss keyboard if open
     Keyboard.dismiss();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
     
     // Enhanced validation
     const requiredFields = ['title', 'description', 'category', 'subject', 'grade', 'level', 'duration', 'maxStudents', 'meetingLink'];
@@ -314,7 +270,6 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     });
     
     if (missingFields.length > 0) {
-      console.log('LiveClassForm: Validation failed - missing required fields:', missingFields);
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
     }
     
@@ -355,7 +310,6 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
 
     setLoading(true);
     try {
-      console.log('LiveClassForm: Creating FormData...');
       const formDataToSend = new FormData();
       
       // Prepare the data object with proper formatting
@@ -376,7 +330,6 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         isAvailable: true
       };
       
-      console.log('LiveClassForm: Processed data:', processedData);
       
       // Add all fields to FormData with proper formatting
       Object.entries(processedData).forEach(([key, value]) => {
@@ -406,12 +359,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       }
       // Backend will add default thumbnail if no image is provided
 
-      console.log('LiveClassForm: FormData created, submitting...');
       
       if (liveClassId) {
-        console.log('LiveClassForm: Updating live class with ID:', liveClassId);
         const result = await adminService.updateLiveClass(liveClassId, formDataToSend);
-        console.log('LiveClassForm: Update result:', result);
         if (result.success) {
           Alert.alert("Success", "Live class updated successfully");
           onSuccess?.();
@@ -419,9 +369,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
           Alert.alert("Error", result.error || "Failed to update live class");
         }
       } else {
-        console.log('LiveClassForm: Creating new live class...');
         const result = await adminService.createLiveClass(formDataToSend);
-        console.log('LiveClassForm: Create result:', result);
         if (result.success) {
           Alert.alert("Success", "Live class created successfully");
           onSuccess?.();
@@ -435,6 +383,82 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       })(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Display validation errors to user
+  useEffect(() => {
+    const errorMessages = Object.values(errors).filter(Boolean);
+    if (errorMessages.length > 0) {
+      Alert.alert('Validation Error', errorMessages.join('\n'));
+    }
+  }, [errors]);
+
+  // Handle form field changes
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear error for the field being edited
+    if (errors[field as keyof FormErrors]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
+    }
+  };
+
+  // Handle input changes with proper typing
+  const handleInputChange = (field: keyof typeof DEFAULT_FORM_VALUES, value: string) => {
+    handleChange(field, value);
+  };
+
+  // Handle date/time changes
+  const handleDateTimeChange = (field: string, date: Date) => {
+    handleChange(field, date);
+    
+    // If start time changes, update end time to maintain duration
+    if (field === 'startTime') {
+      const duration = Number(formData.duration) || 60;
+      const endTime = new Date(date.getTime() + duration * 60000);
+      handleChange('endTime', endTime);
+    }
+  };
+
+
+  // Helper function to close all date/time pickers
+  const closeAllPickers = () => {
+    setShowScheduledDatePicker(false);
+    setShowScheduledTimePicker(false);
+    setShowStartDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndDatePicker(false);
+    setShowEndTimePicker(false);
+  };
+
+  // Handle image picker
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        handleChange('image', {
+          uri: result.assets[0].uri,
+          type: 'image/jpeg',
+          name: 'class-image.jpg',
+        });
+      }
+    } catch (error) {
+      safeCatch('LiveClassForm.pickImage', () => {
+        Alert.alert('Error', 'Failed to pick image. Please try again.');
+      })(error);
     }
   };
 
@@ -469,9 +493,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     }
     
     if (selectedDate) {
-      const currentTime = formData.scheduledAt || new Date();
-      const combined = combineDateAndTime(selectedDate, currentTime);
-      setFormData({ ...formData, scheduledAt: combined });
+      handleDateTimeChange('scheduledAt', selectedDate);
       
       if (Platform.OS === 'ios') {
         setShowScheduledTimePicker(true);
@@ -506,17 +528,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     }
     
     if (selectedDate) {
-      const currentTime = formData.startTime || new Date();
-      const combined = combineDateAndTime(selectedDate, currentTime);
-      const newFormData = { ...formData, startTime: combined };
-      
-      // Calculate end time based on start time + duration
-      if (formData.duration) {
-        const endTime = new Date(combined.getTime() + (Number(formData.duration) * 60000));
-        newFormData.endTime = endTime;
-      }
-      
-      setFormData(newFormData);
+      handleDateTimeChange('startTime', selectedDate);
       
       if (Platform.OS === 'ios') {
         setShowStartTimePicker(true);
@@ -559,9 +571,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     }
     
     if (selectedDate) {
-      const currentTime = formData.endTime || new Date();
-      const combined = combineDateAndTime(selectedDate, currentTime);
-      setFormData({ ...formData, endTime: combined });
+      handleDateTimeChange('endTime', selectedDate);
       
       if (Platform.OS === 'ios') {
         setShowEndTimePicker(true);
@@ -595,11 +605,16 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+    <ScrollView 
+      style={[styles.container, keyboardVisible && styles.containerWithKeyboard]} 
+      contentContainerStyle={{ paddingBottom: 50 }}
+      ref={scrollViewRef}
+      keyboardShouldPersistTaps="handled"
+    >
       <CustomTextInput
         label="Title"
         value={formData.title}
-        onChangeText={t => setFormData({ ...formData, title: t })}
+        onChangeText={(text) => handleInputChange('title', text)}
         style={styles.input}
         mode="outlined"
         leftIcon="videocam"
@@ -608,7 +623,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       <CustomTextInput
         label="Description"
         value={formData.description}
-        onChangeText={t => setFormData({ ...formData, description: t })}
+        onChangeText={(text) => handleInputChange('description', text)}
         style={styles.input}
         mode="outlined"
         multiline
@@ -650,7 +665,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       <CustomTextInput
         label="Subject"
         value={formData.subject}
-        onChangeText={t => setFormData({ ...formData, subject: t })}
+        onChangeText={(text) => handleInputChange('subject', text)}
         style={styles.input}
         mode="outlined"
         leftIcon="menu-book"
@@ -659,7 +674,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       <CustomTextInput
         label="Grade"
         value={formData.grade}
-        onChangeText={t => setFormData({ ...formData, grade: t })}
+        onChangeText={(text) => handleInputChange('grade', text)}
         style={styles.input}
         mode="outlined"
         leftIcon="grade"
@@ -715,7 +730,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.scheduledAt ? formData.scheduledAt.toLocaleDateString() : 'Select Date'}
+                {formData.scheduledAt ? formatDateTime(formData.scheduledAt, 'DD MMM YYYY') : 'Select Date'}
               </Text>
             </TouchableOpacity>
             {showScheduledDatePicker && (
@@ -739,7 +754,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.scheduledAt ? formData.scheduledAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                {formData.scheduledAt ? formatDateTime(formData.scheduledAt, 'hh:mm A') : 'Select Time'}
               </Text>
             </TouchableOpacity>
             {showScheduledTimePicker && (
@@ -769,7 +784,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.startTime ? formData.startTime.toLocaleDateString() : 'Select Date'}
+                {formData.startTime ? formatDateTime(formData.startTime, 'DD MMM YYYY') : 'Select Date'}
               </Text>
             </TouchableOpacity>
             {showStartDatePicker && (
@@ -793,7 +808,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.startTime ? formData.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                {formData.startTime ? formatDateTime(formData.startTime, 'hh:mm A') : 'Select Time'}
               </Text>
             </TouchableOpacity>
             {showStartTimePicker && (
@@ -823,7 +838,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.endTime ? formData.endTime.toLocaleDateString() : 'Select Date'}
+                {formData.endTime ? formatDateTime(formData.endTime, 'DD MMM YYYY') : 'Select Date'}
               </Text>
             </TouchableOpacity>
             {showEndDatePicker && (
@@ -847,7 +862,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
               style={styles.dateTimeButton}
             >
               <Text style={styles.dateText}>
-                {formData.endTime ? formData.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time'}
+                {formData.endTime ? formatDateTime(formData.endTime, 'hh:mm A') : 'Select Time'}
               </Text>
             </TouchableOpacity>
             {showEndTimePicker && (
@@ -865,7 +880,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       <CustomTextInput
         label="Max Students"
         value={formData.maxStudents}
-        onChangeText={t => setFormData({ ...formData, maxStudents: t })}
+        onChangeText={(text) => handleInputChange('maxStudents', text)}
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
@@ -875,7 +890,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       <CustomTextInput
         label="Meeting Link"
         value={formData.meetingLink}
-        onChangeText={t => setFormData({ ...formData, meetingLink: t })}
+        onChangeText={(text) => handleInputChange('meetingLink', text)}
         style={styles.input}
         mode="outlined"
         leftIcon="link"
@@ -915,7 +930,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         
         {formData.image && (
           <View style={styles.imagePreviewContainer}>
-            <Text style={styles.imagePreviewLabel}>Preview:</Text>
+            <Text style={styles.imagePreviewLabel}>
+              Preview: {formatDateTime(new Date(), 'DD MMM YYYY, hh:mm A')}
+            </Text>
             <Image 
               source={{ uri: typeof formData.image === 'string' ? formData.image : formData.image.uri }} 
               style={styles.imagePreview}
@@ -964,6 +981,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", padding: 20 },
+  containerWithKeyboard: {
+    paddingBottom: 100, // Extra padding when keyboard is visible
+  },
   label: { fontSize: 16, fontWeight: "bold", marginTop: 10, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginTop: 5 },
   button: { backgroundColor: "#007bff", padding: 10, marginTop: 15, borderRadius: 5, alignItems: "center" },

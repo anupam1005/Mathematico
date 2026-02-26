@@ -59,7 +59,6 @@ class BookService {
       });
       return response.data;
     } catch (error) {
-      console.error('BookService: Request failed');
       throw ErrorHandler.handleApiError(error);
     }
   }
@@ -103,12 +102,9 @@ class BookService {
 
   async getBookById(id: string): Promise<any> {
     try {
-      console.log('BookService: Fetching book with ID:', id);
       const response = await this.makeRequest(`/books/${id}`);
-      console.log('BookService: Book fetched successfully');
       return response;
     } catch (error) {
-      console.error('BookService: Error fetching book');
       errorHandler.handleError('Error fetching book:', error);
       
       // Return a fallback book object instead of throwing

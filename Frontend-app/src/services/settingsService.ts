@@ -24,11 +24,9 @@ export const getLocalSettings = async (): Promise<UserSettings> => {
     try {
       return JSON.parse(settings);
     } catch (parseError) {
-      console.error('Settings parse error, using defaults:', parseError);
       return { ...DEFAULT_SETTINGS };
     }
   } catch (error: any) {
-    console.error('Error getting local settings');
     return { ...DEFAULT_SETTINGS };
   }
 };
@@ -49,7 +47,6 @@ export const getServerSettings = async (): Promise<UserSettings> => {
     const data = response.data as any;
     return data?.data || { ...DEFAULT_SETTINGS };
   } catch (error: any) {
-    console.error('Error getting server settings');
     throw new Error('Failed to get server settings');
   }
 };
@@ -62,11 +59,9 @@ export const getPendingSettings = async (): Promise<PendingSetting[]> => {
     try {
       return JSON.parse(pending);
     } catch (parseError) {
-      console.error('Pending settings parse error:', parseError);
       return [];
     }
   } catch (error: any) {
-    console.error('Error getting pending settings');
     return [];
   }
 };
@@ -85,7 +80,6 @@ export const addPendingSettings = async (settings: Partial<UserSettings>): Promi
     await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(updatedPending));
     return updatedPending;
   } catch (error: any) {
-    console.error('Error adding pending settings');
     throw new Error('Failed to add pending settings');
   }
 };
@@ -94,7 +88,6 @@ export const clearPendingSettings = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
   } catch (error: any) {
-    console.error('Error clearing pending settings');
     throw new Error('Failed to clear pending settings');
   }
 };
@@ -103,7 +96,6 @@ export const clearLocalSettings = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(SETTINGS_STORAGE_KEY);
   } catch (error: any) {
-    console.error('Error clearing local settings');
     throw new Error('Failed to clear local settings');
   }
 };
@@ -140,7 +132,6 @@ export interface UserSettings {
 
 const SETTINGS_STORAGE_KEY = 'mathematico_user_settings';
 const PENDING_SETTINGS_KEY = 'pending_settings';
-const LANGUAGE_PREFERENCE_KEY = 'mathematico_language_preference';
 
 const DEFAULT_SETTINGS: UserSettings = {
   notifications: {
@@ -164,12 +155,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
 };
 
-const handleError = (error: any, defaultMessage: string) => {
-  console.error('Settings Service Error');
-
+const handleError = (_error: any, defaultMessage: string) => {
   const hasNavigator = typeof navigator !== 'undefined' && navigator !== null;
   const isOnlineFlag = hasNavigator ? navigator.onLine : true;
-  console.log('Settings Service: Online status:', isOnlineFlag);
 
   return {
     success: false,
@@ -196,7 +184,6 @@ const requestWithRetry = async <T = any>(
 
     return response;
   } catch (error: any) {
-    console.error('Error fetching with retry');
     if (retries <= 0) {
       throw error;
     }
@@ -208,11 +195,9 @@ const requestWithRetry = async <T = any>(
 export const SettingsService = {
   getSettings: async (): Promise<SettingsResponse> => {
     try {
-      // Check network status
       const netInfo = await NetInfo.fetch();
       const isConnected = netInfo.isConnected ?? false;
 
-      // Try to get settings from server if online
       if (isConnected) {
         try {
           const response = await requestWithRetry({
@@ -226,7 +211,6 @@ export const SettingsService = {
 
           const data = response.data as any;
           if (data?.success && data?.data) {
-            // Save to local storage
             await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data.data));
             return {
               success: true,
@@ -235,11 +219,9 @@ export const SettingsService = {
             };
           }
         } catch (error: any) {
-          console.error('Failed to fetch settings from server, using local copy');
         }
       }
 
-      // Fall back to local storage
       const localSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (localSettings) {
         try {
@@ -251,8 +233,6 @@ export const SettingsService = {
             isOffline: !isConnected,
           };
         } catch (parseError) {
-          console.error('Local settings parse error:', parseError);
-          // Fall back to defaults if parse fails
           return {
             success: true,
             message: 'Using default settings (local data corrupted)',
@@ -262,7 +242,6 @@ export const SettingsService = {
         }
       }
 
-      // Return default settings if nothing is found
       return {
         success: true,
         message: 'Using default settings',
@@ -270,7 +249,6 @@ export const SettingsService = {
         isOffline: !isConnected,
       };
     } catch (error: any) {
-      console.error('Error getting settings');
       return handleError(error, 'Failed to load settings');
     }
   },
@@ -330,7 +308,6 @@ export const SettingsService = {
           throw new Error(data.message || 'Failed to update settings');
         }
       } catch (error: any) {
-        console.error('Error updating settings');
         // If server update fails but we have local changes, queue for sync
         await AsyncStorage.setItem(PENDING_SETTINGS_KEY, JSON.stringify(newSettings));
         return {
@@ -341,7 +318,6 @@ export const SettingsService = {
         };
       }
     } catch (error: any) {
-      console.error('Error updating settings');
       return handleError(error, 'Failed to update settings');
     }
   },
@@ -356,7 +332,6 @@ export const SettingsService = {
         message: 'Settings cleared successfully',
       };
     } catch (error: any) {
-      console.error('Error clearing settings');
       return handleError(error, 'Failed to clear settings');
     }
   },
@@ -373,7 +348,6 @@ export const SettingsService = {
       try {
         parsedSettings = JSON.parse(pendingSettings);
       } catch (parseError) {
-        console.error('Pending settings parse error during sync:', parseError);
         // Clear corrupted data
         await AsyncStorage.removeItem(PENDING_SETTINGS_KEY);
         return true;
@@ -394,7 +368,6 @@ export const SettingsService = {
       }
       return false;
     } catch (error: any) {
-      console.error('Failed to sync pending settings');
       return false;
     }
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,6 @@ import {
   Button,
   Switch,
   ActivityIndicator,
-  Divider,
-  Card,
   Title,
   SegmentedButtons,
 } from 'react-native-paper';
@@ -20,7 +18,7 @@ import { Icon } from '../../components/Icon';
 import { CustomTextInput } from '../../components/CustomTextInput';
 import { adminService } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
-import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
+import { designSystem, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { safeCatch } from '../../utils/safeCatch';
 
@@ -36,7 +34,7 @@ interface AdminSettings {
 }
 
 export default function AdminSettings({ navigation }: { navigation: any }) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const [settings, setSettings] = useState<AdminSettings>({
     site_name: 'Mathematico',
     site_description: 'Learn Mathematics Online',

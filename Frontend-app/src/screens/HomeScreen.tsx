@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,15 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
-import { Title, Paragraph, Chip, Searchbar } from 'react-native-paper';
+import { Title, Chip, Searchbar } from 'react-native-paper';
 import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { courseService } from '../services/courseService';
 import { bookService } from '../services/bookService';
 import { liveClassService } from '../services/liveClassService';
-import { theme } from '../styles/theme';
 import { designSystem, layoutStyles, textStyles } from '../styles/designSystem';
 import { UnifiedCard } from '../components/UnifiedCard';
 import { StatsCard } from '../components/StatsCard';
-import { EmptyState } from '../components/EmptyState';
 import { safeCatch } from '../utils/safeCatch';
 
 const { width } = Dimensions.get('window');

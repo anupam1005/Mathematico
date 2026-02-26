@@ -1,10 +1,9 @@
 // src/admin/screens/BookForm.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { adminService } from "../../services/adminService";
-import authService from "../../services/authService";
 import { CustomTextInput } from "../../components/CustomTextInput";
 import { designSystem, formStyles, layoutStyles } from "../../styles/designSystem";
 import { safeCatch } from '../../utils/safeCatch';
@@ -16,7 +15,7 @@ interface BookFormProps {
   navigation?: any;
 }
 
-export default function BookForm({ bookId, isEditing, onSuccess, navigation }: BookFormProps) {
+export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps) {
   const [formData, setFormData] = useState<any>({
     title: "",
     author: "",
@@ -83,15 +82,12 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
   };
 
   const handleSubmit = async () => {
-    console.log('📚 BookForm: Submit button clicked');
-    console.log('📚 BookForm: Form data:', formData);
     
     // Enhanced validation
     const requiredFields = ['title', 'author', 'category', 'subject', 'grade'];
     const missingFields = requiredFields.filter(field => !formData[field] || formData[field].toString().trim() === '');
     
     if (missingFields.length > 0) {
-      console.log('📚 BookForm: Validation failed - missing required fields:', missingFields);
       return Alert.alert("Error", `Please fill all required fields: ${missingFields.join(', ')}`);
     }
     
@@ -104,9 +100,7 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
     setUploadProgress(0);
     
     try {
-      console.log('📚 BookForm: Starting book creation process...');
       
-      console.log('📚 BookForm: Creating FormData...');
       const data = new FormData();
       
       // Prepare the data object with proper formatting
@@ -129,7 +123,6 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
         processedData.isbn = trimmedIsbn;
       }
       
-      console.log('📚 BookForm: Processed data:', processedData);
       
       // Add all fields to FormData
       Object.entries(processedData).forEach(([key, value]) => {
@@ -152,21 +145,16 @@ export default function BookForm({ bookId, isEditing, onSuccess, navigation }: B
         }
       }
 
-      console.log('📚 BookForm: FormData created, submitting...');
       
       if (bookId && isEditing) {
-        console.log('📚 BookForm: Updating existing book...');
         const result = await adminService.updateBook(bookId, data);
-        console.log('📚 BookForm: Update result:', result);
         if (result.success) {
           Alert.alert("Success", "Book updated successfully");
         } else {
           Alert.alert("Error", result.error || "Failed to update book");
         }
       } else {
-        console.log('📚 BookForm: Creating new book...');
         const result = await adminService.createBook(data);
-        console.log('📚 BookForm: Create result:', result);
         if (result.success) {
           Alert.alert("Success", "Book created successfully");
         } else {

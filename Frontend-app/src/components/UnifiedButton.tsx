@@ -1,15 +1,15 @@
-import React from 'react';
-import { TouchableOpacity, Text, ViewStyle, TextStyle } from 'react-native';
+import React, { ReactNode } from 'react';
+import { ViewStyle, TextStyle } from 'react-native';
 import { Button as PaperButton, ButtonProps } from 'react-native-paper';
 import { buttonStyles, textStyles, designSystem } from '../styles/designSystem';
 
-interface UnifiedButtonProps extends Omit<ButtonProps, 'style' | 'labelStyle'> {
+interface UnifiedButtonProps extends Omit<ButtonProps, 'style' | 'labelStyle' | 'children'> {
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'small' | 'medium' | 'large';
   fullWidth?: boolean;
   style?: ViewStyle;
   labelStyle?: TextStyle;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const UnifiedButton: React.FC<UnifiedButtonProps> = ({

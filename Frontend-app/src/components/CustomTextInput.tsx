@@ -1,4 +1,3 @@
-import React from 'react';
 import { TextInput as PaperTextInput, TextInputProps } from 'react-native-paper';
 
 interface CustomTextInputProps extends Omit<TextInputProps, 'left' | 'right'> {

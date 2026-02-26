@@ -52,33 +52,6 @@ export interface DashboardStats {
   }>;
 }
 
-// --- Utility: map snake_case <-> camelCase --- //
-function toCamelCase(obj: any): any {
-  if (Array.isArray(obj)) return obj.map(toCamelCase);
-  if (obj && typeof obj === "object") {
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [
-        k.replace(/([-_][a-z])/gi, (s) => s.toUpperCase().replace(/[-_]/g, "")),
-        toCamelCase(v),
-      ])
-    );
-  }
-  return obj;
-}
-
-function toSnakeCase(obj: any): any {
-  if (Array.isArray(obj)) return obj.map(toSnakeCase);
-  if (obj && typeof obj === "object") {
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [
-        k.replace(/[A-Z]/g, (s) => `_${s.toLowerCase()}`),
-        toSnakeCase(v),
-      ])
-    );
-  }
-  return obj;
-}
-
 const baseAdminApi = withBasePath(API_PATHS.admin);
 
 const getPayloadOrThrow = <T = any>(response: any): ApiResponse<T> => {
@@ -625,7 +598,6 @@ class AdminService {
       
       const token = await authService.getToken();
       if (!token) {
-        console.error('AdminService: No authentication token found');
         return { success: false, error: 'No authentication token found' };
       }
 
@@ -644,12 +616,10 @@ class AdminService {
         errorHandler.logInfo('AdminService: Live class created successfully:', result);
         return { success: true, data: result.data };
       } else {
-        console.error('AdminService: Live class creation failed:', result);
         errorHandler.handleError('AdminService: Live class creation failed:', result);
         return { success: false, error: 'Failed to create live class' };
       }
     } catch (error: any) {
-      console.error('AdminService: Live class creation exception:');
       errorHandler.handleError('AdminService: Live class creation error:', error);
       return { success: false, error: 'Failed to create live class' };
     }

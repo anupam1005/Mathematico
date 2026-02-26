@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Divider, ActivityIndicator } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
@@ -106,7 +106,6 @@ export default function CheckoutScreen({ navigation, route }: any) {
       }
     } catch (error) {
       safeCatch('CheckoutScreen.handlePayment', () => {
-        console.error('Payment error:', error);
         Alert.alert(
           'Payment Failed', 
           'Unable to complete payment. Please try again or contact support if the problem persists.',

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from 'react-native';
 import {
@@ -17,7 +16,6 @@ import {
   ActivityIndicator,
   Divider,
 } from 'react-native-paper';
-import { Icon } from '../components/Icon';
 import { CustomTextInput } from '../components/CustomTextInput';
 import { CustomCheckbox } from '../components/CustomCheckbox';
 import { useAuth } from '../contexts/AuthContext';

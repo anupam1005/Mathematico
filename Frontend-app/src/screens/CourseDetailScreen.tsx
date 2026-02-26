@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import {
@@ -14,18 +13,12 @@ import {
   Button,
   Chip,
   ActivityIndicator,
-  Divider,
 } from 'react-native-paper';
 import Icon from '../components/Icon';
-import { useAuth } from '../contexts/AuthContext';
 import { courseService, Course } from '../services/courseService';
 import { designSystem } from '../styles/designSystem';
-import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { safeCatch } from '../utils/safeCatch';
-
 export default function CourseDetailScreen({ navigation, route }: any) {
-  const { user } = useAuth();
   const { courseId } = route.params;
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);

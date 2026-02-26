@@ -58,8 +58,6 @@ class LiveClassService {
       });
       return response.data;
     } catch (error) {
-      console.error('LiveClassService: Request failed');
-
       throw ErrorHandler.handleApiError(error);
     }
   }

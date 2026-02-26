@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 // Unified Design System
 export const designSystem = {
   colors: {

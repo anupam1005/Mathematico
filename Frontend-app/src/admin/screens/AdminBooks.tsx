@@ -10,8 +10,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import {
-  Title,
-  Paragraph,
   Button,
   Searchbar,
   Chip,
@@ -19,7 +17,6 @@ import {
   ActivityIndicator,
   Checkbox,
   Menu,
-  Divider,
 } from 'react-native-paper';
 import { Icon } from '../../components/Icon';
 import { adminService } from '../../services/adminService';
@@ -53,7 +50,7 @@ interface Book {
 }
 
 export default function AdminBooks({ navigation }: any) {
-  const { user } = useAuth();
+  const {} = useAuth();
   const nav = useNavigation();
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,7 +67,6 @@ export default function AdminBooks({ navigation }: any) {
   // Add navigation listener for when returning from BookForm
   useEffect(() => {
     const unsubscribe = nav.addListener('focus', () => {
-      console.log('📚 AdminBooks: Navigation focus event, refreshing books...');
       loadBooks();
     });
 
@@ -80,7 +76,6 @@ export default function AdminBooks({ navigation }: any) {
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('📚 AdminBooks: Screen focused, refreshing books...');
       // Add a small delay to ensure the previous screen has fully unmounted
       const timer = setTimeout(() => {
         loadBooks();
@@ -92,24 +87,17 @@ export default function AdminBooks({ navigation }: any) {
 
   const loadBooks = async () => {
     try {
-      console.log('📚 AdminBooks: Loading books...');
       setIsLoading(true);
       const response = await adminService.getAllBooks();
       
-      console.log('📚 AdminBooks: Books response:', response);
       
       // Handle the response structure correctly
       if (response && response.success && response.data) {
-        console.log('📚 AdminBooks: Setting books from API response:', response.data);
         const booksArray = Array.isArray(response.data) ? response.data : [];
         setBooks(booksArray);
-        console.log('📚 AdminBooks: Books loaded successfully:', booksArray.length, 'books');
       } else if (response && Array.isArray(response)) {
-        console.log('📚 AdminBooks: Setting books from direct array response:', response);
         setBooks(response);
-        console.log('📚 AdminBooks: Books loaded successfully:', response.length, 'books');
       } else {
-        console.log('📚 AdminBooks: No valid data found, setting empty array');
         setBooks([]);
       }
     } catch (error) {
@@ -128,7 +116,6 @@ export default function AdminBooks({ navigation }: any) {
   };
 
   const handleDelete = (id: string) => {
-    console.log('AdminBooks: Delete button clicked for book ID:', id);
     Alert.alert(
       'Delete Book',
       'Are you sure you want to delete this book?',
@@ -139,9 +126,7 @@ export default function AdminBooks({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('AdminBooks: Attempting to delete book with ID:', id);
               const result = await adminService.deleteBook(id);
-              console.log('AdminBooks: Delete result:', result);
               
               if (result.success) {
                 // Remove the book from local state immediately
@@ -311,12 +296,10 @@ export default function AdminBooks({ navigation }: any) {
           <Button
             mode="outlined"
             onPress={() => {
-              console.log('📚 AdminBooks: Navigating to BookForm for editing...');
               navigation.navigate('BookForm', { 
                 book: normalizedItem, 
                 isEditing: true,
                 onSuccess: () => {
-                  console.log('📚 AdminBooks: BookForm onSuccess callback triggered (edit)');
                   // Force refresh when returning from BookForm
                   setTimeout(() => {
                     loadBooks();
@@ -445,7 +428,6 @@ export default function AdminBooks({ navigation }: any) {
         renderItem={renderBookItem}
         keyExtractor={(item, index) => {
           const id = item.id || item._id || item.Id || `book-${index}`;
-          console.log('📚 AdminBooks: Rendering book with ID:', id);
           return id.toString();
         }}
         contentContainerStyle={styles.listContainer}
@@ -479,11 +461,9 @@ export default function AdminBooks({ navigation }: any) {
         style={styles.fab}
         icon="plus"
         onPress={() => {
-          console.log('📚 AdminBooks: Navigating to BookForm...');
           navigation.navigate('BookForm', { 
             isEditing: false,
             onSuccess: () => {
-              console.log('📚 AdminBooks: BookForm onSuccess callback triggered');
               // Force refresh when returning from BookForm
               setTimeout(() => {
                 loadBooks();

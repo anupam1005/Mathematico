@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ActivityIndicator, Text, Button } from 'react-native-paper';
 import { API_PATHS } from '../constants/apiPaths';
@@ -255,7 +255,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
             setError(`Failed to load PDF (Error ${nativeEvent.statusCode})`);
           }
         }}
-        renderError={(errorDomain?: string, errorCode?: number, errorDesc?: string) => {
+        renderError={(errorDomain?: string, _errorCode?: number, errorDesc?: string) => {
           const errorMessage = errorDesc || errorDomain || 'Unknown error';
           safeCatch('SecurePdfViewer.renderError')(new Error(errorMessage));
           return (

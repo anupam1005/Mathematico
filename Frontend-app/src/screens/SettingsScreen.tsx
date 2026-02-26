@@ -4,24 +4,18 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
-  Switch as RNSwitch,
   ActivityIndicator,
   TouchableOpacity,
-  Platform,
   BackHandler,
 } from 'react-native';
 import {
   Card,
-  Title,
   List,
   Divider,
   Button,
   useTheme,
   Portal,
   Dialog,
-  TextInput,
-  HelperText,
   Snackbar,
   Switch,
 } from 'react-native-paper';
@@ -29,17 +23,12 @@ import Icon from '../components/Icon';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import * as Updates from 'expo-updates';
 import { debounce } from '../utils/debounce';
 import { safeCatch } from '../utils/safeCatch';
 import SettingsService, { Settings, PendingSetting, UserSettings } from '../services/settingsService';
-import { designSystem } from '../styles/designSystem';
-import { theme } from '../styles/theme';
 import { formatBytes, formatDate } from '../utils/formatters';
 
 const DATA_USAGE_KEY = 'mathematico_data_usage';
-const LANGUAGE_KEY = 'mathematico_language';
-const PENDING_SETTINGS_KEY = 'pending_settings';
 
 interface DataUsage {
   totalMB: number;
@@ -180,7 +169,6 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         try {
           setDataUsage(JSON.parse(usage));
         } catch (parseError) {
-          console.error('Data usage parse error:', parseError);
           // Initialize fresh data if corrupted
           const initialData: DataUsage = {
             totalMB: 0,
@@ -478,8 +466,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Push Notifications"
           description="Receive push notifications"
-          left={props => <List.Icon {...props} icon="bell" />}
-          right={props => renderSwitch(
+          left={_props => <List.Icon {..._props} icon="bell" />}
+          right={_props => renderSwitch(
             settings.notifications.push, 
             (value) => handleSettingChange('notifications', 'push', value)
           )}
@@ -488,8 +476,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Email Notifications"
           description="Receive email notifications"
-          left={props => <List.Icon {...props} icon="email" />}
-          right={props => renderSwitch(
+          left={_props => <List.Icon {..._props} icon="email" />}
+          right={_props => renderSwitch(
             settings.notifications.email, 
             (value) => handleSettingChange('notifications', 'email', value)
           )}
@@ -498,8 +486,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="SMS Notifications"
           description="Receive SMS notifications"
-          left={props => <List.Icon {...props} icon="message-text" />}
-          right={props => renderSwitch(
+          left={_props => <List.Icon {..._props} icon="message-text" />}
+          right={_props => renderSwitch(
             settings.notifications.sms, 
             (value) => handleSettingChange('notifications', 'sms', value)
           )}
@@ -521,13 +509,13 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Profile Visibility"
           description="Who can see your profile"
-          left={props => <List.Icon {...props} icon="account-eye" />}
-          right={props => (
+          left={_props => <List.Icon {..._props} icon="account-eye" />}
+          right={_props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
                 {settings.privacy.profileVisibility === 'public' ? 'Public' : 'Private'}
               </Text>
-              <List.Icon {...props} icon="chevron-right" />
+              <List.Icon {..._props} icon="chevron-right" />
             </View>
           )}
           onPress={() => {
@@ -539,8 +527,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Show Email"
           description="Display your email on your profile"
-          left={props => <List.Icon {...props} icon="email-outline" />}
-          right={props => renderSwitch(
+          left={_props => <List.Icon {..._props} icon="email-outline" />}
+          right={_props => renderSwitch(
             settings.privacy.showEmail,
             (value) => handleSettingChange('privacy', 'showEmail', value)
           )}
@@ -549,8 +537,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Show Phone Number"
           description="Display your phone number on your profile"
-          left={props => <List.Icon {...props} icon="phone" />}
-          right={props => renderSwitch(
+          left={_props => <List.Icon {..._props} icon="phone" />}
+          right={_props => renderSwitch(
             settings.privacy.showPhone,
             (value) => handleSettingChange('privacy', 'showPhone', value)
           )}
@@ -572,17 +560,17 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Theme"
           description="Change the app's color scheme"
-          left={props => <Icon name="weather-night" size={24} color={colors.onSurface} />}
+          left={_props => <Icon name="weather-night" size={24} color={colors.onSurface} />}
           onPress={() => {
             const newTheme = settings.preferences.theme === 'light' ? 'dark' : 'light';
             handleSettingChange('preferences', 'theme', newTheme);
           }}
-          right={props => (
+          right={_props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
                 {settings.preferences.theme === 'light' ? 'Light' : 'Dark'}
               </Text>
-              <List.Icon {...props} icon="chevron-right" />
+              <List.Icon {..._props} icon="chevron-right" />
             </View>
           )}
         />
@@ -590,14 +578,14 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Language"
           description="Change the app's language"
-          left={props => <Icon name="translate" size={24} color={colors.onSurface} />}
+          left={_props => <Icon name="translate" size={24} color={colors.onSurface} />}
           onPress={() => setShowLanguageDialog(true)}
-          right={props => (
+          right={_props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
                 {SUPPORTED_LANGUAGES.find(lang => lang.code === settings.preferences.language)?.name || 'English'}
               </Text>
-              <List.Icon {...props} icon="chevron-right" />
+              <List.Icon {..._props} icon="chevron-right" />
             </View>
           )}
         />
@@ -605,8 +593,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Time Zone"
           description={settings.preferences.timezone}
-          left={props => <Icon name="clock-outline" size={24} color={colors.onSurface} />}
-          right={props => (
+          left={_props => <Icon name="clock-outline" size={24} color={colors.onSurface} />}
+          right={_props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
                 {settings.preferences.timezone}
@@ -631,8 +619,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Auto-play Videos"
           description="Automatically play video lessons"
-          left={props => <Icon name="play-circle" size={24} color={colors.onSurface} />}
-          right={props => renderSwitch(
+          left={_props => <Icon name="play-circle" size={24} color={colors.onSurface} />}
+          right={_props => renderSwitch(
             settings.learning.autoPlayVideos,
             (value) => handleSettingChange('learning', 'autoPlayVideos', value)
           )}
@@ -641,8 +629,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Download Over Wi-Fi Only"
           description="Only download content when connected to Wi-Fi"
-          left={props => <Icon name="wifi" size={24} color={colors.onSurface} />}
-          right={props => renderSwitch(
+          left={_props => <Icon name="wifi" size={24} color={colors.onSurface} />}
+          right={_props => renderSwitch(
             settings.learning.downloadOverWifi,
             (value) => handleSettingChange('learning', 'downloadOverWifi', value)
           )}
@@ -664,13 +652,13 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Data Usage"
           description={`${formatBytes(dataUsage.totalMB * 1024 * 1024)} used this month`}
-          left={props => <List.Icon {...props} icon="chart-bar" />}
-          right={props => (
+          left={_props => <List.Icon {..._props} icon="chart-bar" />}
+          right={_props => (
             <View style={styles.settingValueContainer}>
               <Text style={[styles.settingValue, { color: colors.onSurfaceVariant }]}>
                 {formatBytes(dataUsage.totalMB * 1024 * 1024, true, 1)}
               </Text>
-              <List.Icon {...props} icon="chevron-right" />
+              <List.Icon {..._props} icon="chevron-right" />
             </View>
           )}
           onPress={() => setShowDataUsageDialog(true)}
@@ -679,7 +667,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Clear Cache"
           description="Free up storage space"
-          left={props => <Icon name="trash-can-outline" size={24} color={colors.onSurface} />}
+          left={_props => <Icon name="trash-can-outline" size={24} color={colors.onSurface} />}
           onPress={() => setShowClearCacheDialog(true)}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
@@ -700,19 +688,19 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         <List.Item
           title="Version"
           description={`${appVersion} (${buildNumber})`}
-          left={props => <List.Icon {...props} icon="information" />}
+          left={_props => <List.Icon {..._props} icon="information" />}
         />
         <Divider />
         <List.Item
           title="Terms of Service"
-          left={props => <Icon name="file-document-outline" size={24} color={colors.onSurface} />}
+          left={_props => <Icon name="file-document-outline" size={24} color={colors.onSurface} />}
           onPress={() => navigation.navigate('TermsOfService')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
         <Divider />
         <List.Item
           title="Privacy Policy"
-          left={props => <Icon name="shield" size={24} color={colors.onSurface} />}
+          left={_props => <Icon name="shield" size={24} color={colors.onSurface} />}
           onPress={() => navigation.navigate('PrivacyPolicy')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
