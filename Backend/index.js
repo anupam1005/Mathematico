@@ -79,6 +79,15 @@ function validateEnvironmentFormat() {
       throw new Error('REDIS_URL must use rediss:// (TLS) in production');
     }
   }
+  
+  // Validate Razorpay webhook secret if Razorpay is enabled
+  if (process.env.ENABLE_RAZORPAY === 'true') {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret || webhookSecret.length < 32) {
+      throw new Error('RAZORPAY_WEBHOOK_SECRET must be set and at least 32 characters when ENABLE_RAZORPAY=true');
+    }
+    console.log('[ENV] Razorpay webhook secret validated successfully');
+  }
 
   // Validate admin credentials in production
   if (process.env.NODE_ENV === 'production') {
@@ -125,8 +134,35 @@ function registerSecurityMiddleware() {
   const { handleRazorpayWebhook } = require('./controllers/webhookController');
   const { createWebhookRateLimiter } = require('./middleware/webhookRateLimiter');
   
-  // For Vercel serverless, use simple raw body parser
-  // The controller will handle different body formats
+  // For Vercel serverless, we need to handle raw body capture differently
+  // Create a custom middleware that captures raw body before Vercel's parsing
+  const webhookRawBodyHandler = (req, res, next) => {
+    if (req.path === '/api/v1/webhook/razorpay' && req.method === 'POST') {
+      let rawData = '';
+      
+      req.on('data', (chunk) => {
+        rawData += chunk;
+      });
+      
+      req.on('end', () => {
+        req.rawBody = Buffer.from(rawData, 'utf8');
+        req.body = req.rawBody; // Set body to raw buffer for express.raw()
+        next();
+      });
+      
+      req.on('error', (err) => {
+        console.error('Error capturing raw body:', err);
+        next(err);
+      });
+    } else {
+      next();
+    }
+  };
+  
+  // Apply webhook handler before the route
+  app.use(webhookRawBodyHandler);
+  
+  // Use the raw body parser directly on the webhook route
   app.post('/api/v1/webhook/razorpay', 
     express.raw({ type: 'application/json' }),
     createWebhookRateLimiter(),

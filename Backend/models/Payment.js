@@ -90,10 +90,6 @@ PaymentSchema.index({ userId: 1, status: 1 });
 PaymentSchema.index({ courseId: 1, status: 1 });
 PaymentSchema.index({ createdAt: -1 });
 
-// Unique indexes explicitly defined
-PaymentSchema.index({ paymentId: 1 }, { unique: true });
-PaymentSchema.index({ orderId: 1 }, { unique: true });
-
 // Static method to find payment by paymentId or orderId
 PaymentSchema.statics.findByPaymentOrOrderId = function(identifier) {
   return this.findOne({

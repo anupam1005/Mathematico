@@ -6,6 +6,28 @@ const securityLogger = require('../utils/securityLogger');
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 /**
+ * Create deterministic JSON string to match Razorpay's signature generation
+ * This ensures consistent property order and formatting
+ */
+const createDeterministicJson = (obj) => {
+  if (obj === null || typeof obj !== 'object') {
+    return JSON.stringify(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(item => createDeterministicJson(item)).join(',') + ']';
+  }
+  
+  // Sort object keys to ensure consistent order
+  const sortedKeys = Object.keys(obj).sort();
+  const keyValuePairs = sortedKeys.map(key => {
+    return '"' + key + '":' + createDeterministicJson(obj[key]);
+  });
+  
+  return '{' + keyValuePairs.join(',') + '}';
+};
+
+/**
  * Verify Razorpay webhook signature
  */
 const verifyWebhookSignature = (rawBody, signature) => {
@@ -17,11 +39,6 @@ const verifyWebhookSignature = (rawBody, signature) => {
     throw new Error('Missing x-razorpay-signature header');
   }
   
-  // DEBUG: Confirm rawBody is a Buffer (remove in production)
-  console.log('[WEBHOOK DEBUG] rawBody type in verify:', typeof rawBody);
-  console.log('[WEBHOOK DEBUG] rawBody is Buffer in verify:', Buffer.isBuffer(rawBody));
-  console.log('[WEBHOOK DEBUG] rawBody length in verify:', rawBody ? rawBody.length : 'null/undefined');
-  
   if (!Buffer.isBuffer(rawBody)) {
     throw new Error('rawBody is not a Buffer - body parser middleware order issue');
   }
@@ -31,9 +48,6 @@ const verifyWebhookSignature = (rawBody, signature) => {
     .update(rawBody)
     .digest('hex');
     
-  console.log('[WEBHOOK DEBUG] expected signature:', expectedSignature.substring(0, 20) + '...');
-  console.log('[WEBHOOK DEBUG] signatures match:', expectedSignature === signature);
-  
   return expectedSignature === signature;
 };
 
@@ -253,29 +267,31 @@ const handleRazorpayWebhook = async (req, res) => {
     }
     
     // Get raw body and signature
-    let rawBody = req.body;
+    let rawBody = req.body; // With express.raw(), req.body should be a Buffer
     const signature = req.headers['x-razorpay-signature'];
-    
-    // DEBUG: Log request analysis (remove in production)
-    console.log('[WEBHOOK DEBUG] req.body type:', typeof rawBody);
-    console.log('[WEBHOOK DEBUG] req.body is Buffer:', Buffer.isBuffer(rawBody));
-    console.log('[WEBHOOK DEBUG] received signature:', signature ? signature.substring(0, 20) + '...' : 'null');
     
     // Handle different body formats based on environment
     if (Buffer.isBuffer(rawBody)) {
-      // Ideal case: raw body is preserved as Buffer
-      console.log('[WEBHOOK DEBUG] Using raw body Buffer');
+      // Ideal case: express.raw() preserved the body as Buffer
     } else if (typeof rawBody === 'string') {
       // Body is string, convert to Buffer
-      console.log('[WEBHOOK DEBUG] Converting string body to Buffer');
       rawBody = Buffer.from(rawBody, 'utf8');
     } else if (rawBody && typeof rawBody === 'object') {
-      // Vercel serverless: body is already parsed as object
-      // Reconstruct the exact JSON string that was used for signature generation
-      console.log('[WEBHOOK DEBUG] Reconstructing Buffer from parsed object (Vercel serverless)');
-      const jsonString = JSON.stringify(rawBody);
-      rawBody = Buffer.from(jsonString, 'utf8');
-      console.log('[WEBHOOK DEBUG] Reconstructed body length:', rawBody.length);
+      // Vercel serverless fallback: body is already parsed as object
+      // This happens when Vercel pre-parses the body before our middleware runs
+      
+      // Try to access the original raw body from Vercel's request
+      if (req.rawBody) {
+        rawBody = req.rawBody;
+      } else {
+        // Try to reconstruct the exact JSON that Razorpay would generate
+        // Razorpay typically uses a specific property order and formatting
+        
+        // Create a deterministic JSON string with proper property order
+        const deterministicJson = createDeterministicJson(rawBody);
+        
+        rawBody = Buffer.from(deterministicJson, 'utf8');
+      }
     } else {
       throw new Error('Invalid request body format');
     }
@@ -284,59 +300,34 @@ const handleRazorpayWebhook = async (req, res) => {
     try {
       const isValid = verifyWebhookSignature(rawBody, signature);
       if (!isValid) {
-        // Include debug info in response for troubleshooting
-        const debugInfo = {
-          bodyType: typeof req.body,
-          isBuffer: Buffer.isBuffer(rawBody),
-          bodyLength: rawBody ? rawBody.length : 0,
-          bodyPreview: rawBody ? rawBody.toString('utf8').substring(0, 100) : 'null',
-          receivedSignature: signature ? signature.substring(0, 20) + '...' : 'null',
-          reconstructedSignature: crypto
-            .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-            .update(rawBody)
-            .digest('hex')
-            .substring(0, 20) + '...'
-        };
-        
         securityLogger.logSecurityEvent({
           eventType: 'WEBHOOK_SIGNATURE_VERIFICATION_FAILED',
           ip: req.ip,
           userAgent: req.get('User-Agent'),
           url: req.originalUrl,
           signature: signature ? signature.substring(0, 20) + '...' : 'null',
-          bodyLength: rawBody ? rawBody.length : 0,
-          debug: debugInfo
+          bodyLength: rawBody ? rawBody.length : 0
         });
         
         return res.status(400).json({
           success: false,
           message: 'Invalid webhook signature',
-          error: 'INVALID_SIGNATURE',
-          debug: debugInfo
+          error: 'INVALID_SIGNATURE'
         });
       }
     } catch (signatureError) {
-      const debugInfo = {
-        bodyType: typeof req.body,
-        isBuffer: Buffer.isBuffer(rawBody),
-        bodyLength: rawBody ? rawBody.length : 0,
-        error: signatureError.message
-      };
-      
       securityLogger.logSecurityEvent({
         eventType: 'WEBHOOK_SIGNATURE_ERROR',
         ip: req.ip,
         userAgent: req.get('User-Agent'),
         url: req.originalUrl,
-        error: signatureError.message,
-        debug: debugInfo
+        error: signatureError.message
       });
       
       return res.status(400).json({
         success: false,
         message: 'Webhook signature verification failed',
-        error: 'SIGNATURE_ERROR',
-        debug: debugInfo
+        error: 'SIGNATURE_ERROR'
       });
     }
     
@@ -344,8 +335,6 @@ const handleRazorpayWebhook = async (req, res) => {
     let event;
     try {
       const rawBodyString = rawBody.toString('utf8');
-      console.log('[WEBHOOK DEBUG] rawBody as string length:', rawBodyString.length);
-      console.log('[WEBHOOK DEBUG] rawBody as string preview:', rawBodyString.substring(0, 200) + '...');
       event = JSON.parse(rawBodyString);
     } catch (parseError) {
       securityLogger.logSecurityEvent({
