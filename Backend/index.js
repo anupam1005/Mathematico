@@ -11,6 +11,9 @@ const net = require('net');
 const { connectDB } = require('./config/database');
 const configureTrustProxy = require('./config/trustProxy');
 const { validateJwtConfig } = require('./utils/jwt');
+const { validateFeatureFlags } = require('./utils/featureFlags');
+const { validateCorsConfig, getCorsOptions } = require('./config/cors');
+const { runCompleteValidation } = require('./utils/environmentValidator');
 
 // Utility function to check if a port is available (local/dev only)
 const isPortAvailable = (port) => {
@@ -125,58 +128,9 @@ function registerSecurityMiddleware() {
   // Cookies
   app.use(cookieParser());
 
-  // CORS
-  const originEnvValues = [
-    process.env.APP_ORIGIN || '',
-    process.env.ADMIN_ORIGIN || '',
-    process.env.CORS_ORIGIN || '',
-    process.env.FRONTEND_URL || '',
-    process.env.WEB_URL || '',
-    'exp://*',
-    'capacitor://*',
-    'ionic://*'
-  ].filter(Boolean);
-
-  const allowedOrigins = Array.from(
-    new Set(
-      originEnvValues.flatMap((value) =>
-        value
-          .split(',')
-          .map((origin) => origin.trim())
-          .filter(Boolean)
-      )
-    )
-  );
-
-  const corsOptions = {
-    origin(origin, callback) {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-
-      // Allow Expo development URLs
-      if (origin.startsWith('exp://') || origin.includes('expo')) return callback(null, true);
-
-      // Allow mobile app origins
-      if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) return callback(null, true);
-
-      // Allow configured origins
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
-      'Access-Control-Request-Method',
-      'Access-Control-Request-Headers'
-    ]
-  };
-
+  // CORS - Use centralized configuration
+  validateCorsConfig();
+  const corsOptions = getCorsOptions();
   app.use(cors(corsOptions));
 
   // Request logging (production only)
@@ -283,6 +237,8 @@ function registerRoutes() {
   app.use(`${API_PREFIX}/student`, require('./routes/student'));
   app.use(`${API_PREFIX}/users`, require('./routes/users'));
   app.use(`${API_PREFIX}/payments`, require('./routes/payment'));
+  app.use(`${API_PREFIX}/webhook`, require('./routes/webhook'));
+  app.use(`${API_PREFIX}/secure-pdf`, require('./routes/securePdf'));
 
   // Root API endpoint
   app.get(`${API_PREFIX}`, (req, res) => {
@@ -299,6 +255,9 @@ function registerRoutes() {
         mobile: `${API_PREFIX}/mobile`,
         student: `${API_PREFIX}/student`,
         users: `${API_PREFIX}/users`,
+        payments: `${API_PREFIX}/payments`,
+        webhook: `${API_PREFIX}/webhook`,
+        securePdf: `${API_PREFIX}/secure-pdf`,
         health: '/health',
         redisHealth: '/api/v1/health/redis'
       }
@@ -343,6 +302,8 @@ function registerErrorHandling() {
 // 5) THEN perform async infrastructure initialization
 // Validate environment variables first
 validateEnvironmentFormat();
+runCompleteValidation();
+validateFeatureFlags();
 
 async function bootstrapAdminUser() {
   const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
