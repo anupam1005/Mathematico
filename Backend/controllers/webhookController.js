@@ -17,11 +17,24 @@ const verifyWebhookSignature = (rawBody, signature) => {
     throw new Error('Missing x-razorpay-signature header');
   }
   
+  // DEBUG: Confirm rawBody is a Buffer
+  console.log('[WEBHOOK DEBUG] rawBody type:', typeof rawBody);
+  console.log('[WEBHOOK DEBUG] rawBody is Buffer:', Buffer.isBuffer(rawBody));
+  console.log('[WEBHOOK DEBUG] rawBody length:', rawBody ? rawBody.length : 'null/undefined');
+  console.log('[WEBHOOK DEBUG] received signature:', signature ? signature.substring(0, 20) + '...' : 'null');
+  
+  if (!Buffer.isBuffer(rawBody)) {
+    throw new Error('rawBody is not a Buffer - body parser middleware order issue');
+  }
+  
   const expectedSignature = crypto
     .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
     .update(rawBody)
     .digest('hex');
     
+  console.log('[WEBHOOK DEBUG] expected signature:', expectedSignature.substring(0, 20) + '...');
+  console.log('[WEBHOOK DEBUG] signatures match:', expectedSignature === signature);
+  
   return expectedSignature === signature;
 };
 
@@ -253,8 +266,8 @@ const handleRazorpayWebhook = async (req, res) => {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
           url: req.originalUrl,
-          signature: signature.substring(0, 20) + '...', // Log partial signature for debugging
-          bodyLength: rawBody.length
+          signature: signature ? signature.substring(0, 20) + '...' : 'null', // Log partial signature for debugging
+          bodyLength: rawBody ? rawBody.length : 0
         });
         
         return res.status(400).json({
@@ -279,10 +292,13 @@ const handleRazorpayWebhook = async (req, res) => {
       });
     }
     
-    // Parse webhook event
+    // Parse webhook event from Buffer AFTER successful signature verification
     let event;
     try {
-      event = JSON.parse(rawBody);
+      const rawBodyString = rawBody.toString('utf8');
+      console.log('[WEBHOOK DEBUG] rawBody as string length:', rawBodyString.length);
+      console.log('[WEBHOOK DEBUG] rawBody as string preview:', rawBodyString.substring(0, 200) + '...');
+      event = JSON.parse(rawBodyString);
     } catch (parseError) {
       securityLogger.logSecurityEvent({
         eventType: 'WEBHOOK_PARSE_ERROR',
@@ -292,7 +308,7 @@ const handleRazorpayWebhook = async (req, res) => {
         error: parseError.message
       });
       
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         message: 'Invalid webhook payload',
         error: 'INVALID_PAYLOAD'

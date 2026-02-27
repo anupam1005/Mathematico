@@ -121,7 +121,10 @@ function registerSecurityMiddleware() {
     })
   );
 
-  // Body parsing
+  // Register webhook route BEFORE body parsers to preserve raw body
+  app.use('/api/v1/webhook', require('./routes/webhook'));
+
+  // Body parsing (AFTER webhook route)
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -238,7 +241,7 @@ function registerRoutes() {
   app.use(`${API_PREFIX}/student`, require('./routes/student'));
   app.use(`${API_PREFIX}/users`, require('./routes/users'));
   app.use(`${API_PREFIX}/payments`, require('./routes/payment'));
-  app.use(`${API_PREFIX}/webhook`, require('./routes/webhook'));
+  // Webhook route is registered in registerSecurityMiddleware() before body parsers
   app.use(`${API_PREFIX}/secure-pdf`, require('./routes/securePdf'));
 
   // Root API endpoint
