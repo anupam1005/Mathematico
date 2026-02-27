@@ -4,14 +4,12 @@ const PaymentSchema = new mongoose.Schema({
   paymentId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   orderId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   status: {
     type: String,
