@@ -122,7 +122,25 @@ function registerSecurityMiddleware() {
   );
 
   // Register webhook route BEFORE body parsers to preserve raw body
-  app.use('/api/v1/webhook', require('./routes/webhook'));
+  const { handleRazorpayWebhook } = require('./controllers/webhookController');
+  const { createWebhookRateLimiter } = require('./middleware/webhookRateLimiter');
+  
+  // For Vercel serverless, use simple raw body parser
+  // The controller will handle different body formats
+  app.post('/api/v1/webhook/razorpay', 
+    express.raw({ type: 'application/json' }),
+    createWebhookRateLimiter(),
+    handleRazorpayWebhook
+  );
+  
+  // Webhook health check
+  app.get('/api/v1/webhook/razorpay/health', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Razorpay webhook endpoint is active',
+      timestamp: new Date().toISOString()
+    });
+  });
 
   // Body parsing (AFTER webhook route)
   app.use(express.json({ limit: '10mb' }));
