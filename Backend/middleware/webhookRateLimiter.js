@@ -20,11 +20,6 @@ const createWebhookRateLimiter = () => {
     skipSuccessfulRequests: false,
     // Skip failed requests from rate limiting
     skipFailedRequests: false,
-    // Key generator for IP-based limiting
-    keyGenerator: (req) => {
-      // For webhooks, we primarily limit by source IP
-      return req.ip || req.connection.remoteAddress || 'unknown';
-    },
     // Custom handler for rate limit exceeded
     handler: (req, res) => {
       console.warn(`Webhook rate limit exceeded for IP: ${req.ip}`);

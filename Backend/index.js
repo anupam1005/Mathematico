@@ -460,9 +460,7 @@ module.exports = app;
 
         const PORT = await findAvailablePort();
         const server = app.listen(PORT, '0.0.0.0', () => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log(`🚀 Mathematico backend listening on ${PORT}`);
-          }
+          console.log(`🚀 Mathematico backend listening on ${PORT}`);
         });
         app.server = server;
       } catch (error) {

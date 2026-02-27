@@ -17,7 +17,7 @@ function validateEnvironment() {
   // Core required variables
   const requiredVars = [
     'NODE_ENV',
-    'MONGODB_URI',
+    'MONGO_URI',
     'JWT_SECRET',
     'JWT_REFRESH_SECRET'
   ];
@@ -308,6 +308,7 @@ function checkEnvironmentConflicts() {
 function getProductionHardeningChecklist() {
   const checklist = [];
   const isProduction = process.env.NODE_ENV === 'production';
+  const razorpayEnabled = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
   
   // Security checklist items
   checklist.push({
