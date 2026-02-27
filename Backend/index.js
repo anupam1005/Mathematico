@@ -133,8 +133,9 @@ function registerSecurityMiddleware() {
   const corsOptions = getCorsOptions();
   app.use(cors(corsOptions));
 
-  // Request logging (production only)
-  if (process.env.NODE_ENV === 'production') {
+  // Request logging (when feature flag is enabled)
+  const { isFeatureEnabled } = require('./utils/featureFlags');
+  if (isFeatureEnabled('requestLogging')) {
     const requestLogger = require('./middleware/requestLogger');
     app.use(requestLogger);
   }
@@ -300,9 +301,11 @@ function registerErrorHandling() {
 }
 
 // 5) THEN perform async infrastructure initialization
-// Validate environment variables first
-validateEnvironmentFormat();
-runCompleteValidation();
+// Validate environment variables first (only in local development)
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1' && process.env.SERVERLESS !== '1') {
+  validateEnvironmentFormat();
+  runCompleteValidation();
+}
 validateFeatureFlags();
 
 async function bootstrapAdminUser() {
@@ -418,29 +421,42 @@ async function startServer() {
   }
 }
 
-// Kick off initialization on cold start (non-blocking for `/`)
-bootstrapPromise = startServer().catch((err) => {
-  // Only set bootstrap error if database is actually disconnected
-  const currentConnection = mongoose.connection;
-  if (currentConnection.readyState !== 1) {
-    bootstrapError = err;
-  }
-  console.error('❌ Startup error:', err && err.message ? err.message : err);
-});
+// Kick off initialization on cold start (non-blocking for serverless)
+if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+  // In serverless, start bootstrap in background but don't block the export
+  bootstrapPromise = startServer().catch((err) => {
+    const currentConnection = mongoose.connection;
+    if (currentConnection.readyState !== 1) {
+      bootstrapError = err;
+    }
+    console.error('❌ Serverless bootstrap error:', err && err.message ? err.message : err);
+  });
+} else {
+  // In local development, we can wait for bootstrap
+  bootstrapPromise = startServer().catch((err) => {
+    // Only set bootstrap error if database is actually disconnected
+    const currentConnection = mongoose.connection;
+    if (currentConnection.readyState !== 1) {
+      bootstrapError = err;
+    }
+    console.error('❌ Startup error:', err && err.message ? err.message : err);
+  });
+}
 
 // Export for Vercel
 module.exports = app;
 
-  // Local development server only
-  if (require.main === module) {
-    const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
-    const isProduction = process.env.NODE_ENV === 'production';
+// Local development server only
+if (require.main === module) {
+  const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-    if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('☁️ Running in serverless/production mode');
-      }
-    } else {
+  if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('☁️ Running in serverless/production mode');
+    }
+    // Don't start server in serverless mode - just export the app
+  } else {
     (async () => {
       try {
         await bootstrapPromise;

@@ -22,8 +22,8 @@ const featureFlags = {
   // Enhanced security features
   enhancedRateLimiting: process.env.ENABLE_ENHANCED_RATE_LIMITING !== 'false',
   
-  // Request logging in production
-  requestLogging: process.env.NODE_ENV === 'production'
+  // Request logging in production (when explicitly enabled)
+  requestLogging: process.env.ENABLE_REQUEST_LOGGING === 'true'
 };
 
 /**
@@ -96,7 +96,8 @@ function validateFeatureFlags() {
     'ENABLE_SECURE_PDF',
     'ENABLE_RAZORPAY', 
     'ENABLE_FILE_LOGGING',
-    'ENABLE_ENHANCED_RATE_LIMITING'
+    'ENABLE_ENHANCED_RATE_LIMITING',
+    'ENABLE_REQUEST_LOGGING'
   ];
   
   booleanFlags.forEach(envVar => {
