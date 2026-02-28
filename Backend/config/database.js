@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
  * Prevents multiple connection attempts across cold starts
  * Optimized for Vercel environment variables
  */
+const globalConnectionKey = 'mongooseConn';
 let cachedConnection = null;
 let connectionPromise = null;
 
@@ -18,14 +19,26 @@ let connectionPromise = null;
  * - Optimized for Vercel environment variables
  */
 const connectDB = async () => {
-  // Return cached connection if available
-  if (cachedConnection && cachedConnection.readyState === 1) {
-    return cachedConnection;
-  }
-
-  // Return existing connection promise if connection is in progress
-  if (connectionPromise) {
-    return connectionPromise;
+  // Use global connection caching for serverless environments
+  if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+    // Check for cached global connection
+    if (global[globalConnectionKey] && global[globalConnectionKey].readyState === 1) {
+      return global[globalConnectionKey];
+    }
+    
+    // Return existing connection promise if connection is in progress
+    if (global[globalConnectionKey + 'Promise']) {
+      return global[globalConnectionKey + 'Promise'];
+    }
+  } else {
+    // Local development - use module-level caching
+    if (cachedConnection && cachedConnection.readyState === 1) {
+      return cachedConnection;
+    }
+    
+    if (connectionPromise) {
+      return connectionPromise;
+    }
   }
 
   // Validate environment with Vercel-specific messaging
@@ -50,17 +63,25 @@ const connectDB = async () => {
   });
 
   // Create connection promise and cache it
-  connectionPromise = (async () => {
+  const newConnectionPromise = (async () => {
     try {
       // Use existing connection if available
       if (mongoose.connection.readyState === 1) {
-        cachedConnection = mongoose.connection;
+        const connection = mongoose.connection;
+        
+        // Cache in the appropriate location
+        if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+          global[globalConnectionKey] = connection;
+        } else {
+          cachedConnection = connection;
+        }
+        
         console.log('MONGO_REUSE_EXISTING', {
-          readyState: cachedConnection.readyState,
-          host: cachedConnection.host,
-          database: cachedConnection.name
+          readyState: connection.readyState,
+          host: connection.host,
+          database: connection.name
         });
-        return cachedConnection;
+        return connection;
       }
 
       // Vercel-optimized connection settings (minimal for compatibility)
@@ -76,21 +97,32 @@ const connectDB = async () => {
       const connection = await mongoose.connect(process.env.MONGO_URI, connectionOptions);
 
       // Cache the successful connection
-      cachedConnection = connection.connection;
+      const dbConnection = connection.connection;
+      
+      if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+        global[globalConnectionKey] = dbConnection;
+      } else {
+        cachedConnection = dbConnection;
+      }
       
       console.log('MONGO_CONNECTION_SUCCESS', {
         message: 'MongoDB connected successfully',
-        readyState: cachedConnection.readyState,
-        host: cachedConnection.host,
-        database: cachedConnection.name,
+        readyState: dbConnection.readyState,
+        host: dbConnection.host,
+        database: dbConnection.name,
         isVercel: process.env.VERCEL === '1'
       });
 
-      return cachedConnection;
+      return dbConnection;
     } catch (error) {
       // Reset connection promise on failure
-      connectionPromise = null;
-      cachedConnection = null;
+      if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+        global[globalConnectionKey + 'Promise'] = null;
+        global[globalConnectionKey] = null;
+      } else {
+        connectionPromise = null;
+        cachedConnection = null;
+      }
       
       console.error('MONGO_CONNECTION_ERROR', {
         message: error.message,
@@ -105,7 +137,14 @@ const connectDB = async () => {
     }
   })();
 
-  return connectionPromise;
+  // Cache the connection promise
+  if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+    global[globalConnectionKey + 'Promise'] = newConnectionPromise;
+  } else {
+    connectionPromise = newConnectionPromise;
+  }
+
+  return newConnectionPromise;
 };
 
 /**

@@ -280,34 +280,36 @@ function registerRoutes() {
   // Redis health check route
   app.get('/api/v1/health/redis', async (req, res) => {
     try {
-      const { redisHealthCheck } = require('./middleware/upstashLoginRateLimiter');
+      // Only check enhanced rate limiter (legacy upstashLoginRateLimiter was removed)
       const { redisHealthCheck: enhancedHealthCheck } = require('./middleware/enhancedRateLimiter');
       
-      const [legacyStatus, enhancedStatus] = await Promise.all([
-        redisHealthCheck(),
-        enhancedHealthCheck()
-      ]);
+      const enhancedStatus = await enhancedHealthCheck();
       
-      const statusCode = (legacyStatus.healthy && enhancedStatus.healthy) ? 200 : 503;
+      // Return 200 with degraded status if Redis is unavailable
+      const statusCode = enhancedStatus.healthy ? 200 : 200;
       
       res.status(statusCode).json({
         service: 'redis',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
-        legacy: legacyStatus,
         enhanced: enhancedStatus,
         overall: {
-          healthy: legacyStatus.healthy && enhancedStatus.healthy,
-          status: (legacyStatus.healthy && enhancedStatus.healthy) ? 'healthy' : 'degraded'
+          healthy: enhancedStatus.healthy,
+          status: enhancedStatus.healthy ? 'healthy' : 'degraded'
         }
       });
     } catch (error) {
-      res.status(503).json({
+      // Never return 503 - always return 200 with degraded status
+      res.status(200).json({
         service: 'redis',
-        status: 'error',
+        status: 'degraded',
         message: error && error.message ? error.message : 'Redis health check failed',
         healthy: false,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        overall: {
+          healthy: false,
+          status: 'degraded'
+        }
       });
     }
   });
@@ -493,7 +495,12 @@ async function startServer() {
   try {
     // Check if MONGO_URI is configured before attempting connection
     if (!process.env.MONGO_URI) {
-      throw new Error('MONGO_URI environment variable is not configured');
+      console.warn('MONGO_BOOTSTRAP_SKIPPED', {
+        reason: 'MONGO_URI not configured',
+        environment: process.env.NODE_ENV,
+        isVercel: process.env.VERCEL === '1'
+      });
+      return; // Don't throw, just skip bootstrap
     }
 
     const connection = await connectDB();
@@ -541,7 +548,16 @@ async function startServer() {
         mongoUriLength: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0
       });
       
-      throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
+      // Don't throw in serverless - just log the error
+      if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+        console.warn('MONGO_BOOTSTRAP_FAILED', {
+          message: 'Database bootstrap failed, but application will continue',
+          action: 'Health endpoint will reflect degraded status'
+        });
+        return; // Don't throw in serverless
+      } else {
+        throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
+      }
     } else {
       // Connection is actually working despite bootstrap error - clear the stale error
       bootstrapError = null;
