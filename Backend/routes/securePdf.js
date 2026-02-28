@@ -34,6 +34,26 @@ router.get('/status', (req, res) => {
 });
 
 /**
+ * GET /api/v1/secure-pdf/
+ * Root endpoint with basic info
+ */
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Secure PDF API',
+    securePdfEnabled: isSecurePdfEnabled(),
+    endpoints: {
+      status: '/status',
+      generateSignedUrl: '/generate-signed-url',
+      verifyAccess: '/verify-access',
+      coursePdfList: '/course/:courseId/list',
+      coursePdfAccess: '/course/:courseId/pdf/:pdfId'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * POST /api/v1/secure-pdf/generate-signed-url
  * Generate a signed URL for PDF access
  * Body: { pdfUrl, courseId, expiresIn? }

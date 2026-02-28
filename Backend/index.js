@@ -394,8 +394,10 @@ function registerRoutes() {
   try {
     const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
+    console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
   } catch (err) {
-    // no-op
+    console.warn('[SWAGGER] Swagger documentation disabled:', err?.message || 'Unknown error');
+    // Continue without swagger - non-critical feature
   }
 }
 
