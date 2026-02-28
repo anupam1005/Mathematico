@@ -63,18 +63,13 @@ const connectDB = async () => {
         return cachedConnection;
       }
 
-      // Vercel-optimized connection settings
+      // Vercel-optimized connection settings (minimal for compatibility)
       const connectionOptions = {
         serverSelectionTimeoutMS: 15000,
         socketTimeoutMS: 45000,
         maxPoolSize: process.env.VERCEL === '1' ? 5 : 10, // Smaller pool for serverless
-        minPoolSize: process.env.VERCEL === '1' ? 1 : 2,  // Smaller min for serverless
         retryWrites: true,
-        w: 'majority',
-        // Vercel-specific optimizations
-        maxIdleTimeMS: process.env.VERCEL === '1' ? 30000 : 60000, // Shorter idle time for serverless
-        bufferMaxEntries: 0, // Fail fast if no connection
-        bufferCommands: false // Disable buffering in serverless
+        w: 'majority'
       };
 
       // Establish new connection
