@@ -7,7 +7,6 @@
 
 const express = require('express');
 const router = express.Router();
-const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
 const { 
   verifyCourseAccess, 
   requireSecurePdf, 
@@ -18,12 +17,10 @@ const { isSecurePdfEnabled } = require('../utils/featureFlags');
 const Course = require('../models/Course');
 const securityLogger = require('../utils/securityLogger');
 
-// Apply authentication to all secure PDF routes
-router.use(strictAuthenticateToken);
-
+// Public endpoints (no authentication required)
 /**
  * GET /api/v1/secure-pdf/status
- * Check if secure PDF is enabled
+ * Check if secure PDF is enabled (public endpoint)
  */
 router.get('/status', (req, res) => {
   res.json({
@@ -35,7 +32,7 @@ router.get('/status', (req, res) => {
 
 /**
  * GET /api/v1/secure-pdf/
- * Root endpoint with basic info
+ * Root endpoint with basic info (public endpoint)
  */
 router.get('/', (req, res) => {
   res.json({
@@ -53,6 +50,7 @@ router.get('/', (req, res) => {
   });
 });
 
+// Protected endpoints (authentication required)
 /**
  * POST /api/v1/secure-pdf/generate-signed-url
  * Generate a signed URL for PDF access
@@ -245,6 +243,7 @@ router.get('/verify-access', verifyCourseAccess(), (req, res) => {
  * List all available PDFs for a course (if user has access)
  */
 router.get('/course/:courseId/list', 
+  requireSecurePdf(),
   verifyCourseAccess('courseId'),
   async (req, res) => {
     try {
