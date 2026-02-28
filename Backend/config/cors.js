@@ -1,9 +1,9 @@
 /**
- * Centralized CORS Configuration
+ * Centralized CORS Configuration - Vercel Optimized
  * 
  * This module consolidates all CORS-related environment variables
  * into a single ALLOWED_ORIGINS configuration for better security
- * and maintainability.
+ * and maintainability in Vercel deployments.
  */
 
 /**
@@ -11,8 +11,27 @@
  * @returns {string[]} Array of allowed origins
  */
 function getAllowedOrigins() {
-  // Primary consolidated variable
+  const isVercel = process.env.VERCEL === '1';
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Primary consolidated variable - Vercel-friendly
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+  
+  // Vercel-specific origins (automatically detected)
+  const vercelOrigins = [];
+  if (isVercel) {
+    // Add Vercel deployment URL if available
+    const vercelUrl = process.env.VERCEL_URL;
+    if (vercelUrl) {
+      vercelOrigins.push(`https://${vercelUrl}`);
+    }
+    
+    // Add custom domain if configured
+    const customDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    if (customDomain) {
+      vercelOrigins.push(`https://${customDomain}`);
+    }
+  }
   
   // Fallback to legacy variables for backward compatibility during migration
   const legacyOrigins = [
@@ -40,12 +59,12 @@ function getAllowedOrigins() {
       .filter(Boolean);
   } else {
     // Use legacy origins if ALLOWED_ORIGINS is not set
-    origins = legacyOrigins;
+    origins = [...legacyOrigins, ...vercelOrigins];
     
     // Warn about deprecated usage in non-production
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('⚠️ Using legacy CORS variables. Please migrate to ALLOWED_ORIGINS');
-      console.warn('   Legacy variables detected:', legacyOrigins);
+    if (!isProduction) {
+      console.warn('[CORS] Using legacy CORS variables. Please migrate to ALLOWED_ORIGINS in Vercel dashboard');
+      console.warn('[CORS] Legacy variables detected:', legacyOrigins);
     }
   }
   
@@ -53,7 +72,18 @@ function getAllowedOrigins() {
   origins.push(...mobileOrigins);
   
   // Remove duplicates and return
-  return Array.from(new Set(origins));
+  const uniqueOrigins = Array.from(new Set(origins));
+  
+  console.log('[CORS] Origins configured:', {
+    environment: process.env.NODE_ENV,
+    isVercel,
+    totalOrigins: uniqueOrigins.length,
+    hasVercelUrl: !!process.env.VERCEL_URL,
+    hasCustomDomain: !!process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    origins: uniqueOrigins
+  });
+  
+  return uniqueOrigins;
 }
 
 /**

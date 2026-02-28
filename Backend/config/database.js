@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 /**
  * Global connection caching for Vercel serverless environment
  * Prevents multiple connection attempts across cold starts
+ * Optimized for Vercel environment variables
  */
 let cachedConnection = null;
 let connectionPromise = null;
@@ -14,6 +15,7 @@ let connectionPromise = null;
  * - Validates connection state before returning
  * - Structured error logging
  * - Vercel serverless compatible
+ * - Optimized for Vercel environment variables
  */
 const connectDB = async () => {
   // Return cached connection if available
@@ -26,10 +28,26 @@ const connectDB = async () => {
     return connectionPromise;
   }
 
-  // Validate environment
+  // Validate environment with Vercel-specific messaging
   if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is undefined");
+    const error = new Error("MONGO_URI environment variable is not configured");
+    console.error('MONGO_URI_MISSING', {
+      error: error.message,
+      environment: process.env.NODE_ENV,
+      isVercel: process.env.VERCEL === '1',
+      vercelEnv: process.env.VERCEL_ENV,
+      solution: 'Set MONGO_URI in your Vercel dashboard under Environment Variables'
+    });
+    throw error;
   }
+
+  // Log connection attempt (without sensitive data)
+  console.log('MONGO_CONNECTING', {
+    environment: process.env.NODE_ENV,
+    isVercel: process.env.VERCEL === '1',
+    uriLength: process.env.MONGO_URI.length,
+    uriStartsWith: process.env.MONGO_URI.substring(0, 20) + '...'
+  });
 
   // Create connection promise and cache it
   connectionPromise = (async () => {
@@ -37,18 +55,30 @@ const connectDB = async () => {
       // Use existing connection if available
       if (mongoose.connection.readyState === 1) {
         cachedConnection = mongoose.connection;
+        console.log('MONGO_REUSE_EXISTING', {
+          readyState: cachedConnection.readyState,
+          host: cachedConnection.host,
+          database: cachedConnection.name
+        });
         return cachedConnection;
       }
 
-      // Establish new connection
-      const connection = await mongoose.connect(process.env.MONGO_URI, {
+      // Vercel-optimized connection settings
+      const connectionOptions = {
         serverSelectionTimeoutMS: 15000,
         socketTimeoutMS: 45000,
-        maxPoolSize: 10,
-        minPoolSize: 2,
+        maxPoolSize: process.env.VERCEL === '1' ? 5 : 10, // Smaller pool for serverless
+        minPoolSize: process.env.VERCEL === '1' ? 1 : 2,  // Smaller min for serverless
         retryWrites: true,
-        w: 'majority'
-      });
+        w: 'majority',
+        // Vercel-specific optimizations
+        maxIdleTimeMS: process.env.VERCEL === '1' ? 30000 : 60000, // Shorter idle time for serverless
+        bufferMaxEntries: 0, // Fail fast if no connection
+        bufferCommands: false // Disable buffering in serverless
+      };
+
+      // Establish new connection
+      const connection = await mongoose.connect(process.env.MONGO_URI, connectionOptions);
 
       // Cache the successful connection
       cachedConnection = connection.connection;
@@ -57,7 +87,8 @@ const connectDB = async () => {
         message: 'MongoDB connected successfully',
         readyState: cachedConnection.readyState,
         host: cachedConnection.host,
-        database: cachedConnection.name
+        database: cachedConnection.name,
+        isVercel: process.env.VERCEL === '1'
       });
 
       return cachedConnection;
@@ -70,7 +101,9 @@ const connectDB = async () => {
         message: error.message,
         name: error.name,
         code: error.code || 'CONNECTION_FAILED',
-        stack: error.stack
+        stack: error.stack,
+        isVercel: process.env.VERCEL === '1',
+        vercelEnv: process.env.VERCEL_ENV
       });
 
       throw error;

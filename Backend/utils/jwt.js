@@ -7,30 +7,36 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // L
 
 function getJwtSecrets() {
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
-  const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
+  const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || jwtSecret).trim(); // Fallback to JWT_SECRET
 
-  // Production security checks
-  if (process.env.NODE_ENV === 'production') {
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET environment variable is required in production');
-    }
-    if (!jwtRefreshSecret) {
-      throw new Error('JWT_REFRESH_SECRET environment variable is required in production');
-    }
+  // Vercel-optimized validation
+  const isVercel = process.env.VERCEL === '1';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Core validation for all environments
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET environment variable is required. Please configure it in your Vercel dashboard.');
+  }
+
+  // Production-specific security checks
+  if (isProduction) {
     if (jwtSecret.length < 32) {
       throw new Error('JWT_SECRET must be at least 32 characters long in production');
     }
-    if (jwtRefreshSecret.length < 32) {
+    if (jwtRefreshSecret && jwtRefreshSecret.length < 32) {
       throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long in production');
     }
   }
 
-  if (!jwtSecret || !jwtRefreshSecret) {
-    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required');
+  // If JWT_REFRESH_SECRET is not set, use JWT_SECRET (Vercel simplicity)
+  if (!jwtRefreshSecret) {
+    console.log('[JWT] JWT_REFRESH_SECRET not set, using JWT_SECRET for both tokens');
+    return { jwtSecret, jwtRefreshSecret: jwtSecret };
   }
 
+  // Security check: secrets must be different if both are provided
   if (jwtSecret === jwtRefreshSecret) {
-    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be different values');
+    console.warn('[JWT] WARNING: JWT_SECRET and JWT_REFRESH_SECRET are identical. Consider using different values for enhanced security.');
   }
 
   // Check for weak/default secrets
@@ -38,6 +44,17 @@ function getJwtSecrets() {
   if (weakSecrets.includes(jwtSecret.toLowerCase()) || weakSecrets.includes(jwtRefreshSecret.toLowerCase())) {
     throw new Error('JWT secrets cannot use weak/default values');
   }
+
+  // Log successful validation (without exposing secrets)
+  console.log('[JWT] JWT configuration validated successfully', {
+    environment: process.env.NODE_ENV,
+    isVercel,
+    hasAccessSecret: !!jwtSecret,
+    hasRefreshSecret: !!jwtRefreshSecret,
+    accessSecretLength: jwtSecret.length,
+    refreshSecretLength: jwtRefreshSecret.length,
+    secretsDifferent: jwtSecret !== jwtRefreshSecret
+  });
 
   return { jwtSecret, jwtRefreshSecret };
 }

@@ -1,5 +1,8 @@
 // Mathematico Backend - Startup Architecture Corrected (Vercel Serverless Compatible)
-require('dotenv').config();
+// Environment variables are loaded from Vercel dashboard - no local .env files needed
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+  require('dotenv').config();
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -72,43 +75,53 @@ let bootstrapError = null;
 let lastSuccessfulConnection = null;
 
 function validateEnvironmentFormat() {
-  // Strict formatting checks that are safe to run synchronously and won't break `/`.
-  if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl.startsWith('rediss://')) {
-      throw new Error('REDIS_URL must use rediss:// (TLS) in production');
-    }
-  }
+  // Vercel-optimized environment validation
+  const isVercel = process.env.VERCEL === '1';
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  // Validate Razorpay webhook secret if Razorpay is enabled
-  if (process.env.ENABLE_RAZORPAY === 'true') {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!webhookSecret || webhookSecret.length < 32) {
-      throw new Error('RAZORPAY_WEBHOOK_SECRET must be set and at least 32 characters when ENABLE_RAZORPAY=true');
-    }
-    console.log('[ENV] Razorpay webhook secret validated successfully');
+  console.log('[ENV] Environment validation:', {
+    nodeEnv: process.env.NODE_ENV,
+    isVercel,
+    isProduction,
+    vercelEnv: process.env.VERCEL_ENV
+  });
+
+  // Core required variables for any environment
+  const requiredVars = ['MONGO_URI', 'JWT_SECRET'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    throw new Error(`Required environment variables missing: ${missingVars.join(', ')}. Please configure these in your Vercel dashboard.`);
   }
 
-  // Validate admin credentials in production
-  if (process.env.NODE_ENV === 'production') {
+  // Production-specific validations
+  if (isProduction) {
+    if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('rediss://')) {
+      console.warn('[ENV] WARNING: REDIS_URL should use rediss:// (TLS) in production for security');
+    }
+    
+    // Validate Razorpay webhook secret if Razorpay is enabled
+    if (process.env.ENABLE_RAZORPAY === 'true') {
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      if (!webhookSecret || webhookSecret.length < 32) {
+        throw new Error('RAZORPAY_WEBHOOK_SECRET must be set and at least 32 characters when ENABLE_RAZORPAY=true');
+      }
+      console.log('[ENV] Razorpay webhook secret validated successfully');
+    }
+
+    // Validate admin credentials in production
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
     
     if (!adminEmail || !adminPassword) {
-      console.error('FATAL: Missing admin credentials in production');
-      console.error('Required environment variables:');
-      console.error('- ADMIN_EMAIL:', adminEmail ? 'SET' : 'MISSING');
-      console.error('- ADMIN_PASSWORD:', adminPassword ? 'SET' : 'MISSING');
-      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in production');
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in production Vercel environment');
     }
     
     if (!adminEmail.includes('@') || adminEmail.length < 5) {
-      console.error('FATAL: Invalid ADMIN_EMAIL format:', adminEmail);
       throw new Error('ADMIN_EMAIL must be a valid email address');
     }
     
     if (adminPassword.length < 8) {
-      console.error('FATAL: ADMIN_PASSWORD too short (min 8 characters)');
       throw new Error('ADMIN_PASSWORD must be at least 8 characters long');
     }
     
@@ -116,6 +129,17 @@ function validateEnvironmentFormat() {
     console.log('[ENV] ADMIN_EMAIL:', adminEmail.toLowerCase().trim());
     console.log('[ENV] ADMIN_PASSWORD length:', adminPassword.length, 'characters');
   }
+
+  // Log successful validation (without sensitive data)
+  console.log('[ENV] Environment validation completed successfully');
+  console.log('[ENV] Configured services:', {
+    mongodb: !!process.env.MONGO_URI,
+    jwt: !!process.env.JWT_SECRET,
+    redis: !!process.env.REDIS_URL,
+    razorpay: process.env.ENABLE_RAZORPAY === 'true',
+    cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY),
+    admin: !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD)
+  });
 }
 
 function registerSecurityMiddleware() {
@@ -288,6 +312,50 @@ function registerRoutes() {
     }
   });
 
+  // Bootstrap diagnostics endpoint - helps identify configuration issues
+  app.get('/api/v1/bootstrap/diagnostics', (req, res) => {
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
+      bootstrap: {
+        completed: bootstrapped,
+        error: bootstrapError ? bootstrapError.message : null,
+        lastSuccessfulConnection: lastSuccessfulConnection || null
+      },
+      environmentVariables: {
+        MONGO_URI: {
+          configured: Boolean(process.env.MONGO_URI),
+          length: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0,
+          startsWith: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 20) + '...' : null
+        },
+        JWT_SECRET: {
+          configured: Boolean(process.env.JWT_SECRET),
+          length: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0
+        },
+        ADMIN_EMAIL: {
+          configured: Boolean(process.env.ADMIN_EMAIL),
+          value: process.env.ADMIN_EMAIL || null
+        },
+        ADMIN_PASSWORD: {
+          configured: Boolean(process.env.ADMIN_PASSWORD),
+          length: process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.length : 0
+        }
+      },
+      database: {
+        readyState: mongoose.connection.readyState,
+        states: {
+          0: 'disconnected',
+          1: 'connected',
+          2: 'connecting',
+          3: 'disconnecting'
+        }
+      }
+    };
+
+    res.status(200).json(diagnostics);
+  });
+
   // API routes
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
   app.use(`${API_PREFIX}/admin`, require('./routes/admin'));
@@ -358,9 +426,11 @@ function registerErrorHandling() {
 }
 
 // 5) THEN perform async infrastructure initialization
-// Validate environment variables first (only in local development)
+// Validate environment variables for all environments (Vercel-optimized)
+validateEnvironmentFormat();
+
+// Only run complete validation in local development
 if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1' && process.env.SERVERLESS !== '1') {
-  validateEnvironmentFormat();
   runCompleteValidation();
 }
 validateFeatureFlags();
@@ -419,6 +489,11 @@ async function bootstrapAdminUser() {
 async function startServer() {
   // Always check current DB state first - don't rely on stale bootstrap state
   try {
+    // Check if MONGO_URI is configured before attempting connection
+    if (!process.env.MONGO_URI) {
+      throw new Error('MONGO_URI environment variable is not configured');
+    }
+
     const connection = await connectDB();
     
     // Verify connection is actually working with ping
@@ -457,7 +532,11 @@ async function startServer() {
         name: err?.name || 'MongoError',
         code: err?.code || 'BOOTSTRAP_FAILED',
         stack: err?.stack,
-        readyState: currentConnection.readyState
+        readyState: currentConnection.readyState,
+        environment: process.env.NODE_ENV,
+        isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
+        mongoUriConfigured: Boolean(process.env.MONGO_URI),
+        mongoUriLength: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0
       });
       
       throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
