@@ -20,7 +20,6 @@ import { CustomTextInput } from '../components/CustomTextInput';
 import { CustomCheckbox } from '../components/CustomCheckbox';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
-import { debounce } from '../utils/debounce';
 
 export default function RegisterScreen({ navigation }: any) {
   const { register, isLoading } = useAuth();
@@ -106,25 +105,28 @@ export default function RegisterScreen({ navigation }: any) {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const trimmedName = name.trim();
+      
+      // PRODUCTION DEBUG: Log payload before API call
+      console.log('REGISTER_PAYLOAD', { 
+        name: trimmedName, 
+        email: normalizedEmail, 
+        passwordLength: password.length 
+      });
+      
       const result = await register(trimmedName, normalizedEmail, password);
 
       if (!result.success) {
         setApiError(result.message || 'Registration failed. Please check your information and try again.');
       }
-    } catch {
+    } catch (error) {
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_REGISTER_ERROR', error);
       setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   }, [name, email, password, confirmPassword, agreeToTerms, register, isSubmitting, isLoading]);
 
-  // Debounced register handler to prevent rapid submissions
-  const debouncedRegister = useCallback(
-    debounce(() => {
-      handleRegister();
-    }, 300),
-    [handleRegister]
-  );
 
   const handleLogin = () => {
     navigation.navigate('Login');
@@ -335,7 +337,7 @@ export default function RegisterScreen({ navigation }: any) {
 
               <Button
                 mode="contained"
-                onPress={debouncedRegister}
+                onPress={handleRegister}
                 style={styles.registerButton}
                 contentStyle={styles.buttonContent}
                 disabled={isLoading || isSubmitting}

@@ -1,7 +1,8 @@
 import { API_PATHS } from '../constants/apiPaths';
 import api from './apiClient';
 import { Storage } from '../utils/storage';
-import { createSafeError } from '../utils/safeError';
+import { API_BASE_URL } from '../config';
+import axios from 'axios';
 
 // const authApi = withBasePath(API_PATHS.auth);
 
@@ -46,11 +47,39 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      // Use relative path - api client already has the full base URL
-      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
-      const payload = response?.data;
+      // PRODUCTION DEBUG: Log request URL before API call
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
+      console.log('REQUEST_URL', requestUrl);
+      
+      let response: any;
+      let payload: any;
+      
+      try {
+        // Use relative path - api client already has the full base URL
+        response = await api.post(`${API_PATHS.auth}/login`, { email, password });
+        payload = response?.data;
+      } catch (apiError) {
+        console.warn('API_CLIENT_FAILED, FALLING_BACK_TO_DIRECT_AXIOS', apiError);
+        
+        // PRODUCTION DEBUG: Fallback to direct axios call
+        const directUrl = 'https://mathematico-backend-new.vercel.app/api/v1/auth/login';
+        console.log('DIRECT_AXIOS_URL', directUrl);
+        
+        const directResponse = await axios.post(directUrl, { email, password }, {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 30000,
+        });
+        payload = directResponse?.data;
+      }
 
-      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+      // PRODUCTION DEBUG: Log response structure
+      console.log('LOGIN_RESPONSE', payload);
+
+      // Flexible token extraction for backend compatibility
+      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
       if (!payload?.success || !accessToken) {
         return {
@@ -67,6 +96,11 @@ const authService = {
       }
 
       await Storage.setItem('authToken', accessToken);
+      
+      // PRODUCTION DEBUG: Verify token storage
+      console.log('TOKEN_SAVED');
+      const storedToken = await Storage.getItem('authToken');
+      console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
 
       return {
         success: true,
@@ -80,33 +114,34 @@ const authService = {
         },
       };
     } catch (err) {
-      const safe = createSafeError(err);
-
-      // Use safeError for structured logging and error formatting
-      const errorContext = {
-        timestamp: new Date().toISOString(),
-        service: 'authService.login',
-        email: email.substring(0, 3) + '***@***', // Partial email for privacy
-        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
-        errorMessage: safe.message,
-      };
-
-      // Log error details for production debugging
-      console.error('AUTH_LOGIN_ERROR', JSON.stringify(errorContext));
-
+      // PRODUCTION DEBUG: Full error logging without safeError swallowing
+      console.error('FULL_LOGIN_ERROR', err);
+      
+      // Extract error information directly
       let message = 'Login failed';
-      const msg = String(safe.message || '');
-
-      if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
-        message = 'Network error. Please check your internet connection.';
-      } else if (safe.response?.status === 401) {
-        message = safe.response?.data?.message || 'Invalid email or password';
-      } else if (safe.response?.status === 429) {
-        message = safe.response?.data?.message || 'Too many login attempts. Please try again later.';
-      } else if (safe.response?.status === 503) {
-        message = safe.response?.data?.message || 'Service temporarily unavailable. Please try again later.';
-      } else if (safe.response?.data?.message) {
-        message = safe.response.data.message;
+      
+      if (err && typeof err === 'object') {
+        const errorObj = err as any;
+        
+        if (errorObj.response) {
+          const status = errorObj.response.status;
+          const errorMsg = errorObj.response.data?.message;
+          
+          if (status === 401) {
+            message = errorMsg || 'Invalid email or password';
+          } else if (status === 429) {
+            message = errorMsg || 'Too many login attempts. Please try again later.';
+          } else if (status === 503) {
+            message = errorMsg || 'Service temporarily unavailable. Please try again later.';
+          } else if (errorMsg) {
+            message = errorMsg;
+          }
+        } else if (errorObj.message) {
+          const msg = String(errorObj.message);
+          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+            message = 'Network error. Please check your internet connection.';
+          }
+        }
       }
 
       return { success: false, message };
@@ -121,9 +156,16 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
+      // PRODUCTION DEBUG: Log request URL before API call
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
+      console.log('REQUEST_URL', requestUrl);
+      
       // Direct API call to prevent path duplication
       const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
       const payload = response?.data;
+
+      // PRODUCTION DEBUG: Log response structure
+      console.log('REGISTER_RESPONSE', payload);
 
       if (!payload?.success) {
         return {
@@ -132,9 +174,16 @@ const authService = {
         };
       }
 
-      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+      // Flexible token extraction for backend compatibility
+      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
+      
       if (accessToken) {
         await Storage.setItem('authToken', accessToken);
+        
+        // PRODUCTION DEBUG: Verify token storage
+        console.log('TOKEN_SAVED');
+        const storedToken = await Storage.getItem('authToken');
+        console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
       }
 
       return {
@@ -146,34 +195,36 @@ const authService = {
         },
       };
     } catch (err) {
-      const safe = createSafeError(err);
-
-      // Use safeError for structured logging and error formatting
-      const errorContext = {
-        timestamp: new Date().toISOString(),
-        service: 'authService.register',
-        name: name.substring(0, 3) + '***', // Partial name for privacy
-        email: email.substring(0, 3) + '***@***', // Partial email for privacy
-        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
-        errorMessage: safe.message,
-      };
-
-      // Log error details for production debugging
-      console.error('AUTH_REGISTER_ERROR', JSON.stringify(errorContext));
-
+      // PRODUCTION DEBUG: Full error logging without safeError swallowing
+      console.error('FULL_REGISTER_ERROR', err);
+      
+      // Extract error information directly
       let message = 'Registration failed';
-      if (safe.response?.status === 400) {
-        message = safe.response?.data?.message || 'Invalid registration data';
-      } else if (safe.response?.status === 409) {
-        message = safe.response?.data?.message || 'Email already exists';
-      } else if (safe.response?.status === 429) {
-        message = safe.response?.data?.message || 'Too many registration attempts. Please try again later.';
-      } else if (safe.response?.status === 503) {
-        message = safe.response?.data?.message || 'Service temporarily unavailable. Please try again later.';
-      } else if (safe.response?.data?.message) {
-        message = safe.response.data.message;
-      } else if (safe.message?.includes('Network') || safe.message?.includes('ECONNREFUSED') || safe.message?.includes('timeout')) {
-        message = 'Network error. Please check your internet connection.';
+      
+      if (err && typeof err === 'object') {
+        const errorObj = err as any;
+        
+        if (errorObj.response) {
+          const status = errorObj.response.status;
+          const errorMsg = errorObj.response.data?.message;
+          
+          if (status === 400) {
+            message = errorMsg || 'Invalid registration data';
+          } else if (status === 409) {
+            message = errorMsg || 'Email already exists';
+          } else if (status === 429) {
+            message = errorMsg || 'Too many registration attempts. Please try again later.';
+          } else if (status === 503) {
+            message = errorMsg || 'Service temporarily unavailable. Please try again later.';
+          } else if (errorMsg) {
+            message = errorMsg;
+          }
+        } else if (errorObj.message) {
+          const msg = String(errorObj.message);
+          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+            message = 'Network error. Please check your internet connection.';
+          }
+        }
       }
 
       return { success: false, message };
@@ -193,33 +244,15 @@ const authService = {
       await Storage.deleteItem('refreshToken');
       return { success: true, message: 'Logout successful' };
     } catch (err) {
-      const safeError = createSafeError(err);
-      
-      // Use safeError for structured logging and error formatting
-      const errorContext = {
-        timestamp: new Date().toISOString(),
-        service: 'authService.logout',
-        hasRefreshToken: !!refreshTokenValue,
-        errorType: safeError.response?.status ? `HTTP_${safeError.response.status}` : 'NETWORK_ERROR',
-        errorMessage: safeError.message,
-      };
-
-      // Log error details for production debugging
-      console.error('AUTH_LOGOUT_ERROR', JSON.stringify(errorContext));
+      // PRODUCTION DEBUG: Full error logging without safeError swallowing
+      console.error('FULL_LOGOUT_ERROR', err);
       
       // Still clear local tokens even if logout API fails
       try {
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
       } catch (storageError: any) {
-        // Token cleanup error
-        const storageErrorContext = {
-          timestamp: new Date().toISOString(),
-          service: 'authService.logout.tokenCleanup',
-          errorType: 'STORAGE_ERROR',
-          errorMessage: storageError?.message || 'Unknown storage error',
-        };
-        console.error('AUTH_LOGOUT_STORAGE_ERROR', JSON.stringify(storageErrorContext));
+        console.error('FULL_LOGOUT_STORAGE_ERROR', storageError);
       }
       return { success: false, message: 'Logout failed' };
     }
@@ -260,7 +293,7 @@ const authService = {
       const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
       const payload = response?.data;
 
-      const accessToken = payload?.data?.accessToken || payload?.data?.token;
+      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
       if (!payload?.success || !accessToken) {
         return {
@@ -288,23 +321,12 @@ const authService = {
         },
       };
     } catch (err) {
-      const safe = createSafeError(err);
-      
-      // Use safeError for structured logging and error formatting
-      const errorContext = {
-        timestamp: new Date().toISOString(),
-        service: 'authService.refreshToken',
-        hasRefreshToken: !!refreshTokenValue,
-        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
-        errorMessage: safe.message,
-      };
-
-      // Log error details for production debugging
-      console.error('AUTH_REFRESH_ERROR', JSON.stringify(errorContext));
+      // PRODUCTION DEBUG: Full error logging without safeError swallowing
+      console.error('FULL_REFRESH_ERROR', err);
       
       return {
         success: false,
-        message: safe.message || 'Token refresh failed',
+        message: 'Token refresh failed',
       };
     }
   },
@@ -330,23 +352,12 @@ const authService = {
         data: payload.data,
       };
     } catch (err) {
-      const safe = createSafeError(err);
-      
-      // Use safeError for structured logging and error formatting
-      const errorContext = {
-        timestamp: new Date().toISOString(),
-        service: 'authService.updateProfile',
-        updateFields: Object.keys(data),
-        errorType: safe.response?.status ? `HTTP_${safe.response.status}` : 'NETWORK_ERROR',
-        errorMessage: safe.message,
-      };
-
-      // Log error details for production debugging
-      console.error('AUTH_UPDATE_PROFILE_ERROR', JSON.stringify(errorContext));
+      // PRODUCTION DEBUG: Full error logging without safeError swallowing
+      console.error('FULL_UPDATE_PROFILE_ERROR', err);
       
       return {
         success: false,
-        message: safe.message || 'Profile update failed',
+        message: 'Profile update failed',
       };
     }
   },

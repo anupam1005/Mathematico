@@ -19,7 +19,6 @@ import {
 import { CustomTextInput } from '../components/CustomTextInput';
 import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
-import { debounce } from '../utils/debounce';
 
 export default function LoginScreen({ navigation }: any) {
   const { login, isLoading } = useAuth();
@@ -67,25 +66,24 @@ export default function LoginScreen({ navigation }: any) {
     
     try {
       const normalizedEmail = email.trim().toLowerCase();
+      
+      // PRODUCTION DEBUG: Log payload before API call
+      console.log('LOGIN_PAYLOAD', { email: normalizedEmail, passwordLength: password.length });
+      
       const result = await login(normalizedEmail, password);
       
       if (!result.success) {
         setApiError(result.message || 'Invalid email or password. Please try again.');
       }
     } catch (error) {
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_LOGIN_ERROR', error);
       setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   }, [email, password, login, isSubmitting, isLoading]);
 
-  // Debounced login handler to prevent rapid submissions
-  const debouncedLogin = useCallback(
-    debounce(() => {
-      handleLogin();
-    }, 300),
-    [handleLogin]
-  );
 
   return (
     <KeyboardAvoidingView
@@ -177,7 +175,7 @@ export default function LoginScreen({ navigation }: any) {
 
               <Button
                 mode="contained"
-                onPress={debouncedLogin}
+                onPress={handleLogin}
                 disabled={isLoading || isSubmitting}
                 style={styles.loginButton}
                 contentStyle={styles.buttonContent}

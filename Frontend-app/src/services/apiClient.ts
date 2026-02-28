@@ -28,6 +28,10 @@ api.interceptors.request.use(
         headers.set('Authorization', `Bearer ${token}`);
         config.headers = headers;
       }
+      
+      // PRODUCTION DEBUG: Log final request URL
+      const finalUrl = (config.baseURL || '') + (config.url || '');
+      console.log('API_REQUEST_URL', finalUrl);
     } catch (error) {
       // Token retrieval failed
     }
