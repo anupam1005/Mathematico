@@ -64,26 +64,32 @@ function getAllowedOrigins() {
       .map(origin => origin.trim())
       .filter(Boolean);
     
-    // Security check: no wildcards in production
+    // Security check: no wildcards in production (except mobile origins)
     if (isProduction) {
-      const hasWildcard = origins.some(origin => 
-        origin === '*' || 
+      const hasUnsafeWildcard = origins.some(origin => 
+        (origin === '*' || 
         origin === '*/*' ||
         origin.startsWith('*') ||
-        origin.endsWith('*')
+        origin.endsWith('*')) &&
+        !origin.startsWith('exp://') &&
+        !origin.startsWith('capacitor://') &&
+        !origin.startsWith('ionic://')
       );
       
-      if (hasWildcard) {
-        console.error('🚨 SECURITY WARNING: Wildcard CORS origins detected in production');
+      if (hasUnsafeWildcard) {
+        console.error('🚨 SECURITY WARNING: Unsafe wildcard CORS origins detected in production');
         console.error('   This allows any website to make requests to your API');
         console.error('   Please use specific origins in ALLOWED_ORIGINS');
         
-        // Remove wildcards in production for security
+        // Remove unsafe wildcards in production for security (keep mobile origins)
         origins = origins.filter(origin => 
-          origin !== '*' && 
+          (origin !== '*' && 
           origin !== '*/*' &&
           !origin.startsWith('*') &&
-          !origin.endsWith('*')
+          !origin.endsWith('*')) ||
+          origin.startsWith('exp://') ||
+          origin.startsWith('capacitor://') ||
+          origin.startsWith('ionic://')
         );
       }
     }
@@ -145,16 +151,19 @@ function validateCorsConfig() {
   
   // Enhanced security checks for production
   if (isProduction) {
-    // Check for wildcard usage (security concern in production)
-    const hasWildcard = origins.some(origin => 
-      origin === '*' || 
+    // Check for unsafe wildcard usage (security concern in production)
+    const hasUnsafeWildcard = origins.some(origin => 
+      (origin === '*' || 
       origin === '*/*' ||
       origin.startsWith('*') ||
-      origin.endsWith('*')
+      origin.endsWith('*')) &&
+      !origin.startsWith('exp://') &&
+      !origin.startsWith('capacitor://') &&
+      !origin.startsWith('ionic://')
     );
     
-    if (hasWildcard) {
-      console.error('🚨 CRITICAL SECURITY WARNING: Wildcard CORS origin detected in production');
+    if (hasUnsafeWildcard) {
+      console.error('🚨 CRITICAL SECURITY WARNING: Unsafe wildcard CORS origin detected in production');
       console.error('   This allows ANY website to make requests to your API');
       console.error('   Immediate action required: Set specific origins in ALLOWED_ORIGINS');
       console.error('   Example: ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com');
