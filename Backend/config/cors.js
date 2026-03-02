@@ -155,7 +155,7 @@ function validateCorsConfig() {
   // Enhanced security checks for production
   if (isProduction) {
     // Check for unsafe wildcard usage (security concern in production)
-    const hasUnsafeWildcard = uniqueOrigins.some(origin => 
+    const hasUnsafeWildcard = origins.some(origin => 
       (origin === '*' || 
       origin === '*/*' ||
       origin.startsWith('*') ||
