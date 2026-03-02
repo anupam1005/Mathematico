@@ -5,10 +5,7 @@
     "Backend/index.js": {
       "runtime": "@vercel/node@3",
       "maxDuration": 120,
-      "memory": 2048,
-      "environment": {
-        "NODE_OPTIONS": "--max-old-space-size=1536"
-      }
+      "memory": 2048
     }
   },
   "routes": [
