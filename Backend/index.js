@@ -1,44 +1,26 @@
-// Mathematico Backend - Startup Architecture Corrected (Vercel Serverless Compatible)
+// Mathematico Backend - Production Serverless Architecture
 // Environment variables are loaded from Vercel dashboard - no local .env files needed
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
-  require('dotenv').config();
-}
+'use strict';
 
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
-const net = require('net');
 
 const { connectDB } = require('./config/database');
 const configureTrustProxy = require('./config/trustProxy');
 const { validateJwtConfig } = require('./utils/jwt');
 const { validateFeatureFlags } = require('./utils/featureFlags');
 const { validateCorsConfig, getCorsOptions } = require('./config/cors');
-const { runCompleteValidation } = require('./utils/environmentValidator');
 
-// Utility function to check if a port is available (local/dev only)
-const isPortAvailable = (port) => {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-
-    server.listen(port, () => {
-      server.once('close', () => resolve(true));
-      server.close();
-    });
-
-    server.on('error', () => resolve(false));
-  });
-};
-
-// 1) Create express app
+// Production serverless app
 const app = express();
 
-// 2) Configure trust proxy
+// Configure trust proxy for production
 configureTrustProxy(app);
 
-// 3) Register ROOT route immediately (must never depend on Redis/Mongo)
+// Root endpoint - always available
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -48,37 +30,35 @@ app.get("/", (req, res) => {
   });
 });
 
-// 4) Register favicon routes immediately (must never depend on Redis/Mongo)
-// Handle common favicon requests to prevent 404s
+// Favicon handlers - prevent 404s
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/favicon.png", (req, res) => res.status(204).end());
 app.get("/favicon", (req, res) => res.status(204).end());
 
-// 5) Register security middleware, routes, and error handling IMMEDIATELY after app creation
-// This ensures routes are ALWAYS available, regardless of DB connection status
+// Security middleware registration
 registerSecurityMiddleware();
 
-// Apply login rate limiting to auth endpoints
+// Rate limiting for auth endpoints
 const loginRateLimiter = require('./middleware/loginRateLimiter');
 
-// JWT validation - graceful degradation (non-critical)
+// JWT validation
 try {
   validateJwtConfig();
 } catch (jwtErr) {
-  console.warn('⚠️ JWT configuration invalid:', jwtErr && jwtErr.message ? jwtErr.message : jwtErr);
-  // Continue without JWT - routes will handle missing tokens gracefully
+  console.warn('⚠️ JWT configuration invalid:', jwtErr?.message || jwtErr);
 }
 
+// Route and error handling registration
 registerRoutes();
 registerErrorHandling();
 
+// Bootstrap state management
 let bootstrapped = false;
 let bootstrapPromise = null;
 let bootstrapError = null;
 let lastSuccessfulConnection = null;
 
 function validateEnvironmentFormat() {
-  // Vercel-optimized environment validation
   const isVercel = process.env.VERCEL === '1';
   const isProduction = process.env.NODE_ENV === 'production';
   
@@ -89,7 +69,7 @@ function validateEnvironmentFormat() {
     vercelEnv: process.env.VERCEL_ENV
   });
 
-  // Core required variables for any environment
+  // Core required variables
   const requiredVars = ['MONGO_URI', 'JWT_SECRET'];
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
@@ -103,7 +83,6 @@ function validateEnvironmentFormat() {
       console.warn('[ENV] WARNING: REDIS_URL should use rediss:// (TLS) in production for security');
     }
     
-    // Validate Razorpay webhook secret if Razorpay is enabled
     if (process.env.ENABLE_RAZORPAY === 'true') {
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
       if (!webhookSecret || webhookSecret.length < 32) {
@@ -112,7 +91,7 @@ function validateEnvironmentFormat() {
       console.log('[ENV] Razorpay webhook secret validated successfully');
     }
 
-    // Validate admin credentials in production
+    // Admin credentials validation
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
     
@@ -129,11 +108,8 @@ function validateEnvironmentFormat() {
     }
     
     console.log('[ENV] Admin credentials validated successfully');
-    console.log('[ENV] ADMIN_EMAIL:', adminEmail.toLowerCase().trim());
-    console.log('[ENV] ADMIN_PASSWORD length:', adminPassword.length, 'characters');
   }
 
-  // Log successful validation (without sensitive data)
   console.log('[ENV] Environment validation completed successfully');
   console.log('[ENV] Configured services:', {
     mongodb: !!process.env.MONGO_URI,
@@ -146,23 +122,17 @@ function validateEnvironmentFormat() {
 }
 
 function registerSecurityMiddleware() {
-  // Disable x-powered-by header
   app.disable('x-powered-by');
   
-  // Enhanced security middleware with Helmet strict policy
   app.use(
     helmet({
-      // Content Security Policy - disabled for API (no HTML content)
       contentSecurityPolicy: false,
-      // Cross-Origin Embedder Policy - disabled for API compatibility
       crossOriginEmbedderPolicy: false,
-      // Enhanced security headers for production
       hsts: process.env.NODE_ENV === 'production' ? {
-        maxAge: 31536000, // 1 year
+        maxAge: 31536000,
         includeSubDomains: true,
         preload: true
       } : false,
-      // Additional security headers
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       permissionsPolicy: {
         features: {
@@ -175,12 +145,10 @@ function registerSecurityMiddleware() {
     })
   );
 
-  // Register webhook route BEFORE body parsers to preserve raw body
+  // Webhook route with raw body handling
   const { handleRazorpayWebhook } = require('./controllers/webhookController');
   const { createWebhookRateLimiter } = require('./middleware/webhookRateLimiter');
   
-  // For Vercel serverless, we need to handle raw body capture differently
-  // Create a custom middleware that captures raw body before Vercel's parsing
   const webhookRawBodyHandler = (req, res, next) => {
     if (req.path === '/api/v1/webhook/razorpay' && req.method === 'POST') {
       let rawData = '';
@@ -191,7 +159,7 @@ function registerSecurityMiddleware() {
       
       req.on('end', () => {
         req.rawBody = Buffer.from(rawData, 'utf8');
-        req.body = req.rawBody; // Set body to raw buffer for express.raw()
+        req.body = req.rawBody;
         next();
       });
       
@@ -204,17 +172,14 @@ function registerSecurityMiddleware() {
     }
   };
   
-  // Apply webhook handler before the route
   app.use(webhookRawBodyHandler);
   
-  // Use the raw body parser directly on the webhook route
   app.post('/api/v1/webhook/razorpay', 
     express.raw({ type: 'application/json' }),
     createWebhookRateLimiter(),
     handleRazorpayWebhook
   );
   
-  // Webhook health check
   app.get('/api/v1/webhook/razorpay/health', (req, res) => {
     res.json({
       success: true,
@@ -223,19 +188,17 @@ function registerSecurityMiddleware() {
     });
   });
 
-  // Body parsing (AFTER webhook route)
+  // Body parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  // Cookies
   app.use(cookieParser());
 
-  // CORS - Use centralized configuration
+  // CORS
   validateCorsConfig();
   const corsOptions = getCorsOptions();
   app.use(cors(corsOptions));
 
-  // Request logging (when feature flag is enabled)
+  // Request logging
   const { isFeatureEnabled } = require('./utils/featureFlags');
   if (isFeatureEnabled('requestLogging')) {
     const requestLogger = require('./middleware/requestLogger');
@@ -246,12 +209,10 @@ function registerSecurityMiddleware() {
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
 
-  // Health endpoint - performs actual connection and ping test
+  // Health endpoint
   app.get('/health', async (req, res) => {
     try {
       const { performHealthCheck } = require('./config/database');
-      
-      // Perform actual health check with connection and ping
       const healthData = await performHealthCheck();
       
       return res.status(200).json({
@@ -269,12 +230,11 @@ function registerRoutes() {
         },
         bootstrap: {
           completed: bootstrapped,
-          error: bootstrapError ? bootstrapError.message : null,
+          error: bootstrapError?.message || null,
           lastSuccessfulConnection: lastSuccessfulConnection || null
         }
       });
     } catch (error) {
-      // Health check failed - return 503 with detailed error
       return res.status(503).json({
         status: 'error',
         environment: process.env.NODE_ENV,
@@ -290,7 +250,7 @@ function registerRoutes() {
         },
         bootstrap: {
           completed: bootstrapped,
-          error: bootstrapError ? bootstrapError.message : null,
+          error: bootstrapError?.message || null,
           lastSuccessfulConnection: lastSuccessfulConnection || null
         },
         error: error.message
@@ -298,18 +258,13 @@ function registerRoutes() {
     }
   });
 
-  // Redis health check route
+  // Redis health check
   app.get('/api/v1/health/redis', async (req, res) => {
     try {
-      // Only check enhanced rate limiter (legacy upstashLoginRateLimiter was removed)
       const { redisHealthCheck: enhancedHealthCheck } = require('./middleware/enhancedRateLimiter');
-      
       const enhancedStatus = await enhancedHealthCheck();
       
-      // Return 200 with degraded status if Redis is unavailable
-      const statusCode = enhancedStatus.healthy ? 200 : 200;
-      
-      res.status(statusCode).json({
+      res.status(200).json({
         service: 'redis',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
@@ -320,11 +275,10 @@ function registerRoutes() {
         }
       });
     } catch (error) {
-      // Never return 503 - always return 200 with degraded status
       res.status(200).json({
         service: 'redis',
         status: 'degraded',
-        message: error && error.message ? error.message : 'Redis health check failed',
+        message: error?.message || 'Redis health check failed',
         healthy: false,
         timestamp: new Date().toISOString(),
         overall: {
@@ -335,61 +289,58 @@ function registerRoutes() {
     }
   });
 
-  // Bootstrap diagnostics endpoint - helps identify configuration issues
+  // Bootstrap diagnostics
   app.get('/api/v1/bootstrap/diagnostics', (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
     const diagnostics = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
       bootstrap: {
         completed: bootstrapped,
-        error: bootstrapError ? bootstrapError.message : null,
+        error: bootstrapError?.message || null,
         lastSuccessfulConnection: lastSuccessfulConnection || null
       },
-      environmentVariables: {
-        MONGO_URI: {
-          configured: Boolean(process.env.MONGO_URI),
-          length: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0,
+      environmentVariables: isProduction ? {
+        MONGO_URI: { configured: Boolean(process.env.MONGO_URI), length: process.env.MONGO_URI?.length || 0 },
+        JWT_SECRET: { configured: Boolean(process.env.JWT_SECRET), length: process.env.JWT_SECRET?.length || 0 },
+        ADMIN_EMAIL: { configured: Boolean(process.env.ADMIN_EMAIL) },
+        ADMIN_PASSWORD: { configured: Boolean(process.env.ADMIN_PASSWORD), length: process.env.ADMIN_PASSWORD?.length || 0 }
+      } : {
+        MONGO_URI: { 
+          configured: Boolean(process.env.MONGO_URI), 
+          length: process.env.MONGO_URI?.length || 0,
           startsWith: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 20) + '...' : null
         },
-        JWT_SECRET: {
-          configured: Boolean(process.env.JWT_SECRET),
-          length: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0
-        },
-        ADMIN_EMAIL: {
-          configured: Boolean(process.env.ADMIN_EMAIL),
-          value: process.env.ADMIN_EMAIL || null
-        },
-        ADMIN_PASSWORD: {
-          configured: Boolean(process.env.ADMIN_PASSWORD),
-          length: process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.length : 0
-        }
+        JWT_SECRET: { configured: Boolean(process.env.JWT_SECRET), length: process.env.JWT_SECRET?.length || 0 },
+        ADMIN_EMAIL: { configured: Boolean(process.env.ADMIN_EMAIL), value: process.env.ADMIN_EMAIL || null },
+        ADMIN_PASSWORD: { configured: Boolean(process.env.ADMIN_PASSWORD), length: process.env.ADMIN_PASSWORD?.length || 0 }
       },
       database: {
         readyState: mongoose.connection.readyState,
-        states: {
-          0: 'disconnected',
-          1: 'connected',
-          2: 'connecting',
-          3: 'disconnecting'
-        }
+        states: { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }
       }
     };
 
     res.status(200).json(diagnostics);
   });
 
-  // API routes with enhanced security middleware
-  app.use(`${API_PREFIX}/auth/login`, loginRateLimiter); // Apply rate limiting to login
-  app.use(`${API_PREFIX}/auth/register`, loginRateLimiter); // Apply rate limiting to register
+  // API routes with rate limiting
+  const enhancedRateLimiter = require('./middleware/enhancedRateLimiter');
   
+  app.use(`${API_PREFIX}`, enhancedRateLimiter);
+  app.use(`${API_PREFIX}/auth/login`, loginRateLimiter);
+  app.use(`${API_PREFIX}/auth/register`, loginRateLimiter);
+  app.use(`${API_PREFIX}/payments`, enhancedRateLimiter);
+  app.use(`${API_PREFIX}/admin`, enhancedRateLimiter);
+  
+  // Route modules
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
   app.use(`${API_PREFIX}/admin`, require('./routes/admin'));
   app.use(`${API_PREFIX}/mobile`, require('./routes/mobile'));
   app.use(`${API_PREFIX}/student`, require('./routes/student'));
   app.use(`${API_PREFIX}/users`, require('./routes/users'));
   app.use(`${API_PREFIX}/payments`, require('./routes/payment'));
-  // Webhook route is registered in registerSecurityMiddleware() before body parsers
   app.use(`${API_PREFIX}/secure-pdf`, require('./routes/securePdf'));
 
   // Root API endpoint
@@ -416,19 +367,17 @@ function registerRoutes() {
     });
   });
 
-  // Swagger documentation (optional)
+  // Swagger documentation
   try {
     const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
     console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
   } catch (err) {
     console.warn('[SWAGGER] Swagger documentation disabled:', err?.message || 'Unknown error');
-    // Continue without swagger - non-critical feature
   }
 }
 
 function registerErrorHandling() {
-  // 404 handler
   app.use('*', (req, res) => {
     res.status(404).json({
       success: false,
@@ -439,28 +388,23 @@ function registerErrorHandling() {
     });
   });
 
-  // Global error handler LAST
   const errorHandler = require('./middleware/errorHandler');
   app.use(errorHandler);
 
-  // Final catch-all (defensive)
   app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err && err.message ? err.message : err);
+    console.error('Unhandled error:', err?.message || err);
     if (process.env.NODE_ENV === 'production') {
       return res.status(500).json({ error: 'Internal server error' });
     }
-    return res.status(500).json({ error: err && err.message ? err.message : String(err), stack: err && err.stack });
+    return res.status(500).json({ 
+      error: err?.message || String(err), 
+      stack: err?.stack 
+    });
   });
 }
 
-// 5) THEN perform async infrastructure initialization
-// Validate environment variables for all environments (Vercel-optimized)
+// Environment validation and initialization
 validateEnvironmentFormat();
-
-// Only run complete validation in local development
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1' && process.env.SERVERLESS !== '1') {
-  runCompleteValidation();
-}
 validateFeatureFlags();
 
 async function bootstrapAdminUser() {
@@ -470,7 +414,6 @@ async function bootstrapAdminUser() {
 
   if (!ADMIN_CONFIGURED) {
     console.error('FATAL: Admin credentials not configured in environment variables');
-    console.error('Required: ADMIN_EMAIL and ADMIN_PASSWORD');
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Admin credentials must be configured in production');
     }
@@ -481,7 +424,6 @@ async function bootstrapAdminUser() {
     const connection = await connectDB();
     const UserModel = require('./models/User');
     
-    // Check if admin user exists
     let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
     
     if (!adminUser) {
@@ -489,7 +431,7 @@ async function bootstrapAdminUser() {
       adminUser = new UserModel({
         name: 'Admin User',
         email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD, // Will be hashed by pre-save middleware
+        password: ADMIN_PASSWORD,
         role: 'admin',
         isAdmin: true,
         isActive: true,
@@ -498,7 +440,6 @@ async function bootstrapAdminUser() {
       await adminUser.save();
       console.log('[BOOTSTRAP] Admin user created successfully');
     } else {
-      // Ensure existing admin user has correct properties
       adminUser.role = 'admin';
       adminUser.isAdmin = true;
       adminUser.isActive = true;
@@ -515,27 +456,20 @@ async function bootstrapAdminUser() {
 }
 
 async function startServer() {
-  // Always check current DB state first - don't rely on stale bootstrap state
   try {
-    // Check if MONGO_URI is configured before attempting connection
     if (!process.env.MONGO_URI) {
       console.warn('MONGO_BOOTSTRAP_SKIPPED', {
         reason: 'MONGO_URI not configured',
         environment: process.env.NODE_ENV,
         isVercel: process.env.VERCEL === '1'
       });
-      return; // Don't throw, just skip bootstrap
+      return;
     }
 
     const connection = await connectDB();
-    
-    // Verify connection is actually working with ping
     await connection.db.admin().ping();
-    
-    // Bootstrap admin user after successful DB connection
     await bootstrapAdminUser();
     
-    // Clear any stale bootstrap errors on successful connection
     if (bootstrapError || !bootstrapped) {
       bootstrapError = null;
       bootstrapped = true;
@@ -552,7 +486,6 @@ async function startServer() {
     
     return;
   } catch (err) {
-    // Only set bootstrap error if we don't have a working connection
     const currentConnection = mongoose.connection;
     const isActuallyConnected = currentConnection.readyState === 1;
     
@@ -569,21 +502,19 @@ async function startServer() {
         environment: process.env.NODE_ENV,
         isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
         mongoUriConfigured: Boolean(process.env.MONGO_URI),
-        mongoUriLength: process.env.MONGO_URI ? process.env.MONGO_URI.length : 0
+        mongoUriLength: process.env.MONGO_URI?.length || 0
       });
       
-      // Don't throw in serverless - just log the error
       if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
         console.warn('MONGO_BOOTSTRAP_FAILED', {
           message: 'Database bootstrap failed, but application will continue',
           action: 'Health endpoint will reflect degraded status'
         });
-        return; // Don't throw in serverless
+        return;
       } else {
         throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
       }
     } else {
-      // Connection is actually working despite bootstrap error - clear the stale error
       bootstrapError = null;
       bootstrapped = true;
       lastSuccessfulConnection = new Date().toISOString();
@@ -599,68 +530,16 @@ async function startServer() {
   }
 }
 
-// Kick off initialization on cold start (non-blocking for serverless)
+// Serverless initialization
 if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
-  // In serverless, start bootstrap in background but don't block the export
   bootstrapPromise = startServer().catch((err) => {
     const currentConnection = mongoose.connection;
     if (currentConnection.readyState !== 1) {
       bootstrapError = err;
     }
-    console.error('❌ Serverless bootstrap error:', err && err.message ? err.message : err);
-  });
-} else {
-  // In local development, we can wait for bootstrap
-  bootstrapPromise = startServer().catch((err) => {
-    // Only set bootstrap error if database is actually disconnected
-    const currentConnection = mongoose.connection;
-    if (currentConnection.readyState !== 1) {
-      bootstrapError = err;
-    }
-    console.error('❌ Startup error:', err && err.message ? err.message : err);
+    console.error('❌ Serverless bootstrap error:', err?.message || err);
   });
 }
 
 // Export for Vercel
 module.exports = app;
-
-// Local development server only
-if (require.main === module) {
-  const isServerless = process.env.VERCEL === '1' || process.env.SERVERLESS === '1';
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  if (isServerless || (isProduction && !process.env.ALLOW_LOCAL_SERVER)) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('☁️ Running in serverless/production mode');
-    }
-    // Don't start server in serverless mode - just export the app
-  } else {
-    (async () => {
-      try {
-        await bootstrapPromise;
-
-        const findAvailablePort = async () => {
-          const defaultPort = process.env.PORT || 5002;
-          const alternativePorts = [5003, 5004, 5005, 3001, 3002, 8000, 8001, 5001];
-
-          if (await isPortAvailable(defaultPort)) return defaultPort;
-
-          for (const port of alternativePorts) {
-            if (await isPortAvailable(port)) return port;
-          }
-
-          throw new Error('No available ports found. Please stop other services or specify a different port.');
-        };
-
-        const PORT = await findAvailablePort();
-        const server = app.listen(PORT, '0.0.0.0', () => {
-          console.log(`🚀 Mathematico backend listening on ${PORT}`);
-        });
-        app.server = server;
-      } catch (error) {
-        console.error('❌ Failed to start local server:', error);
-        process.exit(1);
-      }
-    })();
-  }
-}

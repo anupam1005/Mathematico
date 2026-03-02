@@ -4,8 +4,11 @@
   "functions": {
     "Backend/index.js": {
       "runtime": "@vercel/node@3",
-      "maxDuration": 60,
-      "memory": 1536
+      "maxDuration": 120,
+      "memory": 2048,
+      "environment": {
+        "NODE_OPTIONS": "--max-old-space-size=1536"
+      }
     }
   },
   "routes": [
@@ -14,5 +17,9 @@
     { "src": "/", "dest": "/Backend/index.js" },
     { "src": "/(.*)", "dest": "/Backend/index.js" }
   ],
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": null,
+  "installCommand": "cd Backend && npm install"
 }

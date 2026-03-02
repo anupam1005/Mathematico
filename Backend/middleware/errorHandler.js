@@ -1,46 +1,32 @@
 /**
  * Production Error Handler Middleware - Vercel Serverless Compatible
  * Enhanced security with no stack traces in production
+ * Uses console.log for serverless compatibility
  */
-const winston = require('winston');
+// Remove winston dependency for serverless compatibility
+// const winston = require('winston');
 
-// Configure logger for serverless (no file operations)
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'mathematico-backend' },
-  transports: [
-    // Console transport only for Vercel serverless
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ],
-  // Handle exceptions in serverless
-  exceptionHandlers: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ],
-  // Handle rejections in serverless
-  rejectionHandlers: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-});
+/**
+ * Production-safe error logging
+ * Uses console.log to avoid filesystem issues in serverless
+ */
+const logError = (error, context = {}) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const logData = {
+    message: error.message,
+    name: error.name,
+    code: error.code,
+    timestamp: new Date().toISOString(),
+    service: 'mathematico-backend',
+    ...context
+  };
+  
+  if (!isProduction && error.stack) {
+    logData.stack = error.stack;
+  }
+  
+  console.error('[ERROR]', JSON.stringify(logData));
+};
 
 /**
  * Sanitize error details for production
@@ -81,20 +67,14 @@ const errorHandler = (err, req, res, next) => {
 
   // Log error details safely (without sensitive information)
   try {
-    logger.error({
-      message: sanitizedError.message,
-      name: sanitizedError.name,
-      code: sanitizedError.code,
+    logError(err, {
       url: req && req.url ? req.url : 'unknown',
       method: req && req.method ? req.method : 'unknown',
       ip: req && req.ip ? req.ip : 'unknown',
-      userAgent: req && req.get ? req.get('User-Agent') : 'unknown',
-      timestamp: new Date().toISOString(),
-      // Include stack trace only in development
-      ...(process.env.NODE_ENV !== 'production' && { stack: err && err.stack })
+      userAgent: req && req.get ? req.get('User-Agent') : 'unknown'
     });
   } catch (logError) {
-    // Fallback logging if winston fails
+    // Fallback logging if error logging fails
     console.error('Error logging failed:', logError);
     console.error('Original error:', sanitizedError.message);
   }

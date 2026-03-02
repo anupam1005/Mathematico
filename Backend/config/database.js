@@ -107,14 +107,14 @@ const connectDB = async () => {
         console.log('MONGO_FORCE_CLOSE', { reason: 'Bad connection state detected' });
       }
 
-      // Production-hardened connection settings with retry and TLS
+      // Production-hardened connection settings optimized for serverless
       const connectionOptions = {
-        serverSelectionTimeoutMS: 15000,
-        socketTimeoutMS: 45000,
-        maxPoolSize: process.env.VERCEL === '1' ? 5 : 10,
-        minPoolSize: 2,
-        maxIdleTimeMS: 60000,
-        waitQueueTimeoutMS: 15000,
+        serverSelectionTimeoutMS: 10000, // Reduced for faster failover
+        socketTimeoutMS: 30000, // Reduced for serverless timeout limits
+        maxPoolSize: process.env.VERCEL === '1' ? 3 : 10, // Smaller pool for serverless
+        minPoolSize: process.env.VERCEL === '1' ? 1 : 2, // Minimize for serverless
+        maxIdleTimeMS: process.env.VERCEL === '1' ? 30000 : 60000, // Shorter idle for serverless
+        waitQueueTimeoutMS: 10000, // Reduced for better UX
         retryWrites: true,
         retryReads: true,
         w: 'majority',
@@ -122,7 +122,11 @@ const connectDB = async () => {
         writeConcern: { w: 'majority', j: true },
         readPreference: 'primary',
         heartbeatFrequencyMS: 10000,
-        maxConnecting: 10
+        maxConnecting: process.env.VERCEL === '1' ? 5 : 10, // Limit concurrent connections
+        // Add connection timeout for serverless
+        connectTimeoutMS: 8000,
+        // Enable compression for bandwidth efficiency
+        compressors: ['zstd', 'snappy', 'zlib']
       };
 
       console.log('MONGO_ESTABLISHING_NEW', {
