@@ -4,8 +4,8 @@
   "functions": {
     "Backend/index.js": {
       "runtime": "@vercel/node@3",
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 60,
+      "memory": 1536
     }
   },
   "routes": [
