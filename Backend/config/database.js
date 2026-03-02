@@ -73,6 +73,12 @@ const connectDB = async () => {
   // Create connection promise and cache it
   const newConnectionPromise = (async () => {
     try {
+      // Force close existing connection if in bad state
+      if (mongoose.connection.readyState > 1) {
+        await mongoose.connection.close();
+        console.log('MONGO_FORCE_CLOSE', { reason: 'Bad connection state detected' });
+      }
+
       // Use existing connection if available
       if (mongoose.connection.readyState === 1) {
         const connection = mongoose.connection;
@@ -94,24 +100,20 @@ const connectDB = async () => {
 
       // Production-hardened connection settings with retry and TLS
       const connectionOptions = {
-        serverSelectionTimeoutMS: process.env.VERCEL === '1' ? 10000 : 15000,
-        socketTimeoutMS: process.env.VERCEL === '1' ? 30000 : 45000,
-        maxPoolSize: process.env.VERCEL === '1' ? 3 : 10, // Smaller pool for serverless
-        minPoolSize: process.env.VERCEL === '1' ? 1 : 2,
-        maxIdleTimeMS: 30000, // Close idle connections after 30s
-        waitQueueTimeoutMS: 10000, // Don't wait too long for connection
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: process.env.VERCEL === '1' ? 5 : 10,
+        minPoolSize: 2,
+        maxIdleTimeMS: 60000,
+        waitQueueTimeoutMS: 15000,
         retryWrites: true,
         retryReads: true,
         w: 'majority',
         readConcern: { level: 'majority' },
         writeConcern: { w: 'majority', j: true },
         readPreference: 'primary',
-        // SSL/TLS settings for production
-        ssl: process.env.NODE_ENV === 'production',
-        sslValidate: process.env.NODE_ENV === 'production',
-        // Connection monitoring
         heartbeatFrequencyMS: 10000,
-        maxConnecting: 5
+        maxConnecting: 10
       };
 
       // Establish new connection with enhanced error handling
