@@ -11,12 +11,7 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "/Backend/index.js" },
     { "src": "/health", "dest": "/Backend/index.js" },
-    { "src": "/", "dest": "/Backend/index.js" },
-    { "src": "/(.*)", "dest": "/Backend/index.js" }
+    { "src": "/", "dest": "/Backend/index.js" }
   ],
-  "regions": ["iad1"],
-  "framework": null,
-  "buildCommand": null,
-  "outputDirectory": null,
-  "installCommand": "cd Backend && npm install"
+  "regions": ["iad1"]
 }
