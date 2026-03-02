@@ -27,6 +27,18 @@ const MAX_CONNECTION_ATTEMPTS = 3;
  * - Optimized for Vercel environment variables
  */
 const connectDB = async () => {
+  // First, check if mongoose already has an active connection (most efficient)
+  if (mongoose.connection.readyState === 1) {
+    const connection = mongoose.connection;
+    console.log('MONGO_REUSE_MONGOOSE_NATIVE', {
+      readyState: connection.readyState,
+      host: connection.host,
+      database: connection.name,
+      source: 'mongoose.connection'
+    });
+    return connection;
+  }
+
   // Use global connection caching for serverless environments
   if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
     // Check for cached global connection
@@ -34,14 +46,15 @@ const connectDB = async () => {
       console.log('MONGO_REUSE_CACHED', {
         readyState: global[globalConnectionKey].readyState,
         host: global[globalConnectionKey].host,
-        database: global[globalConnectionKey].name
+        database: global[globalConnectionKey].name,
+        source: 'global.cache'
       });
       return global[globalConnectionKey];
     }
     
     // Return existing connection promise if connection is in progress
     if (global[globalConnectionKey + 'Promise']) {
-      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true });
+      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true, source: 'global.promise' });
       return global[globalConnectionKey + 'Promise'];
     }
   } else {
@@ -50,13 +63,14 @@ const connectDB = async () => {
       console.log('MONGO_REUSE_LOCAL', {
         readyState: cachedConnection.readyState,
         host: cachedConnection.host,
-        database: cachedConnection.name
+        database: cachedConnection.name,
+        source: 'module.cache'
       });
       return cachedConnection;
     }
     
     if (connectionPromise) {
-      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true });
+      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true, source: 'module.promise' });
       return connectionPromise;
     }
   }
@@ -74,32 +88,14 @@ const connectDB = async () => {
     throw error;
   }
 
-  // Check if mongoose already has an active connection before attempting new connection
-  if (mongoose.connection.readyState === 1) {
-    const connection = mongoose.connection;
-    
-    // Cache the active connection
-    if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
-      global[globalConnectionKey] = connection;
-    } else {
-      cachedConnection = connection;
-    }
-    
-    console.log('MONGO_REUSE_MONGOOSE', {
-      readyState: connection.readyState,
-      host: connection.host,
-      database: connection.name
-    });
-    return connection;
-  }
-
   // Only log connecting when we actually need to establish a new connection
   console.log('MONGO_CONNECTING', {
     environment: process.env.NODE_ENV,
     isVercel: process.env.VERCEL === '1',
     uriLength: process.env.MONGO_URI.length,
     uriStartsWith: process.env.MONGO_URI.substring(0, 20) + '...',
-    currentState: mongoose.connection.readyState
+    currentState: mongoose.connection.readyState,
+    reason: 'no_active_connection_found'
   });
 
   // Create connection promise and cache it

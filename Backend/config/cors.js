@@ -155,7 +155,7 @@ function validateCorsConfig() {
   // Enhanced security checks for production
   if (isProduction) {
     // Check for unsafe wildcard usage (security concern in production)
-    const hasUnsafeWildcard = origins.some(origin => 
+    const hasUnsafeWildcard = uniqueOrigins.some(origin => 
       (origin === '*' || 
       origin === '*/*' ||
       origin.startsWith('*') ||
@@ -170,6 +170,8 @@ function validateCorsConfig() {
       console.error('   This allows ANY website to make requests to your API');
       console.error('   Immediate action required: Set specific origins in ALLOWED_ORIGINS');
       console.error('   Example: ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com');
+    } else {
+      console.log('✅ CORS security check passed - No unsafe wildcards detected');
     }
     
     // Check for HTTP origins in production (should be HTTPS only)
