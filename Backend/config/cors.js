@@ -63,36 +63,6 @@ function getAllowedOrigins() {
       .split(',')
       .map(origin => origin.trim())
       .filter(Boolean);
-    
-    // Security check: no wildcards in production (except mobile origins)
-    if (isProduction) {
-      const hasUnsafeWildcard = origins.some(origin => 
-        (origin === '*' || 
-        origin === '*/*' ||
-        origin.startsWith('*') ||
-        origin.endsWith('*')) &&
-        !origin.startsWith('exp://') &&
-        !origin.startsWith('capacitor://') &&
-        !origin.startsWith('ionic://')
-      );
-      
-      if (hasUnsafeWildcard) {
-        console.error('🚨 SECURITY WARNING: Unsafe wildcard CORS origins detected in production');
-        console.error('   This allows any website to make requests to your API');
-        console.error('   Please use specific origins in ALLOWED_ORIGINS');
-        
-        // Remove unsafe wildcards in production for security (keep mobile origins)
-        origins = origins.filter(origin => 
-          (origin !== '*' && 
-          origin !== '*/*' &&
-          !origin.startsWith('*') &&
-          !origin.endsWith('*')) ||
-          origin.startsWith('exp://') ||
-          origin.startsWith('capacitor://') ||
-          origin.startsWith('ionic://')
-        );
-      }
-    }
   } else {
     // Use legacy origins if ALLOWED_ORIGINS is not set
     origins = [...legacyOrigins, ...vercelOrigins];
@@ -104,7 +74,7 @@ function getAllowedOrigins() {
     }
   }
   
-  // Always include mobile origins
+  // Always include mobile origins FIRST (before wildcard check)
   origins.push(...mobileOrigins);
   
   // Remove duplicates and validate format
@@ -123,6 +93,39 @@ function getAllowedOrigins() {
       return false;
     }
   });
+  
+  // Security check: no unsafe wildcards in production (mobile origins already added)
+  if (isProduction) {
+    const hasUnsafeWildcard = uniqueOrigins.some(origin => 
+      (origin === '*' || 
+      origin === '*/*' ||
+      origin.startsWith('*') ||
+      origin.endsWith('*')) &&
+      !origin.startsWith('exp://') &&
+      !origin.startsWith('capacitor://') &&
+      !origin.startsWith('ionic://')
+    );
+    
+    if (hasUnsafeWildcard) {
+      console.error('🚨 SECURITY WARNING: Unsafe wildcard CORS origins detected in production');
+      console.error('   This allows any website to make requests to your API');
+      console.error('   Please use specific origins in ALLOWED_ORIGINS');
+      
+      // Remove unsafe wildcards in production for security (keep mobile origins)
+      const filteredOrigins = uniqueOrigins.filter(origin => 
+        (origin !== '*' && 
+        origin !== '*/*' &&
+        !origin.startsWith('*') &&
+        !origin.endsWith('*')) ||
+        origin.startsWith('exp://') ||
+        origin.startsWith('capacitor://') ||
+        origin.startsWith('ionic://')
+      );
+      
+      uniqueOrigins.length = 0;
+      uniqueOrigins.push(...filteredOrigins);
+    }
+  }
   
   console.log('[CORS] Origins configured:', {
     environment: process.env.NODE_ENV,
