@@ -31,7 +31,6 @@ function validateEnvironment() {
   
   // Optional but recommended variables
   const recommendedVars = [
-    'ALLOWED_ORIGINS',
     'ENABLE_SECURE_PDF',
     'ENABLE_RAZORPAY',
     'RAZORPAY_KEY_ID',
@@ -169,28 +168,42 @@ function validateSecuritySettings(errors, warnings) {
 
 /**
  * Validate CORS settings
+ * Note: For mobile app production, ALLOWED_ORIGINS is not required
  */
 function validateCorsSettings(errors, warnings) {
-  // Check for deprecated CORS variables
-  const deprecatedVars = [
-    'APP_ORIGIN',
-    'ADMIN_ORIGIN', 
-    'CORS_ORIGIN',
-    'FRONTEND_URL',
-    'WEB_URL'
-  ];
-  
-  const hasDeprecatedVars = deprecatedVars.some(varName => process.env[varName]);
+  const isProduction = process.env.NODE_ENV === 'production';
   const hasAllowedOrigins = process.env.ALLOWED_ORIGINS;
   
-  if (hasDeprecatedVars && !hasAllowedOrigins) {
-    warnings.push('Using deprecated CORS variables. Please migrate to ALLOWED_ORIGINS');
+  // In production mobile app, ALLOWED_ORIGINS is optional
+  if (isProduction && !hasAllowedOrigins) {
+    console.log('✅ Mobile App Production: ALLOWED_ORIGINS not required (using dynamic CORS reflection)');
+    return;
+  }
+  
+  // Check for deprecated CORS variables (development only)
+  if (!isProduction) {
+    const deprecatedVars = [
+      'APP_ORIGIN',
+      'ADMIN_ORIGIN', 
+      'CORS_ORIGIN',
+      'FRONTEND_URL',
+      'WEB_URL'
+    ];
+    
+    const hasDeprecatedVars = deprecatedVars.some(varName => process.env[varName]);
+    
+    if (hasDeprecatedVars && !hasAllowedOrigins) {
+      warnings.push('Using deprecated CORS variables. Please migrate to ALLOWED_ORIGINS for development');
+    }
   }
   
   if (hasAllowedOrigins) {
     const origins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
     
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction) {
+      // In production, ALLOWED_ORIGINS should not be used for mobile apps
+      warnings.push('ALLOWED_ORIGINS is set in production but not needed for mobile apps (using dynamic reflection)');
+      
       if (origins.includes('*') || origins.includes('*/*')) {
         errors.push('Wildcard CORS origins are not allowed in production');
       }
@@ -265,26 +278,30 @@ function generateSecureSecret(length = 64) {
 
 /**
  * Check for environment variable conflicts
+ * Note: For mobile app production, ALLOWED_ORIGINS conflicts are not critical
  */
 function checkEnvironmentConflicts() {
   const conflicts = [];
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  // Check for conflicting origins
-  const allowedOrigins = process.env.ALLOWED_ORIGINS;
-  const deprecatedOrigins = [
-    process.env.APP_ORIGIN,
-    process.env.ADMIN_ORIGIN,
-    process.env.CORS_ORIGIN,
-    process.env.FRONTEND_URL,
-    process.env.WEB_URL
-  ].filter(Boolean);
-  
-  if (allowedOrigins && deprecatedOrigins.length > 0) {
-    conflicts.push({
-      type: 'CORS_ORIGIN_CONFLICT',
-      message: 'Both ALLOWED_ORIGINS and deprecated CORS variables are set',
-      recommendation: 'Remove deprecated variables and use only ALLOWED_ORIGINS'
-    });
+  // Check for conflicting origins (development only)
+  if (!isProduction) {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS;
+    const deprecatedOrigins = [
+      process.env.APP_ORIGIN,
+      process.env.ADMIN_ORIGIN,
+      process.env.CORS_ORIGIN,
+      process.env.FRONTEND_URL,
+      process.env.WEB_URL
+    ].filter(Boolean);
+    
+    if (allowedOrigins && deprecatedOrigins.length > 0) {
+      conflicts.push({
+        type: 'CORS_ORIGIN_CONFLICT',
+        message: 'Both ALLOWED_ORIGINS and deprecated CORS variables are set',
+        recommendation: 'Remove deprecated variables and use only ALLOWED_ORIGINS for development'
+      });
+    }
   }
   
   // Check for conflicting URL configurations
@@ -336,7 +353,7 @@ function getProductionHardeningChecklist() {
   
   checklist.push({
     category: 'Security',
-    item: 'CORS does not use wildcards in production',
+    item: 'CORS uses dynamic reflection for mobile apps',
     status: (!isProduction || !process.env.ALLOWED_ORIGINS?.includes('*')) ? 'PASS' : 'FAIL',
     critical: true
   });

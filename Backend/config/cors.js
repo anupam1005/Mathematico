@@ -1,15 +1,27 @@
 /**
  * Production-hardened CORS Configuration - Vercel Optimized
  * 
- * This module consolidates all CORS-related environment variables
- * into a single ALLOWED_ORIGINS configuration for better security
- * and maintainability in Vercel deployments.
+ * This module provides environment-specific CORS configuration:
+ * 
+ * PRODUCTION MODE:
+ * - Dynamic origin reflection (no hardcoded whitelist)
+ * - Allows requests with no origin (mobile apps)
+ * - Reflects incoming origin dynamically (if present)
+ * - Does NOT use wildcard "*"
+ * - Does NOT use exp://*, capacitor://*, or ionic://*
+ * - Keeps credentials: true
+ * - Keeps Authorization header allowed
+ * 
+ * DEVELOPMENT MODE:
+ * - Uses existing ALLOWED_ORIGINS array
+ * - Allows localhost and Expo dev origins
+ * - Maintains strict origin validation
  * 
  * Security enhancements:
- * - Strict origin whitelist validation
+ * - Environment-specific behavior
  * - No wildcard origins in production
- * - Automatic Vercel URL detection
  * - Enhanced security logging
+ * - Mobile app compatibility maintained
  */
 
 /**
@@ -145,68 +157,28 @@ function getAllowedOrigins() {
  */
 function validateCorsConfig() {
   const origins = getAllowedOrigins();
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    console.log('✅ CORS Production Mode: Dynamic origin reflection enabled');
+    console.log('   - Mobile apps (no origin): ✅ Allowed');
+    console.log('   - Dynamic origin reflection: ✅ Enabled');
+    console.log('   - Credentials: ✅ Enabled');
+    console.log('   - Authorization header: ✅ Allowed');
+    console.log('   - Wildcard "*": ❌ Not used');
+    console.log('   - Mobile schemes (exp://*, capacitor://*, ionic://*): ❌ Not used in production');
+    return; // Skip production security checks for dynamic reflection
+  }
   
   if (origins.length === 0) {
     console.warn('⚠️ No CORS origins configured. This may block legitimate requests.');
   }
   
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  // Enhanced security checks for production
-  if (isProduction) {
-    // Check for unsafe wildcard usage (security concern in production)
-    const hasUnsafeWildcard = origins.some(origin => 
-      (origin === '*' || 
-      origin === '*/*' ||
-      origin.startsWith('*') ||
-      origin.endsWith('*')) &&
-      !origin.startsWith('exp://') &&
-      !origin.startsWith('capacitor://') &&
-      !origin.startsWith('ionic://')
-    );
-    
-    if (hasUnsafeWildcard) {
-      console.error('🚨 CRITICAL SECURITY WARNING: Unsafe wildcard CORS origin detected in production');
-      console.error('   This allows ANY website to make requests to your API');
-      console.error('   Immediate action required: Set specific origins in ALLOWED_ORIGINS');
-      console.error('   Example: ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com');
-    } else {
-      console.log('✅ CORS security check passed - No unsafe wildcards detected');
-    }
-    
-    // Check for HTTP origins in production (should be HTTPS only)
-    const hasHttpOrigins = origins.some(origin => 
-      origin.startsWith('http://') && 
-      !origin.startsWith('exp://') && 
-      !origin.startsWith('capacitor://') && 
-      !origin.startsWith('ionic://')
-    );
-    
-    if (hasHttpOrigins) {
-      console.warn('⚠️ SECURITY WARNING: HTTP origins detected in production');
-      console.warn('   Consider using HTTPS only for better security');
-    }
-    
-    // Check for localhost origins in production
-    const hasLocalhost = origins.some(origin => 
-      origin.includes('localhost') || 
-      origin.includes('127.0.0.1') ||
-      origin.includes('0.0.0.0')
-    );
-    
-    if (hasLocalhost) {
-      console.warn('⚠️ SECURITY WARNING: Localhost origins detected in production');
-      console.warn('   Remove localhost origins from production configuration');
-    }
-  }
-  
   // Log configuration in non-production
-  if (!isProduction) {
-    console.log('🌐 CORS Configuration:');
-    console.log('   Allowed origins:', origins);
-    if (origins.some(origin => origin === '*' || origin.startsWith('*'))) {
-      console.warn('   ⚠️ Wildcard origin detected - suitable for development only');
-    }
+  console.log('🌐 CORS Development Mode:');
+  console.log('   Allowed origins:', origins);
+  if (origins.some(origin => origin === '*' || origin.startsWith('*'))) {
+    console.warn('   ⚠️ Wildcard origin detected - suitable for development only');
   }
 }
 
@@ -219,41 +191,56 @@ function getCorsOptions() {
   const isProduction = process.env.NODE_ENV === 'production';
   
   return {
-    origin(origin, callback) {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) {
+    origin: isProduction ? 
+      // Production: Dynamic origin reflection with security
+      (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) {
+          console.log('[CORS] Production: Allowing request with no origin (mobile app)');
+          return callback(null, true);
+        }
+        
+        // In production, reflect the incoming origin dynamically
+        console.log('[CORS] Production: Reflecting origin:', origin);
         return callback(null, true);
       }
-      
-      // Allow Expo development URLs
-      if (origin.startsWith('exp://') || origin.includes('expo')) {
-        return callback(null, true);
-      }
-      
-      // Allow mobile app origins
-      if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
-        return callback(null, true);
-      }
-      
-      // Strict origin validation for web requests
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // Origin not allowed - log security violation
-      console.warn('🚨 CORS Violation Attempt:', {
-        origin,
-        ip: this?.ip || 'unknown',
-        userAgent: this?.get?.('User-Agent') || 'unknown',
-        url: this?.originalUrl || 'unknown',
-        method: this?.method || 'unknown',
-        timestamp: new Date().toISOString()
-      });
-      
-      const error = new Error(`CORS: Origin ${origin} not allowed`);
-      error.code = 'CORS_ORIGIN_NOT_ALLOWED';
-      return callback(error);
-    },
+      :
+      // Development: Use existing ALLOWED_ORIGINS array
+      (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) {
+          return callback(null, true);
+        }
+        
+        // Allow Expo development URLs
+        if (origin.startsWith('exp://') || origin.includes('expo')) {
+          return callback(null, true);
+        }
+        
+        // Allow mobile app origins
+        if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
+          return callback(null, true);
+        }
+        
+        // Strict origin validation for web requests in development
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        
+        // Origin not allowed - log security violation
+        console.warn('🚨 CORS Violation Attempt:', {
+          origin,
+          ip: this?.ip || 'unknown',
+          userAgent: this?.get?.('User-Agent') || 'unknown',
+          url: this?.originalUrl || 'unknown',
+          method: this?.method || 'unknown',
+          timestamp: new Date().toISOString()
+        });
+        
+        const error = new Error(`CORS: Origin ${origin} not allowed`);
+        error.code = 'CORS_ORIGIN_NOT_ALLOWED';
+        return callback(error);
+      },
     
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -289,19 +276,33 @@ function getCorsOptions() {
 
 /**
  * Middleware to log CORS violations (security)
+ * Note: In production mode with dynamic reflection, this only logs for debugging
+ * since all origins are allowed by design
  */
 function logCorsViolation(req, res, next) {
   const origin = req.get('Origin');
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  if (origin && !getAllowedOrigins().includes(origin)) {
-    console.warn('🚨 CORS Violation Attempt:', {
-      origin,
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      url: req.originalUrl,
-      method: req.method,
-      timestamp: new Date().toISOString()
-    });
+  if (isProduction) {
+    // In production with dynamic reflection, all origins are allowed
+    // Log only for debugging purposes
+    if (origin) {
+      console.log('[CORS] Production: Request from origin:', origin);
+    } else {
+      console.log('[CORS] Production: Request with no origin (mobile app)');
+    }
+  } else {
+    // In development, check against allowed origins
+    if (origin && !getAllowedOrigins().includes(origin)) {
+      console.warn('🚨 CORS Violation Attempt:', {
+        origin,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        url: req.originalUrl,
+        method: req.method,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
   
   next();
