@@ -1,13 +1,12 @@
 {
   "version": 2,
   "name": "mathematico-backend",
-  "functions": {
-    "Backend/index.js": {
-      "runtime": "@vercel/node@3",
-      "maxDuration": 60,
-      "memory": 1536
+  "builds": [
+    {
+      "src": "Backend/index.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/Backend/index.js" },
     { "src": "/health", "dest": "/Backend/index.js" },
