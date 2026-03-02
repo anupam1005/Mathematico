@@ -4,6 +4,15 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 
+// Strong password validation regex
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+// Case-insensitive email normalization
+const normalizeEmail = (email) => {
+  if (!email) return email;
+  return email.trim().toLowerCase();
+};
+
 const userSchema = new mongoose.Schema({
   // Basic Information
   name: {
@@ -20,7 +29,8 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    validate: [validator.isEmail, 'Please provide a valid email']
+    validate: [validator.isEmail, 'Please provide a valid email'],
+    set: normalizeEmail // Normalize email before saving
   },
   
   password: {
@@ -28,13 +38,16 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters'],
     select: false, // Don't include password in queries by default
-    // Simplified password validation for development
-    // validate: {
-    //   validator: function(v) {
-    //     return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(v);
-    //   },
-    //   message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-    // }
+    validate: {
+      validator: function(v) {
+        // Skip validation for admin user creation (bootstrap)
+        if (this.role === 'admin' && this.isNew && process.env.ADMIN_EMAIL === this.email) {
+          return true;
+        }
+        return STRONG_PASSWORD_REGEX.test(v);
+      },
+      message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)'
+    }
   },
   
   passwordChangedAt: {
@@ -340,18 +353,29 @@ const userSchema = new mongoose.Schema({
   id: false
 });
 
-// Indexes for better performance (email index already created by unique: true)
+// Indexes for better performance and security
+userSchema.index({ email: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }); // Case-insensitive unique email
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ 'enrolledCourses.courseId': 1, 'enrolledCourses.enrolledAt': -1 }); // Compound index for enrollments
+userSchema.index({ 'purchasedBooks.bookId': 1, 'purchasedBooks.purchasedAt': -1 }); // Compound index for payments
+userSchema.index({ refreshTokens: 1 }); // For refresh token cleanup
+userSchema.index({ loginAttempts: 1 }); // For account lockout queries
+userSchema.index({ lockUntil: 1 }); // For expired lock cleanup
 
 // Virtual for full name
 userSchema.virtual('fullName').get(function() {
   return this.name;
 });
 
-// Pre-save middleware to hash password
+// Pre-save middleware to hash password and handle email normalization
 userSchema.pre('save', async function(next) {
+  // Normalize email
+  if (this.isModified('email')) {
+    this.email = normalizeEmail(this.email);
+  }
+  
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return next();
   
@@ -363,6 +387,8 @@ userSchema.pre('save', async function(next) {
     // Update passwordChangedAt for token invalidation
     if (!this.isNew) {
       this.passwordChangedAt = new Date();
+      // Increment token version to invalidate all existing tokens
+      this.tokenVersion = (this.tokenVersion || 0) + 1;
     }
     
     next();
@@ -550,9 +576,37 @@ userSchema.methods.getSafeProfile = function() {
   };
 };
 
-// Static method to find user by email
+// Static method to find user by email (case-insensitive)
 userSchema.statics.findByEmail = function(email) {
-  return this.findOne({ email: email.toLowerCase() });
+  return this.findOne({ email: normalizeEmail(email) });
+};
+
+// Static method to create user with transaction safety
+userSchema.statics.createSafe = async function(userData) {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    
+    // Normalize email before creation
+    userData.email = normalizeEmail(userData.email);
+    
+    // Check for existing user with case-insensitive email
+    const existingUser = await this.findOne({ email: userData.email }).session(session);
+    if (existingUser) {
+      throw new Error('Email already exists');
+    }
+    
+    const user = new this(userData);
+    await user.save({ session });
+    
+    await session.commitTransaction();
+    return user;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
 
 // Static method to find active users

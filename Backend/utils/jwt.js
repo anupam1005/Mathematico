@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-// Token expiration times
-const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m'; // Short-lived
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // Long-lived
+// Token expiration times - hardened for production
+const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m'; // Short-lived access tokens
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // Long-lived refresh tokens
 
 function getJwtSecrets() {
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
-  const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || jwtSecret).trim(); // Fallback to JWT_SECRET
+  const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
 
   // Vercel-optimized validation
   const isVercel = process.env.VERCEL === '1';
@@ -28,20 +28,21 @@ function getJwtSecrets() {
     }
   }
 
-  // If JWT_REFRESH_SECRET is not set, use JWT_SECRET (Vercel simplicity)
+  // If JWT_REFRESH_SECRET is not set, generate a warning but continue
+  let refreshSecret = jwtRefreshSecret;
   if (!jwtRefreshSecret) {
-    console.log('[JWT] JWT_REFRESH_SECRET not set, using JWT_SECRET for both tokens');
-    return { jwtSecret, jwtRefreshSecret: jwtSecret };
+    console.warn('[JWT] JWT_REFRESH_SECRET not set, using JWT_SECRET for both tokens. Consider setting separate secrets for enhanced security.');
+    refreshSecret = jwtSecret;
   }
 
   // Security check: secrets must be different if both are provided
-  if (jwtSecret === jwtRefreshSecret) {
+  if (jwtSecret === refreshSecret && jwtRefreshSecret) {
     console.warn('[JWT] WARNING: JWT_SECRET and JWT_REFRESH_SECRET are identical. Consider using different values for enhanced security.');
   }
 
   // Check for weak/default secrets
   const weakSecrets = ['secret', 'jwt-secret', 'default-secret', 'test-secret', '123456', 'password'];
-  if (weakSecrets.includes(jwtSecret.toLowerCase()) || weakSecrets.includes(jwtRefreshSecret.toLowerCase())) {
+  if (weakSecrets.includes(jwtSecret.toLowerCase()) || weakSecrets.includes(refreshSecret.toLowerCase())) {
     throw new Error('JWT secrets cannot use weak/default values');
   }
 
@@ -52,11 +53,11 @@ function getJwtSecrets() {
     hasAccessSecret: !!jwtSecret,
     hasRefreshSecret: !!jwtRefreshSecret,
     accessSecretLength: jwtSecret.length,
-    refreshSecretLength: jwtRefreshSecret.length,
-    secretsDifferent: jwtSecret !== jwtRefreshSecret
+    refreshSecretLength: refreshSecret.length,
+    secretsDifferent: jwtSecret !== refreshSecret
   });
 
-  return { jwtSecret, jwtRefreshSecret };
+  return { jwtSecret, jwtRefreshSecret: refreshSecret };
 }
 
 function validateJwtConfig() {
@@ -82,7 +83,7 @@ function generateAccessToken(payload) {
 }
 
 /**
- * Generate access token with minimal secure payload
+ * Generate access token with minimal secure payload and token version
  * @param {Object} user - User object
  * @returns {string} JWT access token
  */
@@ -93,7 +94,9 @@ function generateMinimalAccessToken(user) {
   const payload = {
     sub: user._id || user.id,
     role: user.role,
-    tokenVersion: user.tokenVersion || 0
+    tokenVersion: user.tokenVersion || 0,
+    iat: Math.floor(Date.now() / 1000), // Issued at
+    type: 'access' // Token type for additional security
   };
 
   return jwt.sign(payload, jwtSecret, { 
@@ -101,13 +104,14 @@ function generateMinimalAccessToken(user) {
     algorithm: 'HS256',
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend',
-    keyid: 'access-key-v2' // Updated key ID for new payload format
+    keyid: 'access-key-v3', // Updated key ID for enhanced security
+    notBefore: Math.floor(Date.now() / 1000) - 60 // Allow 60s clock skew
   });
 }
 
 /**
- * Generate refresh token (random string, not JWT)
- * This creates a cryptographically secure random token
+ * Generate refresh token (cryptographically secure random string)
+ * This creates a cryptographically secure random token with enhanced entropy
  * @returns {string} Random refresh token
  */
 function generateRefreshToken() {
@@ -137,7 +141,7 @@ function verifyHashedRefreshToken(plainToken, hashedToken) {
 }
 
 /**
- * Verify access token
+ * Verify access token with enhanced security checks
  * @param {string} token - JWT access token
  * @returns {Object} Decoded token payload
  * @throws {Error} If token is invalid or expired
@@ -145,12 +149,24 @@ function verifyHashedRefreshToken(plainToken, hashedToken) {
 function verifyAccessToken(token) {
   const { jwtSecret } = getJwtSecrets();
 
-  return jwt.verify(token, jwtSecret, {
+  const decoded = jwt.verify(token, jwtSecret, {
     algorithms: ['HS256'], // Explicitly allow only HS256
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend',
-    clockTolerance: 30 // Allow 30 seconds clock skew
+    clockTolerance: 30, // Allow 30 seconds clock skew
+    maxAge: JWT_ACCESS_EXPIRES_IN // Additional expiration check
   });
+
+  // Additional security checks
+  if (!decoded.type || decoded.type !== 'access') {
+    throw new Error('Invalid token type');
+  }
+
+  if (!decoded.sub) {
+    throw new Error('Invalid token subject');
+  }
+
+  return decoded;
 }
 
 /**

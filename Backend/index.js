@@ -58,6 +58,9 @@ app.get("/favicon", (req, res) => res.status(204).end());
 // This ensures routes are ALWAYS available, regardless of DB connection status
 registerSecurityMiddleware();
 
+// Apply login rate limiting to auth endpoints
+const loginRateLimiter = require('./middleware/loginRateLimiter');
+
 // JWT validation - graceful degradation (non-critical)
 try {
   validateJwtConfig();
@@ -146,11 +149,29 @@ function registerSecurityMiddleware() {
   // Disable x-powered-by header
   app.disable('x-powered-by');
   
-  // Helmet first
+  // Enhanced security middleware with Helmet strict policy
   app.use(
     helmet({
-      contentSecurityPolicy: false, // API
-      crossOriginEmbedderPolicy: false
+      // Content Security Policy - disabled for API (no HTML content)
+      contentSecurityPolicy: false,
+      // Cross-Origin Embedder Policy - disabled for API compatibility
+      crossOriginEmbedderPolicy: false,
+      // Enhanced security headers for production
+      hsts: process.env.NODE_ENV === 'production' ? {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true
+      } : false,
+      // Additional security headers
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      permissionsPolicy: {
+        features: {
+          camera: ['none'],
+          microphone: ['none'],
+          geolocation: ['none'],
+          payment: ['none']
+        }
+      }
     })
   );
 
@@ -358,7 +379,10 @@ function registerRoutes() {
     res.status(200).json(diagnostics);
   });
 
-  // API routes
+  // API routes with enhanced security middleware
+  app.use(`${API_PREFIX}/auth/login`, loginRateLimiter); // Apply rate limiting to login
+  app.use(`${API_PREFIX}/auth/register`, loginRateLimiter); // Apply rate limiting to register
+  
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
   app.use(`${API_PREFIX}/admin`, require('./routes/admin'));
   app.use(`${API_PREFIX}/mobile`, require('./routes/mobile'));

@@ -3,7 +3,8 @@ const {
   hashRefreshToken,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
-  getTokenExpirationMs
+  getTokenExpirationMs,
+  verifyAccessToken
 } = require('../utils/jwt');
 const { connectDB } = require('../config/database');
 const crypto = require('crypto');
@@ -17,6 +18,7 @@ const {
   logReplayAttack,
   logTokenInvalidation
 } = require('../utils/securityLogger');
+const enhancedRateLimiter = require('../middleware/enhancedRateLimiter');
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern
@@ -70,7 +72,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_ENV === 'true') {
 }
 
 /**
- * User login with secure token management
+ * User login with hardened security and rate limiting
  */
 const login = async (req, res) => {
   try {
@@ -85,7 +87,7 @@ const login = async (req, res) => {
       timestamp: new Date().toISOString()
     });
     
-    // Validation
+    // Enhanced validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -94,7 +96,17 @@ const login = async (req, res) => {
       });
     }
 
-    // Connect to database (ensureDatabase middleware should handle this, but double-check)
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Connect to database with error handling
     await connectDB();
     
     // Final validation: ensure connection is actually established
@@ -108,8 +120,11 @@ const login = async (req, res) => {
       });
     }
 
+    // Normalize email for lookup
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Special handling for admin user (ensure persisted DB user and real ObjectId)
-    if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
+    if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL) {
       if (!ADMIN_CONFIGURED) {
         console.error('[AUTH] Admin credentials not configured - missing ADMIN_EMAIL or ADMIN_PASSWORD');
         return res.status(503).json({
@@ -120,7 +135,7 @@ const login = async (req, res) => {
       }
 
       // Find or create admin user in MongoDB
-      let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL });
+      let dbAdmin = await UserModel.findByEmail(ADMIN_EMAIL);
       if (!dbAdmin) {
         console.log('[AUTH] Creating admin user in database');
         // Create new admin user - password will be hashed automatically by pre-save middleware
@@ -156,6 +171,7 @@ const login = async (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
+      
       const tokens = generateTokenPair(dbAdmin);
 
       const deviceInfo = {
@@ -189,10 +205,13 @@ const login = async (req, res) => {
     }
 
     // Regular user login - find user in database with explicit password selection
-    const user = await UserModel.findOne({ email: email.toLowerCase() })
-      .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive');
+    const user = await UserModel.findOne({ email: normalizedEmail })
+      .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive +tokenVersion');
     
     if (!user) {
+      // Log failed attempt for security monitoring
+      logFailedLogin(normalizedEmail, 'user_not_found', req);
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
@@ -202,6 +221,8 @@ const login = async (req, res) => {
 
     // Check if user is active
     if (!user.isActive) {
+      logFailedLogin(normalizedEmail, 'account_inactive', req);
+      
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated. Please contact support.',
@@ -213,7 +234,7 @@ const login = async (req, res) => {
     if (user.isLocked) {
       // Log exact lock duration internally for audit
       const lockTimeRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
-      logAccountLock(email, lockTimeRemaining, req);
+      logAccountLock(normalizedEmail, lockTimeRemaining, req);
       
       // Return generic message - no timing or existence information leaked
       return res.status(429).json({
@@ -231,7 +252,7 @@ const login = async (req, res) => {
       await user.incrementLoginAttempts();
       
       // Log failed attempt for security monitoring
-      logFailedLogin(email, 'invalid_credentials', req);
+      logFailedLogin(normalizedEmail, 'invalid_credentials', req);
       
       return res.status(401).json({
         success: false,
@@ -325,7 +346,7 @@ const login = async (req, res) => {
 };
 
 /**
- * User registration with secure token management
+ * User registration with hardened security and transaction safety
  */
 const register = async (req, res) => {
   try {
@@ -341,7 +362,7 @@ const register = async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // Validation
+    // Enhanced validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -350,8 +371,37 @@ const register = async (req, res) => {
       });
     }
 
+    // Validate name
+    if (name.trim().length < 2 || name.trim().length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name must be between 2 and 50 characters',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate password strength (basic check, model will enforce strong validation)
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Prevent admin email registration
-    if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL) {
       return res.status(403).json({
         success: false,
         message: 'This email is reserved for admin use. Please use a different email.',
@@ -359,7 +409,7 @@ const register = async (req, res) => {
       });
     }
 
-    // Connect to database (ensureDatabase middleware should handle this, but double-check)
+    // Connect to database with error handling
     await connectDB();
     
     // Final validation: ensure connection is actually established
@@ -373,17 +423,27 @@ const register = async (req, res) => {
       });
     }
 
-    // Check for existing user
-    const existing = await UserModel.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return res.status(409).json({ 
-        success: false, 
-        message: 'Email already exists' 
+    // Use transaction-safe user creation
+    let user;
+    try {
+      user = await UserModel.createSafe({
+        name: name.trim(),
+        email: normalizedEmail,
+        password,
+        role: 'student',
+        isActive: true,
+        isEmailVerified: false // Will be verified later
       });
+    } catch (createError) {
+      if (createError.message === 'Email already exists') {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists',
+          timestamp: new Date().toISOString()
+        });
+      }
+      throw createError;
     }
-
-    // Create user (password will be hashed by pre-save middleware)
-    const user = await UserModel.create({ name, email, password });
 
     // Generate token pair
     const tokens = generateTokenPair(user);

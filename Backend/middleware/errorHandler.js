@@ -1,4 +1,7 @@
-// Production Error Handler Middleware - Vercel Serverless Compatible
+/**
+ * Production Error Handler Middleware - Vercel Serverless Compatible
+ * Enhanced security with no stack traces in production
+ */
 const winston = require('winston');
 
 // Configure logger for serverless (no file operations)
@@ -39,35 +42,61 @@ const logger = winston.createLogger({
   ]
 });
 
+/**
+ * Sanitize error details for production
+ * @param {Error} err - Error object
+ * @returns {Object} Sanitized error information
+ */
+const sanitizeError = (err) => {
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  const sanitized = {
+    message: err && err.message ? String(err.message) : 'Internal server error',
+    name: err && err.name ? String(err.name) : 'Error',
+    code: err && typeof err.code === 'number' ? err.code : null
+  };
+
+  // Only include stack trace in development
+  if (isDevelopment && err && err.stack) {
+    sanitized.stack = String(err.stack);
+  }
+
+  // Only include detailed error info in development
+  if (isDevelopment) {
+    if (err && err.details) sanitized.details = err.details;
+    if (err && err.errors) sanitized.errors = err.errors;
+  }
+
+  return sanitized;
+};
+
 const errorHandler = (err, req, res, next) => {
   // Prevent double response sending
   if (res.headersSent) {
     return next(err);
   }
 
-  // Safely extract error information
-  const errorMessage = err && err.message ? String(err.message) : 'Internal server error';
-  const errorName = err && err.name ? String(err.name) : 'Error';
-  const errorCode = err && typeof err.code === 'number' ? err.code : null;
-  const errorStack = err && err.stack ? String(err.stack) : undefined;
+  // Sanitize error information
+  const sanitizedError = sanitizeError(err);
 
-  // Log error details safely
+  // Log error details safely (without sensitive information)
   try {
     logger.error({
-      message: errorMessage,
-      name: errorName,
-      code: errorCode,
-      stack: errorStack,
+      message: sanitizedError.message,
+      name: sanitizedError.name,
+      code: sanitizedError.code,
       url: req && req.url ? req.url : 'unknown',
       method: req && req.method ? req.method : 'unknown',
       ip: req && req.ip ? req.ip : 'unknown',
       userAgent: req && req.get ? req.get('User-Agent') : 'unknown',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Include stack trace only in development
+      ...(process.env.NODE_ENV !== 'production' && { stack: err && err.stack })
     });
   } catch (logError) {
     // Fallback logging if winston fails
     console.error('Error logging failed:', logError);
-    console.error('Original error:', errorMessage);
+    console.error('Original error:', sanitizedError.message);
   }
 
   // Don't leak error details in production
@@ -75,46 +104,48 @@ const errorHandler = (err, req, res, next) => {
   
   const errorResponse = {
     success: false,
-    message: errorMessage,
-    timestamp: new Date().toISOString(),
-    ...(isDevelopment && { 
-      stack: errorStack,
-      details: err && err.details ? err.details : undefined,
-      name: errorName
-    })
+    message: sanitizedError.message,
+    timestamp: new Date().toISOString()
   };
 
-  // Handle specific error types
-  if (errorName === 'ValidationError') {
+  // Include additional details only in development
+  if (isDevelopment) {
+    errorResponse.name = sanitizedError.name;
+    if (sanitizedError.stack) errorResponse.stack = sanitizedError.stack;
+    if (sanitizedError.details) errorResponse.details = sanitizedError.details;
+  }
+
+  // Handle specific error types with appropriate status codes
+  if (sanitizedError.name === 'ValidationError') {
     return res.status(400).json({
       ...errorResponse,
       message: 'Validation failed',
-      errors: err && err.errors ? err.errors : undefined
+      ...(isDevelopment && { errors: err && err.errors ? err.errors : undefined })
     });
   }
 
-  if (errorName === 'CastError') {
+  if (sanitizedError.name === 'CastError') {
     return res.status(400).json({
       ...errorResponse,
       message: 'Invalid data format'
     });
   }
 
-  if (errorCode === 11000) {
+  if (sanitizedError.code === 11000) {
     return res.status(409).json({
       ...errorResponse,
       message: 'Duplicate entry found'
     });
   }
 
-  if (errorName === 'JsonWebTokenError') {
+  if (sanitizedError.name === 'JsonWebTokenError') {
     return res.status(401).json({
       ...errorResponse,
       message: 'Invalid authentication token'
     });
   }
 
-  if (errorName === 'TokenExpiredError') {
+  if (sanitizedError.name === 'TokenExpiredError') {
     return res.status(401).json({
       ...errorResponse,
       message: 'Authentication token expired'
@@ -122,10 +153,10 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Handle MongoDB connection errors
-  if (errorMessage && (
-    errorMessage.toLowerCase().includes('mongo') ||
-    errorMessage.toLowerCase().includes('database') ||
-    errorMessage.toLowerCase().includes('connection')
+  if (sanitizedError.message && (
+    sanitizedError.message.toLowerCase().includes('mongo') ||
+    sanitizedError.message.toLowerCase().includes('database') ||
+    sanitizedError.message.toLowerCase().includes('connection')
   )) {
     return res.status(503).json({
       ...errorResponse,
@@ -134,7 +165,7 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Handle Redis connection errors
-  if (errorMessage && errorMessage.toLowerCase().includes('redis')) {
+  if (sanitizedError.message && sanitizedError.message.toLowerCase().includes('redis')) {
     return res.status(503).json({
       ...errorResponse,
       message: 'Service temporarily unavailable'
@@ -142,7 +173,7 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Handle rate limit errors
-  if (errorCode === 429 || errorMessage.toLowerCase().includes('rate limit')) {
+  if (sanitizedError.code === 429 || sanitizedError.message.toLowerCase().includes('rate limit')) {
     return res.status(429).json({
       ...errorResponse,
       message: 'Too many requests. Please try again later.',
@@ -150,8 +181,32 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Default error response
+  // Handle JWT security errors
+  if (sanitizedError.message && (
+    sanitizedError.message.toLowerCase().includes('jwt') ||
+    sanitizedError.message.toLowerCase().includes('token') ||
+    sanitizedError.message.toLowerCase().includes('unauthorized')
+  )) {
+    return res.status(401).json({
+      ...errorResponse,
+      message: 'Authentication failed'
+    });
+  }
+
+  // Default error response - generic message in production
   const statusCode = (err && (err.statusCode || err.status)) || 500;
+  
+  if (process.env.NODE_ENV === 'production') {
+    // In production, return generic error message for 500 errors
+    if (statusCode >= 500) {
+      return res.status(statusCode).json({
+        success: false,
+        message: 'An internal error occurred. Please try again later.',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+  
   res.status(statusCode).json(errorResponse);
 };
 

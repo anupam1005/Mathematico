@@ -1,13 +1,21 @@
 const mongoose = require('mongoose');
 
 /**
- * Global connection caching for Vercel serverless environment
- * Prevents multiple connection attempts across cold starts
- * Optimized for Vercel environment variables
+ * Production-hardened MongoDB connection with global caching
+ * - Uses singleton pattern for Vercel serverless
+ * - Caches connection promise to prevent race conditions
+ * - Validates connection state before returning
+ * - Structured error logging
+ * - Vercel serverless compatible
+ * - Optimized for Vercel environment variables
+ * - Fail-fast on connection errors in production
  */
 const globalConnectionKey = 'mongooseConn';
 let cachedConnection = null;
 let connectionPromise = null;
+let connectionAttempts = 0;
+let lastConnectionError = null;
+const MAX_CONNECTION_ATTEMPTS = 3;
 
 /**
  * Production-safe MongoDB connection with global caching
@@ -84,17 +92,37 @@ const connectDB = async () => {
         return connection;
       }
 
-      // Vercel-optimized connection settings (minimal for compatibility)
+      // Production-hardened connection settings with retry and TLS
       const connectionOptions = {
-        serverSelectionTimeoutMS: 15000,
-        socketTimeoutMS: 45000,
-        maxPoolSize: process.env.VERCEL === '1' ? 5 : 10, // Smaller pool for serverless
+        serverSelectionTimeoutMS: process.env.VERCEL === '1' ? 10000 : 15000,
+        socketTimeoutMS: process.env.VERCEL === '1' ? 30000 : 45000,
+        maxPoolSize: process.env.VERCEL === '1' ? 3 : 10, // Smaller pool for serverless
+        minPoolSize: process.env.VERCEL === '1' ? 1 : 2,
+        maxIdleTimeMS: 30000, // Close idle connections after 30s
+        waitQueueTimeoutMS: 10000, // Don't wait too long for connection
         retryWrites: true,
-        w: 'majority'
+        retryReads: true,
+        w: 'majority',
+        readConcern: { level: 'majority' },
+        writeConcern: { w: 'majority', j: true },
+        readPreference: 'primary',
+        // SSL/TLS settings for production
+        ssl: process.env.NODE_ENV === 'production',
+        sslValidate: process.env.NODE_ENV === 'production',
+        // Connection monitoring
+        heartbeatFrequencyMS: 10000,
+        maxConnecting: 5
       };
 
-      // Establish new connection
+      // Establish new connection with enhanced error handling
       const connection = await mongoose.connect(process.env.MONGO_URI, connectionOptions);
+      
+      // Verify connection with ping
+      await connection.connection.db.admin().ping();
+      
+      // Reset connection attempts on success
+      connectionAttempts = 0;
+      lastConnectionError = null;
 
       // Cache the successful connection
       const dbConnection = connection.connection;
@@ -115,6 +143,10 @@ const connectDB = async () => {
 
       return dbConnection;
     } catch (error) {
+      // Increment connection attempts
+      connectionAttempts++;
+      lastConnectionError = error;
+      
       // Reset connection promise on failure
       if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
         global[globalConnectionKey + 'Promise'] = null;
@@ -130,8 +162,20 @@ const connectDB = async () => {
         code: error.code || 'CONNECTION_FAILED',
         stack: error.stack,
         isVercel: process.env.VERCEL === '1',
-        vercelEnv: process.env.VERCEL_ENV
+        vercelEnv: process.env.VERCEL_ENV,
+        connectionAttempts,
+        maxAttempts: MAX_CONNECTION_ATTEMPTS
       });
+      
+      // Fail fast in production after max attempts
+      if (process.env.NODE_ENV === 'production' && connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+        console.error('MONGO_CONNECTION_FAILED_PERMANENTLY', {
+          message: 'MongoDB connection failed permanently after max attempts',
+          attempts: connectionAttempts,
+          lastError: error.message
+        });
+        throw new Error(`Database connection failed: ${error.message}`);
+      }
 
       throw error;
     }
@@ -148,24 +192,76 @@ const connectDB = async () => {
 };
 
 /**
- * Health check utility - performs actual ping test
+ * Health check utility - performs actual ping test with connection validation
  */
 const performHealthCheck = async () => {
   const connection = await connectDB();
   
   // Perform actual ping test
   try {
-    await connection.db.admin().ping();
+    const pingResult = await connection.db.admin().ping();
+    
+    // Get connection stats for monitoring
+    const stats = await connection.db.stats();
+    
     return {
       connected: true,
       readyState: connection.readyState,
       host: connection.host,
       name: connection.name,
-      ping: 'success'
+      ping: pingResult ? 'success' : 'failed',
+      stats: {
+        collections: stats.collections,
+        dataSize: stats.dataSize,
+        indexes: stats.indexes,
+        indexSize: stats.indexSize
+      },
+      connectionAttempts,
+      lastConnectionError: lastConnectionError?.message || null
     };
   } catch (pingError) {
     throw new Error(`Database ping failed: ${pingError.message}`);
   }
 };
 
-module.exports = { connectDB, performHealthCheck };
+/**
+ * Graceful shutdown utility
+ */
+const closeConnection = async () => {
+  try {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+      console.log('MongoDB connection closed gracefully');
+    }
+  } catch (error) {
+    console.error('Error closing MongoDB connection:', error);
+  }
+};
+
+/**
+ * Connection status utility
+ */
+const getConnectionStatus = () => {
+  const states = {
+    0: 'disconnected',
+    1: 'connected', 
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  
+  return {
+    readyState: mongoose.connection.readyState,
+    state: states[mongoose.connection.readyState],
+    host: mongoose.connection.host,
+    name: mongoose.connection.name,
+    connectionAttempts,
+    lastConnectionError: lastConnectionError?.message || null
+  };
+};
+
+module.exports = { 
+  connectDB, 
+  performHealthCheck, 
+  closeConnection,
+  getConnectionStatus
+};
