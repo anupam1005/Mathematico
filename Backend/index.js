@@ -367,13 +367,22 @@ function registerRoutes() {
     });
   });
 
-  // Swagger documentation
-  try {
-    const { swaggerUi, specs, swaggerOptions } = require('./config/swagger');
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
-    console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
-  } catch (err) {
-    console.warn('[SWAGGER] Swagger documentation disabled:', err?.message || 'Unknown error');
+  // Swagger documentation - production-safe conditional loading
+  if (process.env.ENABLE_SWAGGER === "true") {
+    try {
+      const { swaggerUi, specs, swaggerOptions, isAvailable } = require('./config/swagger');
+      
+      if (isAvailable && swaggerUi && specs) {
+        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
+        console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
+      } else {
+        console.log('[SWAGGER] Swagger documentation disabled - packages not available or specs not generated');
+      }
+    } catch (err) {
+      console.warn('[SWAGGER] Swagger documentation failed to load:', err?.message || 'Unknown error');
+    }
+  } else {
+    console.log('[SWAGGER] Swagger documentation disabled (ENABLE_SWAGGER !== "true")');
   }
 }
 

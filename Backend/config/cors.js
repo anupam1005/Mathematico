@@ -60,12 +60,17 @@ function getAllowedOrigins() {
     process.env.WEB_URL
   ].filter(Boolean);
   
-  // Mobile and development origins (always allowed)
-  const mobileOrigins = [
-    'exp://*',
-    'capacitor://*',
-    'ionic://*'
-  ];
+  // Mobile and development origins (development ONLY)
+  const mobileOrigins = [];
+  
+  // Only add mobile origins in development mode
+  if (!isProduction) {
+    mobileOrigins.push(
+      'exp://*',
+      'capacitor://*',
+      'ionic://*'
+    );
+  }
   
   let origins = [];
   
@@ -86,14 +91,16 @@ function getAllowedOrigins() {
     }
   }
   
-  // Always include mobile origins FIRST (before wildcard check)
-  origins.push(...mobileOrigins);
+  // Include mobile origins ONLY in development (before wildcard check)
+  if (!isProduction) {
+    origins.push(...mobileOrigins);
+  }
   
   // Remove duplicates and validate format
   const uniqueOrigins = Array.from(new Set(origins)).filter(origin => {
     // Basic URL validation
     if (origin.startsWith('exp://') || origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
-      return true; // Mobile origins are allowed as-is
+      return !isProduction; // Mobile origins allowed only in development
     }
     
     // Validate web origins
@@ -106,16 +113,13 @@ function getAllowedOrigins() {
     }
   });
   
-  // Security check: no unsafe wildcards in production (mobile origins already added)
+  // Security check: no unsafe wildcards in production
   if (isProduction) {
     const hasUnsafeWildcard = uniqueOrigins.some(origin => 
-      (origin === '*' || 
+      origin === '*' || 
       origin === '*/*' ||
       origin.startsWith('*') ||
-      origin.endsWith('*')) &&
-      !origin.startsWith('exp://') &&
-      !origin.startsWith('capacitor://') &&
-      !origin.startsWith('ionic://')
+      origin.endsWith('*')
     );
     
     if (hasUnsafeWildcard) {
@@ -123,15 +127,12 @@ function getAllowedOrigins() {
       console.error('   This allows any website to make requests to your API');
       console.error('   Please use specific origins in ALLOWED_ORIGINS');
       
-      // Remove unsafe wildcards in production for security (keep mobile origins)
+      // Remove unsafe wildcards in production for security
       const filteredOrigins = uniqueOrigins.filter(origin => 
-        (origin !== '*' && 
+        origin !== '*' && 
         origin !== '*/*' &&
         !origin.startsWith('*') &&
-        !origin.endsWith('*')) ||
-        origin.startsWith('exp://') ||
-        origin.startsWith('capacitor://') ||
-        origin.startsWith('ionic://')
+        !origin.endsWith('*')
       );
       
       uniqueOrigins.length = 0;
@@ -146,7 +147,11 @@ function getAllowedOrigins() {
     hasVercelUrl: !!process.env.VERCEL_URL,
     hasCustomDomain: !!process.env.VERCEL_PROJECT_PRODUCTION_URL,
     productionSafe: !uniqueOrigins.some(origin => origin === '*' || origin.startsWith('*')),
-    origins: uniqueOrigins
+    origins: isProduction ? uniqueOrigins.filter(origin => 
+      !origin.startsWith('exp://') && 
+      !origin.startsWith('capacitor://') && 
+      !origin.startsWith('ionic://')
+    ) : uniqueOrigins
   });
   
   return uniqueOrigins;
@@ -167,6 +172,7 @@ function validateCorsConfig() {
     console.log('   - Authorization header: ✅ Allowed');
     console.log('   - Wildcard "*": ❌ Not used');
     console.log('   - Mobile schemes (exp://*, capacitor://*, ionic://*): ❌ Not used in production');
+    console.log('   - Mobile app requests (no origin): ✅ Allowed via dynamic reflection');
     return; // Skip production security checks for dynamic reflection
   }
   

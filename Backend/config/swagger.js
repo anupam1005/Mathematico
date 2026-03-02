@@ -1,5 +1,13 @@
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
+// Production-safe Swagger configuration with graceful degradation
+let swaggerJsdoc, swaggerUi;
+
+try {
+  swaggerJsdoc = require('swagger-jsdoc');
+  swaggerUi = require('swagger-ui-express');
+} catch (err) {
+  // Swagger packages not available - module will handle gracefully
+  console.log('[SWAGGER] Swagger packages not available - documentation disabled');
+}
 
 const normalizeServerUrl = (value) => {
   const raw = String(value || '').trim();
@@ -346,14 +354,30 @@ const options = {
   apis: ['./index.js', './routes/*.js'], // Path to the API files
 };
 
-const specs = swaggerJsdoc(options);
+// Generate specs only if Swagger packages are available and enabled
+let specs = null;
+let swaggerOptions = {};
+
+if (swaggerJsdoc && swaggerUi && process.env.ENABLE_SWAGGER === "true") {
+  try {
+    specs = swaggerJsdoc(options);
+    swaggerOptions = {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Mathematico API Documentation',
+      customfavIcon: '/favicon.ico'
+    };
+    console.log('[SWAGGER] Swagger documentation enabled');
+  } catch (err) {
+    console.warn('[SWAGGER] Failed to generate Swagger specs:', err?.message || err);
+    specs = null;
+  }
+} else {
+  console.log('[SWAGGER] Swagger documentation disabled (ENABLE_SWAGGER !== "true" or packages not available)');
+}
 
 module.exports = {
   swaggerUi,
   specs,
-  swaggerOptions: {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Mathematico API Documentation',
-    customfavIcon: '/favicon.ico'
-  }
+  swaggerOptions,
+  isAvailable: !!(swaggerJsdoc && swaggerUi && specs)
 };
