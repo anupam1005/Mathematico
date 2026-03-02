@@ -31,20 +31,32 @@ const connectDB = async () => {
   if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
     // Check for cached global connection
     if (global[globalConnectionKey] && global[globalConnectionKey].readyState === 1) {
+      console.log('MONGO_REUSE_CACHED', {
+        readyState: global[globalConnectionKey].readyState,
+        host: global[globalConnectionKey].host,
+        database: global[globalConnectionKey].name
+      });
       return global[globalConnectionKey];
     }
     
     // Return existing connection promise if connection is in progress
     if (global[globalConnectionKey + 'Promise']) {
+      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true });
       return global[globalConnectionKey + 'Promise'];
     }
   } else {
     // Local development - use module-level caching
     if (cachedConnection && cachedConnection.readyState === 1) {
+      console.log('MONGO_REUSE_LOCAL', {
+        readyState: cachedConnection.readyState,
+        host: cachedConnection.host,
+        database: cachedConnection.name
+      });
       return cachedConnection;
     }
     
     if (connectionPromise) {
+      console.log('MONGO_CONNECTION_IN_PROGRESS', { reusing: true });
       return connectionPromise;
     }
   }
@@ -62,12 +74,32 @@ const connectDB = async () => {
     throw error;
   }
 
-  // Log connection attempt (without sensitive data)
+  // Check if mongoose already has an active connection before attempting new connection
+  if (mongoose.connection.readyState === 1) {
+    const connection = mongoose.connection;
+    
+    // Cache the active connection
+    if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
+      global[globalConnectionKey] = connection;
+    } else {
+      cachedConnection = connection;
+    }
+    
+    console.log('MONGO_REUSE_MONGOOSE', {
+      readyState: connection.readyState,
+      host: connection.host,
+      database: connection.name
+    });
+    return connection;
+  }
+
+  // Only log connecting when we actually need to establish a new connection
   console.log('MONGO_CONNECTING', {
     environment: process.env.NODE_ENV,
     isVercel: process.env.VERCEL === '1',
     uriLength: process.env.MONGO_URI.length,
-    uriStartsWith: process.env.MONGO_URI.substring(0, 20) + '...'
+    uriStartsWith: process.env.MONGO_URI.substring(0, 20) + '...',
+    currentState: mongoose.connection.readyState
   });
 
   // Create connection promise and cache it
@@ -77,25 +109,6 @@ const connectDB = async () => {
       if (mongoose.connection.readyState > 1) {
         await mongoose.connection.close();
         console.log('MONGO_FORCE_CLOSE', { reason: 'Bad connection state detected' });
-      }
-
-      // Use existing connection if available
-      if (mongoose.connection.readyState === 1) {
-        const connection = mongoose.connection;
-        
-        // Cache in the appropriate location
-        if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
-          global[globalConnectionKey] = connection;
-        } else {
-          cachedConnection = connection;
-        }
-        
-        console.log('MONGO_REUSE_EXISTING', {
-          readyState: connection.readyState,
-          host: connection.host,
-          database: connection.name
-        });
-        return connection;
       }
 
       // Production-hardened connection settings with retry and TLS
@@ -115,6 +128,12 @@ const connectDB = async () => {
         heartbeatFrequencyMS: 10000,
         maxConnecting: 10
       };
+
+      console.log('MONGO_ESTABLISHING_NEW', {
+        environment: process.env.NODE_ENV,
+        isVercel: process.env.VERCEL === '1',
+        currentState: mongoose.connection.readyState
+      });
 
       // Establish new connection with enhanced error handling
       const connection = await mongoose.connect(process.env.MONGO_URI, connectionOptions);
