@@ -19,7 +19,7 @@ try {
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || // EAS build environment variable
   API_BASE_URL_ENV || // Expo Constants (app.config.js)
-  'https://mathematico-backend-new.vercel.app/api/v1'; // Production Vercel URL
+  'https://mathematico-backend-new.vercel.app'; // Production Vercel URL
 
 // PRODUCTION DEBUG: Log the final API base URL with environment context
 console.log('API_BASE_URL Configuration:', {
@@ -33,7 +33,7 @@ console.log('API_BASE_URL Configuration:', {
 if (API_BASE_URL.endsWith('/api/v1')) {
   console.log('✅ API_BASE_URL format correct: ends with /api/v1');
 } else if (API_BASE_URL.endsWith('/api')) {
-  console.warn('⚠️ WARNING: API_BASE_URL should end with /api/v1, not /api');
+  console.log('ℹ️ API_BASE_URL format: using base URL (will append /api/v1 in service calls)');
 } else {
-  console.log('ℹ️ API_BASE_URL format: using default production URL');
+  console.log('✅ API_BASE_URL format: using clean base URL for mobile app');
 }

@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
 
 export const API_PATHS = {
-  auth: '/auth',
-  student: '/student',
-  admin: '/admin',
-  mobile: '/mobile',
-  users: '/users',
-  payments: '/payments',
+  auth: '/api/v1/auth',
+  student: '/api/v1/student',
+  admin: '/api/v1/admin',
+  mobile: '/api/v1/mobile',
+  users: '/api/v1/users',
+  payments: '/api/v1/payments',
 } as const;
 
 // CRITICAL: Validate paths to prevent duplication
