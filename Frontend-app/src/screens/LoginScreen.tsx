@@ -46,10 +46,6 @@ export default function LoginScreen({ navigation }: any) {
 
     if (!trimmedPassword) {
       newErrors.password = 'Password is required';
-    } else if (trimmedPassword.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (trimmedPassword.length > 128) {
-      newErrors.password = 'Password is too long (max 128 characters)';
     }
 
     setErrors(newErrors);
@@ -150,7 +146,6 @@ export default function LoginScreen({ navigation }: any) {
                 secureTextEntry={!showPassword}
                 autoComplete="password"
                 autoCorrect={false}
-                maxLength={128}
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
                 error={!!errors.password}

@@ -35,18 +35,8 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false, // Don't include password in queries by default
-    validate: {
-      validator: function(v) {
-        // Skip validation for admin user creation (bootstrap)
-        if (this.role === 'admin' && this.isNew && process.env.ADMIN_EMAIL === this.email) {
-          return true;
-        }
-        return STRONG_PASSWORD_REGEX.test(v);
-      },
-      message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)'
-    }
+    minlength: [1, 'Password is required'],
+    select: false // Don't include password in queries by default
   },
   
   passwordChangedAt: {

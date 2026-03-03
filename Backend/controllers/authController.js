@@ -391,10 +391,10 @@ const register = async (req, res) => {
     }
 
     // Validate password strength (basic check, model will enforce strong validation)
-    if (password.length < 8) {
+    if (!password) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 8 characters long',
+        message: 'Password is required',
         timestamp: new Date().toISOString()
       });
     }

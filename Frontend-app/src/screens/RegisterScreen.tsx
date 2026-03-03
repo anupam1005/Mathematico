@@ -63,17 +63,9 @@ export default function RegisterScreen({ navigation }: any) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Password validation - Production level with strong requirements
+    // Password validation - only check if provided
     if (!trimmedPassword) {
       newErrors.password = 'Password is required';
-    } else if (trimmedPassword.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (trimmedPassword.length > 128) {
-      newErrors.password = 'Password is too long (max 128 characters)';
-    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(trimmedPassword)) {
-      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
-    } else if (!/^(?=.*[@$!%*?&])/.test(trimmedPassword)) {
-      newErrors.password = 'Password must contain at least one special character (@$!%*?&)';
     }
 
     // Confirm password validation
@@ -238,7 +230,6 @@ export default function RegisterScreen({ navigation }: any) {
                 secureTextEntry={!showPassword}
                 autoComplete="password-new"
                 autoCorrect={false}
-                maxLength={128}
                 error={!!errors.password}
                 style={styles.input}
                 leftIcon="lock"
@@ -253,26 +244,7 @@ export default function RegisterScreen({ navigation }: any) {
                 </Text>
               )}
               
-              {/* Password Requirements */}
-              <View style={styles.passwordRequirements}>
-                <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-                <Text style={[styles.requirement, password.length >= 8 && styles.requirementMet]}>
-                  • At least 8 characters
-                </Text>
-                <Text style={[styles.requirement, /[a-z]/.test(password) && styles.requirementMet]}>
-                  • One lowercase letter
-                </Text>
-                <Text style={[styles.requirement, /[A-Z]/.test(password) && styles.requirementMet]}>
-                  • One uppercase letter
-                </Text>
-                <Text style={[styles.requirement, /\d/.test(password) && styles.requirementMet]}>
-                  • One number
-                </Text>
-                <Text style={[styles.requirement, /[@$!%*?&]/.test(password) && styles.requirementMet]}>
-                  • One special character (@$!%*?&)
-                </Text>
-              </View>
-
+              
               <CustomTextInput
                 label="Confirm Password"
                 value={confirmPassword}
@@ -287,7 +259,6 @@ export default function RegisterScreen({ navigation }: any) {
                 secureTextEntry={!showConfirmPassword}
                 autoComplete="password-new"
                 autoCorrect={false}
-                maxLength={128}
                 error={!!errors.confirmPassword}
                 style={styles.input}
                 leftIcon="lock"
