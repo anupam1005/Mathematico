@@ -325,6 +325,81 @@ function registerRoutes() {
     res.status(200).json(diagnostics);
   });
 
+  // Bootstrap endpoint to create admin user
+  app.post('/api/v1/bootstrap', async (req, res) => {
+    try {
+      const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+      const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+
+      if (!ADMIN_CONFIGURED) {
+        return res.status(503).json({
+          success: false,
+          message: 'Admin credentials not configured in environment variables',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Connect to database
+      await connectDB();
+      
+      // Import User model
+      const UserModel = require('./models/User');
+      
+      // Check if admin already exists
+      let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
+      
+      if (!adminUser) {
+        console.log('[BOOTSTRAP] Creating admin user...');
+        adminUser = new UserModel({
+          name: 'Admin User',
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASSWORD,
+          role: 'admin',
+          isAdmin: true,
+          isActive: true,
+          isEmailVerified: true
+        });
+        await adminUser.save();
+        console.log('[BOOTSTRAP] Admin user created successfully');
+      } else {
+        adminUser.role = 'admin';
+        adminUser.isAdmin = true;
+        adminUser.isActive = true;
+        adminUser.isEmailVerified = true;
+        await adminUser.save();
+        console.log('[BOOTSTRAP] Admin user verified and updated');
+      }
+      
+      // Update bootstrap state
+      bootstrapError = null;
+      bootstrapped = true;
+      lastSuccessfulConnection = new Date().toISOString();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Bootstrap completed successfully',
+        data: {
+          adminEmail: ADMIN_EMAIL,
+          adminCreated: !adminUser.isNew,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error('[BOOTSTRAP] Error:', error);
+      bootstrapError = error;
+      bootstrapped = false;
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Bootstrap failed',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // API routes with rate limiting
   const enhancedRateLimiter = require('./middleware/enhancedRateLimiter');
   
