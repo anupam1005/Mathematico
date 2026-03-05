@@ -71,6 +71,7 @@ const authService = {
             Accept: 'application/json',
           },
           timeout: 30000,
+          validateStatus: (status: number) => status < 500,
         });
         payload = directResponse?.data;
       }

@@ -17,6 +17,7 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
+  validateStatus: (status: number) => status < 500,
 });
 
 api.interceptors.request.use(
