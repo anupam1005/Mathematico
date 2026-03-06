@@ -136,12 +136,12 @@ api.interceptors.response.use(
             try {
               // Try to serialize to ensure it's safe
               const serializedData = JSON.parse(JSON.stringify(responseData));
-              safeError.response = safeError.response || {};
+              safeError.response = { ...safeError.response };
               safeError.response.data = serializedData;
             } catch {
               // If serialization fails, store only the message
               if (responseData && typeof responseData.message === 'string') {
-                safeError.response = safeError.response || {};
+                safeError.response = { ...safeError.response };
                 safeError.response.data = { message: responseData.message };
               }
             }

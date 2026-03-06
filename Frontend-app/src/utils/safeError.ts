@@ -27,7 +27,11 @@ export const createSafeError = (error: any) => {
     if (error && error.response) {
       safe.response = {};
       try { safe.response.status = error.response.status; } catch (e) { /* ignore */ }
-      try { safe.response.data = error.response.data; } catch (e) { /* ignore */ }
+      try { 
+        const responseData = error.response.data;
+        safe.response = { ...safe.response };
+        safe.response.data = responseData; 
+      } catch (e) { /* ignore */ }
       try { safe.response.statusText = error.response.statusText; } catch (e) { /* ignore */ }
     }
   } catch (e) { 
