@@ -185,7 +185,16 @@ const connectDB = async () => {
         isVercel: process.env.VERCEL === '1',
         vercelEnv: process.env.VERCEL_ENV,
         connectionAttempts,
-        maxAttempts: MAX_CONNECTION_ATTEMPTS
+        maxAttempts: MAX_CONNECTION_ATTEMPTS,
+        // Add helpful troubleshooting info
+        troubleshooting: {
+          isIpWhitelistIssue: error.message.includes('IP that isn\'t whitelisted'),
+          isAuthIssue: error.message.includes('Authentication failed'),
+          isNetworkIssue: error.message.includes('network') || error.message.includes('timeout'),
+          solution: error.message.includes('IP that isn\'t whitelisted') 
+            ? 'Add Vercel IPs to MongoDB Atlas whitelist or use 0.0.0.0/0 for testing'
+            : 'Check MONGO_URI format and Atlas user permissions'
+        }
       });
       
       // Fail fast in production after max attempts

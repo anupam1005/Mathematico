@@ -36,14 +36,12 @@ api.interceptors.request.use(
       
       // PRODUCTION SAFE: Preserve existing headers safely
       if (config.headers && typeof config.headers === 'object') {
-        // Extract existing headers without mutation
-        const existingHeaders = { ...config.headers };
-        
-        // Merge headers, but don't overwrite Authorization we just set
-        Object.keys(existingHeaders).forEach(key => {
-          const value = existingHeaders[key];
+        // HERMES SAFE: Never spread config.headers - it could be a frozen AxiosHeaders instance
+        // Instead, manually copy only primitive string values to avoid frozen object mutations
+        Object.keys(config.headers).forEach(key => {
+          const value = config.headers[key];
           if (value !== undefined && value !== null && key !== 'Authorization') {
-            // Only set if it's a string value to avoid type issues
+            // Only copy primitive string values - never objects or functions
             if (typeof value === 'string') {
               headers[key] = value;
             }
