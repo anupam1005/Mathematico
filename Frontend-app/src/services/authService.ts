@@ -45,11 +45,11 @@ const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
+      const requestUrl = `${API_BASE_URL}/login`;
       console.log('REQUEST_URL', requestUrl);
       
-      // PRODUCTION SAFE: Use only the refactored API client - no fallbacks
-      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
+      // PRODUCTION SAFE: Use only the refactored API client with direct path
+      const response = await api.post('/login', { email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
@@ -120,9 +120,7 @@ const authService = {
           }
         } else if (errorObj.message && typeof errorObj.message === 'string') {
           const msg = errorObj.message;
-          if (msg.includes('Cannot assign to read-only property')) {
-            message = 'API client configuration error. Please restart the app.';
-          } else if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
             message = 'Network error. Please check your internet connection.';
           } else {
             message = msg;
@@ -143,11 +141,11 @@ const authService = {
   ): Promise<RegisterResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
+      const requestUrl = `${API_BASE_URL}/register`;
       console.log('REQUEST_URL', requestUrl);
       
-      // PRODUCTION SAFE: Use only the refactored API client - no fallbacks
-      const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
+      // PRODUCTION SAFE: Use only the refactored API client with direct path
+      const response = await api.post('/register', { name, email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
@@ -210,9 +208,7 @@ const authService = {
           }
         } else if (errorObj.message && typeof errorObj.message === 'string') {
           const msg = errorObj.message;
-          if (msg.includes('Cannot assign to read-only property')) {
-            message = 'API client configuration error. Please restart the app.';
-          } else if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
             message = 'Network error. Please check your internet connection.';
           } else {
             message = msg;

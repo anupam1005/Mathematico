@@ -8,13 +8,23 @@ import axios, {
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 
-// PRODUCTION-SAFE: Create base axios instance with minimal configuration
-// Avoid any potential frozen object mutations
+// PRODUCTION-SAFE: Ensure API_BASE_URL is always valid
+const SAFE_API_BASE_URL = API_BASE_URL || 'https://mathematico-backend-new.vercel.app/api/v1';
+
+// PRODUCTION-SAFE: Create base axios instance with guaranteed configuration
+// Never allow initialization failure - always use fallback if needed
 const api: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: SAFE_API_BASE_URL,
   timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
   validateStatus: (status: number) => status < 500,
 });
+
+// PRODUCTION DEBUG: Log the actual baseURL being used
+console.log('API_CLIENT_INITIALIZED with baseURL:', SAFE_API_BASE_URL);
 
 // PRODUCTION-SAFE: Request interceptor without AxiosHeaders mutations
 api.interceptors.request.use(

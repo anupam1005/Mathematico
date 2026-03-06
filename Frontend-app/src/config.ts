@@ -15,25 +15,20 @@ try {
   // Constants access failed - will use fallback
 }
 
-// Vercel-optimized config with intelligent fallback
+// Production-safe API base URL configuration with guaranteed fallback
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || // EAS build environment variable
   API_BASE_URL_ENV || // Expo Constants (app.config.js)
-  'https://mathematico-backend-new.vercel.app'; // Production Vercel URL
+  'https://mathematico-backend-new.vercel.app/api/v1'; // Production Vercel URL with full path
 
-// PRODUCTION DEBUG: Log the final API base URL with environment context
-console.log('API_BASE_URL Configuration:', {
-  finalUrl: API_BASE_URL,
-  hasProcessEnv: !!process.env.EXPO_PUBLIC_API_BASE_URL,
-  hasConstantsEnv: !!API_BASE_URL_ENV,
-  environment: process.env.NODE_ENV || 'development'
-});
+// PRODUCTION DEBUG: Log the final API base URL once during startup
+console.log('API_BASE_URL:', API_BASE_URL);
 
-// CRITICAL: Ensure URL doesn't already include /api/v1 path duplication
-if (API_BASE_URL.endsWith('/api/v1')) {
-  console.log('✅ API_BASE_URL format correct: ends with /api/v1');
-} else if (API_BASE_URL.endsWith('/api')) {
-  console.log('ℹ️ API_BASE_URL format: using base URL (will append /api/v1 in service calls)');
-} else {
-  console.log('✅ API_BASE_URL format: using clean base URL for mobile app');
+// Validate the URL format for production safety
+if (!API_BASE_URL || typeof API_BASE_URL !== 'string' || !API_BASE_URL.startsWith('http')) {
+  console.error('Invalid API_BASE_URL detected, using production fallback');
+  // Fallback to production URL if validation fails
+  const fallbackUrl = 'https://mathematico-backend-new.vercel.app/api/v1';
+  (API_BASE_URL as any) = fallbackUrl;
+  console.log('API_BASE_URL (fallback):', fallbackUrl);
 }
