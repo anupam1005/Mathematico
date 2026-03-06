@@ -2,9 +2,6 @@ import { API_PATHS } from '../constants/apiPaths';
 import api from './apiClient';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
-import axios from 'axios';
-
-// const authApi = withBasePath(API_PATHS.auth);
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -51,30 +48,9 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL', requestUrl);
       
-      let response: any;
-      let payload: any;
-      
-      try {
-        // Use relative path - api client already has the full base URL
-        response = await api.post(`${API_PATHS.auth}/login`, { email, password });
-        payload = response?.data;
-      } catch (apiError) {
-        console.warn('API_CLIENT_FAILED, FALLING_BACK_TO_DIRECT_AXIOS', apiError);
-        
-        // PRODUCTION DEBUG: Fallback to direct axios call
-        const directUrl = 'https://mathematico-backend-new.vercel.app/api/v1/auth/login';
-        console.log('DIRECT_AXIOS_URL', directUrl);
-        
-        const directResponse = await axios.post(directUrl, { email, password }, {
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          timeout: 30000,
-          validateStatus: (status: number) => status < 500,
-        });
-        payload = directResponse?.data;
-      }
+      // PRODUCTION SAFE: Use only the refactored API client - no fallbacks
+      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
+      const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
       console.log('LOGIN_RESPONSE', payload);
@@ -118,13 +94,18 @@ const authService = {
       // PRODUCTION DEBUG: Full error logging without safeError swallowing
       console.error('FULL_LOGIN_ERROR', err);
       
-      // Extract error information directly
+      // Extract error information directly with production-safe error handling
       let message = 'Login failed';
       
-      if (err && typeof err === 'object') {
+      if (err && typeof err === 'object' && err !== null) {
         const errorObj = err as any;
         
-        if (errorObj.response) {
+        // Check for network errors first
+        if (errorObj.isNetworkError) {
+          message = 'Network error. Please check your internet connection.';
+        } else if (errorObj.isAuthError) {
+          message = 'Authentication failed. Please try again.';
+        } else if (errorObj.response && typeof errorObj.response === 'object') {
           const status = errorObj.response.status;
           const errorMsg = errorObj.response.data?.message;
           
@@ -137,10 +118,14 @@ const authService = {
           } else if (errorMsg) {
             message = errorMsg;
           }
-        } else if (errorObj.message) {
-          const msg = String(errorObj.message);
-          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+        } else if (errorObj.message && typeof errorObj.message === 'string') {
+          const msg = errorObj.message;
+          if (msg.includes('Cannot assign to read-only property')) {
+            message = 'API client configuration error. Please restart the app.';
+          } else if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
             message = 'Network error. Please check your internet connection.';
+          } else {
+            message = msg;
           }
         }
       }
@@ -161,7 +146,7 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL', requestUrl);
       
-      // Direct API call to prevent path duplication
+      // PRODUCTION SAFE: Use only the refactored API client - no fallbacks
       const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
       const payload = response?.data;
 
@@ -199,13 +184,16 @@ const authService = {
       // PRODUCTION DEBUG: Full error logging without safeError swallowing
       console.error('FULL_REGISTER_ERROR', err);
       
-      // Extract error information directly
+      // Extract error information directly with production-safe error handling
       let message = 'Registration failed';
       
-      if (err && typeof err === 'object') {
+      if (err && typeof err === 'object' && err !== null) {
         const errorObj = err as any;
         
-        if (errorObj.response) {
+        // Check for network errors first
+        if (errorObj.isNetworkError) {
+          message = 'Network error. Please check your internet connection.';
+        } else if (errorObj.response && typeof errorObj.response === 'object') {
           const status = errorObj.response.status;
           const errorMsg = errorObj.response.data?.message;
           
@@ -220,10 +208,14 @@ const authService = {
           } else if (errorMsg) {
             message = errorMsg;
           }
-        } else if (errorObj.message) {
-          const msg = String(errorObj.message);
-          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
+        } else if (errorObj.message && typeof errorObj.message === 'string') {
+          const msg = errorObj.message;
+          if (msg.includes('Cannot assign to read-only property')) {
+            message = 'API client configuration error. Please restart the app.';
+          } else if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
             message = 'Network error. Please check your internet connection.';
+          } else {
+            message = msg;
           }
         }
       }
@@ -239,10 +231,14 @@ const authService = {
     try {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
-      // CRITICAL FIX: Use direct API call to prevent path duplication
+      
+      // PRODUCTION SAFE: Use direct API call to prevent path duplication
       await api.post(`${API_PATHS.auth}/logout`, payloadBody);
+      
+      // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
+      
       return { success: true, message: 'Logout successful' };
     } catch (err) {
       // PRODUCTION DEBUG: Full error logging without safeError swallowing
@@ -290,7 +286,7 @@ const authService = {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
-      // CRITICAL FIX: Use direct API call to prevent path duplication
+      // PRODUCTION SAFE: Use direct API call to prevent path duplication
       const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
       const payload = response?.data;
 
@@ -336,7 +332,7 @@ const authService = {
 
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      // CRITICAL FIX: Use direct API call to prevent path duplication
+      // PRODUCTION SAFE: Use direct API call to prevent path duplication
       const response = await api.put(`${API_PATHS.auth}/profile`, data);
       const payload = response?.data;
 
