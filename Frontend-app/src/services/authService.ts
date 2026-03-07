@@ -45,15 +45,15 @@ const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}/login`;
-      console.log('REQUEST_URL', requestUrl);
+      const requestUrl = `${API_BASE_URL}/api/v1/auth/login`;
+      console.log('REQUEST_URL:', requestUrl);
       
-      // PRODUCTION SAFE: Use only the refactored API client with direct path
-      const response = await api.post('/login', { email, password });
+      // PRODUCTION: Use correct API path
+      const response = await api.post('/api/v1/auth/login', { email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
-      console.log('LOGIN_RESPONSE', payload);
+      console.log('LOGIN_RESPONSE:', payload);
 
       // Flexible token extraction for backend compatibility
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
@@ -91,8 +91,8 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging without safeError swallowing
-      console.error('FULL_LOGIN_ERROR', err);
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_LOGIN_ERROR:', err);
       
       // Extract error information directly with production-safe error handling
       let message = 'Login failed';
@@ -141,15 +141,15 @@ const authService = {
   ): Promise<RegisterResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}/register`;
-      console.log('REQUEST_URL', requestUrl);
+      const requestUrl = `${API_BASE_URL}/api/v1/auth/register`;
+      console.log('REQUEST_URL:', requestUrl);
       
-      // PRODUCTION SAFE: Use only the refactored API client with direct path
-      const response = await api.post('/register', { name, email, password });
+      // PRODUCTION: Use correct API path
+      const response = await api.post('/api/v1/auth/register', { name, email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
-      console.log('REGISTER_RESPONSE', payload);
+      console.log('REGISTER_RESPONSE:', payload);
 
       if (!payload?.success) {
         return {
@@ -179,8 +179,8 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging without safeError swallowing
-      console.error('FULL_REGISTER_ERROR', err);
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_REGISTER_ERROR:', err);
       
       // Extract error information directly with production-safe error handling
       let message = 'Registration failed';
@@ -228,8 +228,8 @@ const authService = {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       
-      // PRODUCTION SAFE: Use direct API call to prevent path duplication
-      await api.post(`${API_PATHS.auth}/logout`, payloadBody);
+      // PRODUCTION: Use correct API path
+      await api.post('/api/v1/auth/logout', payloadBody);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -237,8 +237,8 @@ const authService = {
       
       return { success: true, message: 'Logout successful' };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging without safeError swallowing
-      console.error('FULL_LOGOUT_ERROR', err);
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_LOGOUT_ERROR:', err);
       
       // Still clear local tokens even if logout API fails
       try {
@@ -282,9 +282,16 @@ const authService = {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
-      // PRODUCTION SAFE: Use direct API call to prevent path duplication
-      const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
+      // PRODUCTION DEBUG: Log request URL
+      const requestUrl = `${API_BASE_URL}/api/v1/auth/refresh-token`;
+      console.log('REFRESH_REQUEST_URL:', requestUrl);
+
+      // PRODUCTION: Use correct API path
+      const response = await api.post('/api/v1/auth/refresh-token', payloadBody);
       const payload = response?.data;
+
+      // PRODUCTION DEBUG: Log response structure
+      console.log('REFRESH_RESPONSE:', payload);
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
@@ -314,8 +321,8 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging without safeError swallowing
-      console.error('FULL_REFRESH_ERROR', err);
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_REFRESH_ERROR:', err);
       
       return {
         success: false,
@@ -328,8 +335,12 @@ const authService = {
 
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      // PRODUCTION SAFE: Use direct API call to prevent path duplication
-      const response = await api.put(`${API_PATHS.auth}/profile`, data);
+      // PRODUCTION DEBUG: Log request URL
+      const requestUrl = `${API_BASE_URL}/api/v1/auth/profile`;
+      console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
+
+      // PRODUCTION: Use correct API path
+      const response = await api.put('/api/v1/auth/profile', data);
       const payload = response?.data;
 
       if (!payload?.success) {
@@ -345,8 +356,8 @@ const authService = {
         data: payload.data,
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging without safeError swallowing
-      console.error('FULL_UPDATE_PROFILE_ERROR', err);
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_UPDATE_PROFILE_ERROR:', err);
       
       return {
         success: false,

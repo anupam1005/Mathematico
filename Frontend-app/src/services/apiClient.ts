@@ -1,3 +1,5 @@
+// PRODUCTION: Use strict API_BASE_URL from config
+// No fallbacks - will throw if invalid during config import
 import axios, {
   AxiosInstance,
   AxiosRequestConfig,
@@ -8,13 +10,12 @@ import axios, {
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 
-// PRODUCTION-SAFE: Ensure API_BASE_URL is always valid
-const SAFE_API_BASE_URL = API_BASE_URL || 'https://mathematico-backend-new.vercel.app/api/v1';
+// PRODUCTION DEBUG: Log API client initialization
+console.log('API_CLIENT_INITIALIZED with baseURL:', API_BASE_URL);
 
-// PRODUCTION-SAFE: Create base axios instance with guaranteed configuration
-// Never allow initialization failure - always use fallback if needed
+// PRODUCTION: Create axios instance with strict base URL
 const api: AxiosInstance = axios.create({
-  baseURL: SAFE_API_BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -23,60 +24,51 @@ const api: AxiosInstance = axios.create({
   validateStatus: (status: number) => status < 500,
 });
 
-// PRODUCTION DEBUG: Log the actual baseURL being used
-console.log('API_CLIENT_INITIALIZED with baseURL:', SAFE_API_BASE_URL);
-
-// PRODUCTION-SAFE: Request interceptor without AxiosHeaders mutations
+// PRODUCTION: Request interceptor with Hermes-safe header handling
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
       const token = await Storage.getItem('authToken');
       
-      // PRODUCTION SAFE: Never use AxiosHeaders constructor - causes Hermes mutations
-      // Always work with plain objects to avoid frozen object errors
-      const headers: Record<string, string> = {
+      // HERMES SAFE: Create completely new header object - never mutate existing
+      const newHeaders: Record<string, string | undefined> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
       
       // Add authorization token if available
       if (token && typeof token === 'string') {
-        headers['Authorization'] = `Bearer ${token}`;
+        newHeaders['Authorization'] = `Bearer ${token}`;
       }
       
-      // PRODUCTION SAFE: Preserve existing headers safely
+      // HERMES SAFE: Copy existing headers without mutation
       if (config.headers && typeof config.headers === 'object') {
-        // HERMES SAFE: Never spread config.headers - it could be a frozen AxiosHeaders instance
-        // Instead, manually copy only primitive string values to avoid frozen object mutations
-        Object.keys(config.headers).forEach(key => {
-          const value = config.headers[key];
-          if (value !== undefined && value !== null && key !== 'Authorization') {
-            // Only copy primitive string values - never objects or functions
+        // Extract only primitive string values safely
+        const headerEntries = Object.entries(config.headers);
+        for (const [key, value] of headerEntries) {
+          if (key !== 'Authorization' && value !== undefined && value !== null) {
             if (typeof value === 'string') {
-              headers[key] = value;
+              newHeaders[key] = value;
             }
           }
-        });
+        }
       }
       
-      // PRODUCTION SAFE: Cast to AxiosRequestHeaders to satisfy TypeScript
-      // This is safe because we're using plain objects which Hermes handles correctly
-      config.headers = headers as AxiosRequestHeaders;
+      // PRODUCTION: Replace headers with new object (no mutation)
+      config.headers = newHeaders as AxiosRequestHeaders;
       
       // PRODUCTION DEBUG: Log final request URL
       const finalUrl = `${config.baseURL || ''}${config.url || ''}`;
-      console.log('API_REQUEST_URL', finalUrl);
+      console.log('API_REQUEST_URL:', finalUrl);
       
     } catch (error) {
-      // Token retrieval failed - ensure safe headers
       console.warn('Token retrieval failed:', error);
       
-      // PRODUCTION SAFE: Always ensure headers are plain objects
-      const safeHeaders: Record<string, string> = {
+      // PRODUCTION: Ensure safe headers even on error
+      config.headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-      };
-      config.headers = safeHeaders as AxiosRequestHeaders;
+      } as AxiosRequestHeaders;
     }
     
     return config;
@@ -89,15 +81,13 @@ api.interceptors.request.use(
   }
 );
 
-// PRODUCTION-SAFE: Response interceptor without frozen object mutations
+// PRODUCTION: Response interceptor with safe error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Return response as-is without any mutations
     return response;
   },
   async (error: unknown) => {
-    // PRODUCTION SAFE: Create completely new error object
-    // Never reference or mutate frozen objects from Axios
+    // PRODUCTION: Create safe error object without frozen references
     const safeError: {
       message: string;
       response?: {
@@ -114,22 +104,19 @@ api.interceptors.response.use(
     };
 
     try {
-      // PRODUCTION SAFE: Only extract primitive values, never objects
       if (error && typeof error === 'object' && error !== null) {
         const errorObj = error as any;
         
-        // Extract message safely
+        // Extract primitive values safely
         if (errorObj.message && typeof errorObj.message === 'string') {
           safeError.message = errorObj.message;
         }
         
-        // Extract response data safely without object references
         if (errorObj.response && typeof errorObj.response === 'object') {
           const responseStatus = errorObj.response.status;
           const responseData = errorObj.response.data;
           const responseStatusText = errorObj.response.statusText;
           
-          // Only store primitive values
           if (typeof responseStatus === 'number') {
             safeError.status = responseStatus;
             safeError.response = safeError.response || {};
@@ -141,15 +128,12 @@ api.interceptors.response.use(
             safeError.response.statusText = responseStatusText;
           }
           
-          // Store data if it's serializable
           if (responseData !== undefined && responseData !== null) {
             try {
-              // Try to serialize to ensure it's safe
               const serializedData = JSON.parse(JSON.stringify(responseData));
               safeError.response = { ...safeError.response };
               safeError.response.data = serializedData;
             } catch {
-              // If serialization fails, store only the message
               if (responseData && typeof responseData.message === 'string') {
                 safeError.response = { ...safeError.response };
                 safeError.response.data = { message: responseData.message };
@@ -158,12 +142,11 @@ api.interceptors.response.use(
           }
         }
         
-        // Extract code safely
         if (errorObj.code && typeof errorObj.code === 'string') {
           safeError.code = errorObj.code;
         }
         
-        // Detect network errors
+        // Detect error types
         if (
           safeError.message.includes('Network') ||
           safeError.message.includes('ECONNREFUSED') ||
@@ -175,19 +158,17 @@ api.interceptors.response.use(
           safeError.isNetworkError = true;
         }
         
-        // Detect auth errors
         if (safeError.status === 401) {
           safeError.isAuthError = true;
         }
       }
     } catch (processingError) {
-      // If error processing fails, create minimal safe error
       console.warn('Error processing failed:', processingError);
       safeError.message = 'Request failed';
       safeError.isNetworkError = true;
     }
     
-    // Handle 401 unauthorized - clear tokens
+    // Handle 401 - clear tokens
     if (safeError.isAuthError || safeError.status === 401) {
       try {
         await Storage.deleteItem('authToken');
