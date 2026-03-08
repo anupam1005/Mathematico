@@ -99,44 +99,14 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_LOGIN_ERROR:', err);
+      // PRODUCTION DEBUG: Full error logging - safely stringify to avoid frozen object issues
+      console.error('FULL_LOGIN_ERROR:', JSON.stringify(err));
       
-      // Extract error information directly with production-safe error handling
-      let message = 'Login failed';
-      
-      if (err && typeof err === 'object' && err !== null) {
-        const errorObj = err as any;
-        
-        // Check for network errors first
-        if (errorObj.isNetworkError) {
-          message = 'Network error. Please check your internet connection.';
-        } else if (errorObj.isAuthError) {
-          message = 'Authentication failed. Please try again.';
-        } else if (errorObj.response && typeof errorObj.response === 'object') {
-          const status = errorObj.response.status;
-          const errorMsg = errorObj.response.data?.message;
-          
-          if (status === 401) {
-            message = errorMsg || 'Invalid email or password';
-          } else if (status === 429) {
-            message = errorMsg || 'Too many login attempts. Please try again later.';
-          } else if (status === 503) {
-            message = errorMsg || 'Service temporarily unavailable. Please try again later.';
-          } else if (errorMsg) {
-            message = errorMsg;
-          }
-        } else if (errorObj.message && typeof errorObj.message === 'string') {
-          const msg = errorObj.message;
-          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
-            message = 'Network error. Please check your internet connection.';
-          } else {
-            message = msg;
-          }
-        }
-      }
-
-      return { success: false, message };
+      // PRODUCTION: Return simple error without any object property access
+      return { 
+        success: false, 
+        message: 'Login failed - please check your connection and try again' 
+      };
     }
   },
 
@@ -195,44 +165,14 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_REGISTER_ERROR:', err);
+      // PRODUCTION DEBUG: Full error logging - safely stringify to avoid frozen object issues
+      console.error('FULL_REGISTER_ERROR:', JSON.stringify(err));
       
-      // Extract error information directly with production-safe error handling
-      let message = 'Registration failed';
-      
-      if (err && typeof err === 'object' && err !== null) {
-        const errorObj = err as any;
-        
-        // Check for network errors first
-        if (errorObj.isNetworkError) {
-          message = 'Network error. Please check your internet connection.';
-        } else if (errorObj.response && typeof errorObj.response === 'object') {
-          const status = errorObj.response.status;
-          const errorMsg = errorObj.response.data?.message;
-          
-          if (status === 400) {
-            message = errorMsg || 'Invalid registration data';
-          } else if (status === 409) {
-            message = errorMsg || 'Email already exists';
-          } else if (status === 429) {
-            message = errorMsg || 'Too many registration attempts. Please try again later.';
-          } else if (status === 503) {
-            message = errorMsg || 'Service temporarily unavailable. Please try again later.';
-          } else if (errorMsg) {
-            message = errorMsg;
-          }
-        } else if (errorObj.message && typeof errorObj.message === 'string') {
-          const msg = errorObj.message;
-          if (msg.includes('Network') || msg.includes('ECONNREFUSED') || msg.includes('timeout')) {
-            message = 'Network error. Please check your internet connection.';
-          } else {
-            message = msg;
-          }
-        }
-      }
-
-      return { success: false, message };
+      // PRODUCTION: Return simple error without any object property access
+      return { 
+        success: false, 
+        message: 'Registration failed - please check your connection and try again' 
+      };
     }
   },
 
