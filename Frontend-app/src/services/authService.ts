@@ -47,6 +47,7 @@ const authService = {
       // PRODUCTION DEBUG: Log request URL before API call
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
+      console.log('ABOUT_TO_CALL_AXIOS:', requestUrl);
       
       // PRODUCTION: Use direct axios to bypass interceptor issues
       const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/login`, { email, password }, {
@@ -56,6 +57,8 @@ const authService = {
         },
         timeout: 30000
       });
+      
+      console.log('AXIOS_CALL_SUCCESSFUL:', response.status);
       
       // PRODUCTION DEBUG: Log response structure safely
       console.log('LOGIN_RESPONSE:', JSON.stringify(response?.data));
@@ -99,8 +102,11 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging - safely stringify to avoid frozen object issues
-      console.error('FULL_LOGIN_ERROR:', JSON.stringify(err));
+      // PRODUCTION DEBUG: Full error logging - try multiple methods to capture error
+      console.error('FULL_LOGIN_ERROR:', err);
+      console.error('ERROR_TYPE:', typeof err);
+      console.error('ERROR_STRING:', String(err));
+      console.error('ERROR_JSON:', JSON.stringify(err, null, 2));
       
       // PRODUCTION: Return simple error without any object property access
       return { 
