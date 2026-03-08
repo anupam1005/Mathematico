@@ -50,10 +50,12 @@ const authService = {
       
       // PRODUCTION: Use correct API path
       const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
-      const payload = response?.data;
-
-      // PRODUCTION DEBUG: Log response structure
-      console.log('LOGIN_RESPONSE:', payload);
+      
+      // PRODUCTION DEBUG: Log response structure safely
+      console.log('LOGIN_RESPONSE:', JSON.stringify(response?.data));
+      
+      // PRODUCTION: Deep clone response data to avoid frozen object issues
+      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
 
       // Flexible token extraction for backend compatibility
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
@@ -146,10 +148,12 @@ const authService = {
       
       // PRODUCTION: Use correct API path
       const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
-      const payload = response?.data;
-
-      // PRODUCTION DEBUG: Log response structure
-      console.log('REGISTER_RESPONSE:', payload);
+      
+      // PRODUCTION DEBUG: Log response structure safely
+      console.log('REGISTER_RESPONSE:', JSON.stringify(response?.data));
+      
+      // PRODUCTION: Deep clone response data to avoid frozen object issues
+      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
 
       if (!payload?.success) {
         return {
@@ -288,10 +292,12 @@ const authService = {
 
       // PRODUCTION: Use correct API path
       const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
-      const payload = response?.data;
 
-      // PRODUCTION DEBUG: Log response structure
-      console.log('REFRESH_RESPONSE:', payload);
+      // PRODUCTION DEBUG: Log response structure safely
+      console.log('REFRESH_RESPONSE:', JSON.stringify(response?.data));
+
+      // PRODUCTION: Deep clone response data to avoid frozen object issues
+      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
@@ -341,7 +347,9 @@ const authService = {
 
       // PRODUCTION: Use correct API path
       const response = await api.put(`${API_PATHS.auth}/profile`, data);
-      const payload = response?.data;
+      
+      // PRODUCTION: Deep clone response data to avoid frozen object issues
+      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
 
       if (!payload?.success) {
         return {
