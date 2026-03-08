@@ -37,6 +37,10 @@ android/.gradle/
 android/local.properties
 android/app/release/
 
+# Node modules build artifacts
+**/node_modules/**/android/build/
+**/node_modules/**/android/.idea/
+
 # iOS
 ios/build/
 ios/Pods/
