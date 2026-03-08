@@ -6,6 +6,6 @@ index 1234567..abcdefg 100644
  
  dependencies {
      implementation 'com.facebook.react:react-native:+'
--    implementation 'com.razorpay:checkout:1.6.40'
+-    implementation 'com.razorpay:standard-core:1.7.1'
 +    implementation 'com.razorpay:checkout:1.6.33'
  }
