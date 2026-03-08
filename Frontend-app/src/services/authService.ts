@@ -1,5 +1,5 @@
 import { API_PATHS } from '../constants/apiPaths';
-import api from './apiClient';
+import axios from 'axios';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
 
@@ -48,8 +48,14 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
       
-      // PRODUCTION: Use correct API path
-      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
+      // PRODUCTION: Use direct axios to bypass interceptor issues
+      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/login`, { email, password }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000
+      });
       
       // PRODUCTION DEBUG: Log response structure safely
       console.log('LOGIN_RESPONSE:', JSON.stringify(response?.data));
@@ -146,8 +152,14 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
       
-      // PRODUCTION: Use correct API path
-      const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
+      // PRODUCTION: Use direct axios to bypass interceptor issues
+      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/register`, { name, email, password }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000
+      });
       
       // PRODUCTION DEBUG: Log response structure safely
       console.log('REGISTER_RESPONSE:', JSON.stringify(response?.data));
@@ -232,8 +244,21 @@ const authService = {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       
-      // PRODUCTION: Use correct API path
-      await api.post(`${API_PATHS.auth}/logout`, payloadBody);
+      // Get auth token for protected endpoints
+      const authToken = await Storage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      // PRODUCTION: Use direct axios to bypass interceptor issues
+      await axios.post(`${API_BASE_URL}${API_PATHS.auth}/logout`, payloadBody, {
+        headers,
+        timeout: 30000
+      });
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -290,8 +315,21 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/refresh-token`;
       console.log('REFRESH_REQUEST_URL:', requestUrl);
 
-      // PRODUCTION: Use correct API path
-      const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
+      // Get auth token for protected endpoints
+      const authToken = await Storage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      // PRODUCTION: Use direct axios to bypass interceptor issues
+      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, payloadBody, {
+        headers,
+        timeout: 30000
+      });
 
       // PRODUCTION DEBUG: Log response structure safely
       console.log('REFRESH_RESPONSE:', JSON.stringify(response?.data));
@@ -345,8 +383,21 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
 
-      // PRODUCTION: Use correct API path
-      const response = await api.put(`${API_PATHS.auth}/profile`, data);
+      // Get auth token for protected endpoints
+      const authToken = await Storage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      // PRODUCTION: Use direct axios to bypass interceptor issues
+      const response = await axios.put(`${API_BASE_URL}${API_PATHS.auth}/profile`, data, {
+        headers,
+        timeout: 30000
+      });
       
       // PRODUCTION: Deep clone response data to avoid frozen object issues
       const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
