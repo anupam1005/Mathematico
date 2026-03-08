@@ -24,54 +24,62 @@ const api: AxiosInstance = axios.create({
   validateStatus: (status: number) => status < 500,
 });
 
-// PRODUCTION: Request interceptor with Hermes-safe header handling
+// PRODUCTION: Request interceptor with complete Hermes safety
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
       const token = await Storage.getItem('authToken');
       
-      // HERMES SAFE: Create completely new header object - never mutate existing
-      const newHeaders: Record<string, string | undefined> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+      // HERMES SAFE: Create completely new config object - avoid any frozen object access
+      const newConfig: InternalAxiosRequestConfig = {
+        ...config,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        } as AxiosRequestHeaders,
       };
       
       // Add authorization token if available
       if (token && typeof token === 'string') {
-        newHeaders['Authorization'] = `Bearer ${token}`;
+        newConfig.headers['Authorization'] = `Bearer ${token}`;
       }
       
-      // HERMES SAFE: Copy existing headers without mutation
-      if (config.headers && typeof config.headers === 'object') {
-        // Extract only primitive string values safely
-        const headerEntries = Object.entries(config.headers);
-        for (const [key, value] of headerEntries) {
-          if (key !== 'Authorization' && value !== undefined && value !== null) {
-            if (typeof value === 'string') {
-              newHeaders[key] = value;
-            }
-          }
-        }
+      // HERMES SAFE: Never access config.headers directly - it might be frozen
+      // Instead, create fresh headers and copy only safe config properties
+      if (config.method) {
+        newConfig.method = config.method;
       }
-      
-      // PRODUCTION: Replace headers with new object (no mutation)
-      config.headers = newHeaders as AxiosRequestHeaders;
+      if (config.url) {
+        newConfig.url = config.url;
+      }
+      if (config.data) {
+        newConfig.data = config.data;
+      }
+      if (config.params) {
+        newConfig.params = config.params;
+      }
+      if (config.timeout) {
+        newConfig.timeout = config.timeout;
+      }
       
       // PRODUCTION DEBUG: Log final request URL
-      const finalUrl = `${config.baseURL || ''}${config.url || ''}`;
+      const finalUrl = `${newConfig.baseURL || ''}${newConfig.url || ''}`;
       console.log('API_REQUEST_URL:', finalUrl);
       
-    } catch (error) {
-      console.warn('Token retrieval failed:', error);
+      return newConfig;
       
-      // PRODUCTION: Ensure safe headers even on error
-      config.headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      } as AxiosRequestHeaders;
+    } catch (error) {
+      console.warn('Request interceptor failed:', error);
+      
+      // PRODUCTION: Return safe config even on error
+      return {
+        ...config,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        } as AxiosRequestHeaders,
+      } as InternalAxiosRequestConfig;
     }
-    
-    return config;
   },
   (error) => {
     return Promise.reject({ 
