@@ -45,11 +45,11 @@ const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}/api/v1/auth/login`;
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
       
       // PRODUCTION: Use correct API path
-      const response = await api.post('/api/v1/auth/login', { email, password });
+      const response = await api.post(`${API_PATHS.auth}/login`, { email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
@@ -141,11 +141,11 @@ const authService = {
   ): Promise<RegisterResponse> {
     try {
       // PRODUCTION DEBUG: Log request URL before API call
-      const requestUrl = `${API_BASE_URL}/api/v1/auth/register`;
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
       
       // PRODUCTION: Use correct API path
-      const response = await api.post('/api/v1/auth/register', { name, email, password });
+      const response = await api.post(`${API_PATHS.auth}/register`, { name, email, password });
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
@@ -229,7 +229,7 @@ const authService = {
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       
       // PRODUCTION: Use correct API path
-      await api.post('/api/v1/auth/logout', payloadBody);
+      await api.post(`${API_PATHS.auth}/logout`, payloadBody);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -283,11 +283,11 @@ const authService = {
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
 
       // PRODUCTION DEBUG: Log request URL
-      const requestUrl = `${API_BASE_URL}/api/v1/auth/refresh-token`;
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/refresh-token`;
       console.log('REFRESH_REQUEST_URL:', requestUrl);
 
       // PRODUCTION: Use correct API path
-      const response = await api.post('/api/v1/auth/refresh-token', payloadBody);
+      const response = await api.post(`${API_PATHS.auth}/refresh-token`, payloadBody);
       const payload = response?.data;
 
       // PRODUCTION DEBUG: Log response structure
@@ -336,11 +336,11 @@ const authService = {
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       // PRODUCTION DEBUG: Log request URL
-      const requestUrl = `${API_BASE_URL}/api/v1/auth/profile`;
+      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
 
       // PRODUCTION: Use correct API path
-      const response = await api.put('/api/v1/auth/profile', data);
+      const response = await api.put(`${API_PATHS.auth}/profile`, data);
       const payload = response?.data;
 
       if (!payload?.success) {

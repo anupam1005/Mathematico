@@ -5,7 +5,7 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '8.5.0',
+    version: '8.5.1',
     jsEngine: 'hermes',
     orientation: 'portrait',
     owner: 'mathematicoadmin',
@@ -19,12 +19,12 @@ export default {
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
-      EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://mathematico-backend-new.vercel.app/api/v1',
+      EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://mathematico-backend-new.vercel.app',
       EXPO_PUBLIC_ENV: process.env.EXPO_PUBLIC_ENV || 'production'
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 36,
+      versionCode: 37,
       usesCleartextTraffic: false,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
