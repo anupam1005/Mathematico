@@ -68,7 +68,7 @@
     "@types/node": "^20.19.30",
     "@types/react": "~19.1.2",
     "expo-build-properties": "~1.0.10",
-    "jest-expo": "~54.0.16",
+    "jest-expo": "^47.0.1",
     "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },

@@ -35,11 +35,11 @@ ${additions.join('\n')}`
       return config;
     }
 
-    // Add Razorpay dependency
+    // Add Razorpay dependency with a stable version
     config.modResults.contents = config.modResults.contents.replace(
       /dependencies\s*\{/,
       (match) => `${match}
-    implementation "com.razorpay:checkout:1.6.40"`
+    implementation "com.razorpay:checkout:1.6.38"`
     );
 
     return config;
