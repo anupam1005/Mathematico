@@ -313,7 +313,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         onChangeText={t => setFormData({ ...formData, instructorName: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="person"
+        // Use a valid MaterialCommunityIcons icon name
+        leftIcon="account"
       />
 
       <View style={styles.pickerContainer}>

@@ -6,7 +6,8 @@ export default {
     name: 'Mathematico',
     slug: 'mathematico-app',
     version: '8.5.8',
-    jsEngine: 'hermes',
+    // Use JSC instead of Hermes to avoid React Native Hermes 'NONE' read-only property bugs
+    jsEngine: 'jsc',
     orientation: 'portrait',
     owner: 'dipanjanmathematico',
     icon: './assets/icon.png',
@@ -26,6 +27,8 @@ export default {
       package: 'com.anupam1505.mathematicoapp',
       versionCode: 44,
       usesCleartextTraffic: false,
+      // Explicitly set JS engine for Android as well (for EAS build compatibility)
+      jsEngine: 'jsc',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'

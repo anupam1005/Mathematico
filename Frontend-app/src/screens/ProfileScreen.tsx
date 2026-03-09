@@ -281,7 +281,8 @@ export default function ProfileScreen({ navigation }: any) {
               onChangeText={setEditName}
               mode="outlined"
               style={styles.dialogInput}
-              leftIcon="person"
+              // Use valid MaterialCommunityIcons icon name
+              leftIcon="account"
             />
           </Dialog.Content>
           <Dialog.Actions>

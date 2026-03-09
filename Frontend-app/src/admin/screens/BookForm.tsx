@@ -190,7 +190,8 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         onChangeText={t => setFormData({ ...formData, author: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="person"
+        // Use a valid MaterialCommunityIcons icon name
+        leftIcon="account"
       />
 
       <CustomTextInput

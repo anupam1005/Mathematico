@@ -160,13 +160,10 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging - try multiple methods to capture error
-      console.error('FULL_LOGIN_ERROR:', err);
-      console.error('ERROR_TYPE:', typeof err);
-      console.error('ERROR_STRING:', String(err));
-      console.error('ERROR_JSON:', JSON.stringify(err, null, 2));
-      
-      // PRODUCTION: Return simple error without any object property access
+      // PRODUCTION DEBUG (Hermes-safe): avoid deep inspection of error objects
+      console.error('FULL_LOGIN_ERROR:', String(err));
+
+      // PRODUCTION: Return simple error without touching nested error properties
       return { 
         success: false, 
         message: 'Login failed - please check your connection and try again' 
@@ -238,16 +235,10 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging - try multiple methods to capture error
-      console.error('FULL_REGISTER_ERROR:', err);
-      console.error('REGISTER_ERROR_TYPE:', typeof err);
-      console.error('REGISTER_ERROR_STRING:', String(err));
-      console.error('REGISTER_ERROR_JSON:', JSON.stringify(err, null, 2));
-      const errorObj = err as any;
-      console.error('REGISTER_ERROR_MESSAGE:', errorObj?.message);
-      console.error('REGISTER_ERROR_STACK:', errorObj?.stack);
-      
-      // PRODUCTION: Return simple error without any object property access
+      // PRODUCTION DEBUG (Hermes-safe): keep logging minimal to avoid NONE read-only bugs
+      console.error('FULL_REGISTER_ERROR:', String(err));
+
+      // PRODUCTION: Return simple error without touching nested error properties
       return { 
         success: false, 
         message: 'Registration failed - please check your connection and try again' 
@@ -288,8 +279,8 @@ const authService = {
       
       return { success: true, message: 'Logout successful' };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_LOGOUT_ERROR:', err);
+      // PRODUCTION DEBUG (Hermes-safe)
+      console.error('FULL_LOGOUT_ERROR:', String(err));
       
       // Still clear local tokens even if logout API fails
       try {
@@ -394,8 +385,8 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_REFRESH_ERROR:', err);
+      // PRODUCTION DEBUG (Hermes-safe)
+      console.error('FULL_REFRESH_ERROR:', String(err));
       
       return {
         success: false,
@@ -453,8 +444,8 @@ const authService = {
         data: payload.data,
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_UPDATE_PROFILE_ERROR:', err);
+      // PRODUCTION DEBUG (Hermes-safe)
+      console.error('FULL_UPDATE_PROFILE_ERROR:', String(err));
       
       return {
         success: false,

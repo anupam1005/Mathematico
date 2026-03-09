@@ -461,7 +461,8 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               value={editForm.name || ''}
               onChangeText={(text) => setEditForm({ ...editForm, name: text })}
               style={styles.input}
-              leftIcon="person"
+              // Use valid MaterialCommunityIcons icon name
+              leftIcon="account"
             />
             <CustomTextInput
               label="Email"

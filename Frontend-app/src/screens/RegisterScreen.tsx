@@ -175,7 +175,8 @@ export default function RegisterScreen({ navigation }: any) {
                 maxLength={100}
                 error={!!errors.name}
                 style={styles.input}
-                leftIcon="person"
+                // Use a valid MaterialCommunityIcons name instead of "person"
+                leftIcon="account"
                 testID="name-input"
                 accessibilityLabel="Full name input field"
               />
