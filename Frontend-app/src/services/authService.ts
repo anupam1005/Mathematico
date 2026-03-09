@@ -53,8 +53,8 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.post(requestUrl, { email, password });
+      // Use axios-based client with relative path (base URL is already in authApi)
+      const axiosResponse = await authApi.post('/login', { email, password });
       const responseData = axiosResponse.data;
 
       // Deep clone response data to avoid accidental mutations
@@ -118,8 +118,8 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.post(requestUrl, { name, email, password });
+      // Use axios-based client with relative path (base URL is already in authApi)
+      const axiosResponse = await authApi.post('/register', { name, email, password });
       const responseData = axiosResponse.data;
 
       // Deep clone response data to avoid accidental mutations
@@ -170,11 +170,8 @@ const authService = {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       
-      // Get auth token for protected endpoints
-      const authToken = await Storage.getItem('authToken');
-      
-      // Use axios-based client instead of global fetch
-      await authApi.post(`${API_BASE_URL}${API_PATHS.auth}/logout`, payloadBody);
+      // Use axios-based client instead of global fetch (base URL is already in authApi)
+      await authApi.post('/logout', payloadBody);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -234,8 +231,8 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.post(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, payloadBody, {
+      // Use axios-based client with relative path (base URL is already in authApi)
+      const axiosResponse = await authApi.post('/refresh-token', payloadBody, {
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
       });
 
@@ -287,9 +284,9 @@ const authService = {
       // PRODUCTION DEBUG: Log request URL
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
-
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.put(`${API_BASE_URL}${API_PATHS.auth}/profile`, data);
+      
+      // Use axios-based client with relative path (base URL is already in authApi)
+      const axiosResponse = await authApi.put('/profile', data);
       const responseData = axiosResponse.data;
 
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
