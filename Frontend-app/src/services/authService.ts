@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../config';
 import { withBasePath } from '../services/apiClient';
 
 /* ------------------------------------------------------------------ */
-/* Axios-based Auth API (avoids React Native fetch/Hermes NONE bug)   */
+/* Axios-based Auth API (Hermes-safe, matches Postman behaviour)      */
 /* ------------------------------------------------------------------ */
 
 const authApi = withBasePath(API_PATHS.auth);
@@ -96,13 +96,18 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG (Hermes-safe): avoid deep inspection of error objects
-      console.error('FULL_LOGIN_ERROR:', String(err));
+      const errorObj = err as any;
+      console.error('FULL_LOGIN_ERROR:', JSON.stringify(errorObj, null, 2));
 
-      // PRODUCTION: Return simple error without touching nested error properties
+      // Prefer backend error message if available
+      const backendMessage =
+        errorObj?.response?.data?.message ||
+        errorObj?.message ||
+        'Login failed - please check your connection and try again';
+
       return { 
         success: false, 
-        message: 'Login failed - please check your connection and try again' 
+        message: backendMessage 
       };
     }
   },
@@ -151,13 +156,17 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG (Hermes-safe): keep logging minimal to avoid NONE read-only bugs
-      console.error('FULL_REGISTER_ERROR:', String(err));
+      const errorObj = err as any;
+      console.error('FULL_REGISTER_ERROR:', JSON.stringify(errorObj, null, 2));
 
-      // PRODUCTION: Return simple error without touching nested error properties
+      const backendMessage =
+        errorObj?.response?.data?.message ||
+        errorObj?.message ||
+        'Registration failed - please check your connection and try again';
+
       return { 
         success: false, 
-        message: 'Registration failed - please check your connection and try again' 
+        message: backendMessage 
       };
     }
   },
@@ -169,8 +178,8 @@ const authService = {
     try {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
-      
-      // Use axios-based client instead of global fetch (base URL is already in authApi)
+
+      // Use axios-based client instead of global fetch
       await authApi.post('/logout', payloadBody);
       
       // Always clear local tokens regardless of API response
@@ -179,8 +188,8 @@ const authService = {
       
       return { success: true, message: 'Logout successful' };
     } catch (err) {
-      // PRODUCTION DEBUG (Hermes-safe)
-      console.error('FULL_LOGOUT_ERROR:', String(err));
+      // PRODUCTION DEBUG: Full error logging
+      console.error('FULL_LOGOUT_ERROR:', err);
       
       // Still clear local tokens even if logout API fails
       try {
@@ -230,8 +239,8 @@ const authService = {
 
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
-      
-      // Use axios-based client with relative path (base URL is already in authApi)
+
+      // Use axios-based client instead of global fetch
       const axiosResponse = await authApi.post('/refresh-token', payloadBody, {
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
       });
@@ -267,8 +276,8 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG (Hermes-safe)
-      console.error('FULL_REFRESH_ERROR:', String(err));
+      const errorObj = err as any;
+      console.error('FULL_REFRESH_ERROR:', JSON.stringify(errorObj, null, 2));
       
       return {
         success: false,
@@ -284,8 +293,8 @@ const authService = {
       // PRODUCTION DEBUG: Log request URL
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
-      
-      // Use axios-based client with relative path (base URL is already in authApi)
+
+      // Use axios-based client instead of global fetch
       const axiosResponse = await authApi.put('/profile', data);
       const responseData = axiosResponse.data;
 
@@ -304,8 +313,8 @@ const authService = {
         data: payload.data,
       };
     } catch (err) {
-      // PRODUCTION DEBUG (Hermes-safe)
-      console.error('FULL_UPDATE_PROFILE_ERROR:', String(err));
+      const errorObj = err as any;
+      console.error('FULL_UPDATE_PROFILE_ERROR:', JSON.stringify(errorObj, null, 2));
       
       return {
         success: false,
