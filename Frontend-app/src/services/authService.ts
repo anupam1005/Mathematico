@@ -48,14 +48,18 @@ const authService = {
       console.log('REQUEST_URL:', requestUrl);
       console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
       
-      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      // PRODUCTION: Safely create request body to avoid frozen object issues
+      const requestBody = JSON.stringify({ email, password });
+      
+      // PRODUCTION: Use minimal fetch configuration to avoid React Native frozen object issues
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Accept', 'application/json');
+      
       const response = await fetch(requestUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
+        headers: headers,
+        body: requestBody
       });
       
       console.log('FETCH_CALL_SUCCESSFUL:', response.status);
@@ -133,21 +137,19 @@ const authService = {
       console.log('REQUEST_URL:', requestUrl);
       console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
       
-      // PRODUCTION: Use fetch API to bypass axios frozen object issues
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      // PRODUCTION: Safely create request body to avoid frozen object issues
+      const requestBody = JSON.stringify({ name, email, password });
+      
+      // PRODUCTION: Use minimal fetch configuration to avoid React Native frozen object issues
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Accept', 'application/json');
       
       const response = await fetch(requestUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ name, email, password }),
-        signal: controller.signal
+        headers: headers,
+        body: requestBody
       });
-      
-      clearTimeout(timeoutId);
       console.log('FETCH_CALL_SUCCESSFUL:', response.status);
       
       if (!response.ok) {
@@ -214,7 +216,7 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
         method: 'POST',
         headers: {
@@ -285,7 +287,7 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
         method: 'POST',
         headers: {
@@ -357,7 +359,7 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
         method: 'PUT',
         headers: {

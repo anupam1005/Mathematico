@@ -3,11 +3,45 @@ import type { AxiosRequestConfig } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_PATHS } from '../constants/apiPaths';
-
-import { withBasePath } from './apiClient';
+import { API_BASE_URL } from '../config';
 
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
+
+// Helper function for admin API calls using fetch to avoid React Native frozen object issues
+const adminFetch = async (method: string, path: string, data?: any): Promise<any> => {
+  try {
+    const token = await authService.getToken();
+    
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    headers.append('Accept', 'application/json');
+    
+    if (token && typeof token === 'string') {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+    
+    const url = `${API_BASE_URL}${API_PATHS.admin}${path}`;
+    console.log('ADMIN_FETCH_URL:', url);
+    
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined
+    });
+    
+    console.log('ADMIN_FETCH_STATUS:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('ADMIN_FETCH_ERROR:', error);
+    throw error;
+  }
+};
 
 // Generic API response type
 interface ApiResponse<T = any> {
@@ -49,47 +83,17 @@ export interface DashboardStats {
     id: string;
     title: string;
     category: string;
+    author: string;
   }>;
 }
 
-const baseAdminApi = withBasePath(API_PATHS.admin);
-
-const getPayloadOrThrow = <T = any>(response: any): ApiResponse<T> => {
-  const status = response?.status;
-  const payload = response?.data as ApiResponse<T> | undefined;
-
-  // Axios normally throws on non-2xx; however if callers override validateStatus elsewhere,
-  // we still defensively treat non-2xx as failure.
-  if (typeof status === 'number' && (status < 200 || status >= 300)) {
-    throw new Error(payload?.message || payload?.error || `Request failed (HTTP ${status})`);
+// Helper function to process fetch responses
+const processResponse = (response: any): ApiResponse<any> => {
+  if (response && response.success === false) {
+    throw new Error(response.message || response.error || 'Request failed');
   }
-
-  if (payload && payload.success === false) {
-    throw new Error(payload.message || payload.error || 'Request failed');
-  }
-
-  // Some endpoints (e.g. /admin/info) return a non-standard shape (no data wrapper).
-  // In that case, return an adapter object so callers can still handle it.
-  if (!payload) {
-    return { success: true } as ApiResponse<T>;
-  }
-
-  return payload;
-};
-
-const adminRequestConfig = {};
-
-const adminApi = {
-  get: <T = any>(path: string, config: AxiosRequestConfig = {}) =>
-    baseAdminApi.get<T>(path, { ...adminRequestConfig, ...config }),
-  delete: <T = any>(path: string, config: AxiosRequestConfig = {}) =>
-    baseAdminApi.delete<T>(path, { ...adminRequestConfig, ...config }),
-  post: <T = any>(path: string, data?: any, config: AxiosRequestConfig = {}) =>
-    baseAdminApi.post<T>(path, data, { ...adminRequestConfig, ...config }),
-  put: <T = any>(path: string, data?: any, config: AxiosRequestConfig = {}) =>
-    baseAdminApi.put<T>(path, data, { ...adminRequestConfig, ...config }),
-  request: <T = any>(config: AxiosRequestConfig) =>
-    baseAdminApi.request<T>({ ...adminRequestConfig, ...config }),
+  
+  return response || { success: true };
 };
 
 // ----------------- ADMIN SERVICE CLASS -----------------
@@ -97,11 +101,11 @@ class AdminService {
   // Dashboard
   async getDashboard(): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get('/dashboard');
-      const payload = getPayloadOrThrow(response);
+      const response = await adminFetch('GET', '/dashboard');
+      const payload = processResponse(response);
       return {
         success: true,
-        data: (payload as any).data || {
+        data: payload.data || {
           totalUsers: 0,
           totalBooks: 0,
           totalCourses: 0,
@@ -137,8 +141,8 @@ class AdminService {
   // Users
   async getAllUsers(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/users?page=${page}&limit=${limit}`);
-      const payload = getPayloadOrThrow(response);
+      const response = await adminFetch('GET', `/users?page=${page}&limit=${limit}`);
+      const payload = processResponse(response);
       return {
         success: true,
         data: payload.data || [],
@@ -157,8 +161,8 @@ class AdminService {
 
   async getUserById(id: string): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/users/${id}`);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('GET', `/users/${id}`);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error fetching user:', error);
       return { success: false, error: 'Failed to fetch user' };
@@ -167,8 +171,8 @@ class AdminService {
 
   async createUser(userData: any): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.post('/users', userData);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('POST', '/users', userData);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error creating user:', error);
       return { success: false, error: 'Failed to create user' };
@@ -177,8 +181,8 @@ class AdminService {
 
   async updateUser(id: string, userData: any): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.put(`/users/${id}`, userData);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('PUT', `/users/${id}`, userData);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error updating user:', error);
       return { success: false, error: 'Failed to update user' };
@@ -187,8 +191,8 @@ class AdminService {
 
   async updateUserStatus(id: string, status: boolean): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.put(`/users/${id}/status`, { status });
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('PUT', `/users/${id}/status`, { status });
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error updating user status:', error);
       return { success: false, error: 'Failed to update user status' };
@@ -197,8 +201,8 @@ class AdminService {
 
   async deleteUser(id: string): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.delete(`/users/${id}`);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('DELETE', `/users/${id}`);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error deleting user:', error);
       return { success: false, error: 'Failed to delete user' };
@@ -208,8 +212,8 @@ class AdminService {
   // Books
   async getAllBooks(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/books?page=${page}&limit=${limit}`);
-      const payload = getPayloadOrThrow(response);
+      const response = await adminFetch('GET', `/books?page=${page}&limit=${limit}`);
+      const payload = processResponse(response);
       return {
         success: true,
         data: payload.data || [],
@@ -228,8 +232,8 @@ class AdminService {
 
   async getBookById(id: string): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/books/${id}`);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('GET', `/books/${id}`);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error fetching book:', error);
       return { success: false, error: 'Failed to fetch book' };
@@ -240,28 +244,40 @@ class AdminService {
     try {
       errorHandler.logInfo('AdminService: Creating book with data:', bookData);
       
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
       // Check if bookData is FormData or regular object
       const isFormData = bookData instanceof FormData;
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.post('/books', bookData, config);
-      const result = response.data;
       
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Book created successfully:', result);
-        return { success: true, data: result.data };
+      let response;
+      if (isFormData) {
+        // For FormData, we need special handling
+        const token = await authService.getToken();
+        if (!token) {
+          return { success: false, error: 'No authentication token found' };
+        }
+        
+        const headers = new Headers();
+        if (token && typeof token === 'string') {
+          headers.append('Authorization', `Bearer ${token}`);
+        }
+        
+        const url = `${API_BASE_URL}${API_PATHS.admin}/books`;
+        const fetchResponse = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: bookData
+        });
+        
+        if (!fetchResponse.ok) {
+          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+        }
+        
+        response = await fetchResponse.json();
       } else {
-        errorHandler.handleError('AdminService: Book creation failed:', result);
-        return { success: false, error: 'Failed to create book' };
+        response = await adminFetch('POST', '/books', bookData);
       }
+      
+      errorHandler.logInfo('AdminService: Book created successfully:', response);
+      return { success: true, data: response.data };
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book creation error:', error);
       return { success: false, error: 'Failed to create book' };
@@ -272,28 +288,40 @@ class AdminService {
     try {
       errorHandler.logInfo('AdminService: Updating book with ID:', id, 'data:', bookData);
       
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
       // Check if bookData is FormData or regular object
       const isFormData = bookData instanceof FormData;
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.put(`/books/${id}`, bookData, config);
-      const result = response.data;
       
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Book updated successfully:', result);
-        return { success: true, data: result.data };
+      let response;
+      if (isFormData) {
+        // For FormData, we need special handling
+        const token = await authService.getToken();
+        if (!token) {
+          return { success: false, error: 'No authentication token found' };
+        }
+        
+        const headers = new Headers();
+        if (token && typeof token === 'string') {
+          headers.append('Authorization', `Bearer ${token}`);
+        }
+        
+        const url = `${API_BASE_URL}${API_PATHS.admin}/books/${id}`;
+        const fetchResponse = await fetch(url, {
+          method: 'PUT',
+          headers,
+          body: bookData
+        });
+        
+        if (!fetchResponse.ok) {
+          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+        }
+        
+        response = await fetchResponse.json();
       } else {
-        errorHandler.handleError('AdminService: Book update failed:', result);
-        return { success: false, error: 'Failed to update book' };
+        response = await adminFetch('PUT', `/books/${id}`, bookData);
       }
+      
+      errorHandler.logInfo('AdminService: Book updated successfully:', response);
+      return { success: true, data: response.data };
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book update error:', error);
       return { success: false, error: 'Failed to update book' };
@@ -303,22 +331,9 @@ class AdminService {
   async updateBookStatus(id: string, status: string): Promise<ApiResponse<any>> {
     try {
       errorHandler.logInfo('AdminService: Updating book status for ID:', id, 'status:', status);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.put(`/books/${id}/status`, { status });
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Book status updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Book status update failed:', result);
-        return { success: false, error: 'Failed to update book status' };
-      }
+      const response = await adminFetch('PUT', `/books/${id}/status`, { status });
+      errorHandler.logInfo('AdminService: Book status updated successfully:', response);
+      return { success: true, data: response.data };
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book status update error:', error);
       return { success: false, error: 'Failed to update book status' };
@@ -328,33 +343,21 @@ class AdminService {
   async deleteBook(id: string): Promise<ApiResponse<any>> {
     try {
       errorHandler.logInfo('AdminService: Deleting book with ID:', id);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.delete(`/books/${id}`);
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Book deleted successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Book deletion failed:', result);
-        return { success: false, error: 'Failed to delete book' };
-      }
+      const response = await adminFetch('DELETE', `/books/${id}`);
+      errorHandler.logInfo('AdminService: Book deleted successfully:', response);
+      return { success: true, data: response.data };
     } catch (error: any) {
       errorHandler.handleError('AdminService: Book deletion error:', error);
       return { success: false, error: 'Failed to delete book' };
     }
   }
 
-  // Courses
+  // Add placeholder methods for other functionality
+  // These can be implemented as needed following the same pattern
   async getAllCourses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/courses?page=${page}&limit=${limit}`);
-      const payload = getPayloadOrThrow(response);
+      const response = await adminFetch('GET', `/courses?page=${page}&limit=${limit}`);
+      const payload = processResponse(response);
       return {
         success: true,
         data: payload.data || [],
@@ -373,8 +376,8 @@ class AdminService {
 
   async getCourseById(id: string): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/courses/${id}`);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('GET', `/courses/${id}`);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error fetching course:', error);
       return { success: false, error: 'Failed to fetch course' };
@@ -383,180 +386,30 @@ class AdminService {
 
   async createCourse(courseData: any): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Creating course with data:', courseData);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      // Check if courseData is FormData or regular object
-      const isFormData = courseData instanceof FormData;
-
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.post('/courses', courseData, config);
-      
-      // Check if response exists and has data
-      if (!response) {
-        return { success: false, error: 'No response from server' };
-      }
-
-      // Check if response.data exists and is valid JSON-like
-      if (!response.data) {
-        return { success: false, error: 'Invalid response from server' };
-      }
-
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Course created successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Course creation failed:', result);
-        return { success: false, error: result.message || result.error || 'Failed to create course' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Course creation error:', error);
-      
-      // Handle specific network errors
-      if (error.message === 'Network request failed') {
-        return { 
-          success: false, 
-          error: 'Network connection failed. Please check if the backend server is running and accessible.' 
-        };
-      }
-      
-      // Handle JSON parsing errors specifically
-      if (error.message && error.message.includes('JSON Parse error')) {
-        return { 
-          success: false, 
-          error: 'Server returned invalid response. Please check backend logs.' 
-        };
-      }
-      
-      // Handle non-JSON responses
-      if (error.response && typeof error.response.data === 'string') {
-        return { 
-          success: false, 
-          error: `Server error: ${error.response.data.substring(0, 100)}` 
-        };
-      }
-      
+      const response = await adminFetch('POST', '/courses', courseData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error creating course:', error);
       return { success: false, error: 'Failed to create course' };
     }
   }
 
   async updateCourse(id: string, courseData: any): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Updating course with ID:', id, 'data:', courseData);
-
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const isFormData = courseData instanceof FormData;
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.put(`/courses/${id}`, courseData, config);
-
-      if (!response || !response.data) {
-        return { success: false, error: 'Invalid response from server' };
-      }
-
-      const result = response.data;
-
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Course updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Course update failed:', result);
-        return { success: false, error: result.message || result.error || 'Failed to update course' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Course update error:', error);
-      
-      // Handle specific network errors
-      if (error.message === 'Network request failed') {
-        return { 
-          success: false, 
-          error: 'Network connection failed. Please check if the backend server is running and accessible.' 
-        };
-      }
-      
-      // Handle JSON parsing errors specifically
-      if (error.message && error.message.includes('JSON Parse error')) {
-        return { 
-          success: false, 
-          error: 'Server returned invalid response. Please check backend logs.' 
-        };
-      }
-      
-      // Handle non-JSON responses
-      if (error.response && typeof error.response.data === 'string') {
-        return { 
-          success: false, 
-          error: `Server error: ${error.response.data.substring(0, 100)}` 
-        };
-      }
-      
+      const response = await adminFetch('PUT', `/courses/${id}`, courseData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating course:', error);
       return { success: false, error: 'Failed to update course' };
-    }
-  }
-
-  async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
-    try {
-      errorHandler.logInfo('AdminService: Updating course status for ID:', id, 'status:', status);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.put(`/courses/${id}/status`, { status });
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Course status updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Course status update failed:', result);
-        return { success: false, error: 'Failed to update course status' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Course status update error:', error);
-      return { success: false, error: 'Failed to update course status' };
     }
   }
 
   async deleteCourse(id: string): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Deleting course with ID:', id);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.delete(`/courses/${id}`);
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Course deleted successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Course deletion failed:', result);
-        return { success: false, error: 'Failed to delete course' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Course deletion error:', error);
+      const response = await adminFetch('DELETE', `/courses/${id}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error deleting course:', error);
       return { success: false, error: 'Failed to delete course' };
     }
   }
@@ -564,8 +417,8 @@ class AdminService {
   // Live Classes
   async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/live-classes?page=${page}&limit=${limit}`);
-      const payload = getPayloadOrThrow(response);
+      const response = await adminFetch('GET', `/live-classes?page=${page}&limit=${limit}`);
+      const payload = processResponse(response);
       return {
         success: true,
         data: payload.data || [],
@@ -584,8 +437,8 @@ class AdminService {
 
   async getLiveClassById(id: string): Promise<ApiResponse<any>> {
     try {
-      const response = await adminApi.get(`/live-classes/${id}`);
-      return { success: true, data: response.data.data };
+      const response = await adminFetch('GET', `/live-classes/${id}`);
+      return { success: true, data: response.data };
     } catch (error) {
       errorHandler.handleError('Error fetching live class:', error);
       return { success: false, error: 'Failed to fetch live class' };
@@ -594,224 +447,36 @@ class AdminService {
 
   async createLiveClass(liveClassData: any): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Creating live class with data:', liveClassData);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      // Check if liveClassData is FormData or regular object
-      const isFormData = liveClassData instanceof FormData;
-
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.post('/live-classes', liveClassData, config);
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Live class created successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Live class creation failed:', result);
-        return { success: false, error: 'Failed to create live class' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Live class creation error:', error);
+      const response = await adminFetch('POST', '/live-classes', liveClassData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error creating live class:', error);
       return { success: false, error: 'Failed to create live class' };
     }
   }
 
   async updateLiveClass(id: string, liveClassData: any): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Updating live class with ID:', id, 'data:', liveClassData);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      // Check if liveClassData is FormData or regular object
-      const isFormData = liveClassData instanceof FormData;
-
-      const config: AxiosRequestConfig = {};
-      if (!isFormData) {
-        config.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await adminApi.put(`/live-classes/${id}`, liveClassData, config);
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Live class updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Live class update failed:', result);
-        return { success: false, error: 'Failed to update live class' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Live class update error:', error);
+      const response = await adminFetch('PUT', `/live-classes/${id}`, liveClassData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating live class:', error);
       return { success: false, error: 'Failed to update live class' };
-    }
-  }
-
-  async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
-    try {
-      errorHandler.logInfo('AdminService: Updating live class status for ID:', id, 'status:', status);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.put(`/live-classes/${id}/status`, { status });
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Live class status updated successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Live class status update failed:', result);
-        return { success: false, error: 'Failed to update live class status' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Live class status update error:', error);
-      return { success: false, error: 'Failed to update live class status' };
     }
   }
 
   async deleteLiveClass(id: string): Promise<ApiResponse<any>> {
     try {
-      errorHandler.logInfo('AdminService: Deleting live class with ID:', id);
-      
-      const token = await authService.getToken();
-      if (!token) {
-        return { success: false, error: 'No authentication token found' };
-      }
-
-      const response = await adminApi.delete(`/live-classes/${id}`);
-      const result = response.data;
-      
-      if (response.status >= 200 && response.status < 300) {
-        errorHandler.logInfo('AdminService: Live class deleted successfully:', result);
-        return { success: true, data: result.data };
-      } else {
-        errorHandler.handleError('AdminService: Live class deletion failed:', result);
-        return { success: false, error: 'Failed to delete live class' };
-      }
-    } catch (error: any) {
-      errorHandler.handleError('AdminService: Live class deletion error:', error);
+      const response = await adminFetch('DELETE', `/live-classes/${id}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error deleting live class:', error);
       return { success: false, error: 'Failed to delete live class' };
-    }
-  }
-
-  // Payments
-  async getPayments(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
-    try {
-      const response = await adminApi.get(`/payments?page=${page}&limit=${limit}`);
-      const payload = getPayloadOrThrow(response);
-      return {
-        success: true,
-        data: payload.data || [],
-        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
-      };
-    } catch (error) {
-      errorHandler.handleError('Error fetching payments:', error);
-      return {
-        success: false,
-        error: 'Failed to fetch payments',
-        data: [],
-        pagination: { total: 0, page, limit, totalPages: 0 }
-      };
-    }
-  }
-
-  async getPaymentById(id: string): Promise<ApiResponse<any>> {
-    try {
-      const response = await adminApi.get(`/payments/${id}`);
-      return { success: true, data: response.data.data };
-    } catch (error) {
-      errorHandler.handleError('Error fetching payment:', error);
-      return { success: false, error: 'Failed to fetch payment' };
-    }
-  }
-
-  // Admin Info
-  async getAdminInfo(): Promise<ApiResponse<any>> {
-    try {
-      const response = await adminApi.get('/info');
-
-      // /admin/info is a public endpoint and returns a non-standard shape (no data wrapper).
-      const raw = response?.data;
-      if (raw && raw.success === false) {
-        return { success: false, error: raw.message || raw.error || 'Failed to fetch admin info' };
-      }
-
-      return { success: true, data: raw?.data ?? raw };
-    } catch (error) {
-      errorHandler.handleError('Error fetching admin info:', error);
-      return {
-        success: true,
-        data: {
-          adminName: 'Admin User',
-          email: 'admin@mathematico.com',
-          role: 'admin',
-          permissions: ['read', 'write', 'delete'],
-          database: 'disabled',
-          features: {
-            userManagement: false,
-            bookManagement: false,
-            courseManagement: false,
-            liveClassManagement: false,
-            paymentManagement: false
-          },
-          message: 'Database functionality has been removed. Only authentication is available.'
-        }
-      };
-    }
-  }
-
-  // Settings methods
-  async getSettings(): Promise<ApiResponse<any>> {
-    try {
-      const response = await adminApi.get('/settings');
-      const payload = getPayloadOrThrow(response);
-      return { success: true, data: payload.data };
-    } catch (error) {
-      errorHandler.handleError('Error fetching settings:', error);
-      return {
-        success: true,
-        data: {
-          site_name: 'Mathematico',
-          site_description: 'Educational Platform',
-          contact_email: 'admin@mathematico.com',
-          maintenance_mode: false,
-          allow_registration: false,
-          database: 'disabled',
-          message: 'Database functionality has been removed. Settings are not persistent.'
-        }
-      };
-    }
-  }
-
-  async updateSettings(settings: any): Promise<ApiResponse<any>> {
-    try {
-      const response = await adminApi.put('/settings', settings);
-      const payload = getPayloadOrThrow(response);
-      return { success: true, data: payload.data };
-    } catch (error) {
-      errorHandler.handleError('Error updating settings:', error);
-      return {
-        success: true,
-        data: settings,
-        message: 'Settings updated locally. Database functionality has been removed.'
-      };
     }
   }
 }
 
-export const adminService = new AdminService();
+// Export a singleton instance
+const adminService = new AdminService();
 export default adminService;
+export { AdminService };
