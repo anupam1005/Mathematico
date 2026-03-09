@@ -1,56 +1,13 @@
 import { API_PATHS } from '../constants/apiPaths';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
+import { withBasePath } from '../services/apiClient';
 
 /* ------------------------------------------------------------------ */
-/* Safe Fetch Wrapper for React Native Hermes                           */
+/* Axios-based Auth API (avoids React Native fetch/Hermes NONE bug)   */
 /* ------------------------------------------------------------------ */
 
-const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
-  try {
-    return await fetch(url, options);
-  } catch (error: any) {
-    // Check if this is the "Cannot assign to read-only property 'NONE'" error
-    if (error.message && error.message.includes('Cannot assign to read-only property')) {
-      console.warn('Hermes read-only property error caught, using direct fetch...');
-      
-      // Create completely fresh options object to avoid frozen/readonly issues
-      const method = options.method || 'GET';
-      const body = options.body;
-      
-      // Build headers as a simple object to avoid readonly property issues
-      const freshHeaders: { [key: string]: string } = {};
-      
-      // Add content-type if there's a body
-      if (body) {
-        freshHeaders['Content-Type'] = 'application/json';
-      }
-      
-      // Add accept header
-      freshHeaders['Accept'] = 'application/json';
-      
-      // Add any custom headers from original options
-      if (options.headers) {
-        const originalHeaders = options.headers as any;
-        if (typeof originalHeaders === 'object') {
-          Object.keys(originalHeaders).forEach(key => {
-            if (typeof originalHeaders[key] === 'string') {
-              freshHeaders[key] = originalHeaders[key];
-            }
-          });
-        }
-      }
-      
-      // Use direct fetch call with completely fresh configuration
-      return await fetch(url, {
-        method: method,
-        headers: freshHeaders,
-        body: body
-      });
-    }
-    throw error;
-  }
-};
+const authApi = withBasePath(API_PATHS.auth);
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -93,35 +50,14 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      // PRODUCTION DEBUG: Log request URL before API call
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
-      console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
-      
-      // PRODUCTION: Safely create request body to avoid frozen object issues
-      const requestBody = JSON.stringify({ email, password });
-      
-      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {};
-      headers['Content-Type'] = 'application/json';
-      headers['Accept'] = 'application/json';
-      
-      const response = await safeFetch(requestUrl, {
-        method: 'POST',
-        headers: headers,
-        body: requestBody
-      });
-      
-      console.log('FETCH_CALL_SUCCESSFUL:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('FETCH_RESPONSE:', JSON.stringify(responseData));
-      
-      // PRODUCTION: Deep clone response data to avoid frozen object issues
+
+      // Use axios-based client instead of global fetch
+      const axiosResponse = await authApi.post(requestUrl, { email, password });
+      const responseData = axiosResponse.data;
+
+      // Deep clone response data to avoid accidental mutations
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       // Flexible token extraction for backend compatibility
@@ -179,34 +115,14 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      // PRODUCTION DEBUG: Log request URL before API call
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
-      console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
-      
-      // PRODUCTION: Safely create request body to avoid frozen object issues
-      const requestBody = JSON.stringify({ name, email, password });
-      
-      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {};
-      headers['Content-Type'] = 'application/json';
-      headers['Accept'] = 'application/json';
-      
-      const response = await safeFetch(requestUrl, {
-        method: 'POST',
-        headers: headers,
-        body: requestBody
-      });
-      console.log('FETCH_CALL_SUCCESSFUL:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('FETCH_RESPONSE:', JSON.stringify(responseData));
-      
-      // PRODUCTION: Deep clone response data to avoid frozen object issues
+
+      // Use axios-based client instead of global fetch
+      const axiosResponse = await authApi.post(requestUrl, { name, email, password });
+      const responseData = axiosResponse.data;
+
+      // Deep clone response data to avoid accidental mutations
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       if (!payload?.success) {
@@ -257,21 +173,8 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {};
-      headers['Content-Type'] = 'application/json';
-      headers['Accept'] = 'application/json';
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      
-      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payloadBody)
-      });
-      
-      console.log('FETCH_LOGOUT_SUCCESSFUL:', response.status);
+      // Use axios-based client instead of global fetch
+      await authApi.post(`${API_BASE_URL}${API_PATHS.auth}/logout`, payloadBody);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -331,30 +234,12 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {};
-      headers['Content-Type'] = 'application/json';
-      headers['Accept'] = 'application/json';
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      
-      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payloadBody)
+      // Use axios-based client instead of global fetch
+      const axiosResponse = await authApi.post(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, payloadBody, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
       });
-      
-      console.log('FETCH_REFRESH_SUCCESSFUL:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('FETCH_REFRESH_RESPONSE:', JSON.stringify(responseData));
-      
-      // PRODUCTION: Deep clone response data to avoid frozen object issues
+
+      const responseData = axiosResponse.data;
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
@@ -403,32 +288,10 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
 
-      // Get auth token for protected endpoints
-      const authToken = await Storage.getItem('authToken');
-      
-      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {};
-      headers['Content-Type'] = 'application/json';
-      headers['Accept'] = 'application/json';
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      
-      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
-        method: 'PUT',
-        headers: headers,
-        body: JSON.stringify(data)
-      });
-      
-      console.log('FETCH_PROFILE_SUCCESSFUL:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      
-      // PRODUCTION: Deep clone response data to avoid frozen object issues
+      // Use axios-based client instead of global fetch
+      const axiosResponse = await authApi.put(`${API_BASE_URL}${API_PATHS.auth}/profile`, data);
+      const responseData = axiosResponse.data;
+
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       if (!payload?.success) {
