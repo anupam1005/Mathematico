@@ -51,10 +51,11 @@ const authService = {
       // PRODUCTION: Safely create request body to avoid frozen object issues
       const requestBody = JSON.stringify({ email, password });
       
-      // PRODUCTION: Use minimal fetch configuration to avoid React Native frozen object issues
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      headers.append('Accept', 'application/json');
+      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
+      const headers: { [key: string]: string } = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       
       const response = await fetch(requestUrl, {
         method: 'POST',
@@ -140,10 +141,11 @@ const authService = {
       // PRODUCTION: Safely create request body to avoid frozen object issues
       const requestBody = JSON.stringify({ name, email, password });
       
-      // PRODUCTION: Use minimal fetch configuration to avoid React Native frozen object issues
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      headers.append('Accept', 'application/json');
+      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
+      const headers: { [key: string]: string } = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       
       const response = await fetch(requestUrl, {
         method: 'POST',
@@ -216,12 +218,13 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      headers.append('Accept', 'application/json');
+      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
+      const headers: { [key: string]: string } = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       if (authToken) {
-        headers.append('Authorization', `Bearer ${authToken}`);
+        headers['Authorization'] = `Bearer ${authToken}`;
       }
       
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
@@ -290,12 +293,13 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      headers.append('Accept', 'application/json');
+      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
+      const headers: { [key: string]: string } = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       if (authToken) {
-        headers.append('Authorization', `Bearer ${authToken}`);
+        headers['Authorization'] = `Bearer ${authToken}`;
       }
       
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
@@ -365,12 +369,13 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
-      const headers = new Headers();
-      headers.append('Content-Type', 'application/json');
-      headers.append('Accept', 'application/json');
+      // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
+      const headers: { [key: string]: string } = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       if (authToken) {
-        headers.append('Authorization', `Bearer ${authToken}`);
+        headers['Authorization'] = `Bearer ${authToken}`;
       }
       
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {

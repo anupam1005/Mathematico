@@ -12,12 +12,13 @@ const adminFetch = async (method: string, path: string, data?: any): Promise<any
   try {
     const token = await authService.getToken();
     
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json');
-    headers.append('Accept', 'application/json');
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
     
     if (token && typeof token === 'string') {
-      headers.append('Authorization', `Bearer ${token}`);
+      headers['Authorization'] = `Bearer ${token}`;
     }
     
     const url = `${API_BASE_URL}${API_PATHS.admin}${path}`;
@@ -254,9 +255,9 @@ class AdminService {
           return { success: false, error: 'No authentication token found' };
         }
         
-        const headers = new Headers();
+        const headers: { [key: string]: string } = {};
         if (token && typeof token === 'string') {
-          headers.append('Authorization', `Bearer ${token}`);
+          headers['Authorization'] = `Bearer ${token}`;
         }
         
         const url = `${API_BASE_URL}${API_PATHS.admin}/books`;
@@ -298,9 +299,9 @@ class AdminService {
           return { success: false, error: 'No authentication token found' };
         }
         
-        const headers = new Headers();
+        const headers: { [key: string]: string } = {};
         if (token && typeof token === 'string') {
-          headers.append('Authorization', `Bearer ${token}`);
+          headers['Authorization'] = `Bearer ${token}`;
         }
         
         const url = `${API_BASE_URL}${API_PATHS.admin}/books/${id}`;
