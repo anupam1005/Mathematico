@@ -63,6 +63,7 @@
     "react-refresh": "^0.14.2"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^20.1.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.19.30",
