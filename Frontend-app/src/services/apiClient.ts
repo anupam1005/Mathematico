@@ -150,8 +150,14 @@ api.interceptors.response.use(
           }
         }
         
-        if (errorObj.code && typeof errorObj.code === 'string') {
-          safeError.code = errorObj.code;
+        // HERMES SAFE: Wrap error.code access in try-catch to avoid read-only property issues
+        try {
+          if (errorObj.code && typeof errorObj.code === 'string') {
+            safeError.code = errorObj.code;
+          }
+        } catch (codeError) {
+          // Ignore read-only property access errors - this is what causes the 'NONE' error
+          console.warn('Could not access error.code property:', codeError);
         }
         
         // Detect error types
