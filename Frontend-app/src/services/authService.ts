@@ -12,20 +12,41 @@ const safeFetch = async (url: string, options: RequestInit): Promise<Response> =
   } catch (error: any) {
     // Check if this is the "Cannot assign to read-only property 'NONE'" error
     if (error.message && error.message.includes('Cannot assign to read-only property')) {
-      console.warn('Hermes read-only property error caught, retrying with minimal config...');
+      console.warn('Hermes read-only property error caught, using direct fetch...');
       
-      // Retry with minimal configuration to avoid frozen object issues
-      const minimalOptions: RequestInit = {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(options.headers as any || {})
-        },
-        body: options.body
-      };
+      // Create completely fresh options object to avoid frozen/readonly issues
+      const method = options.method || 'GET';
+      const body = options.body;
       
-      return await fetch(url, minimalOptions);
+      // Build headers as a simple object to avoid readonly property issues
+      const freshHeaders: { [key: string]: string } = {};
+      
+      // Add content-type if there's a body
+      if (body) {
+        freshHeaders['Content-Type'] = 'application/json';
+      }
+      
+      // Add accept header
+      freshHeaders['Accept'] = 'application/json';
+      
+      // Add any custom headers from original options
+      if (options.headers) {
+        const originalHeaders = options.headers as any;
+        if (typeof originalHeaders === 'object') {
+          Object.keys(originalHeaders).forEach(key => {
+            if (typeof originalHeaders[key] === 'string') {
+              freshHeaders[key] = originalHeaders[key];
+            }
+          });
+        }
+      }
+      
+      // Use direct fetch call with completely fresh configuration
+      return await fetch(url, {
+        method: method,
+        headers: freshHeaders,
+        body: body
+      });
     }
     throw error;
   }
@@ -81,10 +102,9 @@ const authService = {
       const requestBody = JSON.stringify({ email, password });
       
       // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      const headers: { [key: string]: string } = {};
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
       
       const response = await safeFetch(requestUrl, {
         method: 'POST',
@@ -171,10 +191,9 @@ const authService = {
       const requestBody = JSON.stringify({ name, email, password });
       
       // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      const headers: { [key: string]: string } = {};
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
       
       const response = await safeFetch(requestUrl, {
         method: 'POST',
@@ -248,10 +267,9 @@ const authService = {
       const authToken = await Storage.getItem('authToken');
       
       // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      const headers: { [key: string]: string } = {};
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
@@ -323,10 +341,9 @@ const authService = {
       const authToken = await Storage.getItem('authToken');
       
       // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      const headers: { [key: string]: string } = {};
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
@@ -399,10 +416,9 @@ const authService = {
       const authToken = await Storage.getItem('authToken');
       
       // PRODUCTION: Use plain object headers to avoid React Native Hermes read-only property errors
-      const headers: { [key: string]: string } = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      const headers: { [key: string]: string } = {};
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
