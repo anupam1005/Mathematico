@@ -134,15 +134,20 @@ const authService = {
       console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
       
       // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password }),
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
       console.log('FETCH_CALL_SUCCESSFUL:', response.status);
       
       if (!response.ok) {
@@ -167,8 +172,6 @@ const authService = {
       
       if (accessToken) {
         await Storage.setItem('authToken', accessToken);
-        
-        // PRODUCTION DEBUG: Verify token storage
         console.log('TOKEN_SAVED');
         const storedToken = await Storage.getItem('authToken');
         console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
@@ -183,8 +186,14 @@ const authService = {
         },
       };
     } catch (err) {
-      // PRODUCTION DEBUG: Full error logging - safely stringify to avoid frozen object issues
-      console.error('FULL_REGISTER_ERROR:', JSON.stringify(err));
+      // PRODUCTION DEBUG: Full error logging - try multiple methods to capture error
+      console.error('FULL_REGISTER_ERROR:', err);
+      console.error('REGISTER_ERROR_TYPE:', typeof err);
+      console.error('REGISTER_ERROR_STRING:', String(err));
+      console.error('REGISTER_ERROR_JSON:', JSON.stringify(err, null, 2));
+      const errorObj = err as any;
+      console.error('REGISTER_ERROR_MESSAGE:', errorObj?.message);
+      console.error('REGISTER_ERROR_STACK:', errorObj?.stack);
       
       // PRODUCTION: Return simple error without any object property access
       return { 
