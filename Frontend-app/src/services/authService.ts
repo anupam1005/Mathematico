@@ -1,5 +1,4 @@
 import { API_PATHS } from '../constants/apiPaths';
-import axios from 'axios';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
 
@@ -47,24 +46,29 @@ const authService = {
       // PRODUCTION DEBUG: Log request URL before API call
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
-      console.log('ABOUT_TO_CALL_AXIOS:', requestUrl);
+      console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
       
-      // PRODUCTION: Use direct axios to bypass interceptor issues
-      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/login`, { email, password }, {
+      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const response = await fetch(requestUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 30000
+        body: JSON.stringify({ email, password })
       });
       
-      console.log('AXIOS_CALL_SUCCESSFUL:', response.status);
+      console.log('FETCH_CALL_SUCCESSFUL:', response.status);
       
-      // PRODUCTION DEBUG: Log response structure safely
-      console.log('LOGIN_RESPONSE:', JSON.stringify(response?.data));
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('FETCH_RESPONSE:', JSON.stringify(responseData));
       
       // PRODUCTION: Deep clone response data to avoid frozen object issues
-      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
+      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       // Flexible token extraction for backend compatibility
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
@@ -127,21 +131,29 @@ const authService = {
       // PRODUCTION DEBUG: Log request URL before API call
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
+      console.log('ABOUT_TO_CALL_FETCH:', requestUrl);
       
-      // PRODUCTION: Use direct axios to bypass interceptor issues
-      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/register`, { name, email, password }, {
+      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const response = await fetch(requestUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 30000
+        body: JSON.stringify({ name, email, password })
       });
       
-      // PRODUCTION DEBUG: Log response structure safely
-      console.log('REGISTER_RESPONSE:', JSON.stringify(response?.data));
+      console.log('FETCH_CALL_SUCCESSFUL:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('FETCH_RESPONSE:', JSON.stringify(responseData));
       
       // PRODUCTION: Deep clone response data to avoid frozen object issues
-      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
+      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       if (!payload?.success) {
         return {
@@ -192,19 +204,19 @@ const authService = {
       
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
       
-      // PRODUCTION: Use direct axios to bypass interceptor issues
-      await axios.post(`${API_BASE_URL}${API_PATHS.auth}/logout`, payloadBody, {
-        headers,
-        timeout: 30000
+      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
+        body: JSON.stringify(payloadBody)
       });
+      
+      console.log('FETCH_LOGOUT_SUCCESSFUL:', response.status);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -263,25 +275,29 @@ const authService = {
 
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
+      
+      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
+        body: JSON.stringify(payloadBody)
+      });
+      
+      console.log('FETCH_REFRESH_SUCCESSFUL:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      // PRODUCTION: Use direct axios to bypass interceptor issues
-      const response = await axios.post(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, payloadBody, {
-        headers,
-        timeout: 30000
-      });
-
-      // PRODUCTION DEBUG: Log response structure safely
-      console.log('REFRESH_RESPONSE:', JSON.stringify(response?.data));
-
+      const responseData = await response.json();
+      console.log('FETCH_REFRESH_RESPONSE:', JSON.stringify(responseData));
+      
       // PRODUCTION: Deep clone response data to avoid frozen object issues
-      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
+      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
@@ -331,22 +347,28 @@ const authService = {
 
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
       
-      // PRODUCTION: Use direct axios to bypass interceptor issues
-      const response = await axios.put(`${API_BASE_URL}${API_PATHS.auth}/profile`, data, {
-        headers,
-        timeout: 30000
+      // PRODUCTION: Use fetch API to bypass axios frozen object issues
+      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
+        body: JSON.stringify(data)
       });
       
+      console.log('FETCH_PROFILE_SUCCESSFUL:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      
       // PRODUCTION: Deep clone response data to avoid frozen object issues
-      const payload = response?.data ? JSON.parse(JSON.stringify(response.data)) : null;
+      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       if (!payload?.success) {
         return {
