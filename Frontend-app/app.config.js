@@ -8,14 +8,14 @@ export default {
     version: '8.5.7',
     jsEngine: 'hermes',
     orientation: 'portrait',
-    owner: 'mathematicodipanjan',
+    owner: 'dipanjanmathematico',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: 'a5a0258d-ab3e-4426-be8e-ac487ab13ef8'
+        projectId: '3be2683e-daea-4170-a064-24212ad6f37b'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
