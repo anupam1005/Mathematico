@@ -216,14 +216,17 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
+      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Accept', 'application/json');
+      if (authToken) {
+        headers.append('Authorization', `Bearer ${authToken}`);
+      }
+      
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-        },
+        headers: headers,
         body: JSON.stringify(payloadBody)
       });
       
@@ -287,14 +290,17 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
+      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Accept', 'application/json');
+      if (authToken) {
+        headers.append('Authorization', `Bearer ${authToken}`);
+      }
+      
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-        },
+        headers: headers,
         body: JSON.stringify(payloadBody)
       });
       
@@ -359,14 +365,17 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
       
-      // PRODUCTION: Use fetch API with simplified configuration to avoid frozen object issues
+      // PRODUCTION: Use Headers API to avoid React Native frozen object issues
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      headers.append('Accept', 'application/json');
+      if (authToken) {
+        headers.append('Authorization', `Bearer ${authToken}`);
+      }
+      
       const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-        },
+        headers: headers,
         body: JSON.stringify(data)
       });
       

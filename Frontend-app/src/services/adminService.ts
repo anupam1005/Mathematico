@@ -1,5 +1,4 @@
 // src/services/adminService.ts
-import type { AxiosRequestConfig } from 'axios';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_PATHS } from '../constants/apiPaths';
