@@ -4,6 +4,35 @@ import authService from './authService';
 import { API_PATHS } from '../constants/apiPaths';
 import { API_BASE_URL } from '../config';
 
+/* ------------------------------------------------------------------ */
+/* Safe Fetch Wrapper for React Native Hermes                           */
+/* ------------------------------------------------------------------ */
+
+const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
+  try {
+    return await fetch(url, options);
+  } catch (error: any) {
+    // Check if this is the "Cannot assign to read-only property 'NONE'" error
+    if (error.message && error.message.includes('Cannot assign to read-only property')) {
+      console.warn('Hermes read-only property error caught in adminService, retrying with minimal config...');
+      
+      // Retry with minimal configuration to avoid frozen object issues
+      const minimalOptions: RequestInit = {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(options.headers as any || {})
+        },
+        body: options.body
+      };
+      
+      return await fetch(url, minimalOptions);
+    }
+    throw error;
+  }
+};
+
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
 
@@ -24,7 +53,7 @@ const adminFetch = async (method: string, path: string, data?: any): Promise<any
     const url = `${API_BASE_URL}${API_PATHS.admin}${path}`;
     console.log('ADMIN_FETCH_URL:', url);
     
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       method,
       headers,
       body: data ? JSON.stringify(data) : undefined
@@ -261,7 +290,7 @@ class AdminService {
         }
         
         const url = `${API_BASE_URL}${API_PATHS.admin}/books`;
-        const fetchResponse = await fetch(url, {
+        const fetchResponse = await safeFetch(url, {
           method: 'POST',
           headers,
           body: bookData
@@ -305,7 +334,7 @@ class AdminService {
         }
         
         const url = `${API_BASE_URL}${API_PATHS.admin}/books/${id}`;
-        const fetchResponse = await fetch(url, {
+        const fetchResponse = await safeFetch(url, {
           method: 'PUT',
           headers,
           body: bookData

@@ -3,6 +3,35 @@ import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
 
 /* ------------------------------------------------------------------ */
+/* Safe Fetch Wrapper for React Native Hermes                           */
+/* ------------------------------------------------------------------ */
+
+const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
+  try {
+    return await fetch(url, options);
+  } catch (error: any) {
+    // Check if this is the "Cannot assign to read-only property 'NONE'" error
+    if (error.message && error.message.includes('Cannot assign to read-only property')) {
+      console.warn('Hermes read-only property error caught, retrying with minimal config...');
+      
+      // Retry with minimal configuration to avoid frozen object issues
+      const minimalOptions: RequestInit = {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(options.headers as any || {})
+        },
+        body: options.body
+      };
+      
+      return await fetch(url, minimalOptions);
+    }
+    throw error;
+  }
+};
+
+/* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -57,7 +86,7 @@ const authService = {
         'Accept': 'application/json',
       };
       
-      const response = await fetch(requestUrl, {
+      const response = await safeFetch(requestUrl, {
         method: 'POST',
         headers: headers,
         body: requestBody
@@ -147,7 +176,7 @@ const authService = {
         'Accept': 'application/json',
       };
       
-      const response = await fetch(requestUrl, {
+      const response = await safeFetch(requestUrl, {
         method: 'POST',
         headers: headers,
         body: requestBody
@@ -227,7 +256,7 @@ const authService = {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
-      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
+      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/logout`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(payloadBody)
@@ -302,7 +331,7 @@ const authService = {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
-      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
+      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/refresh-token`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(payloadBody)
@@ -378,7 +407,7 @@ const authService = {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
       
-      const response = await fetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
+      const response = await safeFetch(`${API_BASE_URL}${API_PATHS.auth}/profile`, {
         method: 'PUT',
         headers: headers,
         body: JSON.stringify(data)
