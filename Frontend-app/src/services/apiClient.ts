@@ -160,14 +160,23 @@ api.interceptors.response.use(
           console.warn('Could not access error.code property:', codeError);
         }
         
-        // Detect error types
+        // Detect error types - HERMES SAFE: Wrap safeError.code access in try-catch
+        let isNetworkErrorByCode = false;
+        try {
+          if (safeError.code === 'ECONNABORTED' ||
+              safeError.code === 'ENOTFOUND' ||
+              safeError.code === 'ECONNRESET') {
+            isNetworkErrorByCode = true;
+          }
+        } catch (codeAccessError) {
+          // Ignore read-only property access errors
+        }
+        
         if (
           safeError.message.includes('Network') ||
           safeError.message.includes('ECONNREFUSED') ||
           safeError.message.includes('timeout') ||
-          safeError.code === 'ECONNABORTED' ||
-          safeError.code === 'ENOTFOUND' ||
-          safeError.code === 'ECONNRESET'
+          isNetworkErrorByCode
         ) {
           safeError.isNetworkError = true;
         }
