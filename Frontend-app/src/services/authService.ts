@@ -16,13 +16,13 @@ const authApi = withBasePath(API_PATHS.auth);
 //
 // STRICT CONTRACT (production-level):
 // - `options.method` MUST be provided (typically "POST" for auth)
-// - Body is always JSON-serialised
+// - Body is always JSON-serialised (handled only here)
 // - Content-Type is always application/json
 // - Full RequestInit config is preserved across retries
 // - Never reconstructs the request with a different HTTP method
 const safeAuthFetch = async (
   path: string,
-  options: RequestInit & { method: 'POST' | 'GET' }
+  options: Omit<RequestInit, 'body'> & { method: 'POST' | 'GET'; body?: any }
 ): Promise<any> => {
   const url = `${API_BASE_URL}${API_PATHS.auth}${path}`;
 
@@ -36,14 +36,13 @@ const safeAuthFetch = async (
 
   const method = options.method.toUpperCase();
 
-  // Normalise / merge headers while keeping them as plain objects
+  // Always use fresh, plain headers object and never mutate input options
   const normalizedHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    ...(options.headers as Record<string, string> | undefined),
   };
 
-  // Ensure JSON serialisation of the body
+  // Ensure JSON serialisation of the body – this is the ONLY place we stringify
   let serializedBody: BodyInit | undefined = undefined;
   if (options.body !== undefined && options.body !== null) {
     if (typeof options.body === 'string') {
@@ -93,6 +92,15 @@ const safeAuthFetch = async (
     const json = await response.json();
     return json;
   } catch (error: any) {
+    // Hermes-safe error logging (no JSON.stringify on Error objects)
+    try {
+      console.error('AUTH_FETCH_ERROR_OBJECT', error);
+      console.error('AUTH_FETCH_ERROR_MESSAGE', error?.message);
+      console.error('AUTH_FETCH_ERROR_STACK', error?.stack);
+    } catch {
+      // Logging must never break the request
+    }
+
     // Handle Hermes "NONE" bug by retrying once with the same config
     if (error?.message && error.message.includes('Cannot assign to read-only property')) {
       console.warn(
@@ -154,7 +162,8 @@ const authService = {
       // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
       const responseData = await safeAuthFetch('/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        // Pass plain object; safeAuthFetch will serialize once
+        body: { email, password },
       });
 
       // Deep clone response data to avoid accidental mutations or frozen objects
@@ -195,9 +204,12 @@ const authService = {
           refreshToken: payload.data.refreshToken,
         },
       };
-    } catch (err) {
+    } catch (err: any) {
       const errorObj = err as any;
-      console.error('FULL_LOGIN_ERROR:', JSON.stringify(errorObj, null, 2));
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_LOGIN_ERROR_OBJECT', errorObj);
+      console.error('FULL_LOGIN_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_LOGIN_ERROR_STACK', errorObj?.stack);
 
       // Prefer backend error message if available
       const backendMessage =
@@ -205,9 +217,9 @@ const authService = {
         errorObj?.message ||
         'Login failed - please check your connection and try again';
 
-      return { 
-        success: false, 
-        message: backendMessage 
+      return {
+        success: false,
+        message: backendMessage,
       };
     }
   },
@@ -226,7 +238,8 @@ const authService = {
       // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
       const responseData = await safeAuthFetch('/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password }),
+        // Pass plain object; safeAuthFetch will serialize once
+        body: { name, email, password },
       });
 
       // Deep clone response data to avoid accidental mutations or frozen objects
@@ -257,18 +270,21 @@ const authService = {
           accessToken: accessToken,
         },
       };
-    } catch (err) {
+    } catch (err: any) {
       const errorObj = err as any;
-      console.error('FULL_REGISTER_ERROR:', JSON.stringify(errorObj, null, 2));
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_REGISTER_ERROR_OBJECT', errorObj);
+      console.error('FULL_REGISTER_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_REGISTER_ERROR_STACK', errorObj?.stack);
 
       const backendMessage =
         errorObj?.response?.data?.message ||
         errorObj?.message ||
         'Registration failed - please check your connection and try again';
 
-      return { 
-        success: false, 
-        message: backendMessage 
+      return {
+        success: false,
+        message: backendMessage,
       };
     }
   },
@@ -377,10 +393,13 @@ const authService = {
           expiresIn: payload.data.expiresIn || 900,
         },
       };
-    } catch (err) {
+    } catch (err: any) {
       const errorObj = err as any;
-      console.error('FULL_REFRESH_ERROR:', JSON.stringify(errorObj, null, 2));
-      
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_REFRESH_ERROR_OBJECT', errorObj);
+      console.error('FULL_REFRESH_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_REFRESH_ERROR_STACK', errorObj?.stack);
+
       return {
         success: false,
         message: 'Token refresh failed',
@@ -414,10 +433,13 @@ const authService = {
         message: payload.message || 'Profile updated successfully',
         data: payload.data,
       };
-    } catch (err) {
+    } catch (err: any) {
       const errorObj = err as any;
-      console.error('FULL_UPDATE_PROFILE_ERROR:', JSON.stringify(errorObj, null, 2));
-      
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_UPDATE_PROFILE_ERROR_OBJECT', errorObj);
+      console.error('FULL_UPDATE_PROFILE_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_UPDATE_PROFILE_ERROR_STACK', errorObj?.stack);
+
       return {
         success: false,
         message: 'Profile update failed',
