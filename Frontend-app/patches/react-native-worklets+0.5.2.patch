@@ -1,0 +1,18 @@
+diff --git a/node_modules/react-native-worklets/android/build.gradle b/node_modules/react-native-worklets/android/build.gradle
+index 021f5bc..26ce154 100644
+--- a/node_modules/react-native-worklets/android/build.gradle
++++ b/node_modules/react-native-worklets/android/build.gradle
+@@ -309,9 +309,11 @@ task assertMinimalReactNativeVersionTask {
+ preBuild.dependsOn(assertMinimalReactNativeVersionTask)
+ 
+ task assertNewArchitectureEnabledTask {
+-    onlyIf { !IS_NEW_ARCHITECTURE_ENABLED }
++    // Expo/RN projects may intentionally keep the New Architecture disabled.
++    // Worklets can still be used via Reanimated in classic mode in many setups, so do not fail the build here.
++    onlyIf { false }
+     doFirst {
+-        throw new GradleException("[Worklets] Worklets require new architecture to be enabled. Please enable it by setting `newArchEnabled` to `true` in `gradle.properties`.")
++        // no-op
+     }
+ }
+ 
