@@ -173,10 +173,27 @@ const requestWithRetry = async <T = any>(
   timeout = 10000
 ): Promise<AxiosResponse<T>> => {
   try {
-    const response = await mobileApi.request<T>({
+    // HERMES-SAFE: Avoid spreading Axios config objects.
+    // Build a new plain config with only the properties we actually use.
+    const finalConfig: AxiosRequestConfig = {
+      url: config.url,
+      method: config.method,
       timeout,
-      ...config,
-    });
+    };
+
+    if (config.data !== undefined) {
+      finalConfig.data = config.data;
+    }
+
+    if (config.params !== undefined) {
+      finalConfig.params = config.params;
+    }
+
+    if (config.headers) {
+      finalConfig.headers = config.headers;
+    }
+
+    const response = await mobileApi.request<T>(finalConfig);
 
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`HTTP error! status: ${response.status}`);

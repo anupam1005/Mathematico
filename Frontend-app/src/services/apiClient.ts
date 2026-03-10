@@ -5,7 +5,6 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   InternalAxiosRequestConfig,
-  AxiosRequestHeaders,
 } from 'axios';
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
@@ -29,56 +28,38 @@ api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
       const token = await Storage.getItem('authToken');
-      
-      // HERMES SAFE: Create completely new config object - avoid any frozen object access
-      const newConfig: InternalAxiosRequestConfig = {
-        ...config,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        } as AxiosRequestHeaders,
+
+      // HERMES-SAFE HEADERS:
+      // Always construct a fresh plain object and assign it to config.headers.
+      // Do NOT spread or mutate AxiosHeaders / React Native Headers instances.
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
       };
-      
-      // Add authorization token if available
-      if (token && typeof token === 'string') {
-        newConfig.headers['Authorization'] = `Bearer ${token}`;
+
+      if (token && typeof token === 'string' && token.length > 0) {
+        headers.Authorization = `Bearer ${token}`;
       }
-      
-      // HERMES SAFE: Never access config.headers directly - it might be frozen
-      // Instead, create fresh headers and copy only safe config properties
-      if (config.method) {
-        newConfig.method = config.method;
-      }
-      if (config.url) {
-        newConfig.url = config.url;
-      }
-      if (config.data) {
-        newConfig.data = config.data;
-      }
-      if (config.params) {
-        newConfig.params = config.params;
-      }
-      if (config.timeout) {
-        newConfig.timeout = config.timeout;
-      }
-      
+
+      // Assign plain headers object directly – avoids touching any frozen header instances.
+      (config as any).headers = headers;
+
       // PRODUCTION DEBUG: Log final request URL
-      const finalUrl = `${newConfig.baseURL || ''}${newConfig.url || ''}`;
+      const finalUrl = `${config.baseURL || ''}${config.url || ''}`;
       console.log('API_REQUEST_URL:', finalUrl);
-      
-      return newConfig;
-      
+
+      return config;
     } catch (error) {
       console.warn('Request interceptor failed:', error);
-      
-      // PRODUCTION: Return safe config even on error
-      return {
-        ...config,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        } as AxiosRequestHeaders,
-      } as InternalAxiosRequestConfig;
+
+      // PRODUCTION: Ensure we still return a config with plain headers
+      const fallbackHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      (config as any).headers = fallbackHeaders;
+      return config;
     }
   },
   (error) => {
@@ -227,10 +208,34 @@ export const withBasePath = (basePath: string) => ({
     return api.patch<T>(buildUrl(basePath, path), data, config);
   },
   request: <T = any>(config: AxiosRequestConfig) => {
-    return api.request<T>({
-      ...config,
+    // HERMES-SAFE: Avoid spreading Axios config objects.
+    // Build a new plain config object and copy over only the fields we need.
+    const finalConfig: AxiosRequestConfig = {
       url: buildUrl(basePath, config.url || ''),
-    });
+    };
+
+    if (config.method) {
+      finalConfig.method = config.method;
+    }
+
+    if (config.data !== undefined) {
+      finalConfig.data = config.data;
+    }
+
+    if (config.params !== undefined) {
+      finalConfig.params = config.params;
+    }
+
+    if (config.headers) {
+      // Headers are passed through as-is; interceptor will replace them with a plain object.
+      finalConfig.headers = config.headers;
+    }
+
+    if (config.timeout) {
+      finalConfig.timeout = config.timeout;
+    }
+
+    return api.request<T>(finalConfig);
   },
 });
 
