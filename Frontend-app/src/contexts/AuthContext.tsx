@@ -11,7 +11,8 @@ export interface User {
   avatar_url?: string;
   is_admin: boolean;
   isAdmin: boolean; // Alias for compatibility
-  role: 'user' | 'admin' | 'instructor';
+  // Backend returns `student` / `admin` (and may return other roles like `teacher`)
+  role: 'student' | 'admin' | 'teacher' | 'instructor' | 'user';
   email_verified: boolean;
   is_active: boolean;
   created_at: string;
@@ -130,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: userData.email || email,
           is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
           isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          role: userData.role || 'user',
+          role: userData.role || 'student',
           email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
           is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
           created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
@@ -184,7 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: userData.email || email,
           is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
           isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          role: userData.role || 'user',
+          role: userData.role || 'student',
           email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
           is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
           created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
