@@ -7,113 +7,8 @@ import { withBasePath } from '../services/apiClient';
 /* Auth API - Hermes-safe                                             */
 /* ------------------------------------------------------------------ */
 
-// Keep axios client for non-auth-critical helpers if needed
+// Keep axios client for auth endpoints
 const authApi = withBasePath(API_PATHS.auth);
-
-// Minimal, Hermes-safe fetch wrapper for auth endpoints.
-// Avoids any Headers / AxiosHeaders mutation that can trigger
-// "Cannot assign to read-only property 'NONE'" on some RN builds.
-//
-// STRICT CONTRACT (production-level):
-// - `options.method` MUST be provided (typically "POST" for auth)
-// - Body is always JSON-serialised (handled only here)
-// - Content-Type is always application/json
-// - Full RequestInit config is preserved across retries
-// - Never reconstructs the request with a different HTTP method
-const safeAuthFetch = async (
-  path: string,
-  options: Omit<RequestInit, 'body'> & { method: 'POST' | 'GET'; body?: any }
-): Promise<any> => {
-  const url = `${API_BASE_URL}${API_PATHS.auth}${path}`;
-
-  // Defensive validation: method must be explicitly provided
-  if (!options.method) {
-    throw new Error(
-      `safeAuthFetch requires an explicit HTTP method for ${url}. ` +
-      'This is a hard failure to prevent accidental GET fallbacks.'
-    );
-  }
-
-  const method = options.method.toUpperCase();
-
-  // Always use fresh, plain headers object and never mutate input options
-  const normalizedHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-
-  // Ensure JSON serialisation of the body – this is the ONLY place we stringify
-  let serializedBody: BodyInit | undefined = undefined;
-  if (options.body !== undefined && options.body !== null) {
-    if (typeof options.body === 'string') {
-      serializedBody = options.body;
-    } else {
-      serializedBody = JSON.stringify(options.body as any);
-    }
-  }
-
-  // Preserve the rest of the RequestInit config while enforcing our constraints
-  const baseOptions: RequestInit = {
-    ...options,
-    method,
-    headers: normalizedHeaders,
-    body: serializedBody,
-  };
-
-  // Strict request logging for debugging production issues
-  try {
-    console.log('AUTH_REQUEST', {
-      method: baseOptions.method,
-      url,
-      headers: normalizedHeaders,
-      // Avoid logging full password in plain text: only log presence / shape
-      payloadSummary:
-        typeof serializedBody === 'string'
-          ? (() => {
-              try {
-                const parsed = JSON.parse(serializedBody);
-                const clone = { ...parsed };
-                if ('password' in clone) {
-                  clone.password = '[REDACTED]';
-                }
-                return clone;
-              } catch {
-                return '[unparseable_body_string]';
-              }
-            })()
-          : undefined,
-    });
-  } catch {
-    // Logging must never break the request
-  }
-
-  try {
-    const response = await fetch(url, baseOptions);
-    const json = await response.json();
-    return json;
-  } catch (error: any) {
-    // Hermes-safe error logging (no JSON.stringify on Error objects)
-    try {
-      console.error('AUTH_FETCH_ERROR_OBJECT', error);
-      console.error('AUTH_FETCH_ERROR_MESSAGE', error?.message);
-      console.error('AUTH_FETCH_ERROR_STACK', error?.stack);
-    } catch {
-      // Logging must never break the request
-    }
-
-    // Handle Hermes "NONE" bug by retrying once with the same config
-    if (error?.message && error.message.includes('Cannot assign to read-only property')) {
-      console.warn(
-        'Hermes read-only NONE error caught in safeAuthFetch, retrying with preserved config...'
-      );
-
-      const retryResponse = await fetch(url, baseOptions);
-      const retryJson = await retryResponse.json();
-      return retryJson;
-    }
-    throw error;
-  }
-};
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -159,12 +54,12 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
-      const responseData = await safeAuthFetch('/login', {
-        method: 'POST',
-        // Pass plain object; safeAuthFetch will serialize once
-        body: { email, password },
+      const axiosResponse = await authApi.post('/login', {
+        email,
+        password,
       });
+
+      const responseData = axiosResponse.data;
 
       // Deep clone response data to avoid accidental mutations or frozen objects
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
@@ -235,12 +130,13 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
-      const responseData = await safeAuthFetch('/register', {
-        method: 'POST',
-        // Pass plain object; safeAuthFetch will serialize once
-        body: { name, email, password },
+      const axiosResponse = await authApi.post('/register', {
+        name,
+        email,
+        password,
       });
+
+      const responseData = axiosResponse.data;
 
       // Deep clone response data to avoid accidental mutations or frozen objects
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
