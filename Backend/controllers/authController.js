@@ -134,8 +134,11 @@ const login = async (req, res) => {
         });
       }
 
-      // Find or create admin user in MongoDB
-      let dbAdmin = await UserModel.findByEmail(ADMIN_EMAIL);
+      // Find or create admin user in MongoDB.
+      // IMPORTANT: `password` is `select: false` in the User model, so we must explicitly select it
+      // for `comparePassword()` to work (same as the regular user login flow below).
+      let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL })
+        .select('+password +tokenVersion +isActive +isEmailVerified');
       if (!dbAdmin) {
         console.log('[AUTH] Creating admin user in database');
         // Create new admin user - password will be hashed automatically by pre-save middleware
