@@ -5,29 +5,44 @@ import { API_PATHS } from '../constants/apiPaths';
 import { API_BASE_URL } from '../config';
 
 /* ------------------------------------------------------------------ */
-/* Safe Fetch Wrapper for React Native Hermes                           */
+/* Safe Fetch Wrapper for React Native Hermes                         */
 /* ------------------------------------------------------------------ */
 
 const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
+  // Defensive validation: enforce explicit HTTP method for non-GET admin calls
+  if (!options.method) {
+    throw new Error(
+      `safeFetch requires an explicit HTTP method for ${url}. ` +
+      'This prevents accidental GET fallbacks on retry.'
+    );
+  }
+
+  const method = options.method.toUpperCase();
+
+  // Normalise headers into a plain object and ensure JSON defaults
+  const normalizedHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
+  };
+
+  const baseOptions: RequestInit = {
+    ...options,
+    method,
+    headers: normalizedHeaders,
+  };
+
   try {
-    return await fetch(url, options);
+    return await fetch(url, baseOptions);
   } catch (error: any) {
     // Check if this is the "Cannot assign to read-only property 'NONE'" error
-    if (error.message && error.message.includes('Cannot assign to read-only property')) {
-      console.warn('Hermes read-only property error caught in adminService, retrying with minimal config...');
-      
-      // Retry with minimal configuration to avoid frozen object issues
-      const minimalOptions: RequestInit = {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(options.headers as any || {})
-        },
-        body: options.body
-      };
-      
-      return await fetch(url, minimalOptions);
+    if (error?.message && error.message.includes('Cannot assign to read-only property')) {
+      console.warn(
+        'Hermes read-only property error caught in adminService, retrying with preserved config...'
+      );
+
+      // Retry using the exact same, normalised options to preserve method/headers/body
+      return await fetch(url, baseOptions);
     }
     throw error;
   }

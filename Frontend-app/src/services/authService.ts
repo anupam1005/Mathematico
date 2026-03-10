@@ -13,31 +13,92 @@ const authApi = withBasePath(API_PATHS.auth);
 // Minimal, Hermes-safe fetch wrapper for auth endpoints.
 // Avoids any Headers / AxiosHeaders mutation that can trigger
 // "Cannot assign to read-only property 'NONE'" on some RN builds.
+//
+// STRICT CONTRACT (production-level):
+// - `options.method` MUST be provided (typically "POST" for auth)
+// - Body is always JSON-serialised
+// - Content-Type is always application/json
+// - Full RequestInit config is preserved across retries
+// - Never reconstructs the request with a different HTTP method
 const safeAuthFetch = async (
   path: string,
   options: RequestInit & { method: 'POST' | 'GET' }
 ): Promise<any> => {
   const url = `${API_BASE_URL}${API_PATHS.auth}${path}`;
 
-  const baseOptions: RequestInit = {
-    method: options.method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: options.body,
+  // Defensive validation: method must be explicitly provided
+  if (!options.method) {
+    throw new Error(
+      `safeAuthFetch requires an explicit HTTP method for ${url}. ` +
+      'This is a hard failure to prevent accidental GET fallbacks.'
+    );
+  }
+
+  const method = options.method.toUpperCase();
+
+  // Normalise / merge headers while keeping them as plain objects
+  const normalizedHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
   };
+
+  // Ensure JSON serialisation of the body
+  let serializedBody: BodyInit | undefined = undefined;
+  if (options.body !== undefined && options.body !== null) {
+    if (typeof options.body === 'string') {
+      serializedBody = options.body;
+    } else {
+      serializedBody = JSON.stringify(options.body as any);
+    }
+  }
+
+  // Preserve the rest of the RequestInit config while enforcing our constraints
+  const baseOptions: RequestInit = {
+    ...options,
+    method,
+    headers: normalizedHeaders,
+    body: serializedBody,
+  };
+
+  // Strict request logging for debugging production issues
+  try {
+    console.log('AUTH_REQUEST', {
+      method: baseOptions.method,
+      url,
+      headers: normalizedHeaders,
+      // Avoid logging full password in plain text: only log presence / shape
+      payloadSummary:
+        typeof serializedBody === 'string'
+          ? (() => {
+              try {
+                const parsed = JSON.parse(serializedBody);
+                const clone = { ...parsed };
+                if ('password' in clone) {
+                  clone.password = '[REDACTED]';
+                }
+                return clone;
+              } catch {
+                return '[unparseable_body_string]';
+              }
+            })()
+          : undefined,
+    });
+  } catch {
+    // Logging must never break the request
+  }
 
   try {
     const response = await fetch(url, baseOptions);
     const json = await response.json();
     return json;
   } catch (error: any) {
-    // Handle Hermes "NONE" bug by retrying once with the same minimal config
+    // Handle Hermes "NONE" bug by retrying once with the same config
     if (error?.message && error.message.includes('Cannot assign to read-only property')) {
       console.warn(
-        'Hermes read-only NONE error caught in safeAuthFetch, retrying with minimal config...'
+        'Hermes read-only NONE error caught in safeAuthFetch, retrying with preserved config...'
       );
+
       const retryResponse = await fetch(url, baseOptions);
       const retryJson = await retryResponse.json();
       return retryJson;
