@@ -5,7 +5,7 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '8.5.8',
+    version: '8.5.9',
     // Force Hermes everywhere (Expo + native Android/iOS) for consistent runtime behavior.
     jsEngine: 'hermes',
     orientation: 'portrait',
@@ -25,7 +25,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 44,
+      versionCode: 45,
       usesCleartextTraffic: false,
       // Explicitly set JS engine for Android as well (for EAS build compatibility)
       jsEngine: 'hermes',

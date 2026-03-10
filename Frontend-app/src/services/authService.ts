@@ -4,10 +4,47 @@ import { API_BASE_URL } from '../config';
 import { withBasePath } from '../services/apiClient';
 
 /* ------------------------------------------------------------------ */
-/* Axios-based Auth API (Hermes-safe, matches Postman behaviour)      */
+/* Auth API - Hermes-safe                                             */
 /* ------------------------------------------------------------------ */
 
+// Keep axios client for non-auth-critical helpers if needed
 const authApi = withBasePath(API_PATHS.auth);
+
+// Minimal, Hermes-safe fetch wrapper for auth endpoints.
+// Avoids any Headers / AxiosHeaders mutation that can trigger
+// "Cannot assign to read-only property 'NONE'" on some RN builds.
+const safeAuthFetch = async (
+  path: string,
+  options: RequestInit & { method: 'POST' | 'GET' }
+): Promise<any> => {
+  const url = `${API_BASE_URL}${API_PATHS.auth}${path}`;
+
+  const baseOptions: RequestInit = {
+    method: options.method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: options.body,
+  };
+
+  try {
+    const response = await fetch(url, baseOptions);
+    const json = await response.json();
+    return json;
+  } catch (error: any) {
+    // Handle Hermes "NONE" bug by retrying once with the same minimal config
+    if (error?.message && error.message.includes('Cannot assign to read-only property')) {
+      console.warn(
+        'Hermes read-only NONE error caught in safeAuthFetch, retrying with minimal config...'
+      );
+      const retryResponse = await fetch(url, baseOptions);
+      const retryJson = await retryResponse.json();
+      return retryJson;
+    }
+    throw error;
+  }
+};
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -53,11 +90,13 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use axios-based client with relative path (base URL is already in authApi)
-      const axiosResponse = await authApi.post('/login', { email, password });
-      const responseData = axiosResponse.data;
+      // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
+      const responseData = await safeAuthFetch('/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
 
-      // Deep clone response data to avoid accidental mutations
+      // Deep clone response data to avoid accidental mutations or frozen objects
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       // Flexible token extraction for backend compatibility
@@ -123,11 +162,13 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
 
-      // Use axios-based client with relative path (base URL is already in authApi)
-      const axiosResponse = await authApi.post('/register', { name, email, password });
-      const responseData = axiosResponse.data;
+      // Use Hermes-safe fetch wrapper instead of axios to avoid NONE bug
+      const responseData = await safeAuthFetch('/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+      });
 
-      // Deep clone response data to avoid accidental mutations
+      // Deep clone response data to avoid accidental mutations or frozen objects
       const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
 
       if (!payload?.success) {
