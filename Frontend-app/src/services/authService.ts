@@ -1,14 +1,38 @@
+
+import axios, { AxiosInstance } from 'axios';
 import { API_PATHS } from '../constants/apiPaths';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
-import { withBasePath } from '../services/apiClient';
+import { hermesAuthClient } from './hermesAuthClient';
 
 /* ------------------------------------------------------------------ */
-/* Auth API - Hermes-safe                                             */
+/* Auth API - Hermes-safe (dedicated Axios instance, no interceptors) */
 /* ------------------------------------------------------------------ */
 
-// Keep axios client for auth endpoints
-const authApi = withBasePath(API_PATHS.auth);
+// Create a dedicated Axios instance for auth that does NOT use the shared
+// interceptors. This isolates login/register from any potential Hermes
+// issues in global interceptor chains while still using Axios.
+const authApi: AxiosInstance = axios.create({
+  baseURL: `${API_BASE_URL}${API_PATHS.auth}`,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+});
+
+const buildHeaders = (token?: string | null): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  if (token && typeof token === 'string' && token.length > 0) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -54,15 +78,12 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
       console.log('REQUEST_URL:', requestUrl);
 
-      const axiosResponse = await authApi.post('/login', {
+      const responseData = await hermesAuthClient.post('/login', {
         email,
         password,
       });
 
-      const responseData = axiosResponse.data;
-
-      // Deep clone response data to avoid accidental mutations or frozen objects
-      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
+      const payload = responseData ?? null;
 
       // Flexible token extraction for backend compatibility
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
@@ -130,16 +151,13 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
       console.log('REQUEST_URL:', requestUrl);
 
-      const axiosResponse = await authApi.post('/register', {
+      const responseData = await hermesAuthClient.post('/register', {
         name,
         email,
         password,
       });
 
-      const responseData = axiosResponse.data;
-
-      // Deep clone response data to avoid accidental mutations or frozen objects
-      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
+      const payload = responseData ?? null;
 
       if (!payload?.success) {
         return {
@@ -192,25 +210,37 @@ const authService = {
     try {
       refreshTokenValue = await Storage.getItem('refreshToken');
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
+      const authToken = await Storage.getItem('authToken');
 
-      // Use axios-based client instead of global fetch
-      await authApi.post('/logout', payloadBody);
+      await authApi.post(
+        '/logout',
+        payloadBody,
+        {
+          headers: buildHeaders(authToken ?? null),
+        }
+      );
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       
       return { success: true, message: 'Logout successful' };
-    } catch (err) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_LOGOUT_ERROR:', err);
-      
+    } catch (err: any) {
+      const errorObj = err as any;
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_LOGOUT_ERROR_OBJECT', errorObj);
+      console.error('FULL_LOGOUT_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_LOGOUT_ERROR_STACK', errorObj?.stack);
+
       // Still clear local tokens even if logout API fails
       try {
         await Storage.deleteItem('authToken');
         await Storage.deleteItem('refreshToken');
       } catch (storageError: any) {
-        console.error('FULL_LOGOUT_STORAGE_ERROR', storageError);
+        const storageErrorObj = storageError as any;
+        console.error('FULL_LOGOUT_STORAGE_ERROR_OBJECT', storageErrorObj);
+        console.error('FULL_LOGOUT_STORAGE_ERROR_MESSAGE', storageErrorObj?.message);
+        console.error('FULL_LOGOUT_STORAGE_ERROR_STACK', storageErrorObj?.stack);
       }
       return { success: false, message: 'Logout failed' };
     }
@@ -223,7 +253,12 @@ const authService = {
       const token = await Storage.getItem('authToken');
       const isValidToken = typeof token === 'string' && token.length > 10;
       return isValidToken ? token : null;
-    } catch (err) {
+    } catch (err: any) {
+      const errorObj = err as any;
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_GET_TOKEN_ERROR_OBJECT', errorObj);
+      console.error('FULL_GET_TOKEN_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_GET_TOKEN_ERROR_STACK', errorObj?.stack);
       return null;
     }
   },
@@ -233,8 +268,12 @@ const authService = {
       await Storage.deleteItem('authToken');
       await Storage.deleteItem('refreshToken');
       await Storage.deleteItem('user');
-    } catch (err) {
-      // Token cleanup error
+    } catch (err: any) {
+      const errorObj = err as any;
+      // Hermes-safe error logging – avoid JSON.stringify on Error objects
+      console.error('FULL_CLEAR_INVALID_TOKENS_ERROR_OBJECT', errorObj);
+      console.error('FULL_CLEAR_INVALID_TOKENS_ERROR_MESSAGE', errorObj?.message);
+      console.error('FULL_CLEAR_INVALID_TOKENS_ERROR_STACK', errorObj?.stack);
       // Don't throw - cleanup failures should not break auth flows
     }
   },
@@ -254,13 +293,16 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
 
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.post('/refresh-token', payloadBody, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-      });
+      const axiosResponse = await authApi.post(
+        '/refresh-token',
+        payloadBody,
+        {
+          headers: buildHeaders(authToken ?? null),
+        }
+      );
 
       const responseData = axiosResponse.data;
-      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
+      const payload = responseData ?? null;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
@@ -311,11 +353,18 @@ const authService = {
       const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
       console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
 
-      // Use axios-based client instead of global fetch
-      const axiosResponse = await authApi.put('/profile', data);
+      const authToken = await Storage.getItem('authToken');
+
+      const axiosResponse = await authApi.put(
+        '/profile',
+        data,
+        {
+          headers: buildHeaders(authToken ?? null),
+        }
+      );
       const responseData = axiosResponse.data;
 
-      const payload = responseData ? JSON.parse(JSON.stringify(responseData)) : null;
+      const payload = responseData ?? null;
 
       if (!payload?.success) {
         return {
