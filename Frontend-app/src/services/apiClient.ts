@@ -104,7 +104,6 @@ api.interceptors.response.use(
         statusText?: string;
       };
       status?: number;
-      code?: string;
       isNetworkError?: boolean;
       isAuthError?: boolean;
     } = {
@@ -150,33 +149,12 @@ api.interceptors.response.use(
           }
         }
         
-        // HERMES SAFE: Wrap error.code access in try-catch to avoid read-only property issues
-        try {
-          if (errorObj.code && typeof errorObj.code === 'string') {
-            safeError.code = errorObj.code;
-          }
-        } catch (codeError) {
-          // Ignore read-only property access errors - this is what causes the 'NONE' error
-          console.warn('Could not access error.code property:', codeError);
-        }
-        
-        // Detect error types - HERMES SAFE: Wrap safeError.code access in try-catch
-        let isNetworkErrorByCode = false;
-        try {
-          if (safeError.code === 'ECONNABORTED' ||
-              safeError.code === 'ENOTFOUND' ||
-              safeError.code === 'ECONNRESET') {
-            isNetworkErrorByCode = true;
-          }
-        } catch (codeAccessError) {
-          // Ignore read-only property access errors
-        }
-        
         if (
           safeError.message.includes('Network') ||
           safeError.message.includes('ECONNREFUSED') ||
           safeError.message.includes('timeout') ||
-          isNetworkErrorByCode
+          // Hermes safety: do NOT touch error.code; it is known to trigger the read-only 'NONE' crash on some RN/Hermes builds.
+          false
         ) {
           safeError.isNetworkError = true;
         }
