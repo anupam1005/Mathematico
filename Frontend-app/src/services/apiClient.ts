@@ -1,169 +1,72 @@
-// PRODUCTION: Use strict API_BASE_URL from config
-// No fallbacks - will throw if invalid during config import
-import axios, {
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from 'axios';
+// PRODUCTION: Use strict API_BASE_URL from config (no old-domain fallback)
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 
-// PRODUCTION DEBUG: Log API client initialization
-console.log('API_CLIENT_INITIALIZED with baseURL:', API_BASE_URL);
-
-// PRODUCTION: Create axios instance with strict base URL
+// IMPORTANT: No interceptors.
+// Your migration rules require: "Ensure no interceptor mutates headers."
+// We attach auth headers per request using fresh plain objects only.
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
   validateStatus: (status: number) => status < 500,
 });
 
-// PRODUCTION: Request interceptor with complete Hermes safety
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    try {
-      const token = await Storage.getItem('authToken');
+type PlainHeaders = Record<string, string>;
 
-      // HERMES-SAFE HEADERS:
-      // Always construct a fresh plain object and assign it to config.headers.
-      // Do NOT spread or mutate AxiosHeaders / React Native Headers instances.
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+const toPlainStringHeaders = (value: unknown): PlainHeaders => {
+  const out: PlainHeaders = {};
+  if (!value || typeof value !== 'object') return out;
 
-      if (token && typeof token === 'string' && token.length > 0) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
-      // Assign plain headers object directly – avoids touching any frozen header instances.
-      (config as any).headers = headers;
-
-      // PRODUCTION DEBUG: Log final request URL
-      const finalUrl = `${config.baseURL || ''}${config.url || ''}`;
-      console.log('API_REQUEST_URL:', finalUrl);
-
-      return config;
-    } catch (error) {
-      console.warn('Request interceptor failed:', error);
-
-      // PRODUCTION: Ensure we still return a config with plain headers
-      const fallbackHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-
-      (config as any).headers = fallbackHeaders;
-      return config;
-    }
-  },
-  (error) => {
-    return Promise.reject({ 
-      message: 'Request preparation failed',
-      isNetworkError: true 
-    });
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof v === 'string') out[k] = v;
   }
-);
+  return out;
+};
 
-// PRODUCTION: Response interceptor with safe error handling
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  async (error: unknown) => {
-    // PRODUCTION: Create safe error object without frozen references
-    const safeError: {
-      message: string;
-      response?: {
-        status?: number;
-        data?: any;
-        statusText?: string;
-      };
-      status?: number;
-      isNetworkError?: boolean;
-      isAuthError?: boolean;
-    } = {
-      message: 'Request failed',
-    };
+const buildAuthHeaders = async (extraHeaders?: unknown): Promise<PlainHeaders> => {
+  const headers: PlainHeaders = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
 
-    try {
-      if (error && typeof error === 'object' && error !== null) {
-        const errorObj = error as any;
-        
-        // Extract primitive values safely
-        if (errorObj.message && typeof errorObj.message === 'string') {
-          safeError.message = errorObj.message;
-        }
-        
-        if (errorObj.response && typeof errorObj.response === 'object') {
-          const responseStatus = errorObj.response.status;
-          const responseData = errorObj.response.data;
-          const responseStatusText = errorObj.response.statusText;
-          
-          if (typeof responseStatus === 'number') {
-            safeError.status = responseStatus;
-            safeError.response = safeError.response || {};
-            safeError.response.status = responseStatus;
-          }
-          
-          if (typeof responseStatusText === 'string') {
-            safeError.response = safeError.response || {};
-            safeError.response.statusText = responseStatusText;
-          }
-          
-          if (responseData !== undefined && responseData !== null) {
-            try {
-              const serializedData = JSON.parse(JSON.stringify(responseData));
-              safeError.response = { ...safeError.response };
-              safeError.response.data = serializedData;
-            } catch {
-              if (responseData && typeof responseData.message === 'string') {
-                safeError.response = { ...safeError.response };
-                safeError.response.data = { message: responseData.message };
-              }
-            }
-          }
-        }
-        
-        if (
-          safeError.message.includes('Network') ||
-          safeError.message.includes('ECONNREFUSED') ||
-          safeError.message.includes('timeout') ||
-          // Hermes safety: do NOT touch error.code; it is known to trigger the read-only 'NONE' crash on some RN/Hermes builds.
-          false
-        ) {
-          safeError.isNetworkError = true;
-        }
-        
-        if (safeError.status === 401) {
-          safeError.isAuthError = true;
-        }
-      }
-    } catch (processingError) {
-      console.warn('Error processing failed:', processingError);
-      safeError.message = 'Request failed';
-      safeError.isNetworkError = true;
+  try {
+    const token = await Storage.getItem('authToken');
+    if (token && typeof token === 'string' && token.length > 0) {
+      headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Handle 401 - clear tokens
-    if (safeError.isAuthError || safeError.status === 401) {
-      try {
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-        await Storage.deleteItem('user');
-      } catch {
-        // Ignore cleanup failures
-      }
-    }
-    
-    return Promise.reject(safeError);
+  } catch {
+    // ignore token read failures; request can still proceed without auth
   }
-);
+
+  // Merge extra headers (plain strings only) without mutating caller objects
+  const extras = toPlainStringHeaders(extraHeaders);
+  for (const [k, v] of Object.entries(extras)) {
+    headers[k] = v;
+  }
+
+  return headers;
+};
+
+const sanitizeConfig = async (config?: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
+  const finalConfig: AxiosRequestConfig = {};
+  if (!config) return finalConfig;
+
+  if (config.method) finalConfig.method = config.method;
+  if (config.params !== undefined) finalConfig.params = config.params;
+  if (config.data !== undefined) finalConfig.data = config.data;
+  if (config.timeout) finalConfig.timeout = config.timeout;
+  if (config.responseType) finalConfig.responseType = config.responseType;
+  if (config.withCredentials !== undefined) finalConfig.withCredentials = config.withCredentials;
+
+  // Headers: always replace with a fresh plain object (Hermes-safe)
+  finalConfig.headers = await buildAuthHeaders(config.headers);
+  return finalConfig;
+};
 
 // PRODUCTION-SAFE: Path building utilities
 const normalizePath = (path: string): string => {
@@ -193,49 +96,24 @@ const buildUrl = (basePath: string, path?: string): string => {
 // No frozen object mutations, no AxiosHeaders usage
 export const withBasePath = (basePath: string) => ({
   get: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return api.get<T>(buildUrl(basePath, path), config);
+    return sanitizeConfig(config).then((finalConfig) => api.get<T>(buildUrl(basePath, path), finalConfig));
   },
   delete: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return api.delete<T>(buildUrl(basePath, path), config);
+    return sanitizeConfig(config).then((finalConfig) => api.delete<T>(buildUrl(basePath, path), finalConfig));
   },
   post: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.post<T>(buildUrl(basePath, path), data, config);
+    return sanitizeConfig(config).then((finalConfig) => api.post<T>(buildUrl(basePath, path), data, finalConfig));
   },
   put: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.put<T>(buildUrl(basePath, path), data, config);
+    return sanitizeConfig(config).then((finalConfig) => api.put<T>(buildUrl(basePath, path), data, finalConfig));
   },
   patch: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.patch<T>(buildUrl(basePath, path), data, config);
+    return sanitizeConfig(config).then((finalConfig) => api.patch<T>(buildUrl(basePath, path), data, finalConfig));
   },
   request: <T = any>(config: AxiosRequestConfig) => {
-    // HERMES-SAFE: Avoid spreading Axios config objects.
-    // Build a new plain config object and copy over only the fields we need.
-    const finalConfig: AxiosRequestConfig = {
-      url: buildUrl(basePath, config.url || ''),
-    };
-
-    if (config.method) {
-      finalConfig.method = config.method;
-    }
-
-    if (config.data !== undefined) {
-      finalConfig.data = config.data;
-    }
-
-    if (config.params !== undefined) {
-      finalConfig.params = config.params;
-    }
-
-    if (config.headers) {
-      // Headers are passed through as-is; interceptor will replace them with a plain object.
-      finalConfig.headers = config.headers;
-    }
-
-    if (config.timeout) {
-      finalConfig.timeout = config.timeout;
-    }
-
-    return api.request<T>(finalConfig);
+    // HERMES-SAFE: Avoid spreading Axios config objects. Copy only primitives we need.
+    const url = buildUrl(basePath, config.url || '');
+    return sanitizeConfig(config).then((finalConfig) => api.request<T>({ ...finalConfig, url }));
   },
 });
 

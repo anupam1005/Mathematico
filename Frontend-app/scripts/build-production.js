@@ -8,7 +8,7 @@ const path = require('path');
 console.log('🚀 Starting Mathematico Frontend Production Build...\n');
 
 // Check if required environment variables are set
-const requiredEnvVars = ['API_BASE_URL'];
+const requiredEnvVars = ['EXPO_PUBLIC_API_BASE_URL'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
@@ -21,7 +21,8 @@ if (missingVars.length > 0) {
 // Verify API connectivity
 console.log('🔍 Verifying API connectivity...');
 try {
-  const response = execSync(`curl -f -s -o /dev/null -w "%{http_code}" ${process.env.API_BASE_URL}/health`, { 
+  const apiBaseUrl = String(process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
+  const response = execSync(`curl -f -s -o /dev/null -w "%{http_code}" ${apiBaseUrl}/health`, { 
     timeout: 10000,
     stdio: 'pipe'
   });
@@ -88,7 +89,7 @@ const buildInfo = {
   timestamp: new Date().toISOString(),
   version: require('../package.json').version,
   environment: process.env.NODE_ENV || 'production',
-  apiBaseUrl: process.env.API_BASE_URL,
+  apiBaseUrl: String(process.env.EXPO_PUBLIC_API_BASE_URL || '').trim(),
   buildType: 'production',
   platform: 'android'
 };

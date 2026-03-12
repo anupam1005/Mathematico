@@ -79,6 +79,15 @@ function validateEnvironmentFormat() {
 
   // Production-specific validations
   if (isProduction) {
+    // Frontend URL is required to generate password reset links reliably
+    const frontendUrl = (process.env.FRONTEND_URL || '').trim();
+    if (!frontendUrl) {
+      throw new Error('FRONTEND_URL must be set in production to generate password reset links.');
+    }
+    if (!frontendUrl.startsWith('https://')) {
+      throw new Error(`FRONTEND_URL must start with https:// in production. Received: ${frontendUrl}`);
+    }
+
     if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('rediss://')) {
       console.warn('[ENV] WARNING: REDIS_URL should use rediss:// (TLS) in production for security');
     }

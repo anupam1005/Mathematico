@@ -49,7 +49,7 @@ Frontend-app/
 ├── app.config.js             # Expo configuration
 ├── src/
 │   ├── config.ts             # API configuration & environment setup
-│   │                          # - Production: https://mathematico-backend-new.vercel.app
+│   │                          # - Production: https://api.mathematico.in
 │   │                          # - Development: Uses EXPO_PUBLIC_API_BASE_URL env var
 │   │                          #   (localhost only for internal testing)
 │   │
@@ -181,9 +181,9 @@ Backend/
 
 - **Purpose**: Centralized API endpoint configuration
 - **Key Features**:
-  - Automatically switches between dev/prod URLs based on `__DEV__`
-  - Production: `https://mathematico-backend-new.vercel.app`
-  - Development: `http://localhost:5002`
+  - Uses `EXPO_PUBLIC_API_BASE_URL` (no hardcoded production URL in app code)
+  - Production: `https://api.mathematico.in`
+  - Development/Internal testing: set `EXPO_PUBLIC_API_BASE_URL` as needed
 - **Endpoints**:
   - `API_CONFIG.auth`: Authentication endpoints
   - `API_CONFIG.mobile`: Mobile app endpoints
@@ -393,7 +393,7 @@ async functionName(params): Promise<ApiResponse> {
 ### Environment Detection
 
 The app uses environment variables for API configuration:
-- **Production**: Uses `EXPO_PUBLIC_API_BASE_URL` environment variable (defaults to `https://mathematico-backend-new.vercel.app`)
+- **Production**: Uses `EXPO_PUBLIC_API_BASE_URL` environment variable (no defaults)
 - **Development/Internal Testing**: Can be configured via `EXPO_PUBLIC_API_BASE_URL` for Google Play Store internal testing
 - **Note**: No localhost references in production code - all URLs are environment-driven
 
@@ -430,7 +430,7 @@ Indian Rupee (INR) is the default currency, configured in `src/config.ts`.
 
 ### Backend
 - Deployed on **Vercel** as serverless functions
-- Production URL: `https://mathematico-backend-new.vercel.app`
+- Production URL: `https://api.mathematico.in`
 - Environment variables configured in Vercel dashboard
 
 ### Mobile App
@@ -533,5 +533,5 @@ This project is licensed under the MIT License.
 
 **Built with ❤️ for mathematics education**
 
-**Version**: 8.1.0 (Build 9)  
+**Version**: 8.6.6 (Build 6)  
 **Status**: ✅ Production Ready - Available on Google Play Store

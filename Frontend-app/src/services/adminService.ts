@@ -2,88 +2,80 @@
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import authService from './authService';
 import { API_PATHS } from '../constants/apiPaths';
-import { API_BASE_URL } from '../config';
+import { withBasePath } from './apiClient';
+import { createSafeError } from '../utils/safeError';
 
 /* ------------------------------------------------------------------ */
-/* Safe Fetch Wrapper for React Native Hermes                         */
+/* Admin network layer                                                */
 /* ------------------------------------------------------------------ */
-
-const safeFetch = async (url: string, options: RequestInit): Promise<Response> => {
-  // Defensive validation: enforce explicit HTTP method for non-GET admin calls
-  if (!options.method) {
-    throw new Error(
-      `safeFetch requires an explicit HTTP method for ${url}. ` +
-      'This prevents accidental GET fallbacks on retry.'
-    );
-  }
-
-  const method = options.method.toUpperCase();
-
-  // Normalise headers into a plain object and ensure JSON defaults
-  const normalizedHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    ...(options.headers as Record<string, string> | undefined),
-  };
-
-  const baseOptions: RequestInit = {
-    ...options,
-    method,
-    headers: normalizedHeaders,
-  };
-
-  try {
-    return await fetch(url, baseOptions);
-  } catch (error: any) {
-    // Check if this is the "Cannot assign to read-only property 'NONE'" error
-    if (error?.message && error.message.includes('Cannot assign to read-only property')) {
-      console.warn(
-        'Hermes read-only property error caught in adminService, retrying with preserved config...'
-      );
-
-      // Retry using the exact same, normalised options to preserve method/headers/body
-      return await fetch(url, baseOptions);
-    }
-    throw error;
-  }
-};
 
 // Create a service error handler for adminService
 const errorHandler = createServiceErrorHandler('adminService');
 
-// Helper function for admin API calls using fetch to avoid React Native frozen object issues
+type PlainHeaders = Record<string, string>;
+
+const buildAuthHeaders = (token?: string | null, extra?: PlainHeaders): PlainHeaders => {
+  const headers: PlainHeaders = {
+    Accept: 'application/json',
+  };
+
+  if (token && typeof token === 'string' && token.length > 0) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (typeof v === 'string') headers[k] = v;
+    }
+  }
+
+  return headers;
+};
+
+const adminApi = withBasePath(API_PATHS.admin);
+
+// Helper function for admin API calls using axios only (no fetch, no interceptors)
 const adminFetch = async (method: string, path: string, data?: any): Promise<any> => {
   try {
     const token = await authService.getToken();
-    
-    const headers: { [key: string]: string } = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-    
-    if (token && typeof token === 'string') {
-      headers['Authorization'] = `Bearer ${token}`;
+
+    // Preserve existing debug signal, but avoid logging full absolute URLs
+    console.log('ADMIN_FETCH_PATH:', path);
+
+    const upper = String(method || '').toUpperCase();
+
+    // JSON by default (except FormData uploads where axios must set boundary)
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+
+    const baseHeaders: PlainHeaders = isFormData
+      ? buildAuthHeaders(token)
+      : buildAuthHeaders(token, {
+          'Content-Type': 'application/json',
+        });
+
+    // Do not set Content-Type for FormData; axios will set correct multipart boundary.
+    if (isFormData) {
+      delete baseHeaders['Content-Type'];
     }
-    
-    const url = `${API_BASE_URL}${API_PATHS.admin}${path}`;
-    console.log('ADMIN_FETCH_URL:', url);
-    
-    const response = await safeFetch(url, {
-      method,
-      headers,
-      body: data ? JSON.stringify(data) : undefined
-    });
-    
-    console.log('ADMIN_FETCH_STATUS:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
+
+    if (upper === 'GET') return (await adminApi.get(path, { headers: baseHeaders })).data;
+    if (upper === 'DELETE') return (await adminApi.delete(path, { headers: baseHeaders })).data;
+    if (upper === 'POST') return (await adminApi.post(path, data, { headers: baseHeaders })).data;
+    if (upper === 'PUT') return (await adminApi.put(path, data, { headers: baseHeaders })).data;
+    if (upper === 'PATCH') return (await adminApi.patch(path, data, { headers: baseHeaders })).data;
+
+    return (
+      await adminApi.request({
+        method: upper as any,
+        url: path,
+        data,
+        headers: baseHeaders,
+      })
+    ).data;
   } catch (error) {
-    console.error('ADMIN_FETCH_ERROR:', error);
-    throw error;
+    const safe = createSafeError(error);
+    console.error('ADMIN_FETCH_ERROR:', safe);
+    throw safe;
   }
 };
 
@@ -293,29 +285,8 @@ class AdminService {
       
       let response;
       if (isFormData) {
-        // For FormData, we need special handling
-        const token = await authService.getToken();
-        if (!token) {
-          return { success: false, error: 'No authentication token found' };
-        }
-        
-        const headers: { [key: string]: string } = {};
-        if (token && typeof token === 'string') {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const url = `${API_BASE_URL}${API_PATHS.admin}/books`;
-        const fetchResponse = await safeFetch(url, {
-          method: 'POST',
-          headers,
-          body: bookData
-        });
-        
-        if (!fetchResponse.ok) {
-          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
-        }
-        
-        response = await fetchResponse.json();
+        // FormData upload: route through the same axios-only helper for consistency.
+        response = await adminFetch('POST', '/books', bookData);
       } else {
         response = await adminFetch('POST', '/books', bookData);
       }
@@ -337,29 +308,7 @@ class AdminService {
       
       let response;
       if (isFormData) {
-        // For FormData, we need special handling
-        const token = await authService.getToken();
-        if (!token) {
-          return { success: false, error: 'No authentication token found' };
-        }
-        
-        const headers: { [key: string]: string } = {};
-        if (token && typeof token === 'string') {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const url = `${API_BASE_URL}${API_PATHS.admin}/books/${id}`;
-        const fetchResponse = await safeFetch(url, {
-          method: 'PUT',
-          headers,
-          body: bookData
-        });
-        
-        if (!fetchResponse.ok) {
-          throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
-        }
-        
-        response = await fetchResponse.json();
+        response = await adminFetch('PUT', `/books/${id}`, bookData);
       } else {
         response = await adminFetch('PUT', `/books/${id}`, bookData);
       }

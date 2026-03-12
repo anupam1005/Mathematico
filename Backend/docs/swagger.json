@@ -15,7 +15,7 @@
   },
   "servers": [
     {
-      "url": "https://mathematico-backend-new.vercel.app",
+      "url": "https://api.mathematico.in",
       "description": "Production server"
     }
   ],

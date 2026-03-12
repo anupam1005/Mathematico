@@ -1,38 +1,8 @@
 
-import axios, { AxiosInstance } from 'axios';
 import { API_PATHS } from '../constants/apiPaths';
 import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../config';
 import { hermesAuthClient } from './hermesAuthClient';
-
-/* ------------------------------------------------------------------ */
-/* Auth API - Hermes-safe (dedicated Axios instance, no interceptors) */
-/* ------------------------------------------------------------------ */
-
-// Create a dedicated Axios instance for auth that does NOT use the shared
-// interceptors. This isolates login/register from any potential Hermes
-// issues in global interceptor chains while still using Axios.
-const authApi: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}${API_PATHS.auth}`,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-});
-
-const buildHeaders = (token?: string | null): Record<string, string> => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-
-  if (token && typeof token === 'string' && token.length > 0) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-};
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -103,6 +73,9 @@ const authService = {
       }
 
       await Storage.setItem('authToken', accessToken);
+      if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
+        await Storage.setItem('refreshToken', payload.data.refreshToken);
+      }
       
       // PRODUCTION DEBUG: Verify token storage
       console.log('TOKEN_SAVED');
@@ -171,6 +144,9 @@ const authService = {
       
       if (accessToken) {
         await Storage.setItem('authToken', accessToken);
+        if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
+          await Storage.setItem('refreshToken', payload.data.refreshToken);
+        }
         console.log('TOKEN_SAVED');
         const storedToken = await Storage.getItem('authToken');
         console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
@@ -212,13 +188,7 @@ const authService = {
       const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
       const authToken = await Storage.getItem('authToken');
 
-      await authApi.post(
-        '/logout',
-        payloadBody,
-        {
-          headers: buildHeaders(authToken ?? null),
-        }
-      );
+      await hermesAuthClient.post('/logout', payloadBody, authToken ?? null);
       
       // Always clear local tokens regardless of API response
       await Storage.deleteItem('authToken');
@@ -293,16 +263,7 @@ const authService = {
       // Get auth token for protected endpoints
       const authToken = await Storage.getItem('authToken');
 
-      const axiosResponse = await authApi.post(
-        '/refresh-token',
-        payloadBody,
-        {
-          headers: buildHeaders(authToken ?? null),
-        }
-      );
-
-      const responseData = axiosResponse.data;
-      const payload = responseData ?? null;
+      const payload = (await hermesAuthClient.post('/refresh-token', payloadBody, authToken ?? null)) ?? null;
 
       const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
 
@@ -321,6 +282,9 @@ const authService = {
       }
 
       await Storage.setItem('authToken', accessToken);
+      if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
+        await Storage.setItem('refreshToken', payload.data.refreshToken);
+      }
 
       return {
         success: true,
@@ -355,16 +319,7 @@ const authService = {
 
       const authToken = await Storage.getItem('authToken');
 
-      const axiosResponse = await authApi.put(
-        '/profile',
-        data,
-        {
-          headers: buildHeaders(authToken ?? null),
-        }
-      );
-      const responseData = axiosResponse.data;
-
-      const payload = responseData ?? null;
+      const payload = (await hermesAuthClient.put('/profile', data, authToken ?? null)) ?? null;
 
       if (!payload?.success) {
         return {

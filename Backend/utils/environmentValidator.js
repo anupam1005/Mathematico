@@ -26,7 +26,8 @@ function validateEnvironment() {
   const productionRequiredVars = [
     'ADMIN_EMAIL',
     'ADMIN_PASSWORD',
-    'REDIS_URL'
+    'REDIS_URL',
+    'FRONTEND_URL'
   ];
   
   // Optional but recommended variables

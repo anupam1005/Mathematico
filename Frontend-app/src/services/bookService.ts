@@ -53,10 +53,19 @@ const adminApi = withBasePath(API_PATHS.admin);
 class BookService {
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      const response = await mobileApi.request({
-        url: endpoint,
-        ...options,
-      });
+      // Hermes-safe: avoid spreading arbitrary axios config objects.
+      const cfg: any = { url: endpoint };
+      if (options && typeof options === 'object') {
+        if (options.method) cfg.method = options.method;
+        if (options.params !== undefined) cfg.params = options.params;
+        if (options.data !== undefined) cfg.data = options.data;
+        if (options.timeout) cfg.timeout = options.timeout;
+        if (options.responseType) cfg.responseType = options.responseType;
+        if (options.withCredentials !== undefined) cfg.withCredentials = options.withCredentials;
+        if (options.headers) cfg.headers = options.headers;
+      }
+
+      const response = await mobileApi.request(cfg);
       return response.data;
     } catch (error) {
       throw ErrorHandler.handleApiError(error);

@@ -18,7 +18,7 @@ const normalizeServerUrl = (value) => {
 const serverUrl =
   normalizeServerUrl(process.env.BACKEND_URL) ||
   normalizeServerUrl(process.env.VERCEL_URL) ||
-  'https://mathematico-backend-new.vercel.app';
+  'https://api.mathematico.in';
 
 const options = {
   definition: {

@@ -108,8 +108,8 @@ router.get('/info', (req, res) => {
     },
     note: 'Use your registered admin account credentials to login',
     curlExample: {
-      login: `curl -X POST ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app'}/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'`,
-      access: `curl -X GET ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://mathematico-backend-new.vercel.app'}/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"`
+      login: `curl -X POST ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://api.mathematico.in'}/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'`,
+      access: `curl -X GET ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://api.mathematico.in'}/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"`
     }
   });
 });

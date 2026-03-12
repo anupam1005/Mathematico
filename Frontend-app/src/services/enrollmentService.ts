@@ -325,7 +325,8 @@ class EnrollmentService {
     try {
       const { Storage } = await import('../utils/storage');
       const token = await Storage.getItem('authToken');
-      return token || '';
+      // Avoid leaking non-string values into headers.
+      return typeof token === 'string' ? token : '';
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error getting auth token:', error);
       return '';

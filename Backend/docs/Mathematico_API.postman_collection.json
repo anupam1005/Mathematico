@@ -8,12 +8,12 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://mathematico-backend-new.vercel.app",
+      "value": "https://api.mathematico.in",
       "type": "string"
     },
     {
       "key": "localUrl",
-      "value": "https://mathematico-backend-new.vercel.app",
+      "value": "https://api.mathematico.in",
       "type": "string"
     },
     {

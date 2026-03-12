@@ -9,7 +9,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mathematico-backend-new.vercel.app",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.mathematico.in",
         "EXPO_PUBLIC_ENV": "production"
       },
       "channel": "production"
@@ -18,7 +18,21 @@
       "android": {
         "buildType": "apk"
       },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.mathematico.in",
+        "EXPO_PUBLIC_ENV": "preview"
+      },
       "channel": "preview"
+    },
+    "development": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.mathematico.in",
+        "EXPO_PUBLIC_ENV": "development"
+      },
+      "channel": "development"
     }
   }
 }

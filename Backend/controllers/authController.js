@@ -823,8 +823,11 @@ const forgotPassword = async (req, res) => {
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    const baseUrl = process.env.BACKEND_URL || '';
-    const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${resetToken}`;
+    // IMPORTANT:
+    // Password reset links must point to the FRONTEND app/site, not the backend API host.
+    // This avoids broken links when BACKEND_URL is unset (common on serverless deployments).
+    const frontendBaseUrl = (process.env.FRONTEND_URL || '').trim();
+    const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
 
     try {
       await sendEmail({

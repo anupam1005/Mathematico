@@ -1491,12 +1491,12 @@
     "variable": [
       {
         "type": "string",
-        "value": "https://mathematico-backend-new.vercel.app",
+        "value": "https://api.mathematico.in",
         "key": "baseUrl"
       },
       {
         "type": "string",
-        "value": "https://mathematico-backend-new.vercel.app",
+        "value": "https://api.mathematico.in",
         "key": "localUrl"
       },
       {
@@ -1722,7 +1722,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -2369,7 +2369,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -3328,7 +3328,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -6693,7 +6693,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -9946,7 +9946,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -13199,7 +13199,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -15345,7 +15345,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -16214,7 +16214,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -16648,7 +16648,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -16961,7 +16961,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -17305,7 +17305,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -17649,7 +17649,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -18015,7 +18015,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -18408,7 +18408,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -18801,7 +18801,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -19183,7 +19183,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -19571,7 +19571,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -20012,7 +20012,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -20453,7 +20453,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -20856,7 +20856,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -21230,7 +21230,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -21608,7 +21608,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -22069,7 +22069,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -22519,7 +22519,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -22895,7 +22895,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -23257,7 +23257,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -23721,7 +23721,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -24176,7 +24176,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -24555,7 +24555,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -24940,7 +24940,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -25320,7 +25320,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -25702,7 +25702,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -26076,7 +26076,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {
@@ -26448,7 +26448,7 @@
             },
             {
               "key": "Host",
-              "value": "mathematico-backend-new.vercel.app",
+              "value": "api.mathematico.in",
               "system": true
             },
             {

@@ -193,12 +193,16 @@ function validateCorsConfig() {
  * @returns {Object} CORS configuration object
  */
 function getCorsOptions() {
-  const allowedOrigins = getAllowedOrigins();
   const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProduction
+    ? [
+        'https://api.mathematico.in',
+      ]
+    : getAllowedOrigins();
   
   return {
     origin: isProduction ? 
-      // Production: Dynamic origin reflection with security
+      // Production: Strict allowlist (no wildcard reflection)
       (origin, callback) => {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) {
@@ -206,9 +210,13 @@ function getCorsOptions() {
           return callback(null, true);
         }
         
-        // In production, reflect the incoming origin dynamically
-        console.log('[CORS] Production: Reflecting origin:', origin);
-        return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        const error = new Error(`CORS: Origin ${origin} not allowed`);
+        error.code = 'CORS_ORIGIN_NOT_ALLOWED';
+        return callback(error);
       }
       :
       // Development: Use existing ALLOWED_ORIGINS array

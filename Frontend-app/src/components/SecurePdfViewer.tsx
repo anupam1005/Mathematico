@@ -220,8 +220,8 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         mediaPlaybackRequiresUserAction={false}
         allowFileAccess={false}
         allowUniversalAccessFromFileURLs={false}
-        mixedContentMode="always"
-        originWhitelist={['*']}
+        mixedContentMode="never"
+        originWhitelist={['https://*', 'about:blank', 'data:*']}
         onShouldStartLoadWithRequest={(request: any) => {
           // Allow only known-good viewer hosts/URLs used by our embedded HTML
           const url = request.url.toLowerCase();
