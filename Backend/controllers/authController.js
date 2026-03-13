@@ -82,7 +82,8 @@ const login = async (req, res) => {
     console.log('[AUTH] Login attempt:', {
       email: email ? `${email.substring(0, 3)}***` : 'missing',
       hasPassword: !!password,
-      ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown',
+      // IMPORTANT: rely on req.ip only; never re-parse X-Forwarded-For
+      ip: req.ip || req.connection?.remoteAddress || 'unknown',
       userAgent: req.headers['user-agent']?.substring(0, 50) || 'unknown',
       timestamp: new Date().toISOString()
     });
@@ -360,7 +361,8 @@ const register = async (req, res) => {
       email: email ? `${email.substring(0, 3)}***` : 'missing',
       hasName: !!name,
       hasPassword: !!password,
-      ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown',
+      // IMPORTANT: rely on req.ip only; never re-parse X-Forwarded-For
+      ip: req.ip || req.connection?.remoteAddress || 'unknown',
       userAgent: req.headers['user-agent']?.substring(0, 50) || 'unknown',
       timestamp: new Date().toISOString()
     });

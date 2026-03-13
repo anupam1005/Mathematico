@@ -16,6 +16,7 @@ let connectionPromise = null;
 let connectionAttempts = 0;
 let lastConnectionError = null;
 const MAX_CONNECTION_ATTEMPTS = 3;
+let warmConnectionStarted = false;
 
 /**
  * Production-safe MongoDB connection with global caching
@@ -222,6 +223,40 @@ const connectDB = async () => {
 };
 
 /**
+ * Fire-and-forget connection warm-up.
+ *
+ * Designed for serverless:
+ * - Kicks off a background connection attempt during cold start,
+ *   so the first login/auth request is less likely to pay the full
+ *   connection penalty.
+ * - Never throws and never blocks the main bootstrap path.
+ */
+const warmMongoConnection = () => {
+  if (warmConnectionStarted) {
+    return;
+  }
+
+  warmConnectionStarted = true;
+
+  // Fire-and-forget; errors are logged but do not crash the process
+  connectDB()
+    .then((conn) => {
+      if (conn) {
+        console.log('MONGO_WARM_CONNECTION_READY', {
+          host: conn.host,
+          database: conn.name,
+          readyState: conn.readyState
+        });
+      }
+    })
+    .catch((error) => {
+      console.warn('MONGO_WARM_CONNECTION_FAILED', {
+        message: error?.message || String(error)
+      });
+    });
+};
+
+/**
  * Health check utility - performs actual ping test with connection validation
  */
 const performHealthCheck = async () => {
@@ -290,8 +325,9 @@ const getConnectionStatus = () => {
 };
 
 module.exports = { 
-  connectDB, 
+  connectDB,
   performHealthCheck, 
   closeConnection,
-  getConnectionStatus
+  getConnectionStatus,
+  warmMongoConnection
 };

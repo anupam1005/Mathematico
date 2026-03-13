@@ -8,10 +8,5 @@
       "memory": 2048
     }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/Backend/index.js" },
-    { "src": "/health", "dest": "/Backend/index.js" },
-    { "src": "/", "dest": "/Backend/index.js" }
-  ],
   "regions": ["iad1"]
 }

@@ -12,6 +12,7 @@
 const { Ratelimit } = require('@upstash/ratelimit');
 const { Redis } = require('@upstash/redis');
 const { logRateLimitExceeded } = require('../utils/securityLogger');
+const crypto = require('crypto');
 
 // Configuration
 const LOGIN_RATE_LIMIT = parseInt(process.env.LOGIN_RATE_LIMIT) || 5; // attempts per window
@@ -157,13 +158,36 @@ const attemptRecovery = async () => {
 };
 
 /**
- * Extract IP address safely with proxy support
+ * Normalize IP address for rate limiting.
+ *
+ * IMPORTANT:
+ * - Relies solely on `req.ip` which is derived from Express trust proxy config.
+ * - NEVER re-parse the full X-Forwarded-For chain here to avoid header spoofing.
+ * - For IPv6, we hash a subnet prefix so that carrier IPv6 rotation does not
+ *   cause a new bucket for every tiny IP change, while still grouping activity.
  */
-const extractIP = (req) => {
-  return req.ip || 
-         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-         req.connection?.remoteAddress || 
-         'unknown';
+const normalizeIpForRateLimiting = (rawIp) => {
+  if (!rawIp || typeof rawIp !== 'string') {
+    return 'ip:unknown';
+  }
+
+  let ip = rawIp.trim();
+
+  // Strip IPv4-mapped IPv6 prefix if present (e.g. ::ffff:192.0.2.1)
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  // IPv6: hash a stable prefix to avoid per-address buckets but keep separation
+  if (ip.includes(':') && !ip.includes('.')) {
+    const segments = ip.split(':');
+    const prefix = segments.slice(0, 4).join(':'); // approximate /64 prefix
+    const hash = crypto.createHash('sha256').update(prefix).digest('hex').slice(0, 16);
+    return `ip6:${hash}`;
+  }
+
+  // IPv4 or unknown but non-empty string
+  return `ip4:${ip}`;
 };
 
 /**
@@ -192,11 +216,12 @@ const enhancedRateLimiter = async (req, res, next) => {
   }
 
   try {
-    const ip = extractIP(req);
+    const rawIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    const normalizedIp = normalizeIpForRateLimiting(rawIp);
     const email = extractEmail(req);
     
     // IP-based rate limiting
-    const ipIdentifier = `ip:${ip}:${req.path}`;
+    const ipIdentifier = `${normalizedIp}:${req.path}`;
     const ipResult = await ipRateLimiter.limit(ipIdentifier);
 
     if (!ipResult.success) {

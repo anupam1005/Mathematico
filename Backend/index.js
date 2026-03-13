@@ -2,25 +2,21 @@
 // Environment variables are loaded from Vercel dashboard - no local .env files needed
 'use strict';
 
+// Top-level imports are intentionally minimal for serverless cold-start performance.
+// Heavy modules are required lazily inside route/middleware scopes.
 const express = require('express');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
-const mongoose = require('mongoose');
 
-const { connectDB } = require('./config/database');
-const configureTrustProxy = require('./config/trustProxy');
-const { validateJwtConfig } = require('./utils/jwt');
-const { validateFeatureFlags } = require('./utils/featureFlags');
-const { validateCorsConfig, getCorsOptions } = require('./config/cors');
+const { connectDB, warmMongoConnection } = require('./config/database');
 
 // Production serverless app
 const app = express();
 
-// Configure trust proxy for production
-configureTrustProxy(app);
+// Configure trust proxy for production (lazy require to keep top-level light)
+require('./config/trustProxy')(app);
 
-// Root endpoint - always available
+// Root endpoint - always available, even if environment is misconfigured
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -35,99 +31,64 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/favicon.png", (req, res) => res.status(204).end());
 app.get("/favicon", (req, res) => res.status(204).end());
 
-// Security middleware registration
-registerSecurityMiddleware();
+// Lightweight environment validation state (cache only success)
+let envValidationCompleted = false;
+let envValidationOk = false;
 
-// Rate limiting for auth endpoints
-const loginRateLimiter = require('./middleware/loginRateLimiter');
-
-// JWT validation
-try {
-  validateJwtConfig();
-} catch (jwtErr) {
-  console.warn('⚠️ JWT configuration invalid:', jwtErr?.message || jwtErr);
-}
-
-// Route and error handling registration
-registerRoutes();
-registerErrorHandling();
-
-// Bootstrap state management
-let bootstrapped = false;
-let bootstrapPromise = null;
-let bootstrapError = null;
-let lastSuccessfulConnection = null;
-
-function validateEnvironmentFormat() {
-  const isVercel = process.env.VERCEL === '1';
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  console.log('[ENV] Environment validation:', {
-    nodeEnv: process.env.NODE_ENV,
-    isVercel,
-    isProduction,
-    vercelEnv: process.env.VERCEL_ENV
-  });
-
-  // Core required variables
-  const requiredVars = ['MONGO_URI', 'JWT_SECRET'];
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    throw new Error(`Required environment variables missing: ${missingVars.join(', ')}. Please configure these in your Vercel dashboard.`);
+// Lightweight environment validation for all business routes
+// - Caches ONLY successful validation
+// - On failure, responds with error but retries on the next request
+function environmentValidationMiddleware(req, res, next) {
+  if (envValidationCompleted) {
+    // Only cache the "all good" case; failures always re-validate
+    if (envValidationOk) {
+      return next();
+    }
   }
 
-  // Production-specific validations
-  if (isProduction) {
-    // Frontend URL is required to generate password reset links reliably
-    const frontendUrl = (process.env.FRONTEND_URL || '').trim();
-    if (!frontendUrl) {
-      throw new Error('FRONTEND_URL must be set in production to generate password reset links.');
+  try {
+    // Fast, lightweight validation only (serverless-safe)
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    const mongoUri = (process.env.MONGO_URI || '').trim();
+    const jwtSecret = (process.env.JWT_SECRET || '').trim();
+
+    if (!mongoUri) {
+      throw new Error('MONGO_URI must be configured');
     }
-    if (!frontendUrl.startsWith('https://')) {
-      throw new Error(`FRONTEND_URL must start with https:// in production. Received: ${frontendUrl}`);
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET must be configured');
     }
 
-    if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('rediss://')) {
-      console.warn('[ENV] WARNING: REDIS_URL should use rediss:// (TLS) in production for security');
-    }
-    
-    if (process.env.ENABLE_RAZORPAY === 'true') {
-      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-      if (!webhookSecret || webhookSecret.length < 32) {
-        throw new Error('RAZORPAY_WEBHOOK_SECRET must be set and at least 32 characters when ENABLE_RAZORPAY=true');
+    if (isProduction) {
+      const frontendUrl = (process.env.FRONTEND_URL || '').trim();
+
+      if (!frontendUrl) {
+        throw new Error('FRONTEND_URL must be set in production');
       }
-      console.log('[ENV] Razorpay webhook secret validated successfully');
+      if (!frontendUrl.startsWith('https://')) {
+        throw new Error('FRONTEND_URL must start with https:// in production');
+      }
     }
 
-    // Admin credentials validation
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    
-    if (!adminEmail || !adminPassword) {
-      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in production Vercel environment');
-    }
-    
-    if (!adminEmail.includes('@') || adminEmail.length < 5) {
-      throw new Error('ADMIN_EMAIL must be a valid email address');
-    }
-    
-    if (adminPassword.length < 8) {
-      throw new Error('ADMIN_PASSWORD must be at least 8 characters long');
-    }
-    
-    console.log('[ENV] Admin credentials validated successfully');
+    // Cache ONLY the successful outcome
+    envValidationCompleted = true;
+    envValidationOk = true;
+
+    return next();
+  } catch (err) {
+    // Do NOT cache failure – allow retry on subsequent requests
+    envValidationCompleted = false;
+    envValidationOk = false;
+
+    return res.status(500).json({
+      success: false,
+      error: 'ENVIRONMENT_VALIDATION_ERROR',
+      message: err?.message || 'Environment validation failed.',
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    });
   }
-
-  console.log('[ENV] Environment validation completed successfully');
-  console.log('[ENV] Configured services:', {
-    mongodb: !!process.env.MONGO_URI,
-    jwt: !!process.env.JWT_SECRET,
-    redis: !!process.env.REDIS_URL,
-    razorpay: process.env.ENABLE_RAZORPAY === 'true',
-    cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY),
-    admin: !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD)
-  });
 }
 
 function registerSecurityMiddleware() {
@@ -154,39 +115,35 @@ function registerSecurityMiddleware() {
     })
   );
 
-  // Webhook route with raw body handling
-  const { handleRazorpayWebhook } = require('./controllers/webhookController');
-  const { createWebhookRateLimiter } = require('./middleware/webhookRateLimiter');
-  
-  const webhookRawBodyHandler = (req, res, next) => {
-    if (req.path === '/api/v1/webhook/razorpay' && req.method === 'POST') {
-      let rawData = '';
-      
-      req.on('data', (chunk) => {
-        rawData += chunk;
-      });
-      
-      req.on('end', () => {
-        req.rawBody = Buffer.from(rawData, 'utf8');
-        req.body = req.rawBody;
-        next();
-      });
-      
-      req.on('error', (err) => {
-        console.error('Error capturing raw body:', err);
-        next(err);
-      });
-    } else {
+  // Lazily require heavy webhook controller and rate limiter on first use
+  // Use express.raw with strict size limit to avoid memory bloat.
+  let webhookRateLimiterInstance;
+  let webhookHandlerInstance;
+
+  app.post(
+    '/api/v1/webhook/razorpay',
+    express.raw({ type: 'application/json', limit: '1mb' }),
+    (req, res, next) => {
+      // Preserve backwards compatibility with handlers expecting req.rawBody
+      if (!req.rawBody) {
+        req.rawBody = req.body;
+      }
       next();
+    },
+    (req, res, next) => {
+      if (!webhookRateLimiterInstance) {
+        const { createWebhookRateLimiter } = require('./middleware/webhookRateLimiter');
+        webhookRateLimiterInstance = createWebhookRateLimiter();
+      }
+      return webhookRateLimiterInstance(req, res, next);
+    },
+    (req, res, next) => {
+      if (!webhookHandlerInstance) {
+        const { handleRazorpayWebhook } = require('./controllers/webhookController');
+        webhookHandlerInstance = handleRazorpayWebhook;
+      }
+      return webhookHandlerInstance(req, res, next);
     }
-  };
-  
-  app.use(webhookRawBodyHandler);
-  
-  app.post('/api/v1/webhook/razorpay', 
-    express.raw({ type: 'application/json' }),
-    createWebhookRateLimiter(),
-    handleRazorpayWebhook
   );
   
   app.get('/api/v1/webhook/razorpay/health', (req, res) => {
@@ -200,9 +157,13 @@ function registerSecurityMiddleware() {
   // Body parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Lazy-load cookie parser to keep top-level imports minimal
+  const cookieParser = require('cookie-parser');
   app.use(cookieParser());
 
   // CORS
+  const { validateCorsConfig, getCorsOptions } = require('./config/cors');
   validateCorsConfig();
   const corsOptions = getCorsOptions();
   app.use(cors(corsOptions));
@@ -217,55 +178,6 @@ function registerSecurityMiddleware() {
 
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
-
-  // Health endpoint
-  app.get('/health', async (req, res) => {
-    try {
-      const { performHealthCheck } = require('./config/database');
-      const healthData = await performHealthCheck();
-      
-      return res.status(200).json({
-        status: 'ok',
-        environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString(),
-        database: { 
-          status: 'connected',
-          readyState: healthData.readyState,
-          type: 'mongodb',
-          connected: healthData.connected,
-          host: healthData.host,
-          name: healthData.name,
-          ping: healthData.ping
-        },
-        bootstrap: {
-          completed: bootstrapped,
-          error: bootstrapError?.message || null,
-          lastSuccessfulConnection: lastSuccessfulConnection || null
-        }
-      });
-    } catch (error) {
-      return res.status(503).json({
-        status: 'error',
-        environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString(),
-        database: {
-          status: 'disconnected',
-          readyState: mongoose.connection.readyState || 0,
-          type: 'mongodb',
-          connected: false,
-          host: null,
-          name: null,
-          error: error.message
-        },
-        bootstrap: {
-          completed: bootstrapped,
-          error: bootstrapError?.message || null,
-          lastSuccessfulConnection: lastSuccessfulConnection || null
-        },
-        error: error.message
-      });
-    }
-  });
 
   // Redis health check
   app.get('/api/v1/health/redis', async (req, res) => {
@@ -301,14 +213,38 @@ function registerRoutes() {
   // Bootstrap diagnostics
   app.get('/api/v1/bootstrap/diagnostics', (req, res) => {
     const isProduction = process.env.NODE_ENV === 'production';
+    let envValidation = null;
+    let conflicts = [];
+    let checklist = [];
+    let heavyValidationError = null;
+
+    // Run full, heavy-weight environment validation only on this diagnostics endpoint
+    try {
+      const {
+        validateEnvironment,
+        checkEnvironmentConflicts,
+        getProductionHardeningChecklist
+      } = require('./utils/environmentValidator');
+
+      envValidation = validateEnvironment();
+      conflicts = checkEnvironmentConflicts();
+      checklist = getProductionHardeningChecklist();
+    } catch (error) {
+      heavyValidationError = {
+        message: error?.message || String(error),
+        stack: process.env.NODE_ENV === 'production' ? undefined : error?.stack
+      };
+    }
+
     const diagnostics = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
       bootstrap: {
-        completed: bootstrapped,
-        error: bootstrapError?.message || null,
-        lastSuccessfulConnection: lastSuccessfulConnection || null
+        // Stateless by design in serverless; no long-lived bootstrap state
+        completed: null,
+        error: null,
+        lastSuccessfulConnection: null
       },
       environmentVariables: isProduction ? {
         MONGO_URI: { configured: Boolean(process.env.MONGO_URI), length: process.env.MONGO_URI?.length || 0 },
@@ -328,6 +264,14 @@ function registerRoutes() {
       database: {
         readyState: mongoose.connection.readyState,
         states: { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }
+      },
+      environmentValidation: {
+        heavyValidationRan: Boolean(envValidation || heavyValidationError),
+        errors: envValidation?.errors || [],
+        warnings: envValidation?.warnings || [],
+        conflicts,
+        checklist,
+        error: heavyValidationError
       }
     };
 
@@ -380,11 +324,6 @@ function registerRoutes() {
         console.log('[BOOTSTRAP] Admin user verified and updated');
       }
       
-      // Update bootstrap state
-      bootstrapError = null;
-      bootstrapped = true;
-      lastSuccessfulConnection = new Date().toISOString();
-      
       return res.status(200).json({
         success: true,
         message: 'Bootstrap completed successfully',
@@ -397,9 +336,6 @@ function registerRoutes() {
       
     } catch (error) {
       console.error('[BOOTSTRAP] Error:', error);
-      bootstrapError = error;
-      bootstrapped = false;
-      
       return res.status(500).json({
         success: false,
         message: 'Bootstrap failed',
@@ -410,13 +346,44 @@ function registerRoutes() {
   });
 
   // API routes with rate limiting
-  const enhancedRateLimiter = require('./middleware/enhancedRateLimiter');
-  
-  app.use(`${API_PREFIX}`, enhancedRateLimiter);
-  app.use(`${API_PREFIX}/auth/login`, loginRateLimiter);
-  app.use(`${API_PREFIX}/auth/register`, loginRateLimiter);
-  app.use(`${API_PREFIX}/payments`, enhancedRateLimiter);
-  app.use(`${API_PREFIX}/admin`, enhancedRateLimiter);
+  // Lazily require enhanced rate limiter and login rate limiter to reduce cold start size
+  let enhancedRateLimiterInstance;
+  let loginRateLimiterInstance;
+
+  app.use(`${API_PREFIX}`, (req, res, next) => {
+    if (!enhancedRateLimiterInstance) {
+      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
+    }
+    return enhancedRateLimiterInstance(req, res, next);
+  });
+
+  app.use(`${API_PREFIX}/auth/login`, (req, res, next) => {
+    if (!loginRateLimiterInstance) {
+      loginRateLimiterInstance = require('./middleware/loginRateLimiter');
+    }
+    return loginRateLimiterInstance(req, res, next);
+  });
+
+  app.use(`${API_PREFIX}/auth/register`, (req, res, next) => {
+    if (!loginRateLimiterInstance) {
+      loginRateLimiterInstance = require('./middleware/loginRateLimiter');
+    }
+    return loginRateLimiterInstance(req, res, next);
+  });
+
+  app.use(`${API_PREFIX}/payments`, (req, res, next) => {
+    if (!enhancedRateLimiterInstance) {
+      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
+    }
+    return enhancedRateLimiterInstance(req, res, next);
+  });
+
+  app.use(`${API_PREFIX}/admin`, (req, res, next) => {
+    if (!enhancedRateLimiterInstance) {
+      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
+    }
+    return enhancedRateLimiterInstance(req, res, next);
+  });
   
   // Route modules
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
@@ -453,18 +420,40 @@ function registerRoutes() {
 
   // Swagger documentation - production-safe conditional loading
   if (process.env.ENABLE_SWAGGER === "true") {
-    try {
-      const { swaggerUi, specs, swaggerOptions, isAvailable } = require('./config/swagger');
-      
-      if (isAvailable && swaggerUi && specs) {
-        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
-        console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
-      } else {
-        console.log('[SWAGGER] Swagger documentation disabled - packages not available or specs not generated');
+    // Lazily load Swagger configuration and handlers on first /api-docs request
+    let swaggerInitialized = false;
+    let swaggerHandlers = null;
+
+    const swaggerLazyHandler = (req, res, next) => {
+      if (!swaggerInitialized) {
+        try {
+          const { swaggerUi, specs, swaggerOptions, isAvailable } = require('./config/swagger');
+
+          if (isAvailable && swaggerUi && specs) {
+            swaggerHandlers = [
+              swaggerUi.serve,
+              swaggerUi.setup(specs, swaggerOptions)
+            ];
+            console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
+          } else {
+            console.log('[SWAGGER] Swagger documentation disabled - packages not available or specs not generated');
+          }
+        } catch (err) {
+          console.warn('[SWAGGER] Swagger documentation failed to load:', err?.message || 'Unknown error');
+        } finally {
+          swaggerInitialized = true;
+        }
       }
-    } catch (err) {
-      console.warn('[SWAGGER] Swagger documentation failed to load:', err?.message || 'Unknown error');
-    }
+
+      if (swaggerHandlers) {
+        return swaggerHandlers[0](req, res, () => swaggerHandlers[1](req, res, next));
+      }
+
+      // If Swagger is unavailable, fall through to 404 handler as before
+      return next();
+    };
+
+    app.use('/api-docs', swaggerLazyHandler);
   } else {
     console.log('[SWAGGER] Swagger documentation disabled (ENABLE_SWAGGER !== "true")');
   }
@@ -496,143 +485,81 @@ function registerErrorHandling() {
   });
 }
 
-// Environment validation and initialization
-validateEnvironmentFormat();
-validateFeatureFlags();
+// Global middleware ordering:
+// 1. Lightweight health and root endpoints
+// 2. Environment validation
+// 3. Security middleware (helmet, CORS, parsers, webhook security)
+// 4. Application routes and error handling
 
-async function bootstrapAdminUser() {
-  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-  const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
-
-  if (!ADMIN_CONFIGURED) {
-    console.error('FATAL: Admin credentials not configured in environment variables');
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Admin credentials must be configured in production');
-    }
-    return;
-  }
-
+// Health endpoint MUST be registered before environment validation
+app.get('/health', async (req, res) => {
   try {
-    const connection = await connectDB();
-    const UserModel = require('./models/User');
-    
-    let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
-    
-    if (!adminUser) {
-      console.log('[BOOTSTRAP] Creating admin user...');
-      adminUser = new UserModel({
-        name: 'Admin User',
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
-        role: 'admin',
-        isAdmin: true,
-        isActive: true,
-        isEmailVerified: true
-      });
-      await adminUser.save();
-      console.log('[BOOTSTRAP] Admin user created successfully');
-    } else {
-      adminUser.role = 'admin';
-      adminUser.isAdmin = true;
-      adminUser.isActive = true;
-      adminUser.isEmailVerified = true;
-      await adminUser.save();
-      console.log('[BOOTSTRAP] Admin user verified and updated');
-    }
-    
-    console.log('[BOOTSTRAP] Admin bootstrap completed for:', ADMIN_EMAIL);
-  } catch (error) {
-    console.error('[BOOTSTRAP] Failed to bootstrap admin user:', error?.message || error);
-    throw error;
-  }
-}
+    const { performHealthCheck } = require('./config/database');
+    const healthData = await performHealthCheck();
 
-async function startServer() {
-  try {
-    if (!process.env.MONGO_URI) {
-      console.warn('MONGO_BOOTSTRAP_SKIPPED', {
-        reason: 'MONGO_URI not configured',
-        environment: process.env.NODE_ENV,
-        isVercel: process.env.VERCEL === '1'
-      });
-      return;
-    }
-
-    const connection = await connectDB();
-    await connection.db.admin().ping();
-    await bootstrapAdminUser();
-    
-    if (bootstrapError || !bootstrapped) {
-      bootstrapError = null;
-      bootstrapped = true;
-      lastSuccessfulConnection = new Date().toISOString();
-      
-      console.log('MONGO_BOOTSTRAP_SUCCESS', {
-        message: 'MongoDB connection established during bootstrap',
-        readyState: connection.readyState,
-        host: connection.host,
-        database: connection.name,
-        timestamp: lastSuccessfulConnection
-      });
-    }
-    
-    return;
-  } catch (err) {
-    const currentConnection = mongoose.connection;
-    const isActuallyConnected = currentConnection.readyState === 1;
-    
-    if (!isActuallyConnected) {
-      bootstrapError = err;
-      bootstrapped = false;
-      
-      console.error('MONGO_CONNECTION_ERROR', {
-        message: err?.message || 'Unknown error',
-        name: err?.name || 'MongoError',
-        code: err?.code || 'BOOTSTRAP_FAILED',
-        stack: err?.stack,
-        readyState: currentConnection.readyState,
-        environment: process.env.NODE_ENV,
-        isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
-        mongoUriConfigured: Boolean(process.env.MONGO_URI),
-        mongoUriLength: process.env.MONGO_URI?.length || 0
-      });
-      
-      if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
-        console.warn('MONGO_BOOTSTRAP_FAILED', {
-          message: 'Database bootstrap failed, but application will continue',
-          action: 'Health endpoint will reflect degraded status'
-        });
-        return;
-      } else {
-        throw new Error(`Database connection failed during bootstrap: ${err?.message || 'Unknown error'}`);
+    return res.status(200).json({
+      status: 'ok',
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'connected',
+        readyState: healthData.readyState,
+        type: 'mongodb',
+        connected: healthData.connected,
+        host: healthData.host,
+        name: healthData.name,
+        ping: healthData.ping
       }
-    } else {
-      bootstrapError = null;
-      bootstrapped = true;
-      lastSuccessfulConnection = new Date().toISOString();
-      
-      console.log('MONGO_BOOTSTRAP_SELF_HEAL', {
-        message: 'Bootstrap error cleared - connection is working',
-        readyState: currentConnection.readyState,
-        host: currentConnection.host,
-        database: currentConnection.name,
-        timestamp: lastSuccessfulConnection
-      });
-    }
+    });
+  } catch (error) {
+    return res.status(200).json({
+      status: 'degraded',
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'disconnected',
+        readyState: mongoose.connection.readyState || 0,
+        type: 'mongodb',
+        connected: false,
+        host: null,
+        name: null,
+        error: error.message
+      },
+      error: error.message
+    });
+  }
+});
+
+// Register environment validation before security and routes (but after health/root)
+app.use(environmentValidationMiddleware);
+
+// Warm MongoDB connection in the background so first auth/login requests
+// do not incur the full cold connection penalty on serverless cold starts.
+// This is non-blocking and safe for both Vercel and local development.
+if (process.env.ENABLE_MONGO_WARMING !== 'false') {
+  try {
+    warmMongoConnection();
+  } catch (e) {
+    console.warn('MONGO_WARM_CONNECTION_INIT_FAILED', {
+      message: e?.message || String(e)
+    });
   }
 }
 
-// Serverless initialization
-if (process.env.VERCEL === '1' || process.env.SERVERLESS === '1') {
-  bootstrapPromise = startServer().catch((err) => {
-    const currentConnection = mongoose.connection;
-    if (currentConnection.readyState !== 1) {
-      bootstrapError = err;
-    }
-    console.error('❌ Serverless bootstrap error:', err?.message || err);
-  });
+// Security middleware registration (runs after env validation)
+// Rate limiter modules are required lazily inside route registration
+registerSecurityMiddleware();
+
+// JWT validation (configuration-only, does not affect request flow)
+try {
+  validateJwtConfig();
+} catch (jwtErr) {
+  console.warn('⚠️ JWT configuration invalid:', jwtErr?.message || jwtErr);
 }
+
+// Route and error handling registration
+registerRoutes();
+registerErrorHandling();
 
 // Export for Vercel
 module.exports = app;

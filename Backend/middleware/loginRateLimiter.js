@@ -10,6 +10,7 @@
 const { Ratelimit } = require('@upstash/ratelimit');
 const { Redis } = require('@upstash/redis');
 const { logRateLimitExceeded } = require('../utils/securityLogger');
+const crypto = require('crypto');
 
 // Configuration - hardened for production
 const LOGIN_RATE_LIMIT = parseInt(process.env.LOGIN_RATE_LIMIT) || 5; // attempts per window
@@ -165,13 +166,36 @@ const attemptRecovery = async () => {
 };
 
 /**
- * Extract IP address safely with proxy support
+ * Normalize IP address for login rate limiting.
+ *
+ * BEHAVIOR:
+ * - Uses `req.ip` only (derived from Express trust proxy config).
+ * - Ignores the full X-Forwarded-For chain to prevent spoofing.
+ * - Collapses IPv6 addresses to a hashed subnet prefix so that
+ *   carrier-grade IPv6 rotation does not lock out legitimate users.
  */
-const extractIP = (req) => {
-  return req.ip || 
-         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-         req.connection?.remoteAddress || 
-         'unknown';
+const normalizeIpForRateLimiting = (rawIp) => {
+  if (!rawIp || typeof rawIp !== 'string') {
+    return 'ip:unknown';
+  }
+
+  let ip = rawIp.trim();
+
+  // Strip IPv4-mapped IPv6 prefix if present (e.g. ::ffff:203.0.113.5)
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  // IPv6: hash a stable prefix (approx /64) to reduce false lockouts
+  if (ip.includes(':') && !ip.includes('.')) {
+    const segments = ip.split(':');
+    const prefix = segments.slice(0, 4).join(':');
+    const hash = crypto.createHash('sha256').update(prefix).digest('hex').slice(0, 16);
+    return `ip6:${hash}`;
+  }
+
+  // IPv4 or generic string
+  return `ip4:${ip}`;
 };
 
 /**
@@ -185,8 +209,9 @@ const extractEmail = (req) => {
  * Login rate limiting middleware with enhanced security
  * 
  * Behavior:
- * - Applies IP-based rate limiting first (5 attempts per 15 minutes)
- * - Then applies account-based rate limiting if email is present (10 attempts per hour)
+ * - Applies IP-based rate limiting first as a SOFT guardrail
+ *   (never blocks by itself; only logs and sets headers)
+ * - Then applies account-based rate limiting as the HARD limit if email is present
  * - Returns generic message on limit exceeded
  * - Never throws; on Redis failure it logs and gracefully allows the request
  * - Logs all rate limit violations for security monitoring
@@ -201,11 +226,12 @@ const loginRateLimiter = async (req, res, next) => {
   }
 
   try {
-    const ip = extractIP(req);
+    const rawIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    const normalizedIp = normalizeIpForRateLimiting(rawIp);
     const email = extractEmail(req);
     
-    // IP-based rate limiting (primary defense)
-    const ipIdentifier = `login_ip:${ip}`;
+    // IP-based rate limiting (SOFT defense: logs + headers, no hard block)
+    const ipIdentifier = `login_${normalizedIp}`;
     const ipResult = await ipRateLimiter.limit(ipIdentifier);
 
     if (!ipResult.success) {
@@ -214,16 +240,13 @@ const loginRateLimiter = async (req, res, next) => {
       // Log rate limit exceeded for security monitoring
       logRateLimitExceeded(ipIdentifier, LOGIN_RATE_LIMIT, LOGIN_RATE_WINDOW, req);
       
-      // Set proper rate limit headers
+      // Set proper rate limit headers, but DO NOT hard-block here.
+      // This allows short bursts / carrier IP rotation without immediate lockout.
       res.setHeader('X-RateLimit-Limit', ipResult.limit?.toString() || LOGIN_RATE_LIMIT.toString());
       res.setHeader('X-RateLimit-Remaining', ipResult.remaining?.toString() || '0');
       res.setHeader('Retry-After', Math.max(retryAfter, 1).toString());
-      
-      return res.status(429).json({
-        success: false,
-        message: 'Too many login attempts. Please try again later.',
-        timestamp: new Date().toISOString()
-      });
+      // Continue to account-based checks so that only the specific account
+      // can be locked out, not the entire shared IP / carrier block.
     }
 
     // Account-based rate limiting (secondary defense)

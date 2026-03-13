@@ -26,13 +26,14 @@ const sanitizeUserAgent = (userAgent) => {
 };
 
 /**
- * Extract IP address safely with proxy support
+ * Extract IP address safely using Express trust proxy configuration.
+ *
+ * IMPORTANT:
+ * - We rely solely on `req.ip`, which already respects `app.set('trust proxy', 1)`.
+ * - We DO NOT re-parse `X-Forwarded-For` here to avoid spoofed header attacks.
  */
 const extractIP = (req) => {
-  return req.ip || 
-         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
-         req.connection?.remoteAddress || 
-         'unknown';
+  return req.ip || req.connection?.remoteAddress || 'unknown';
 };
 
 /**
