@@ -59,7 +59,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
               pdfFile: null,
             });
           }
-        }).catch((error) => {
+      }).catch((error: any) => {
           safeCatch('BookForm.loadBook')(error);
         }).finally(() => setLoading(false));
       } catch (error) {

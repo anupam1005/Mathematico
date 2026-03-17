@@ -407,6 +407,16 @@ class AdminService {
     }
   }
 
+  async updateCourseStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminFetch('PUT', `/courses/${id}/status`, { status });
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating course status:', error);
+      return { success: false, error: 'Failed to update course status' };
+    }
+  }
+
   // Live Classes
   async getAllLiveClasses(page: number = 1, limit: number = 10): Promise<ApiResponse<any>> {
     try {
@@ -467,9 +477,43 @@ class AdminService {
       return { success: false, error: 'Failed to delete live class' };
     }
   }
+
+  async updateLiveClassStatus(id: string, status: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminFetch('PUT', `/live-classes/${id}/status`, { status });
+      return { success: true, data: response.data };
+    } catch (error) {
+      errorHandler.handleError('Error updating live class status:', error);
+      return { success: false, error: 'Failed to update live class status' };
+    }
+  }
+
+  // Settings (optional backend support)
+  async getSettings(): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminFetch('GET', '/settings');
+      const payload = processResponse(response);
+      return { success: true, data: payload.data ?? payload };
+    } catch (error) {
+      errorHandler.handleError('Error fetching settings:', error);
+      return { success: false, error: 'Failed to fetch settings' };
+    }
+  }
+
+  async updateSettings(settings: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminFetch('PUT', '/settings', settings);
+      const payload = processResponse(response);
+      return { success: true, data: payload.data ?? payload };
+    } catch (error) {
+      errorHandler.handleError('Error updating settings:', error);
+      return { success: false, error: 'Failed to update settings' };
+    }
+  }
 }
 
 // Export a singleton instance
 const adminService = new AdminService();
 export default adminService;
-export { AdminService };
+// Back-compat: some screens import `{ adminService }`
+export { adminService, AdminService };

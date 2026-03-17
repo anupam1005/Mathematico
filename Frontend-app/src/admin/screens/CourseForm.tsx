@@ -47,7 +47,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
             pdf: null,
           });
         }
-      }).catch((error) => {
+      }).catch((error: any) => {
         safeCatch('CourseForm.loadCourse')(error);
       }).finally(() => setLoading(false));
     }
