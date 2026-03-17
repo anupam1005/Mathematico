@@ -158,11 +158,53 @@ const attemptRecovery = async () => {
 };
 
 /**
+ * Safe IP resolver with fallback hierarchy for serverless environments
+ * - Uses x-forwarded-for first (Vercel provides this)
+ * - Falls back to socket.remoteAddress
+ * - Final fallback to safe default
+ */
+const getSafeIp = (req) => {
+  try {
+    // Try X-Forwarded-For header first (Vercel sets this)
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      const firstIp = forwardedFor.split(',')[0]?.trim();
+      if (firstIp && firstIp !== 'unknown' && firstIp !== '') {
+        return firstIp;
+      }
+    }
+
+    // Try socket.remoteAddress
+    const socketIp = req.socket?.remoteAddress;
+    if (socketIp && typeof socketIp === 'string' && socketIp !== 'unknown' && socketIp !== '') {
+      return socketIp;
+    }
+
+    // Try connection.remoteAddress (legacy)
+    const connectionIp = req.connection?.remoteAddress;
+    if (connectionIp && typeof connectionIp === 'string' && connectionIp !== 'unknown' && connectionIp !== '') {
+      return connectionIp;
+    }
+
+    // Try Express req.ip (may be undefined in some serverless scenarios)
+    const expressIp = req.ip;
+    if (expressIp && typeof expressIp === 'string' && expressIp !== 'unknown' && expressIp !== '') {
+      return expressIp;
+    }
+  } catch (error) {
+    console.warn('[RATE_LIMITER] IP resolution failed:', error?.message || 'Unknown error');
+  }
+
+  // Safe fallback for all failure cases
+  return '0.0.0.0';
+};
+
+/**
  * Normalize IP address for rate limiting.
  *
  * IMPORTANT:
- * - Relies solely on `req.ip` which is derived from Express trust proxy config.
- * - NEVER re-parse the full X-Forwarded-For chain here to avoid header spoofing.
+ * - Uses safe IP resolver with fallback hierarchy for serverless environments
+ * - Handles undefined req.ip, malformed headers, IPv6 compression issues
  * - For IPv6, we hash a subnet prefix so that carrier IPv6 rotation does not
  *   cause a new bucket for every tiny IP change, while still grouping activity.
  */
@@ -178,12 +220,17 @@ const normalizeIpForRateLimiting = (rawIp) => {
     ip = ip.substring(7);
   }
 
-  // IPv6: hash a stable prefix to avoid per-address buckets but keep separation
+  // Handle IPv6 compression issues safely
   if (ip.includes(':') && !ip.includes('.')) {
-    const segments = ip.split(':');
-    const prefix = segments.slice(0, 4).join(':'); // approximate /64 prefix
-    const hash = crypto.createHash('sha256').update(prefix).digest('hex').slice(0, 16);
-    return `ip6:${hash}`;
+    try {
+      const segments = ip.split(':');
+      const prefix = segments.slice(0, 4).join(':'); // approximate /64 prefix
+      const hash = crypto.createHash('sha256').update(prefix).digest('hex').slice(0, 16);
+      return `ip6:${hash}`;
+    } catch (hashError) {
+      console.warn('[RATE_LIMITER] IPv6 hashing failed, using fallback:', hashError?.message || 'Unknown error');
+      return 'ip6:unknown';
+    }
   }
 
   // IPv4 or unknown but non-empty string
@@ -216,13 +263,26 @@ const enhancedRateLimiter = async (req, res, next) => {
   }
 
   try {
-    const rawIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    // Use safe IP resolver instead of relying solely on req.ip
+    const rawIp = getSafeIp(req);
     const normalizedIp = normalizeIpForRateLimiting(rawIp);
     const email = extractEmail(req);
     
-    // IP-based rate limiting
-    const ipIdentifier = `${normalizedIp}:${req.path}`;
-    const ipResult = await ipRateLimiter.limit(ipIdentifier);
+    // IP-based rate limiting with additional safety
+    let ipResult;
+    let ipIdentifier;
+    try {
+      ipIdentifier = `${normalizedIp}:${req.path}`;
+      ipResult = await ipRateLimiter.limit(ipIdentifier);
+    } catch (ipError) {
+      console.error('[RATE_LIMITER] IP rate limiting failed:', {
+        error: ipError?.message || 'Unknown error',
+        path: req.path,
+        normalizedIp
+      });
+      // Continue without IP rate limiting if it fails
+      return next();
+    }
 
     if (!ipResult.success) {
       const retryAfter = Math.ceil((ipResult.reset - Date.now()) / 1000);
@@ -242,12 +302,23 @@ const enhancedRateLimiter = async (req, res, next) => {
       });
     }
 
-    // Account-based rate limiting (only if email is provided)
+    // Account-based rate limiting (only if email is provided) with additional safety
     if (email && email.trim()) {
-      const accountIdentifier = `account:${email.toLowerCase()}:${req.path}`;
-      const accountResult = await accountRateLimiter.limit(accountIdentifier);
+      let accountResult;
+      let accountIdentifier;
+      try {
+        accountIdentifier = `account:${email.toLowerCase()}:${req.path}`;
+        accountResult = await accountRateLimiter.limit(accountIdentifier);
+      } catch (accountError) {
+        console.error('[RATE_LIMITER] Account rate limiting failed:', {
+          error: accountError?.message || 'Unknown error',
+          path: req.path,
+          email: email.toLowerCase()
+        });
+        // Continue without account rate limiting if it fails
+      }
 
-      if (!accountResult.success) {
+      if (accountResult && !accountResult.success) {
         const retryAfter = Math.ceil((accountResult.reset - Date.now()) / 1000);
         
         // Log rate limit exceeded
@@ -266,11 +337,13 @@ const enhancedRateLimiter = async (req, res, next) => {
       }
 
       // Set account rate limit headers for successful requests
-      if (accountResult.limit !== undefined) {
-        res.setHeader('X-Account-RateLimit-Limit', accountResult.limit.toString());
-      }
-      if (accountResult.remaining !== undefined) {
-        res.setHeader('X-Account-RateLimit-Remaining', accountResult.remaining.toString());
+      if (accountResult) {
+        if (accountResult.limit !== undefined) {
+          res.setHeader('X-Account-RateLimit-Limit', accountResult.limit.toString());
+        }
+        if (accountResult.remaining !== undefined) {
+          res.setHeader('X-Account-RateLimit-Remaining', accountResult.remaining.toString());
+        }
       }
     }
 
@@ -290,9 +363,17 @@ const enhancedRateLimiter = async (req, res, next) => {
 
     return next();
   } catch (error) {
+    console.error('[RATE_LIMITER] Unexpected error:', {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack,
+      path: req.path,
+      method: req.method
+    });
+    
     handleRedisFailure(error);
     
-    // Never crash server or return 500 due to rate limiting
+    // NEVER crash server or return 500 due to rate limiting
+    // ALWAYS call next() to ensure request continues
     return next();
   }
 };

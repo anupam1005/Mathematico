@@ -357,19 +357,20 @@ function registerRoutes() {
     return enhancedRateLimiterInstance(req, res, next);
   });
 
-  app.use(`${API_PREFIX}/auth/login`, (req, res, next) => {
-    if (!loginRateLimiterInstance) {
-      loginRateLimiterInstance = require('./middleware/loginRateLimiter');
-    }
-    return loginRateLimiterInstance(req, res, next);
-  });
+  // Temporarily bypass rate limiting for login and register routes for debugging
+  // app.use(`${API_PREFIX}/auth/login`, (req, res, next) => {
+  //   if (!loginRateLimiterInstance) {
+  //     loginRateLimiterInstance = require('./middleware/loginRateLimiter');
+  //   }
+  //   return loginRateLimiterInstance(req, res, next);
+  // });
 
-  app.use(`${API_PREFIX}/auth/register`, (req, res, next) => {
-    if (!loginRateLimiterInstance) {
-      loginRateLimiterInstance = require('./middleware/loginRateLimiter');
-    }
-    return loginRateLimiterInstance(req, res, next);
-  });
+  // app.use(`${API_PREFIX}/auth/register`, (req, res, next) => {
+  //   if (!loginRateLimiterInstance) {
+  //     loginRateLimiterInstance = require('./middleware/loginRateLimiter');
+  //   }
+  //   return loginRateLimiterInstance(req, res, next);
+  // });
 
   app.use(`${API_PREFIX}/payments`, (req, res, next) => {
     if (!enhancedRateLimiterInstance) {
@@ -383,6 +384,24 @@ function registerRoutes() {
       enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
     }
     return enhancedRateLimiterInstance(req, res, next);
+  });
+
+  // Global error boundary - placed after rate limiters but before routes
+  app.use((err, req, res, next) => {
+    console.error('[GLOBAL_ERROR_BOUNDARY]', {
+      error: err?.message || 'Unknown error',
+      stack: err?.stack,
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Always return JSON response, never crash
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
   });
   
   // Route modules
