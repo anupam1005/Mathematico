@@ -268,7 +268,7 @@ const enhancedRateLimiter = async (req, res, next) => {
     const normalizedIp = normalizeIpForRateLimiting(rawIp);
     const email = extractEmail(req);
     
-    // IP-based rate limiting with additional safety
+    // IP-based rate limiting - no fallback in production
     let ipResult;
     let ipIdentifier;
     try {
@@ -280,8 +280,14 @@ const enhancedRateLimiter = async (req, res, next) => {
         path: req.path,
         normalizedIp
       });
-      // Continue without IP rate limiting if it fails
-      return next();
+      // In production, rate limiter failures should be logged but not crash the request
+      // Return structured error response instead of silent continuation
+      return res.status(503).json({
+        success: false,
+        error: 'RATE_LIMITER_SERVICE_UNAVAILABLE',
+        message: 'Rate limiting service temporarily unavailable',
+        timestamp: new Date().toISOString()
+      });
     }
 
     if (!ipResult.success) {
@@ -302,7 +308,7 @@ const enhancedRateLimiter = async (req, res, next) => {
       });
     }
 
-    // Account-based rate limiting (only if email is provided) with additional safety
+    // Account-based rate limiting (only if email is provided) - no fallback in production
     if (email && email.trim()) {
       let accountResult;
       let accountIdentifier;
@@ -315,10 +321,16 @@ const enhancedRateLimiter = async (req, res, next) => {
           path: req.path,
           email: email.toLowerCase()
         });
-        // Continue without account rate limiting if it fails
+        // In production, rate limiter failures should return structured error
+        return res.status(503).json({
+          success: false,
+          error: 'RATE_LIMITER_SERVICE_UNAVAILABLE',
+          message: 'Rate limiting service temporarily unavailable',
+          timestamp: new Date().toISOString()
+        });
       }
 
-      if (accountResult && !accountResult.success) {
+      if (!accountResult.success) {
         const retryAfter = Math.ceil((accountResult.reset - Date.now()) / 1000);
         
         // Log rate limit exceeded
@@ -337,13 +349,11 @@ const enhancedRateLimiter = async (req, res, next) => {
       }
 
       // Set account rate limit headers for successful requests
-      if (accountResult) {
-        if (accountResult.limit !== undefined) {
-          res.setHeader('X-Account-RateLimit-Limit', accountResult.limit.toString());
-        }
-        if (accountResult.remaining !== undefined) {
-          res.setHeader('X-Account-RateLimit-Remaining', accountResult.remaining.toString());
-        }
+      if (accountResult.limit !== undefined) {
+        res.setHeader('X-Account-RateLimit-Limit', accountResult.limit.toString());
+      }
+      if (accountResult.remaining !== undefined) {
+        res.setHeader('X-Account-RateLimit-Remaining', accountResult.remaining.toString());
       }
     }
 
@@ -372,9 +382,13 @@ const enhancedRateLimiter = async (req, res, next) => {
     
     handleRedisFailure(error);
     
-    // NEVER crash server or return 500 due to rate limiting
-    // ALWAYS call next() to ensure request continues
-    return next();
+    // In production, unexpected errors should return structured JSON response
+    return res.status(503).json({
+      success: false,
+      error: 'RATE_LIMITER_UNEXPECTED_ERROR',
+      message: 'Rate limiting service encountered an unexpected error',
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

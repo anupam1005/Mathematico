@@ -223,47 +223,25 @@ const connectDB = async () => {
 };
 
 /**
- * Fire-and-forget connection warm-up.
- *
- * Designed for serverless:
- * - Kicks off a background connection attempt during cold start,
- *   so the first login/auth request is less likely to pay the full
- *   connection penalty.
- * - Never throws and never blocks the main bootstrap path.
- */
-const warmMongoConnection = () => {
-  if (warmConnectionStarted) {
-    return;
-  }
-
-  warmConnectionStarted = true;
-
-  // Fire-and-forget; errors are logged but do not crash the process
-  connectDB()
-    .then((conn) => {
-      if (conn) {
-        console.log('MONGO_WARM_CONNECTION_READY', {
-          host: conn.host,
-          database: conn.name,
-          readyState: conn.readyState
-        });
-      }
-    })
-    .catch((error) => {
-      console.warn('MONGO_WARM_CONNECTION_FAILED', {
-        message: error?.message || String(error)
-      });
-    });
-};
-
-/**
  * Health check utility - performs actual ping test with connection validation
  */
 const performHealthCheck = async () => {
-  const connection = await connectDB();
-  
-  // Perform actual ping test
   try {
+    // Check if there's an existing connection without forcing a new one
+    if (mongoose.connection.readyState !== 1) {
+      return {
+        connected: false,
+        readyState: mongoose.connection.readyState,
+        host: null,
+        name: null,
+        ping: 'no_connection',
+        error: 'No active database connection'
+      };
+    }
+    
+    const connection = mongoose.connection;
+    
+    // Perform actual ping test
     const pingResult = await connection.db.admin().ping();
     
     // Get connection stats for monitoring
@@ -285,7 +263,16 @@ const performHealthCheck = async () => {
       lastConnectionError: lastConnectionError?.message || null
     };
   } catch (pingError) {
-    throw new Error(`Database ping failed: ${pingError.message}`);
+    return {
+      connected: false,
+      readyState: mongoose.connection.readyState,
+      host: mongoose.connection.host,
+      name: mongoose.connection.name,
+      ping: 'failed',
+      error: pingError.message,
+      connectionAttempts,
+      lastConnectionError: lastConnectionError?.message || null
+    };
   }
 };
 
@@ -328,6 +315,5 @@ module.exports = {
   connectDB,
   performHealthCheck, 
   closeConnection,
-  getConnectionStatus,
-  warmMongoConnection
+  getConnectionStatus
 };

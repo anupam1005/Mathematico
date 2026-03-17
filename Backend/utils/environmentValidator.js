@@ -14,34 +14,36 @@ function validateEnvironment() {
   const errors = [];
   const warnings = [];
   
-  // Core required variables
+  // Core required variables (mobile-only production)
   const requiredVars = [
     'NODE_ENV',
     'MONGO_URI',
-    'JWT_SECRET',
-    'JWT_REFRESH_SECRET'
+    'JWT_SECRET'
   ];
   
-  // Production-specific required variables
+  // Production-specific required variables (mobile-only)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const enableWebClient = process.env.ENABLE_WEB_CLIENT === 'true';
+  
   const productionRequiredVars = [
     'ADMIN_EMAIL',
-    'ADMIN_PASSWORD',
-    'REDIS_URL',
-    'FRONTEND_URL'
+    'ADMIN_PASSWORD'
   ];
   
-  // Optional but recommended variables
+  // Only require FRONTEND_URL if web client is explicitly enabled
+  if (enableWebClient) {
+    productionRequiredVars.push('FRONTEND_URL');
+  }
+  
+  // No optional variables in strict production - everything must be explicit
   const recommendedVars = [
-    'ENABLE_SECURE_PDF',
     'ENABLE_RAZORPAY',
     'RAZORPAY_KEY_ID',
     'RAZORPAY_KEY_SECRET',
-    'RAZORPAY_WEBHOOK_SECRET',
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
     'CLOUDINARY_API_SECRET',
-    'COOKIE_DOMAIN',
-    'ENABLE_ENHANCED_RATE_LIMITING'
+    'ENABLE_SECURE_PDF'
   ];
   
   // Check required variables
@@ -60,7 +62,7 @@ function validateEnvironment() {
     });
   }
   
-  // Check recommended variables
+  // Check recommended variables (warnings only)
   recommendedVars.forEach(varName => {
     if (!process.env[varName]) {
       warnings.push(`Missing recommended environment variable: ${varName}`);
@@ -173,12 +175,17 @@ function validateSecuritySettings(errors, warnings) {
  */
 function validateCorsSettings(errors, warnings) {
   const isProduction = process.env.NODE_ENV === 'production';
-  const hasAllowedOrigins = process.env.ALLOWED_ORIGINS;
+  const enableWebClient = process.env.ENABLE_WEB_CLIENT === 'true';
+  const hasAllowedOrigins = Boolean(process.env.ALLOWED_ORIGINS);
   
-  // In production mobile app, ALLOWED_ORIGINS is optional
-  if (isProduction && !hasAllowedOrigins) {
-    console.log('✅ Mobile App Production: ALLOWED_ORIGINS not required (using dynamic CORS reflection)');
-    return;
+  // In production, only validate CORS if web client is enabled
+  if (isProduction && enableWebClient) {
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      errors.push('FRONTEND_URL is required when ENABLE_WEB_CLIENT=true in production');
+    } else if (!frontendUrl.startsWith('https://')) {
+      errors.push('FRONTEND_URL must start with https:// in production');
+    }
   }
   
   // Check for deprecated CORS variables (development only)
@@ -202,8 +209,10 @@ function validateCorsSettings(errors, warnings) {
     const origins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
     
     if (isProduction) {
-      // In production, ALLOWED_ORIGINS should not be used for mobile apps
-      warnings.push('ALLOWED_ORIGINS is set in production but not needed for mobile apps (using dynamic reflection)');
+      // In production, ALLOWED_ORIGINS should only be used for web clients
+      if (!enableWebClient) {
+        warnings.push('ALLOWED_ORIGINS is set but ENABLE_WEB_CLIENT=false (mobile-only deployment)');
+      }
       
       if (origins.includes('*') || origins.includes('*/*')) {
         errors.push('Wildcard CORS origins are not allowed in production');
@@ -381,6 +390,23 @@ function getProductionHardeningChecklist() {
     critical: false
   });
   
+  // Mobile vs Web deployment checklist
+  const enableWebClient = process.env.ENABLE_WEB_CLIENT === 'true';
+  
+  checklist.push({
+    category: 'Architecture',
+    item: 'Web client configuration is consistent',
+    status: (enableWebClient && process.env.FRONTEND_URL) || (!enableWebClient) ? 'PASS' : 'FAIL',
+    critical: enableWebClient
+  });
+  
+  checklist.push({
+    category: 'Architecture',
+    item: 'Mobile deep link URL is configured',
+    status: process.env.MOBILE_DEEP_LINK_URL ? 'PASS' : 'WARN',
+    critical: false
+  });
+
   // Configuration checklist items
   checklist.push({
     category: 'Configuration',

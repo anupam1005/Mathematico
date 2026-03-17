@@ -1895,7 +1895,7 @@ const getAllPayments = async (req, res) => {
       });
     }
 
-    // Graceful fallback if no model
+    // Return empty array if no model available
     res.json({
       success: true,
       data: [],

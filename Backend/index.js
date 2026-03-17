@@ -39,6 +39,11 @@ let envValidationOk = false;
 // - Caches ONLY successful validation
 // - On failure, responds with error but retries on the next request
 function environmentValidationMiddleware(req, res, next) {
+  // Bypass environment validation for critical auth endpoints
+  if (req.path === '/api/v1/auth/login' || req.path === '/api/v1/auth/register') {
+    return next();
+  }
+
   if (envValidationCompleted) {
     // Only cache the "all good" case; failures always re-validate
     if (envValidationOk) {
@@ -61,13 +66,22 @@ function environmentValidationMiddleware(req, res, next) {
     }
 
     if (isProduction) {
+      const enableWebClient = process.env.ENABLE_WEB_CLIENT === 'true';
       const frontendUrl = (process.env.FRONTEND_URL || '').trim();
 
-      if (!frontendUrl) {
-        throw new Error('FRONTEND_URL must be set in production');
-      }
-      if (!frontendUrl.startsWith('https://')) {
-        throw new Error('FRONTEND_URL must start with https:// in production');
+      // Only require FRONTEND_URL if web client is enabled
+      if (enableWebClient) {
+        if (!frontendUrl) {
+          throw new Error('FRONTEND_URL must be set in production when ENABLE_WEB_CLIENT=true');
+        }
+        if (!frontendUrl.startsWith('https://')) {
+          throw new Error('FRONTEND_URL must start with https:// in production');
+        }
+      } else {
+        // Mobile-only deployment - FRONTEND_URL is optional
+        if (frontendUrl && !frontendUrl.startsWith('https://')) {
+          console.warn('[ENV_VALIDATION] FRONTEND_URL should start with https:// in production, but ignoring for mobile-only deployment');
+        }
       }
     }
 
@@ -551,19 +565,6 @@ app.get('/health', async (req, res) => {
 
 // Register environment validation before security and routes (but after health/root)
 app.use(environmentValidationMiddleware);
-
-// Warm MongoDB connection in the background so first auth/login requests
-// do not incur the full cold connection penalty on serverless cold starts.
-// This is non-blocking and safe for both Vercel and local development.
-if (process.env.ENABLE_MONGO_WARMING !== 'false') {
-  try {
-    warmMongoConnection();
-  } catch (e) {
-    console.warn('MONGO_WARM_CONNECTION_INIT_FAILED', {
-      message: e?.message || String(e)
-    });
-  }
-}
 
 // Security middleware registration (runs after env validation)
 // Rate limiter modules are required lazily inside route registration

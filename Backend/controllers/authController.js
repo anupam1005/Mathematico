@@ -828,8 +828,19 @@ const forgotPassword = async (req, res) => {
     // IMPORTANT:
     // Password reset links must point to the FRONTEND app/site, not the backend API host.
     // This avoids broken links when BACKEND_URL is unset (common on serverless deployments).
+    // For mobile-only deployments, MOBILE_DEEP_LINK_URL must be explicitly configured.
     const frontendBaseUrl = (process.env.FRONTEND_URL || '').trim();
-    const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
+    const mobileDeepLinkUrl = (process.env.MOBILE_DEEP_LINK_URL || '').trim();
+    
+    let resetUrl;
+    if (frontendBaseUrl) {
+      resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
+    } else if (mobileDeepLinkUrl) {
+      resetUrl = `${mobileDeepLinkUrl}?action=reset-password&token=${resetToken}`;
+    } else {
+      // No fallback - strict production behavior
+      throw new Error('Password reset requires either FRONTEND_URL or MOBILE_DEEP_LINK_URL environment variables');
+    }
 
     try {
       await sendEmail({
@@ -1005,8 +1016,6 @@ module.exports = {
   changePassword,
   // Additional methods for routes
   healthCheck: (req, res) => res.json({ success: true, status: 'healthy', service: 'auth', timestamp: new Date().toISOString() }),
-  testDatabase: (req, res) => res.json({ success: true, message: 'Database test endpoint', connected: true }),
-  verifyUsersCollection: (req, res) => res.json({ success: true, message: 'Users collection verified', exists: true, count: 0 }),
   getProfile: (req, res) => res.json({ success: true, data: req.user || {} }),
   
   // JWT Health Check
