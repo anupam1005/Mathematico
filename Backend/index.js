@@ -26,6 +26,37 @@ const app = express();
 // Configure serverless-safe trust proxy
 require('./config/trustProxy')(app);
 
+// EARLY CORS COMPAT (CRITICAL FOR "XHR request failed" PREVENTION)
+// Some clients (webviews / proxies / browsers) will report "XHR request failed" if an OPTIONS preflight
+// is rejected or if an error response is missing CORS headers.
+//
+// We intentionally register a minimal, serverless-safe CORS header layer BEFORE guards so that even
+// size/timeout/env failures are still readable by clients.
+app.use((req, res, next) => {
+  try {
+    const origin = req.headers?.origin;
+    if (origin && typeof origin === 'string') {
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Requested-With, Accept, Origin'
+      );
+    }
+
+    // Always terminate preflight quickly
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // GLOBAL MIDDLEWARE ORDER - CRITICAL FOR SERVERLESS STABILITY
 // 1. Health endpoints (no validation, no rate limiting)
 // 2. Size and timeout guards (prevent hanging requests)

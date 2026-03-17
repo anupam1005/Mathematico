@@ -16,15 +16,50 @@
  * Catches any synchronous or asynchronous errors and returns structured JSON
  */
 const serverlessErrorGuard = (err, req, res, next) => {
+  const errorId = (() => {
+    try {
+      const crypto = require('crypto');
+      return typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : crypto.randomBytes(16).toString('hex');
+    } catch (_) {
+      return `err_${Date.now()}`;
+    }
+  })();
+
+  // Attach a correlation id without changing response JSON formats
+  try {
+    res.setHeader('X-Error-Id', errorId);
+  } catch (_) {}
+
+  const safeBody = (() => {
+    try {
+      const body = req.body;
+      if (!body || typeof body !== 'object') return body;
+      const clone = Array.isArray(body) ? body.slice(0, 20) : { ...body };
+      if (clone && typeof clone === 'object') {
+        if (Object.prototype.hasOwnProperty.call(clone, 'password')) clone.password = '[REDACTED]';
+        if (Object.prototype.hasOwnProperty.call(clone, 'confirmPassword')) clone.confirmPassword = '[REDACTED]';
+        if (Object.prototype.hasOwnProperty.call(clone, 'newPassword')) clone.newPassword = '[REDACTED]';
+        if (Object.prototype.hasOwnProperty.call(clone, 'oldPassword')) clone.oldPassword = '[REDACTED]';
+        if (Object.prototype.hasOwnProperty.call(clone, 'refreshToken')) clone.refreshToken = '[REDACTED]';
+      }
+      return clone;
+    } catch (_) {
+      return undefined;
+    }
+  })();
+
   // Log the full error for debugging
   console.error('[SERVERLESS_ERROR_GUARD]', {
+    errorId,
     error: err?.message || 'Unknown error',
     stack: err?.stack,
     path: req.path,
     method: req.method,
     url: req.url,
     headers: req.headers,
-    body: req.body,
+    body: safeBody,
     query: req.query,
     params: req.params,
     ip: req.ip,
