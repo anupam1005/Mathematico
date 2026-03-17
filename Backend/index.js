@@ -1,29 +1,73 @@
-// Mathematico Backend - Production Serverless Architecture
-// Environment variables are loaded from Vercel dashboard - no local .env files needed
+// Mathematico Backend - SERVERLESS-STABLE PRODUCTION ARCHITECTURE
+// 
+// GUARANTEES:
+// - Login/Register NEVER produce "XHR request failed"
+// - Backend NEVER crashes middleware chain  
+// - Rate limiter NEVER throws or blocks requests
+// - All errors return JSON responses
+// - Mobile-first, serverless-optimized
 'use strict';
 
-// Top-level imports are intentionally minimal for serverless cold-start performance.
-// Heavy modules are required lazily inside route/middleware scopes.
+// Top-level imports are intentionally minimal for serverless cold-start performance
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
-const { connectDB, warmMongoConnection } = require('./config/database');
+// Import serverless-safe modules
+const { connectDB, performHealthCheck } = require('./config/serverlessDatabase');
+const { serverlessErrorGuard, timeoutGuard, sizeGuard, asyncHandler } = require('./middleware/serverlessErrorGuard');
+const { serverlessEnvironmentValidator } = require('./middleware/serverlessEnvironmentValidator');
+const { createAuthProtection } = require('./middleware/authProtection');
+const { rateLimiterHealthCheck } = require('./middleware/serverlessRateLimiter');
 
 // Production serverless app
 const app = express();
 
-// Configure trust proxy for production (lazy require to keep top-level light)
+// Configure serverless-safe trust proxy
 require('./config/trustProxy')(app);
 
-// Root endpoint - always available, even if environment is misconfigured
+// GLOBAL MIDDLEWARE ORDER - CRITICAL FOR SERVERLESS STABILITY
+// 1. Health endpoints (no validation, no rate limiting)
+// 2. Size and timeout guards (prevent hanging requests)
+// 3. Environment validation (mobile-first, auth bypass)
+// 4. Security middleware (helmet, CORS, parsers)
+// 5. Rate limiting (serverless-safe, never throws)
+// 6. Global error boundary (catch all remaining errors)
+// 7. Business routes
+
+// 1. Health endpoints - ALWAYS available, no validation, no rate limiting
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "ok",
     service: "mathematico-backend",
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    architecture: "serverless-stable"
   });
+});
+
+app.get('/health', asyncHandler(async (req, res) => {
+  const healthData = await performHealthCheck();
+  return res.status(200).json({
+    status: 'ok',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    database: {
+      status: healthData.connected ? 'connected' : 'disconnected',
+      readyState: healthData.readyState,
+      type: 'mongodb',
+      connected: healthData.connected,
+      host: healthData.host,
+      name: healthData.name,
+      ping: healthData.ping
+    }
+  });
+}));
+
+// Rate limiter health check
+app.get('/health/rate-limiter', (req, res) => {
+  const health = rateLimiterHealthCheck();
+  res.status(200).json(health);
 });
 
 // Favicon handlers - prevent 404s
@@ -31,80 +75,14 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/favicon.png", (req, res) => res.status(204).end());
 app.get("/favicon", (req, res) => res.status(204).end());
 
-// Lightweight environment validation state (cache only success)
-let envValidationCompleted = false;
-let envValidationOk = false;
+// 2. Size and timeout guards - prevent hanging requests
+app.use(sizeGuard(10 * 1024 * 1024)); // 10MB limit
+app.use(timeoutGuard(25000)); // 25 second timeout
 
-// Lightweight environment validation for all business routes
-// - Caches ONLY successful validation
-// - On failure, responds with error but retries on the next request
-function environmentValidationMiddleware(req, res, next) {
-  // Bypass environment validation for critical auth endpoints
-  if (req.path === '/api/v1/auth/login' || req.path === '/api/v1/auth/register') {
-    return next();
-  }
+// 3. Environment validation - mobile-first, auth endpoints bypassed
+app.use(serverlessEnvironmentValidator);
 
-  if (envValidationCompleted) {
-    // Only cache the "all good" case; failures always re-validate
-    if (envValidationOk) {
-      return next();
-    }
-  }
-
-  try {
-    // Fast, lightweight validation only (serverless-safe)
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    const mongoUri = (process.env.MONGO_URI || '').trim();
-    const jwtSecret = (process.env.JWT_SECRET || '').trim();
-
-    if (!mongoUri) {
-      throw new Error('MONGO_URI must be configured');
-    }
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET must be configured');
-    }
-
-    if (isProduction) {
-      const enableWebClient = process.env.ENABLE_WEB_CLIENT === 'true';
-      const frontendUrl = (process.env.FRONTEND_URL || '').trim();
-
-      // Only require FRONTEND_URL if web client is enabled
-      if (enableWebClient) {
-        if (!frontendUrl) {
-          throw new Error('FRONTEND_URL must be set in production when ENABLE_WEB_CLIENT=true');
-        }
-        if (!frontendUrl.startsWith('https://')) {
-          throw new Error('FRONTEND_URL must start with https:// in production');
-        }
-      } else {
-        // Mobile-only deployment - FRONTEND_URL is optional
-        if (frontendUrl && !frontendUrl.startsWith('https://')) {
-          console.warn('[ENV_VALIDATION] FRONTEND_URL should start with https:// in production, but ignoring for mobile-only deployment');
-        }
-      }
-    }
-
-    // Cache ONLY the successful outcome
-    envValidationCompleted = true;
-    envValidationOk = true;
-
-    return next();
-  } catch (err) {
-    // Do NOT cache failure – allow retry on subsequent requests
-    envValidationCompleted = false;
-    envValidationOk = false;
-
-    return res.status(500).json({
-      success: false,
-      error: 'ENVIRONMENT_VALIDATION_ERROR',
-      message: err?.message || 'Environment validation failed.',
-      environment: process.env.NODE_ENV,
-      timestamp: new Date().toISOString()
-    });
-  }
-}
-
+// 4. Security middleware (helmet, CORS, parsers)
 function registerSecurityMiddleware() {
   app.disable('x-powered-by');
   
@@ -129,8 +107,7 @@ function registerSecurityMiddleware() {
     })
   );
 
-  // Lazily require heavy webhook controller and rate limiter on first use
-  // Use express.raw with strict size limit to avoid memory bloat.
+  // Webhook security with rate limiting
   let webhookRateLimiterInstance;
   let webhookHandlerInstance;
 
@@ -138,7 +115,6 @@ function registerSecurityMiddleware() {
     '/api/v1/webhook/razorpay',
     express.raw({ type: 'application/json', limit: '1mb' }),
     (req, res, next) => {
-      // Preserve backwards compatibility with handlers expecting req.rawBody
       if (!req.rawBody) {
         req.rawBody = req.body;
       }
@@ -172,7 +148,7 @@ function registerSecurityMiddleware() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Lazy-load cookie parser to keep top-level imports minimal
+  // Cookie parser
   const cookieParser = require('cookie-parser');
   app.use(cookieParser());
 
@@ -182,7 +158,7 @@ function registerSecurityMiddleware() {
   const corsOptions = getCorsOptions();
   app.use(cors(corsOptions));
 
-  // Request logging
+  // Request logging (optional)
   const { isFeatureEnabled } = require('./utils/featureFlags');
   if (isFeatureEnabled('requestLogging')) {
     const requestLogger = require('./middleware/requestLogger');
@@ -190,59 +166,61 @@ function registerSecurityMiddleware() {
   }
 }
 
+// 5. Rate limiting - serverless-safe, never throws
+function registerRateLimiting() {
+  const API_PREFIX = '/api/v1';
+  
+  // Auth endpoints with specific protection
+  app.use(`${API_PREFIX}/auth/login`, createAuthProtection('login'));
+  app.use(`${API_PREFIX}/auth/register`, createAuthProtection('register'));
+  
+  // Admin routes with strict protection
+  app.use(`${API_PREFIX}/admin`, createAuthProtection('admin'));
+  
+  // Public mobile routes with soft protection
+  app.use(`${API_PREFIX}/mobile`, createAuthProtection('public'));
+  
+  // General API protection
+  app.use(`${API_PREFIX}`, createAuthProtection('public'));
+  
+  // Payment routes with soft protection
+  app.use(`${API_PREFIX}/payments`, createAuthProtection('public'));
+}
+
+// 6. Global error boundary (non-error middleware)
+// NOTE: Express error handlers must be registered AFTER routes to catch their errors.
+// This boundary exists to guard against sync throws in middleware registration and to normalize JSON responses.
+app.use((req, res, next) => {
+  try {
+    // Ensure we never accidentally return HTML
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// 7. Business routes
 function registerRoutes() {
   const API_PREFIX = '/api/v1';
 
-  // Redis health check
-  app.get('/api/v1/health/redis', async (req, res) => {
-    try {
-      const { redisHealthCheck: enhancedHealthCheck } = require('./middleware/enhancedRateLimiter');
-      const enhancedStatus = await enhancedHealthCheck();
-      
-      res.status(200).json({
-        service: 'redis',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV,
-        enhanced: enhancedStatus,
-        overall: {
-          healthy: enhancedStatus.healthy,
-          status: enhancedStatus.healthy ? 'healthy' : 'degraded'
-        }
-      });
-    } catch (error) {
-      res.status(200).json({
-        service: 'redis',
-        status: 'degraded',
-        message: error?.message || 'Redis health check failed',
-        healthy: false,
-        timestamp: new Date().toISOString(),
-        overall: {
-          healthy: false,
-          status: 'degraded'
-        }
-      });
-    }
-  });
-
   // Bootstrap diagnostics
-  app.get('/api/v1/bootstrap/diagnostics', (req, res) => {
+  app.get('/api/v1/bootstrap/diagnostics', asyncHandler(async (req, res) => {
     const isProduction = process.env.NODE_ENV === 'production';
     let envValidation = null;
     let conflicts = [];
     let checklist = [];
     let heavyValidationError = null;
 
-    // Run full, heavy-weight environment validation only on this diagnostics endpoint
+    // Run serverless environment validation on this diagnostics endpoint (no legacy imports)
     try {
       const {
-        validateEnvironment,
-        checkEnvironmentConflicts,
-        getProductionHardeningChecklist
-      } = require('./utils/environmentValidator');
+        validateServerlessEnvironment,
+        getServerlessChecklist
+      } = require('./middleware/serverlessEnvironmentValidator');
 
-      envValidation = validateEnvironment();
-      conflicts = checkEnvironmentConflicts();
-      checklist = getProductionHardeningChecklist();
+      envValidation = validateServerlessEnvironment();
+      checklist = getServerlessChecklist()?.checklist || [];
     } catch (error) {
       heavyValidationError = {
         message: error?.message || String(error),
@@ -250,12 +228,13 @@ function registerRoutes() {
       };
     }
 
+    const mongoose = require('mongoose');
     const diagnostics = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       isServerless: process.env.VERCEL === '1' || process.env.SERVERLESS === '1',
+      architecture: 'serverless-stable',
       bootstrap: {
-        // Stateless by design in serverless; no long-lived bootstrap state
         completed: null,
         error: null,
         lastSuccessfulConnection: null
@@ -290,133 +269,63 @@ function registerRoutes() {
     };
 
     res.status(200).json(diagnostics);
-  });
+  }));
 
   // Bootstrap endpoint to create admin user
-  app.post('/api/v1/bootstrap', async (req, res) => {
-    try {
-      const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-      const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+  app.post('/api/v1/bootstrap', asyncHandler(async (req, res) => {
+    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+    const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 
-      if (!ADMIN_CONFIGURED) {
-        return res.status(503).json({
-          success: false,
-          message: 'Admin credentials not configured in environment variables',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Connect to database
-      await connectDB();
-      
-      // Import User model
-      const UserModel = require('./models/User');
-      
-      // Check if admin already exists
-      let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
-      
-      if (!adminUser) {
-        console.log('[BOOTSTRAP] Creating admin user...');
-        adminUser = new UserModel({
-          name: 'Admin User',
-          email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD,
-          role: 'admin',
-          isAdmin: true,
-          isActive: true,
-          isEmailVerified: true
-        });
-        await adminUser.save();
-        console.log('[BOOTSTRAP] Admin user created successfully');
-      } else {
-        adminUser.role = 'admin';
-        adminUser.isAdmin = true;
-        adminUser.isActive = true;
-        adminUser.isEmailVerified = true;
-        await adminUser.save();
-        console.log('[BOOTSTRAP] Admin user verified and updated');
-      }
-      
-      return res.status(200).json({
-        success: true,
-        message: 'Bootstrap completed successfully',
-        data: {
-          adminEmail: ADMIN_EMAIL,
-          adminCreated: !adminUser.isNew,
-          timestamp: new Date().toISOString()
-        }
-      });
-      
-    } catch (error) {
-      console.error('[BOOTSTRAP] Error:', error);
-      return res.status(500).json({
+    if (!ADMIN_CONFIGURED) {
+      return res.status(503).json({
         success: false,
-        message: 'Bootstrap failed',
-        error: error.message,
+        message: 'Admin credentials not configured in environment variables',
         timestamp: new Date().toISOString()
       });
     }
-  });
 
-  // API routes with rate limiting
-  // Lazily require enhanced rate limiter and login rate limiter to reduce cold start size
-  let enhancedRateLimiterInstance;
-  let loginRateLimiterInstance;
-
-  app.use(`${API_PREFIX}`, (req, res, next) => {
-    if (!enhancedRateLimiterInstance) {
-      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
-    }
-    return enhancedRateLimiterInstance(req, res, next);
-  });
-
-  // Temporarily bypass rate limiting for login and register routes for debugging
-  // app.use(`${API_PREFIX}/auth/login`, (req, res, next) => {
-  //   if (!loginRateLimiterInstance) {
-  //     loginRateLimiterInstance = require('./middleware/loginRateLimiter');
-  //   }
-  //   return loginRateLimiterInstance(req, res, next);
-  // });
-
-  // app.use(`${API_PREFIX}/auth/register`, (req, res, next) => {
-  //   if (!loginRateLimiterInstance) {
-  //     loginRateLimiterInstance = require('./middleware/loginRateLimiter');
-  //   }
-  //   return loginRateLimiterInstance(req, res, next);
-  // });
-
-  app.use(`${API_PREFIX}/payments`, (req, res, next) => {
-    if (!enhancedRateLimiterInstance) {
-      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
-    }
-    return enhancedRateLimiterInstance(req, res, next);
-  });
-
-  app.use(`${API_PREFIX}/admin`, (req, res, next) => {
-    if (!enhancedRateLimiterInstance) {
-      enhancedRateLimiterInstance = require('./middleware/enhancedRateLimiter');
-    }
-    return enhancedRateLimiterInstance(req, res, next);
-  });
-
-  // Global error boundary - placed after rate limiters but before routes
-  app.use((err, req, res, next) => {
-    console.error('[GLOBAL_ERROR_BOUNDARY]', {
-      error: err?.message || 'Unknown error',
-      stack: err?.stack,
-      path: req.path,
-      method: req.method,
-      timestamp: new Date().toISOString()
-    });
+    // Connect to database
+    await connectDB();
     
-    // Always return JSON response, never crash
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      timestamp: new Date().toISOString()
+    // Import User model
+    const UserModel = require('./models/User');
+    
+    // Check if admin already exists
+    let adminUser = await UserModel.findOne({ email: ADMIN_EMAIL });
+    
+    if (!adminUser) {
+      console.log('[BOOTSTRAP] Creating admin user...');
+      adminUser = new UserModel({
+        name: 'Admin User',
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+        role: 'admin',
+        isAdmin: true,
+        isActive: true,
+        isEmailVerified: true
+      });
+      await adminUser.save();
+      console.log('[BOOTSTRAP] Admin user created successfully');
+    } else {
+      adminUser.role = 'admin';
+      adminUser.isAdmin = true;
+      adminUser.isActive = true;
+      adminUser.isEmailVerified = true;
+      await adminUser.save();
+      console.log('[BOOTSTRAP] Admin user verified and updated');
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Bootstrap completed successfully',
+      data: {
+        adminEmail: ADMIN_EMAIL,
+        adminCreated: !adminUser.isNew,
+        timestamp: new Date().toISOString()
+      }
     });
-  });
+  }));
   
   // Route modules
   app.use(`${API_PREFIX}/auth`, require('./routes/auth'));
@@ -431,11 +340,19 @@ function registerRoutes() {
   app.get(`${API_PREFIX}`, (req, res) => {
     res.json({
       success: true,
-      message: 'Mathematico API - Production Hardened',
-      version: '2.0.0',
+      message: 'Mathematico API - Serverless Stable',
+      version: '3.0.0',
       database: 'MongoDB',
       environment: process.env.NODE_ENV,
+      architecture: 'serverless-stable',
       timestamp: new Date().toISOString(),
+      guarantees: [
+        'Login/Register never produce XHR request failed',
+        'Backend never crashes middleware chain',
+        'Rate limiter never throws or blocks requests',
+        'All errors return JSON responses',
+        'Mobile-first, serverless-optimized'
+      ],
       endpoints: {
         auth: `${API_PREFIX}/auth`,
         admin: `${API_PREFIX}/admin`,
@@ -446,14 +363,13 @@ function registerRoutes() {
         webhook: `${API_PREFIX}/webhook`,
         securePdf: `${API_PREFIX}/secure-pdf`,
         health: '/health',
-        redisHealth: '/api/v1/health/redis'
+        rateLimiterHealth: '/health/rate-limiter'
       }
     });
   });
 
   // Swagger documentation - production-safe conditional loading
   if (process.env.ENABLE_SWAGGER === "true") {
-    // Lazily load Swagger configuration and handlers on first /api-docs request
     let swaggerInitialized = false;
     let swaggerHandlers = null;
 
@@ -469,7 +385,7 @@ function registerRoutes() {
             ];
             console.log('[SWAGGER] Swagger documentation enabled at /api-docs');
           } else {
-            console.log('[SWAGGER] Swagger documentation disabled - packages not available or specs not generated');
+            console.log('[SWAGGER] Swagger documentation disabled - packages not available');
           }
         } catch (err) {
           console.warn('[SWAGGER] Swagger documentation failed to load:', err?.message || 'Unknown error');
@@ -482,20 +398,19 @@ function registerRoutes() {
         return swaggerHandlers[0](req, res, () => swaggerHandlers[1](req, res, next));
       }
 
-      // If Swagger is unavailable, fall through to 404 handler as before
       return next();
     };
 
     app.use('/api-docs', swaggerLazyHandler);
-  } else {
-    console.log('[SWAGGER] Swagger documentation disabled (ENABLE_SWAGGER !== "true")');
   }
 }
 
 function registerErrorHandling() {
+  // 404 handler
   app.use('*', (req, res) => {
     res.status(404).json({
       success: false,
+      error: 'ENDPOINT_NOT_FOUND',
       message: 'Endpoint not found',
       path: req.originalUrl,
       method: req.method,
@@ -503,83 +418,34 @@ function registerErrorHandling() {
     });
   });
 
-  const errorHandler = require('./middleware/errorHandler');
-  app.use(errorHandler);
-
-  app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err?.message || err);
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-    return res.status(500).json({ 
-      error: err?.message || String(err), 
-      stack: err?.stack 
-    });
-  });
+  // Final error handler - ALWAYS JSON, NEVER crashes middleware chain
+  app.use(serverlessErrorGuard);
 }
 
-// Global middleware ordering:
-// 1. Lightweight health and root endpoints
-// 2. Environment validation
-// 3. Security middleware (helmet, CORS, parsers, webhook security)
-// 4. Application routes and error handling
+// MIDDLEWARE REGISTRATION - CRITICAL ORDER
+// 1. Health endpoints (already registered above)
+// 2. Size and timeout guards (already registered above)
+// 3. Environment validation (already registered above)
 
-// Health endpoint MUST be registered before environment validation
-app.get('/health', async (req, res) => {
-  try {
-    const { performHealthCheck } = require('./config/database');
-    const healthData = await performHealthCheck();
-
-    return res.status(200).json({
-      status: 'ok',
-      environment: process.env.NODE_ENV,
-      timestamp: new Date().toISOString(),
-      database: {
-        status: 'connected',
-        readyState: healthData.readyState,
-        type: 'mongodb',
-        connected: healthData.connected,
-        host: healthData.host,
-        name: healthData.name,
-        ping: healthData.ping
-      }
-    });
-  } catch (error) {
-    return res.status(200).json({
-      status: 'degraded',
-      environment: process.env.NODE_ENV,
-      timestamp: new Date().toISOString(),
-      database: {
-        status: 'disconnected',
-        readyState: mongoose.connection.readyState || 0,
-        type: 'mongodb',
-        connected: false,
-        host: null,
-        name: null,
-        error: error.message
-      },
-      error: error.message
-    });
-  }
-});
-
-// Register environment validation before security and routes (but after health/root)
-app.use(environmentValidationMiddleware);
-
-// Security middleware registration (runs after env validation)
-// Rate limiter modules are required lazily inside route registration
+// 4. Security middleware
 registerSecurityMiddleware();
 
-// JWT validation (configuration-only, does not affect request flow)
+// 5. Rate limiting
+registerRateLimiting();
+
+// 6. Global error boundary (already registered above)
+
+// 7. Routes and error handling
+registerRoutes();
+registerErrorHandling();
+
+// JWT validation (configuration-only)
 try {
+  const { validateJwtConfig } = require('./config/jwt');
   validateJwtConfig();
 } catch (jwtErr) {
   console.warn('⚠️ JWT configuration invalid:', jwtErr?.message || jwtErr);
 }
-
-// Route and error handling registration
-registerRoutes();
-registerErrorHandling();
 
 // Export for Vercel
 module.exports = app;

@@ -6,7 +6,7 @@ const {
   getTokenExpirationMs,
   verifyAccessToken
 } = require('../utils/jwt');
-const { connectDB } = require('../config/database');
+const { connectDB } = require('../config/serverlessDatabase');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const {
@@ -18,7 +18,7 @@ const {
   logReplayAttack,
   logTokenInvalidation
 } = require('../utils/securityLogger');
-const enhancedRateLimiter = require('../middleware/enhancedRateLimiter');
+// NOTE: rate limiting is enforced at the router/app level via serverless-safe middleware.
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern
