@@ -73,6 +73,20 @@ const serverlessErrorGuard = (err, req, res, next) => {
   let errorCode = 'SERVER_RUNTIME_ERROR';
   let message = 'Unexpected runtime failure';
 
+  // Body-parser / JSON parse errors (malformed JSON)
+  // Express sets `err.type = 'entity.parse.failed'` and `err.status = 400` for invalid JSON bodies.
+  if (
+    err &&
+    (err.type === 'entity.parse.failed' ||
+      err.status === 400 ||
+      err.statusCode === 400) &&
+    (err instanceof SyntaxError || (typeof err.message === 'string' && err.message.toLowerCase().includes('json')))
+  ) {
+    statusCode = 400;
+    errorCode = 'INVALID_JSON';
+    message = 'Invalid JSON payload';
+  }
+
   // Handle specific error types
   if (err.name === 'ValidationError') {
     statusCode = 400;
