@@ -21,14 +21,14 @@ export default {
     // Force Hermes everywhere (Expo + native Android/iOS) for consistent runtime behavior.
     jsEngine: 'hermes',
     orientation: 'portrait',
-    owner: 'admindipanjan',
+    owner: 'dipanjanmathematico',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: '0b240a8b-590c-4c9f-8c36-6b6a54b5c646'
+        projectId: '3be2683e-daea-4170-a064-24212ad6f37b'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
