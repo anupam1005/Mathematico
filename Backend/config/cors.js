@@ -204,6 +204,21 @@ function getCorsOptions() {
     origin: isProduction ? 
       // Production: Strict allowlist (no wildcard reflection)
       (origin, callback) => {
+        // RUNTIME FORENSIC TRACE (PRODUCTION) - DO NOT CHANGE BEHAVIOR
+        console.error("CORS_TRACE_RUNTIME", {
+          origin,
+          typeofOrigin: typeof origin,
+          isNullString: origin === "null",
+          isUndefined: origin === undefined,
+          allowedOrigins,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.error("CORS_DECISION", {
+          origin,
+          decision: allowedOrigins.includes(origin) ? "ALLOW" : "REJECT"
+        });
+
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) {
           console.log('[CORS] Production: Allowing request with no origin (mobile app)');
@@ -216,6 +231,10 @@ function getCorsOptions() {
 
         const error = new Error(`CORS: Origin ${origin} not allowed`);
         error.code = 'CORS_ORIGIN_NOT_ALLOWED';
+        console.error("[CORS REJECTED]", {
+          origin,
+          reason: "NOT_IN_ALLOWLIST"
+        });
         return callback(error);
       }
       :
