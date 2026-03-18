@@ -1,19 +1,18 @@
-// PRODUCTION: Use strict API_BASE_URL from config (no old-domain fallback)
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+// @ts-expect-error axios does not publish typings for deep adapter imports; required for Hermes/Metro static inclusion
+import xhrAdapter from 'axios/lib/adapters/xhr.js';
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 
-// IMPORTANT: No interceptors.
-// Your migration rules require: "Ensure no interceptor mutates headers."
-// We attach auth headers per request using fresh plain objects only.
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
   validateStatus: (status: number) => status < 500,
+  adapter: xhrAdapter,
 });
 
 type PlainHeaders = Record<string, string>;
@@ -40,10 +39,8 @@ const buildAuthHeaders = async (extraHeaders?: unknown): Promise<PlainHeaders> =
       headers.Authorization = `Bearer ${token}`;
     }
   } catch {
-    // ignore token read failures; request can still proceed without auth
   }
 
-  // Merge extra headers (plain strings only) without mutating caller objects
   const extras = toPlainStringHeaders(extraHeaders);
   for (const [k, v] of Object.entries(extras)) {
     headers[k] = v;
@@ -63,37 +60,28 @@ const sanitizeConfig = async (config?: AxiosRequestConfig): Promise<AxiosRequest
   if (config.responseType) finalConfig.responseType = config.responseType;
   if (config.withCredentials !== undefined) finalConfig.withCredentials = config.withCredentials;
 
-  // Headers: always replace with a fresh plain object (Hermes-safe)
   finalConfig.headers = await buildAuthHeaders(config.headers);
   return finalConfig;
 };
 
-// PRODUCTION-SAFE: Path building utilities
 const normalizePath = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
 };
 
 const buildUrl = (basePath: string, path?: string): string => {
-  // Remove trailing slash from base path
   const normalizedBase = basePath.replace(/\/$/, '');
   
-  // If no path provided, return just the base
   if (!path) return normalizedBase;
   
-  // Normalize the path to ensure it starts with /
   const normalizedPath = normalizePath(path);
   
-  // Prevent double path concatenation
   if (normalizedBase.endsWith(normalizedPath)) {
     return normalizedBase;
   }
   
-  // Concatenate base and path
   return `${normalizedBase}${normalizedPath}`;
 };
 
-// PRODUCTION-SAFE: API client wrapper with complete error isolation
-// No frozen object mutations, no AxiosHeaders usage
 export const withBasePath = (basePath: string) => ({
   get: <T = any>(path: string, config?: AxiosRequestConfig) => {
     return sanitizeConfig(config).then((finalConfig) => api.get<T>(buildUrl(basePath, path), finalConfig));
@@ -111,7 +99,6 @@ export const withBasePath = (basePath: string) => ({
     return sanitizeConfig(config).then((finalConfig) => api.patch<T>(buildUrl(basePath, path), data, finalConfig));
   },
   request: <T = any>(config: AxiosRequestConfig) => {
-    // HERMES-SAFE: Avoid spreading Axios config objects. Copy only primitives we need.
     const url = buildUrl(basePath, config.url || '');
     return sanitizeConfig(config).then((finalConfig) => api.request<T>({ ...finalConfig, url }));
   },
