@@ -17,18 +17,18 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '8.7.1',
+    version: '8.7.2',
     // Force Hermes everywhere (Expo + native Android/iOS) for consistent runtime behavior.
     jsEngine: 'hermes',
     orientation: 'portrait',
-    owner: 'dipanjanmathematico213',
+    owner: 'mathematicoofficial',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: '8a60db2e-4ef0-48ad-a64e-356244ce9d92'
+        projectId: '1d4e9bae-e6c1-45e2-bbc7-3f4e9a878a21'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
