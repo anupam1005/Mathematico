@@ -63,17 +63,13 @@ export default function LoginScreen({ navigation }: any) {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       
-      // PRODUCTION DEBUG: Log payload before API call
-      console.log('LOGIN_PAYLOAD', { email: normalizedEmail, passwordLength: password.length });
-      
       const result = await login(normalizedEmail, password);
       
       if (!result.success) {
         setApiError(result.message || 'Invalid email or password. Please try again.');
       }
     } catch (error) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_LOGIN_ERROR', error);
+      // Hermes-safe error handling is centralized in safeCatch/auth stack.
       setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);

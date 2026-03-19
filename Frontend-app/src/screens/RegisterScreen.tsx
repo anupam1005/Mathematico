@@ -98,21 +98,13 @@ export default function RegisterScreen({ navigation }: any) {
       const normalizedEmail = email.trim().toLowerCase();
       const trimmedName = name.trim();
       
-      // PRODUCTION DEBUG: Log payload before API call
-      console.log('REGISTER_PAYLOAD', { 
-        name: trimmedName, 
-        email: normalizedEmail, 
-        passwordLength: password.length 
-      });
-      
       const result = await register(trimmedName, normalizedEmail, password);
 
       if (!result.success) {
         setApiError(result.message || 'Registration failed. Please check your information and try again.');
       }
     } catch (error) {
-      // PRODUCTION DEBUG: Full error logging
-      console.error('FULL_REGISTER_ERROR', error);
+      // Hermes-safe error handling is centralized in safeCatch/auth stack.
       setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);

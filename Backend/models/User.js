@@ -138,26 +138,6 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   
-  // Refresh Token Management (for secure authentication)
-  refreshTokens: [{
-    tokenHash: {
-      type: String,
-      required: true
-    },
-    expiresAt: {
-      type: Date,
-      required: true
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    },
-    deviceInfo: {
-      userAgent: String,
-      ip: String
-    }
-  }],
-  
   // Learning Progress
   enrolledCourses: [{
     courseId: {
@@ -349,7 +329,6 @@ userSchema.index({ isActive: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ 'enrolledCourses.courseId': 1, 'enrolledCourses.enrolledAt': -1 }); // Compound index for enrollments
 userSchema.index({ 'purchasedBooks.bookId': 1, 'purchasedBooks.purchasedAt': -1 }); // Compound index for payments
-userSchema.index({ refreshTokens: 1 }); // For refresh token cleanup
 userSchema.index({ loginAttempts: 1 }); // For account lockout queries
 userSchema.index({ lockUntil: 1 }); // For expired lock cleanup
 
@@ -601,54 +580,6 @@ userSchema.statics.createSafe = async function(userData) {
 // Static method to find active users
 userSchema.statics.findActiveUsers = function() {
   return this.find({ isActive: true });
-};
-
-// Instance method to add refresh token
-userSchema.methods.addRefreshToken = function(tokenHash, expiresAt, deviceInfo = {}) {
-  // Remove expired tokens
-  this.refreshTokens = this.refreshTokens.filter(token => token.expiresAt > new Date());
-  
-  // Limit to 5 active refresh tokens per user (multiple devices)
-  if (this.refreshTokens.length >= 5) {
-    this.refreshTokens.shift(); // Remove oldest token
-  }
-  
-  this.refreshTokens.push({
-    tokenHash,
-    expiresAt,
-    deviceInfo
-  });
-  
-  return this.save();
-};
-
-// Instance method to remove refresh token
-userSchema.methods.removeRefreshToken = function(tokenHash) {
-  this.refreshTokens = this.refreshTokens.filter(token => token.tokenHash !== tokenHash);
-  return this.save();
-};
-
-// Instance method to clear all refresh tokens (logout from all devices)
-userSchema.methods.clearAllRefreshTokens = function() {
-  this.refreshTokens = [];
-  return this.save();
-};
-
-// Instance method to verify refresh token
-userSchema.methods.hasValidRefreshToken = function(tokenHash) {
-  const token = this.refreshTokens.find(t => t.tokenHash === tokenHash);
-  
-  if (!token) return false;
-  
-  // Check if token is expired
-  if (token.expiresAt < new Date()) {
-    // Remove expired token
-    this.refreshTokens = this.refreshTokens.filter(t => t.tokenHash !== tokenHash);
-    this.save();
-    return false;
-  }
-  
-  return true;
 };
 
 // Serverless-safe model export pattern

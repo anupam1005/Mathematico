@@ -3,7 +3,6 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { upload } = require('../utils/fileUpload');
 const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
-const ensureDatabase = require('../middleware/ensureDatabase');
 const { asyncHandler } = require('../middleware/serverlessErrorGuard');
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
@@ -17,21 +16,21 @@ const methodNotAllowed = (expectedMethod, path) => (req, res) => {
 };
 
 // Public auth routes - all require database connection
-router.post('/login', ensureDatabase, asyncHandler(authController.login));
+router.post('/login', asyncHandler(authController.login));
 router.get('/login', methodNotAllowed('POST', '/login'));
-router.post('/register', ensureDatabase, asyncHandler(authController.register));
+router.post('/register', asyncHandler(authController.register));
 router.get('/register', methodNotAllowed('POST', '/register'));
-router.post('/logout', ensureDatabase, asyncHandler(authController.logout));
-router.post('/refresh-token', ensureDatabase, asyncHandler(authController.refreshToken));
-router.post('/forgot-password', ensureDatabase, asyncHandler(authController.forgotPassword));
-router.post('/reset-password', ensureDatabase, asyncHandler(authController.resetPassword));
-router.post('/verify-email', ensureDatabase, asyncHandler(authController.verifyEmail));
+router.post('/logout', asyncHandler(authController.logout));
+router.post('/refresh-token', asyncHandler(authController.refreshToken));
+router.post('/forgot-password', asyncHandler(authController.forgotPassword));
+router.post('/reset-password', asyncHandler(authController.resetPassword));
+router.post('/verify-email', asyncHandler(authController.verifyEmail));
 
 // Health check route
 router.get('/health', authController.healthCheck);
 
 // Protected auth routes - require both database and strict authentication
-router.get('/profile', ensureDatabase, strictAuthenticateToken, asyncHandler(authController.getProfile));
+router.get('/profile', strictAuthenticateToken, asyncHandler(authController.getProfile));
 
 // Import profile controller
 let profileController;
@@ -39,15 +38,15 @@ try {
   profileController = require('../controllers/profileController');
 
   // Profile management routes - require both database and strict authentication
-  router.put('/profile', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.updateProfile));
-  router.post('/profile/picture', ensureDatabase, strictAuthenticateToken, upload.single('profilePicture'), asyncHandler(profileController.uploadProfilePicture));
-  router.delete('/profile/picture', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.deleteProfilePicture));
-  router.put('/change-password', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.changePassword));
+  router.put('/profile', strictAuthenticateToken, asyncHandler(profileController.updateProfile));
+  router.post('/profile/picture', strictAuthenticateToken, upload.single('profilePicture'), asyncHandler(profileController.uploadProfilePicture));
+  router.delete('/profile/picture', strictAuthenticateToken, asyncHandler(profileController.deleteProfilePicture));
+  router.put('/change-password', strictAuthenticateToken, asyncHandler(profileController.changePassword));
 
   // User preferences routes - require both database and strict authentication
-  router.get('/preferences', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.getPreferences));
-  router.put('/preferences', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.updatePreferences));
-  router.delete('/account', ensureDatabase, strictAuthenticateToken, asyncHandler(profileController.deleteAccount));
+  router.get('/preferences', strictAuthenticateToken, asyncHandler(profileController.getPreferences));
+  router.put('/preferences', strictAuthenticateToken, asyncHandler(profileController.updatePreferences));
+  router.delete('/account', strictAuthenticateToken, asyncHandler(profileController.deleteAccount));
 
 } catch (error) {
   console.warn('[AUTH_ROUTES] Optional profile controller failed to load:', error?.message || String(error));

@@ -1,75 +1,98 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
-import { Storage } from '../utils/storage';
+import { API_PATHS } from '../constants/apiPaths';
+import { installRefreshInterceptor, isRequestCancelled } from './refreshInterceptor';
+
+type ApiErrorCode =
+  | 'OFFLINE'
+  | 'TIMEOUT'
+  | 'NETWORK_ERROR'
+  | 'UNAUTHORIZED'
+  | 'API_ERROR'
+  | 'CANCELLED';
+
+export interface ApiError {
+  message: string;
+  code: ApiErrorCode;
+  status?: number;
+  data?: any;
+  originalError?: unknown;
+}
+
+const DEFAULT_TIMEOUT_MS = 20000;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000,
+  timeout: DEFAULT_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 });
 
-// Centralized auth token & error handling
+const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
+  if (isRequestCancelled(error)) {
+    return {
+      message: 'Request cancelled',
+      code: 'CANCELLED',
+      originalError: error,
+    };
+  }
 
-// Inject Authorization header from SecureStore/AsyncStorage
-api.interceptors.request.use(
-  async (config) => {
-    try {
-      const token = await Storage.getItem<string>('authToken', false);
-      if (token && typeof token === 'string' && token.length > 0) {
-        config.headers = config.headers || {};
-        // Never override an explicit Authorization header
-        if (!('Authorization' in config.headers)) {
-          (config.headers as any).Authorization = `Bearer ${token}`;
-        }
-      }
-    } catch {
-      // Swallow – network calls should still proceed without token
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+  if (error.code === 'ECONNABORTED') {
+    return {
+      message: 'Request timeout. Please try again.',
+      code: 'TIMEOUT',
+      originalError: error,
+    };
+  }
 
-// Normalize errors and handle auth failures
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    // Network-level errors (no response)
-    if (!error.response) {
-      return Promise.reject({
-        message: 'Network error - please check your connection and try again.',
-        code: 'NETWORK_ERROR',
-      });
-    }
-
-    const { status, data } = error.response;
+  if (error.response) {
+    const status = error.response.status;
+    const data = (error.response.data || {}) as any;
 
     if (status === 401) {
-      // Clear tokens on unauthorized so the app can treat user as logged out
-      try {
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-        await Storage.deleteItem('user');
-      } catch {
-      }
-
-      return Promise.reject({
-        message: data?.message || 'Your session has expired. Please log in again.',
+      return {
+        message: data?.message || 'Session expired. Please login again.',
         code: 'UNAUTHORIZED',
         status,
-      });
+        data,
+        originalError: error,
+      };
     }
 
-    return Promise.reject({
+    return {
       message: data?.message || 'Request failed. Please try again.',
       code: 'API_ERROR',
       status,
       data,
-    });
-  },
+      originalError: error,
+    };
+  }
+
+  if (error.code === 'ERR_NETWORK' || !error.response) {
+    return {
+      message: 'Network error. Please check your connection and try again.',
+      code: 'NETWORK_ERROR',
+      originalError: error,
+    };
+  }
+
+  return {
+    message: error.message || 'Request failed. Please try again.',
+    code: 'API_ERROR',
+    originalError: error,
+  };
+};
+
+const refreshHandle = installRefreshInterceptor(api, {
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+  healthPath: `${API_PATHS.auth}/health`,
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => Promise.reject(await normalizeApiError(error))
 );
 
 const normalizePath = (path: string): string => {
@@ -77,16 +100,20 @@ const normalizePath = (path: string): string => {
 };
 
 const buildUrl = (basePath: string, path?: string): string => {
-  const normalizedBase = basePath.replace(/\/$/, '');
-  
+  const normalizedBase = normalizePath(basePath).replace(/\/+$/, '');
+
   if (!path) return normalizedBase;
-  
-  const normalizedPath = normalizePath(path);
-  
-  if (normalizedBase.endsWith(normalizedPath)) {
-    return normalizedBase;
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
   }
-  
+
+  const normalizedPath = normalizePath(path);
+
+  if (normalizedPath === normalizedBase || normalizedPath.startsWith(`${normalizedBase}/`)) {
+    return normalizedPath;
+  }
+
   return `${normalizedBase}${normalizedPath}`;
 };
 
@@ -111,5 +138,17 @@ export const withBasePath = (basePath: string) => ({
     return api.request<T>({ ...config, url });
   },
 });
+
+export const createRequestController = () => {
+  const controller = new AbortController();
+  return {
+    signal: controller.signal,
+    cancel: () => controller.abort(),
+  };
+};
+
+export const runBackendHealthCheck = () => refreshHandle.checkHealth();
+
+export const ejectApiInterceptors = () => refreshHandle.eject();
 
 export default api;

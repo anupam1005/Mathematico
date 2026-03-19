@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Alert, Platform } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { Alert } from 'react-native';
 import authService from '../services/authService';
-import { Storage } from '../utils/storage';
 import { safeCatch } from '../utils/safeCatch';
 
 export interface User {
@@ -48,60 +47,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const bootstrapRef = useRef<Promise<void> | null>(null);
+  const logoutRef = useRef<Promise<void> | null>(null);
 
-  // Check if user is logged in on app start
-  useEffect(() => {
-    (async () => {
+  const restoreAuthState = async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
+    try {
+      const restored = await authService.restoreSession();
+      const nextUser = (restored.user || null) as User | null;
+      const nextIsAuthenticated = Boolean(restored.isAuthenticated);
+      setUser(nextUser);
+      setIsAuthenticated(nextIsAuthenticated);
+      return { user: nextUser, isAuthenticated: nextIsAuthenticated };
+    } catch (error: any) {
+      safeCatch('AuthContext.restoreAuthState')(error);
+      setUser(null);
+      setIsAuthenticated(false);
+      return { user: null, isAuthenticated: false };
+    }
+  };
+
+  const bootstrap = async (): Promise<void> => {
+    if (bootstrapRef.current) {
+      await bootstrapRef.current;
+      return;
+    }
+
+    bootstrapRef.current = (async () => {
       try {
-        await checkAuthStatus();
-      } catch (error) {
-        safeCatch('AuthContext.checkAuthStatus.useEffect')(error);
+        setIsLoading(true);
+        await restoreAuthState();
+      } finally {
+        setIsLoading(false);
       }
     })();
+
+    try {
+      await bootstrapRef.current;
+    } finally {
+      bootstrapRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    bootstrap().catch(safeCatch('AuthContext.bootstrap.useEffect'));
   }, []);
 
   const checkAuthStatus = async () => {
-    try {
-      setIsLoading(true);
-      const token = await authService.getToken();
-      
-      if (token && token.length > 10) {
-        // Token is valid, try to get user data from storage
-        const storedUser = await Storage.getItem<string>('user', false);
-        if (storedUser) {
-          try {
-            const userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
-            setUser(userData);
-            setIsAuthenticated(true);
-          } catch (parseError: any) {
-            safeCatch('AuthContext.checkAuthStatus.parseUser')(parseError);
-            // Clear invalid data and logout
-            await Storage.deleteItem('user');
-            await Storage.deleteItem('authToken');
-            setUser(null);
-            setIsAuthenticated(false);
-          }
-        } else {
-          // If no user data, clear token and logout
-          await Storage.deleteItem('authToken');
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    } catch (error: any) {
-      safeCatch('AuthContext.checkAuthStatus')(error);
-      // Clear invalid tokens
-      await Storage.deleteItem('authToken');
-      await Storage.deleteItem('refreshToken');
-      await Storage.deleteItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
+    await bootstrap();
   };
 
   const login = async (
@@ -111,37 +103,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authService.login(email, password);
-      
-      if (response.success && response.data) {
-        const userData = response.data.user;
-        const token = (response.data as any).token || (response.data as any).accessToken;
 
-        if (token && token !== 'null' && token !== 'undefined') {
-          await Storage.setItem('authToken', token);
+      if (response.success) {
+        const restored = await restoreAuthState();
+        if (!restored.isAuthenticated) {
+          return { success: false, message: 'Login failed to initialize session' };
         }
-        
-        const user: User = {
-          id: userData.id?.toString() || userData._id?.toString() || 'unknown',
-          name: userData.name || userData.email?.split('@')[0] || 'User',
-          email: userData.email || email,
-          is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          role: userData.role || 'student',
-          email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
-          is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
-          created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
-          updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
-        };
-        
-        await Storage.setItem('user', JSON.stringify(user));
-        
-        setUser(user);
-        setIsAuthenticated(true);
         return { success: true, message: response.message };
-      } else {
-        // Return failure with message so UI can display appropriate error
-        return { success: false, message: response.message || 'Invalid credentials' };
       }
+
+      return { success: false, message: response.message || 'Invalid credentials' };
     } catch (error: any) {
       const errorMessage = 'An error occurred during login. Please try again.';
       safeCatch('AuthContext.login')(error);
@@ -159,44 +130,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authService.register(name, email, password);
-      
-      if (response.success && response.data) {
-        const userData = response.data.user;
-        const token = response.data.token;
 
-        if (token && token !== 'null' && token !== 'undefined') {
-          await Storage.setItem('authToken', token);
+      if (response.success) {
+        const restored = await restoreAuthState();
+        if (!restored.isAuthenticated) {
+          return { success: false, message: 'Registration failed to initialize session' };
         }
-        
-        const user: User = {
-          id: userData.id?.toString() || userData._id?.toString() || 'unknown',
-          name: userData.name || userData.email?.split('@')[0] || 'User',
-          email: userData.email || email,
-          is_admin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          isAdmin: userData.isAdmin || userData.is_admin || userData.role === 'admin',
-          role: userData.role || 'student',
-          email_verified: userData.email_verified !== undefined ? userData.email_verified : (userData.isEmailVerified || false),
-          is_active: userData.is_active !== undefined ? userData.is_active : (userData.isActive !== false),
-          created_at: userData.created_at || userData.createdAt || new Date().toISOString(),
-          updated_at: userData.updated_at || userData.updatedAt || new Date().toISOString(),
-        };
-        
-        await Storage.setItem('user', JSON.stringify(user));
-        
-        setUser(user);
-        setIsAuthenticated(true);
-        
         Alert.alert(
-          'Registration Successful', 
+          'Registration Successful',
           'Welcome to Mathematico! You are now logged in.',
           [{ text: 'OK' }]
         );
         return { success: true, message: response.message };
-      } else {
-        const message = response.message || 'Registration failed. Please try again.';
-        Alert.alert('Registration Failed', message);
-        return { success: false, message };
       }
+
+      const message = response.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Failed', message);
+      return { success: false, message };
     } catch (error: any) {
       const errorMessage = 'An error occurred during registration. Please try again.';
       safeCatch('AuthContext.register', () => {
@@ -209,40 +159,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async (): Promise<void> => {
+    if (logoutRef.current) {
+      await logoutRef.current;
+      return;
+    }
+
+    logoutRef.current = (async () => {
+      try {
+        await authService.logout();
+      } catch (error: any) {
+        safeCatch('AuthContext.logout')(error);
+      } finally {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    })();
+
     try {
-      await authService.logout();
-    } catch (error: any) {
-      safeCatch('AuthContext.logout')(error);
+      await logoutRef.current;
     } finally {
-      await Storage.deleteItem('user');
-      await Storage.deleteItem('authToken');
-      await Storage.deleteItem('refreshToken');
-      setUser(null);
-      setIsAuthenticated(false);
+      logoutRef.current = null;
     }
   };
 
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const response = await authService.refreshToken();
-      
-      if (response.success && response.data) {
-        const { accessToken } = response.data;
-        
-        // Update access token
-        if (accessToken) {
-          await Storage.setItem('authToken', accessToken);
-        }
-        
-        return true;
-      } else {
-        // Refresh failed, logout user
-        await logout();
-        return false;
-      }
+      const restored = await restoreAuthState();
+      return restored.isAuthenticated;
     } catch (error: any) {
       safeCatch('AuthContext.refreshToken')(error);
-      await logout();
       return false;
     }
   };
@@ -250,32 +195,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     try {
       const response = await authService.updateProfile(data);
-      
+
       if (response.success) {
-        // Merge the update data with current user and response data
-        // This ensures that even if backend doesn't return all fields, we preserve them
-        const updatedUser = {
-          ...user,
-          ...response.data,
-          // Explicitly include the data we sent (in case backend doesn't return it)
-          ...data,
-          // Ensure admin flags are set correctly
-          isAdmin: response.data?.isAdmin || response.data?.role === 'admin' || user?.isAdmin || false,
-          is_admin: response.data?.isAdmin || response.data?.role === 'admin' || user?.is_admin || false,
-        };
-        
-        // Update state immediately
-        setUser(updatedUser);
-        // Persist to SecureStore
-        await Storage.setItem('user', JSON.stringify(updatedUser));
-        
+        await restoreAuthState();
         return true;
-      } else {
-        safeCatch('AuthContext.updateProfile.response', () => {
-          Alert.alert('Update Failed', response.message || 'Profile update failed');
-        })(new Error('Profile update failed'));
-        return false;
       }
+
+      safeCatch('AuthContext.updateProfile.response', () => {
+        Alert.alert('Update Failed', response.message || 'Profile update failed');
+      })(new Error('Profile update failed'));
+      return false;
     } catch (error: any) {
       safeCatch('AuthContext.updateProfile', () => {
         Alert.alert('Update Error', 'An error occurred while updating profile. Please try again.');

@@ -1,22 +1,15 @@
 const { 
   generateTokenPair, 
-  hashRefreshToken,
-  setRefreshTokenCookie,
-  clearRefreshTokenCookie,
+  generateMinimalAccessToken,
   getTokenExpirationMs,
-  verifyAccessToken
+  verifyRefreshToken
 } = require('../utils/jwt');
-const { connectDB } = require('../config/serverlessDatabase');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const {
   logFailedLogin,
   logAccountLock,
-  logTokenRefresh,
-  logPasswordChange,
-  logSuspiciousActivity,
-  logReplayAttack,
-  logTokenInvalidation
+  logPasswordChange
 } = require('../utils/securityLogger');
 // NOTE: rate limiting is enforced at the router/app level via serverless-safe middleware.
 
@@ -60,6 +53,16 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 // SECURITY: Never use default password in production
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_CONFIGURED = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
+
+const scheduleSecurityLog = (logFn) => {
+  setImmediate(() => {
+    try {
+      logFn();
+    } catch (_) {
+      // Never block auth responses on security logging failures.
+    }
+  });
+};
 
 // Debug logging for environment variables (development only)
 if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_ENV === 'true') {
@@ -107,24 +110,11 @@ const login = async (req, res) => {
       });
     }
 
-    // Connect to database with error handling
-    await connectDB();
-    
-    // Final validation: ensure connection is actually established
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable',
-        error: 'Service Unavailable',
-        timestamp: new Date().toISOString()
-      });
-    }
 
     // Normalize email for lookup
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Special handling for admin user (ensure persisted DB user and real ObjectId)
+    // Special handling for admin user (no writes in login path)
     if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL) {
       if (!ADMIN_CONFIGURED) {
         console.error('[AUTH] Admin credentials not configured - missing ADMIN_EMAIL or ADMIN_PASSWORD');
@@ -135,34 +125,14 @@ const login = async (req, res) => {
         });
       }
 
-      // Find or create admin user in MongoDB.
-      // IMPORTANT: `password` is `select: false` in the User model, so we must explicitly select it
-      // for `comparePassword()` to work (same as the regular user login flow below).
-      let dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL })
+      const dbAdmin = await UserModel.findOne({ email: ADMIN_EMAIL })
         .select('+password +tokenVersion +isActive +isEmailVerified');
       if (!dbAdmin) {
-        console.log('[AUTH] Creating admin user in database');
-        // Create new admin user - password will be hashed automatically by pre-save middleware
-        dbAdmin = new UserModel({
-          name: 'Admin User',
-          email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD, // Will be hashed by pre-save middleware
-          role: 'admin',
-          isAdmin: true,
-          isActive: true,
-          isEmailVerified: true
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin credentials',
+          timestamp: new Date().toISOString()
         });
-        await dbAdmin.save();
-        console.log('[AUTH] Admin user created successfully');
-      } else {
-        // Ensure role flags and update last login
-        dbAdmin.role = 'admin';
-        dbAdmin.isAdmin = true;
-        dbAdmin.isActive = true;
-        dbAdmin.isEmailVerified = true;
-        dbAdmin.lastLogin = new Date();
-        dbAdmin.loginCount = (dbAdmin.loginCount || 0) + 1;
-        await dbAdmin.save();
       }
 
       // Verify the provided password matches the stored hash using the same comparison method as regular users
@@ -178,20 +148,6 @@ const login = async (req, res) => {
       
       const tokens = generateTokenPair(dbAdmin);
 
-      const deviceInfo = {
-        userAgent: req.headers['user-agent'],
-        ip: req.ip || req.connection.remoteAddress
-      };
-
-      await dbAdmin.addRefreshToken(
-        tokens.refreshTokenHash,
-        tokens.refreshTokenExpiry,
-        deviceInfo
-      );
-
-      // Set refresh token in HttpOnly cookie
-      setRefreshTokenCookie(res, tokens.refreshToken);
-
       // Get safe user profile (minimal response)
       const safeUser = dbAdmin.getSafeProfile();
 
@@ -201,6 +157,7 @@ const login = async (req, res) => {
         data: {
           user: safeUser,
           accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
           tokenType: 'Bearer',
           expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
         },
@@ -213,8 +170,7 @@ const login = async (req, res) => {
       .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive +tokenVersion');
     
     if (!user) {
-      // Log failed attempt for security monitoring
-      logFailedLogin(normalizedEmail, 'user_not_found', req);
+      scheduleSecurityLog(() => logFailedLogin(normalizedEmail, 'user_not_found', req));
       
       return res.status(401).json({
         success: false,
@@ -225,7 +181,7 @@ const login = async (req, res) => {
 
     // Check if user is active
     if (!user.isActive) {
-      logFailedLogin(normalizedEmail, 'account_inactive', req);
+      scheduleSecurityLog(() => logFailedLogin(normalizedEmail, 'account_inactive', req));
       
       return res.status(401).json({
         success: false,
@@ -238,7 +194,7 @@ const login = async (req, res) => {
     if (user.isLocked) {
       // Log exact lock duration internally for audit
       const lockTimeRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
-      logAccountLock(normalizedEmail, lockTimeRemaining, req);
+      scheduleSecurityLog(() => logAccountLock(normalizedEmail, lockTimeRemaining, req));
       
       // Return generic message - no timing or existence information leaked
       return res.status(429).json({
@@ -252,11 +208,7 @@ const login = async (req, res) => {
     const isPasswordValid = await user.comparePassword(password);
     
     if (!isPasswordValid) {
-      // Increment failed login attempts
-      await user.incrementLoginAttempts();
-      
-      // Log failed attempt for security monitoring
-      logFailedLogin(normalizedEmail, 'invalid_credentials', req);
+      scheduleSecurityLog(() => logFailedLogin(normalizedEmail, 'invalid_credentials', req));
       
       return res.status(401).json({
         success: false,
@@ -265,31 +217,8 @@ const login = async (req, res) => {
       });
     }
 
-    // Reset login attempts on successful authentication
-    await user.resetLoginAttempts();
-
     // Generate token pair
     const tokens = generateTokenPair(user);
-
-    // Store hashed refresh token in database
-    const deviceInfo = {
-      userAgent: req.headers['user-agent'],
-      ip: req.ip || req.connection.remoteAddress
-    };
-    
-    await user.addRefreshToken(
-      tokens.refreshTokenHash, 
-      tokens.refreshTokenExpiry,
-      deviceInfo
-    );
-
-    // Update last login and login count
-    user.lastLogin = new Date();
-    user.loginCount = (user.loginCount || 0) + 1;
-    await user.save();
-
-    // Set refresh token in HttpOnly cookie
-    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Get safe user profile (minimal response)
     const safeUser = user.getSafeProfile();
@@ -300,6 +229,7 @@ const login = async (req, res) => {
       data: {
         user: safeUser,
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
       },
@@ -414,19 +344,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Connect to database with error handling
-    await connectDB();
-    
-    // Final validation: ensure connection is actually established
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable',
-        error: 'Service Unavailable',
-        timestamp: new Date().toISOString()
-      });
-    }
 
     // Use transaction-safe user creation
     let user;
@@ -450,23 +367,8 @@ const register = async (req, res) => {
       throw createError;
     }
 
-    // Generate token pair
+    // Generate token pair (stateless tokens only)
     const tokens = generateTokenPair(user);
-
-    // Store hashed refresh token in database
-    const deviceInfo = {
-      userAgent: req.headers['user-agent'],
-      ip: req.ip || req.connection.remoteAddress
-    };
-    
-    await user.addRefreshToken(
-      tokens.refreshTokenHash, 
-      tokens.refreshTokenExpiry,
-      deviceInfo
-    );
-
-    // Set refresh token in HttpOnly cookie
-    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Get safe user profile (minimal response)
     const safeUser = user.getSafeProfile();
@@ -477,6 +379,7 @@ const register = async (req, res) => {
       data: {
         user: safeUser,
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         tokenType: 'Bearer',
         expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
       },
@@ -547,30 +450,10 @@ const register = async (req, res) => {
 };
 
 /**
- * Logout - clear refresh token from database and cookie
+ * Logout - stateless for mobile clients
  */
 const logout = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
-
-    if (refreshToken && UserModel) {
-      await connectDB();
-      
-      const tokenHash = hashRefreshToken(refreshToken);
-      
-      // Find user and remove refresh token
-      const user = await UserModel.findOne({
-        'refreshTokens.tokenHash': tokenHash
-      });
-
-      if (user) {
-        await user.removeRefreshToken(tokenHash);
-      }
-    }
-
-    // Clear refresh token cookie
-    clearRefreshTokenCookie(res);
-
     return res.json({
       success: true,
       message: 'Logout successful',
@@ -579,8 +462,6 @@ const logout = async (req, res) => {
     
   } catch (error) {
     console.error('Logout error');
-    // Still clear cookie even if database operation fails
-    clearRefreshTokenCookie(res);
     return res.json({
       success: true,
       message: 'Logout successful',
@@ -626,15 +507,14 @@ const getCurrentUser = async (req, res) => {
 };
 
 /**
- * Refresh access token using refresh token from HttpOnly cookie
+ * Refresh access token using stateless JWT refresh token from request body
  */
 
 const refreshToken = async (req, res) => {
   try {
-    // Get refresh token from cookie or request body
-    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    const refreshTokenValue = req.body.refreshToken;
 
-    if (!refreshToken) {
+    if (!refreshTokenValue) {
       return res.status(401).json({
         success: false,
         message: 'Refresh token not found',
@@ -642,102 +522,58 @@ const refreshToken = async (req, res) => {
       });
     }
 
-    // Connect to database (ensureDatabase middleware should handle this, but double-check)
-    await connectDB();
-    
-    // Final validation: ensure connection is actually established
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable',
-        error: 'Service Unavailable',
-        timestamp: new Date().toISOString()
-      });
-    }
+    const decodedRefresh = verifyRefreshToken(refreshTokenValue);
+    const userId = decodedRefresh.sub;
 
-    // Hash the refresh token to compare with database
-    const tokenHash = hashRefreshToken(refreshToken);
-
-    // Find user with this refresh token
-    const user = await UserModel.findOne({
-      'refreshTokens.tokenHash': tokenHash,
-      'refreshTokens.expiresAt': { $gt: new Date() }
-    });
-
-    // REPLAY DETECTION: If tokenHash NOT found in user's refreshTokens
-    // This indicates a replay attack - someone is trying to reuse an already-rotated token
+    const user = await UserModel.findById(userId).select('+isActive +tokenVersion');
     if (!user) {
-      // Try to find any user that might have had this token before (for logging)
-      const potentialUser = await UserModel.findOne({
-        'refreshTokens.tokenHash': tokenHash
-      });
-      
-      if (potentialUser) {
-        // This is definitely a replay attack - token was rotated but reused
-        logReplayAttack(potentialUser._id.toString(), req);
-        logTokenInvalidation(potentialUser._id.toString(), 'replay_attack', req);
-        
-        // Immediately clear ALL refreshTokens for that user
-        await potentialUser.clearAllRefreshTokens();
-      }
-      
-      clearRefreshTokenCookie(res);
       return res.status(401).json({
         success: false,
-        message: 'Invalid session. Please login again.',
+        message: 'Invalid refresh token',
         timestamp: new Date().toISOString()
       });
     }
 
-    // Verify token is still valid
-    if (!user.hasValidRefreshToken(tokenHash)) {
-      clearRefreshTokenCookie(res);
+    if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Refresh token expired',
+        message: 'Account is deactivated. Please contact support.',
         timestamp: new Date().toISOString()
       });
     }
 
-    // Generate new token pair
-    const tokens = generateTokenPair(user);
+    if ((decodedRefresh.tokenVersion || 0) !== (user.tokenVersion || 0)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please login again.',
+        timestamp: new Date().toISOString()
+      });
+    }
 
-    // Remove old refresh token and add new one
-    await user.removeRefreshToken(tokenHash);
-    
-    const deviceInfo = {
-      userAgent: req.headers['user-agent'],
-      ip: req.ip || req.connection.remoteAddress
-    };
-    
-    await user.addRefreshToken(
-      tokens.refreshTokenHash, 
-      tokens.refreshTokenExpiry,
-      deviceInfo
-    );
-
-    // Set new refresh token in HttpOnly cookie
-    setRefreshTokenCookie(res, tokens.refreshToken);
-
-    // Log successful token refresh
-    logTokenRefresh(user._id.toString(), true, req);
+    // Stateless issuance without DB writes and without refresh rotation
+    const accessToken = generateMinimalAccessToken(user);
 
     return res.json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
-        accessToken: tokens.accessToken,
+        accessToken,
+        refreshToken: refreshTokenValue,
         tokenType: 'Bearer',
-        expiresIn: tokens.accessTokenExpiresIn
-        // Note: refreshToken is not returned in JSON body, only in HttpOnly cookie
+        expiresIn: getTokenExpirationMs(process.env.JWT_ACCESS_EXPIRES_IN || '15m') / 1000
       },
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
     console.error('Token refresh error');
-    clearRefreshTokenCookie(res);
+    if (error?.name === 'TokenExpiredError' || error?.name === 'JsonWebTokenError' || error?.name === 'NotBeforeError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token',
+        timestamp: new Date().toISOString()
+      });
+    }
     return res.status(500).json({
       success: false,
       message: 'Token refresh failed',
@@ -761,8 +597,6 @@ const verifyEmail = async (req, res) => {
         message: 'Verification token or email is required'
       });
     }
-
-    await connectDB();
 
     let user = null;
     if (token) {
@@ -813,7 +647,6 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    await connectDB();
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({
@@ -906,8 +739,6 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    await connectDB();
-
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const user = await UserModel.findOne({
       passwordResetToken: hashedToken,
@@ -925,7 +756,6 @@ const resetPassword = async (req, res) => {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     user.passwordChangedAt = new Date();
-    user.refreshTokens = [];
     await user.save();
 
     // Log password change for security monitoring
@@ -963,7 +793,6 @@ const changePassword = async (req, res) => {
       });
     }
 
-    await connectDB();
     const user = await UserModel.findById(userId).select('+password');
     if (!user) {
       return res.status(404).json({
@@ -982,7 +811,6 @@ const changePassword = async (req, res) => {
 
     user.password = newPassword;
     user.passwordChangedAt = new Date();
-    user.refreshTokens = [];
     await user.save();
 
     // Log password change for security monitoring

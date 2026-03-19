@@ -110,14 +110,26 @@ function generateMinimalAccessToken(user) {
 }
 
 /**
- * Generate refresh token (cryptographically secure random string)
- * This creates a cryptographically secure random token with enhanced entropy
- * @returns {string} Random refresh token
+ * Generate stateless refresh token JWT
+ * @param {Object} user - User object
+ * @returns {string} JWT refresh token
  */
-function generateRefreshToken() {
-  // Generate 64 bytes of random data for enhanced security (512 bits)
-  // This exceeds the minimum 256-bit requirement
-  return crypto.randomBytes(64).toString('hex');
+function generateRefreshToken(user) {
+  const { jwtRefreshSecret } = getJwtSecrets();
+  const payload = {
+    sub: user._id || user.id,
+    role: user.role,
+    tokenVersion: user.tokenVersion || 0,
+    type: 'refresh'
+  };
+
+  return jwt.sign(payload, jwtRefreshSecret, {
+    expiresIn: JWT_REFRESH_EXPIRES_IN,
+    algorithm: 'HS256',
+    issuer: 'mathematico-backend',
+    audience: 'mathematico-frontend',
+    keyid: 'refresh-key-v1'
+  });
 }
 
 /**
@@ -138,6 +150,31 @@ function hashRefreshToken(token) {
 function verifyHashedRefreshToken(plainToken, hashedToken) {
   const hash = hashRefreshToken(plainToken);
   return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hashedToken));
+}
+
+/**
+ * Verify refresh token with strict checks
+ * @param {string} token - JWT refresh token
+ * @returns {Object} Decoded token payload
+ */
+function verifyRefreshToken(token) {
+  const { jwtRefreshSecret } = getJwtSecrets();
+  const decoded = jwt.verify(token, jwtRefreshSecret, {
+    algorithms: ['HS256'],
+    issuer: 'mathematico-backend',
+    audience: 'mathematico-frontend',
+    clockTolerance: 30
+  });
+
+  if (!decoded.type || decoded.type !== 'refresh') {
+    throw new Error('Invalid refresh token type');
+  }
+
+  if (!decoded.sub) {
+    throw new Error('Invalid refresh token subject');
+  }
+
+  return decoded;
 }
 
 /**
@@ -210,47 +247,6 @@ function decodeToken(token) {
 }
 
 /**
- * Set secure HTTP-only cookie for refresh token
- * @param {Object} res - Express response object
- * @param {string} token - Refresh token
- */
-function setRefreshTokenCookie(res, token) {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const sameSite = isProduction ? 'none' : 'lax';
-  const cookiePath = '/api/v1/auth/refresh-token';
-
-  res.cookie('refreshToken', token, {
-    httpOnly: true,        // Prevents JavaScript access
-    secure: isProduction,  // HTTPS only in production
-    sameSite,              // Allow cross-origin refresh in production
-    maxAge: getTokenExpirationMs(JWT_REFRESH_EXPIRES_IN),
-    path: cookiePath,      // Only send to refresh endpoint
-    // Additional security attributes
-    domain: process.env.COOKIE_DOMAIN || undefined,
-    partitioned: true      // Enable partitioned cookies for better privacy
-  });
-}
-
-/**
- * Clear refresh token cookie
- * @param {Object} res - Express response object
- */
-function clearRefreshTokenCookie(res) {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const sameSite = isProduction ? 'none' : 'lax';
-  const cookiePath = '/api/v1/auth/refresh-token';
-
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite,
-    path: cookiePath,
-    domain: process.env.COOKIE_DOMAIN || undefined,
-    partitioned: true
-  });
-}
-
-/**
  * Generate token pair (access + refresh) with minimal secure payload
  * @param {Object} user - User object
  * @returns {Object} Token pair with expiration info
@@ -258,16 +254,11 @@ function clearRefreshTokenCookie(res) {
 function generateTokenPair(user) {
   // Use minimal secure payload for access token
   const accessToken = generateMinimalAccessToken(user);
-  
-  const refreshToken = generateRefreshToken();
-  const refreshTokenHash = hashRefreshToken(refreshToken);
-  const refreshTokenExpiry = calculateTokenExpiration(JWT_REFRESH_EXPIRES_IN);
+  const refreshToken = generateRefreshToken(user);
   
   return {
     accessToken,
     refreshToken,
-    refreshTokenHash,
-    refreshTokenExpiry,
     accessTokenExpiresIn: JWT_ACCESS_EXPIRES_IN,
     refreshTokenExpiresIn: JWT_REFRESH_EXPIRES_IN
   };
@@ -287,15 +278,11 @@ function generateLegacyTokenPair(user) {
     isAdmin: user.role === 'admin'
   });
   
-  const refreshToken = generateRefreshToken();
-  const refreshTokenHash = hashRefreshToken(refreshToken);
-  const refreshTokenExpiry = calculateTokenExpiration(JWT_REFRESH_EXPIRES_IN);
+  const refreshToken = generateRefreshToken(user);
   
   return {
     accessToken,
     refreshToken,
-    refreshTokenHash,
-    refreshTokenExpiry,
     accessTokenExpiresIn: JWT_ACCESS_EXPIRES_IN,
     refreshTokenExpiresIn: JWT_REFRESH_EXPIRES_IN
   };
@@ -311,14 +298,11 @@ module.exports = {
   
   // Token verification
   verifyAccessToken,
+  verifyRefreshToken,
   verifyHashedRefreshToken,
   
   // Token hashing
   hashRefreshToken,
-  
-  // Cookie management
-  setRefreshTokenCookie,
-  clearRefreshTokenCookie,
   
   // Validation (call during startup)
   validateJwtConfig,

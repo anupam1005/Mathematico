@@ -308,7 +308,6 @@ const changePassword = async (req, res) => {
 
     user.password = newPassword;
     user.passwordChangedAt = new Date();
-    user.refreshTokens = [];
     await user.save();
 
     return res.json({
@@ -464,7 +463,7 @@ const deleteAccount = async (req, res) => {
     }
 
     await connectDB();
-    const user = await UserModel.findById(userId).select('+refreshTokens');
+    const user = await UserModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -475,7 +474,6 @@ const deleteAccount = async (req, res) => {
 
     user.isActive = false;
     user.deactivated = true;
-    user.refreshTokens = [];
     user.updatedAt = new Date();
     await user.save();
 

@@ -154,7 +154,11 @@ function MainTabs() {
 }
 
 function AppNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AppLoading />;
+  }
 
   if (!isAuthenticated) {
     return (
