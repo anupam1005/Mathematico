@@ -189,92 +189,12 @@ function validateCorsConfig() {
 }
 
 /**
- * Generate CORS options for Express cors middleware with enhanced security
- * @returns {Object} CORS configuration object
+ * Generate CORS options for Express cors middleware.
+ * Mobile-app only: allow all origins, keep credentials enabled.
  */
 function getCorsOptions() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const allowedOrigins = isProduction
-    ? [
-        'https://api.mathematico.in',
-      ]
-    : getAllowedOrigins();
-  
   return {
-    origin: isProduction ? 
-      // Production: Strict allowlist (no wildcard reflection)
-      (origin, callback) => {
-        // RUNTIME FORENSIC TRACE (PRODUCTION) - DO NOT CHANGE BEHAVIOR
-        console.error("CORS_TRACE_RUNTIME", {
-          origin,
-          typeofOrigin: typeof origin,
-          isNullString: origin === "null",
-          isUndefined: origin === undefined,
-          allowedOrigins,
-          timestamp: new Date().toISOString()
-        });
-        
-        console.error("CORS_DECISION", {
-          origin,
-          decision: allowedOrigins.includes(origin) ? "ALLOW" : "REJECT"
-        });
-
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) {
-          console.log('[CORS] Production: Allowing request with no origin (mobile app)');
-          return callback(null, true);
-        }
-        
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-
-        const error = new Error(`CORS: Origin ${origin} not allowed`);
-        error.code = 'CORS_ORIGIN_NOT_ALLOWED';
-        console.error("[CORS REJECTED]", {
-          origin,
-          reason: "NOT_IN_ALLOWLIST"
-        });
-        return callback(error);
-      }
-      :
-      // Development: Use existing ALLOWED_ORIGINS array
-      (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) {
-          return callback(null, true);
-        }
-        
-        // Allow Expo development URLs
-        if (origin.startsWith('exp://') || origin.includes('expo')) {
-          return callback(null, true);
-        }
-        
-        // Allow mobile app origins
-        if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
-          return callback(null, true);
-        }
-        
-        // Strict origin validation for web requests in development
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        
-        // Origin not allowed - log security violation
-        console.warn('🚨 CORS Violation Attempt:', {
-          origin,
-          ip: this?.ip || 'unknown',
-          userAgent: this?.get?.('User-Agent') || 'unknown',
-          url: this?.originalUrl || 'unknown',
-          method: this?.method || 'unknown',
-          timestamp: new Date().toISOString()
-        });
-        
-        const error = new Error(`CORS: Origin ${origin} not allowed`);
-        error.code = 'CORS_ORIGIN_NOT_ALLOWED';
-        return callback(error);
-      },
-    
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -294,16 +214,9 @@ function getCorsOptions() {
       'X-RateLimit-Reset',
       'Retry-After'
     ],
-    maxAge: isProduction ? 86400 : 3600, // 24h in prod, 1h in dev
-    // Enhanced security options
-    optionsSuccessStatus: 204, // No content for OPTIONS requests
+    maxAge: 86400,
+    optionsSuccessStatus: 204,
     preflightContinue: false,
-    // Additional security headers
-    ...(isProduction && {
-      // Strict security in production
-      maxAge: 86400, // Cache preflight for 24h
-      credentials: true
-    })
   };
 }
 

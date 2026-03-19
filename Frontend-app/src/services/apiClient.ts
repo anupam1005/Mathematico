@@ -1,6 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-// @ts-expect-error axios does not publish typings for deep adapter imports; required for Hermes/Metro static inclusion
-import xhrAdapter from 'axios/lib/adapters/xhr.js';
 import { API_BASE_URL } from '../config';
 import { Storage } from '../utils/storage';
 
@@ -11,58 +9,68 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  validateStatus: (status: number) => status < 500,
-  adapter: xhrAdapter,
 });
 
-type PlainHeaders = Record<string, string>;
+// Centralized auth token & error handling
 
-const toPlainStringHeaders = (value: unknown): PlainHeaders => {
-  const out: PlainHeaders = {};
-  if (!value || typeof value !== 'object') return out;
-
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof v === 'string') out[k] = v;
-  }
-  return out;
-};
-
-const buildAuthHeaders = async (extraHeaders?: unknown): Promise<PlainHeaders> => {
-  const headers: PlainHeaders = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-
-  try {
-    const token = await Storage.getItem('authToken');
-    if (token && typeof token === 'string' && token.length > 0) {
-      headers.Authorization = `Bearer ${token}`;
+// Inject Authorization header from SecureStore/AsyncStorage
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await Storage.getItem<string>('authToken', false);
+      if (token && typeof token === 'string' && token.length > 0) {
+        config.headers = config.headers || {};
+        // Never override an explicit Authorization header
+        if (!('Authorization' in config.headers)) {
+          (config.headers as any).Authorization = `Bearer ${token}`;
+        }
+      }
+    } catch {
+      // Swallow – network calls should still proceed without token
     }
-  } catch {
-  }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
-  const extras = toPlainStringHeaders(extraHeaders);
-  for (const [k, v] of Object.entries(extras)) {
-    headers[k] = v;
-  }
+// Normalize errors and handle auth failures
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // Network-level errors (no response)
+    if (!error.response) {
+      return Promise.reject({
+        message: 'Network error - please check your connection and try again.',
+        code: 'NETWORK_ERROR',
+      });
+    }
 
-  return headers;
-};
+    const { status, data } = error.response;
 
-const sanitizeConfig = async (config?: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
-  const finalConfig: AxiosRequestConfig = {};
-  if (!config) return finalConfig;
+    if (status === 401) {
+      // Clear tokens on unauthorized so the app can treat user as logged out
+      try {
+        await Storage.deleteItem('authToken');
+        await Storage.deleteItem('refreshToken');
+        await Storage.deleteItem('user');
+      } catch {
+      }
 
-  if (config.method) finalConfig.method = config.method;
-  if (config.params !== undefined) finalConfig.params = config.params;
-  if (config.data !== undefined) finalConfig.data = config.data;
-  if (config.timeout) finalConfig.timeout = config.timeout;
-  if (config.responseType) finalConfig.responseType = config.responseType;
-  if (config.withCredentials !== undefined) finalConfig.withCredentials = config.withCredentials;
+      return Promise.reject({
+        message: data?.message || 'Your session has expired. Please log in again.',
+        code: 'UNAUTHORIZED',
+        status,
+      });
+    }
 
-  finalConfig.headers = await buildAuthHeaders(config.headers);
-  return finalConfig;
-};
+    return Promise.reject({
+      message: data?.message || 'Request failed. Please try again.',
+      code: 'API_ERROR',
+      status,
+      data,
+    });
+  },
+);
 
 const normalizePath = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
@@ -84,23 +92,23 @@ const buildUrl = (basePath: string, path?: string): string => {
 
 export const withBasePath = (basePath: string) => ({
   get: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return sanitizeConfig(config).then((finalConfig) => api.get<T>(buildUrl(basePath, path), finalConfig));
+    return api.get<T>(buildUrl(basePath, path), config);
   },
   delete: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return sanitizeConfig(config).then((finalConfig) => api.delete<T>(buildUrl(basePath, path), finalConfig));
+    return api.delete<T>(buildUrl(basePath, path), config);
   },
   post: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return sanitizeConfig(config).then((finalConfig) => api.post<T>(buildUrl(basePath, path), data, finalConfig));
+    return api.post<T>(buildUrl(basePath, path), data, config);
   },
   put: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return sanitizeConfig(config).then((finalConfig) => api.put<T>(buildUrl(basePath, path), data, finalConfig));
+    return api.put<T>(buildUrl(basePath, path), data, config);
   },
   patch: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return sanitizeConfig(config).then((finalConfig) => api.patch<T>(buildUrl(basePath, path), data, finalConfig));
+    return api.patch<T>(buildUrl(basePath, path), data, config);
   },
   request: <T = any>(config: AxiosRequestConfig) => {
     const url = buildUrl(basePath, config.url || '');
-    return sanitizeConfig(config).then((finalConfig) => api.request<T>({ ...finalConfig, url }));
+    return api.request<T>({ ...config, url });
   },
 });
 

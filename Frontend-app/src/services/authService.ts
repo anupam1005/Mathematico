@@ -1,8 +1,7 @@
 
 import { API_PATHS } from '../constants/apiPaths';
 import { Storage } from '../utils/storage';
-import { API_BASE_URL } from '../config';
-import { hermesAuthClient } from './hermesAuthClient';
+import api, { withBasePath } from './apiClient';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -33,82 +32,69 @@ export interface RefreshTokenResponse {
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  data?: any;
+  data?: {
+    user: any;
+    token: string;
+  };
 }
 
 /* ------------------------------------------------------------------ */
 /* Auth Service                                                       */
 /* ------------------------------------------------------------------ */
 
+const authApi = withBasePath(API_PATHS.auth);
+
 const authService = {
   /* ---------------------------- LOGIN ----------------------------- */
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/login`;
-      console.log('REQUEST_URL:', requestUrl);
+      const response = await authApi.post('/login', { email, password });
+      const payload = response?.data ?? null;
 
-      const responseData = await hermesAuthClient.post('/login', {
-        email,
-        password,
-      });
-
-      const payload = responseData ?? null;
-
-      // Flexible token extraction for backend compatibility
-      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
-
-      if (!payload?.success || !accessToken) {
+      if (!payload?.success || !payload?.data) {
         return {
           success: false,
           message: payload?.message || 'Invalid login response',
         };
       }
 
-      if (typeof accessToken !== 'string' || accessToken.length < 10) {
+      // Normalize backend shape for mobile clients
+      const rawUser = payload.data.user || payload.data;
+      const token: string =
+        payload.data.accessToken ||
+        payload.data.token ||
+        payload.accessToken ||
+        payload.token;
+
+      if (!token || typeof token !== 'string' || token.length < 10) {
         return {
           success: false,
-          message: 'Invalid access token received',
+          message: 'Invalid token received from server',
         };
       }
 
-      await Storage.setItem('authToken', accessToken);
-      if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
-        await Storage.setItem('refreshToken', payload.data.refreshToken);
-      }
-      
-      // PRODUCTION DEBUG: Verify token storage
-      console.log('TOKEN_SAVED');
-      const storedToken = await Storage.getItem('authToken');
-      console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
+      await Storage.setItem('authToken', token);
 
       return {
         success: true,
         message: payload.message || 'Login successful',
         data: {
-          user: payload.data.user,
-          accessToken: accessToken,
-          tokenType: payload.data.tokenType || 'Bearer',
+          user: rawUser,
+          accessToken: token,
+          tokenType: 'Bearer',
           expiresIn: payload.data.expiresIn || 900,
-          refreshToken: payload.data.refreshToken,
         },
       };
-    } catch (err: any) {
-      const errorObj = err as any;
-      // Hermes-safe error logging – avoid JSON.stringify on Error objects
-      console.error('FULL_LOGIN_ERROR_OBJECT', errorObj);
-      console.error('FULL_LOGIN_ERROR_MESSAGE', errorObj?.message);
-      console.error('FULL_LOGIN_ERROR_STACK', errorObj?.stack);
-
-      // Prefer backend error message if available
-      const backendMessage =
-        errorObj?.response?.data?.message ||
-        errorObj?.message ||
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.data?.message ||
         'Login failed - please check your connection and try again';
 
       return {
         success: false,
-        message: backendMessage,
+        message,
       };
     }
   },
@@ -121,60 +107,49 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/register`;
-      console.log('REQUEST_URL:', requestUrl);
-
-      const responseData = await hermesAuthClient.post('/register', {
+      const response = await authApi.post('/register', {
         name,
         email,
         password,
       });
 
-      const payload = responseData ?? null;
+      const payload = response?.data ?? null;
 
-      if (!payload?.success) {
+      if (!payload?.success || !payload?.data) {
         return {
           success: false,
           message: payload?.message || 'Registration failed',
         };
       }
 
-      // Flexible token extraction for backend compatibility
-      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
-      
-      if (accessToken) {
-        await Storage.setItem('authToken', accessToken);
-        if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
-          await Storage.setItem('refreshToken', payload.data.refreshToken);
-        }
-        console.log('TOKEN_SAVED');
-        const storedToken = await Storage.getItem('authToken');
-        console.log('TOKEN_VERIFIED', storedToken ? 'SUCCESS' : 'FAILED');
+      const rawUser = payload.data.user || payload.data;
+      const token: string =
+        payload.data.accessToken ||
+        payload.data.token ||
+        payload.accessToken ||
+        payload.token;
+
+      if (token && typeof token === 'string' && token.length > 0) {
+        await Storage.setItem('authToken', token);
       }
 
       return {
         success: true,
         message: payload.message || 'Registration successful',
         data: {
-          ...payload.data,
-          accessToken: accessToken,
+          user: rawUser,
+          token,
         },
       };
-    } catch (err: any) {
-      const errorObj = err as any;
-      // Hermes-safe error logging – avoid JSON.stringify on Error objects
-      console.error('FULL_REGISTER_ERROR_OBJECT', errorObj);
-      console.error('FULL_REGISTER_ERROR_MESSAGE', errorObj?.message);
-      console.error('FULL_REGISTER_ERROR_STACK', errorObj?.stack);
-
-      const backendMessage =
-        errorObj?.response?.data?.message ||
-        errorObj?.message ||
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.data?.message ||
         'Registration failed - please check your connection and try again';
 
       return {
         success: false,
-        message: backendMessage,
+        message,
       };
     }
   },
@@ -182,38 +157,15 @@ const authService = {
   /* ----------------------------- LOGOUT ---------------------------- */
 
   async logout(): Promise<{ success: boolean; message: string }> {
-    let refreshTokenValue: string | null = null;
     try {
-      refreshTokenValue = await Storage.getItem('refreshToken');
-      const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
-      const authToken = await Storage.getItem('authToken');
-
-      await hermesAuthClient.post('/logout', payloadBody, authToken ?? null);
-      
-      // Always clear local tokens regardless of API response
-      await Storage.deleteItem('authToken');
-      await Storage.deleteItem('refreshToken');
-      
-      return { success: true, message: 'Logout successful' };
-    } catch (err: any) {
-      const errorObj = err as any;
-      // Hermes-safe error logging – avoid JSON.stringify on Error objects
-      console.error('FULL_LOGOUT_ERROR_OBJECT', errorObj);
-      console.error('FULL_LOGOUT_ERROR_MESSAGE', errorObj?.message);
-      console.error('FULL_LOGOUT_ERROR_STACK', errorObj?.stack);
-
-      // Still clear local tokens even if logout API fails
-      try {
-        await Storage.deleteItem('authToken');
-        await Storage.deleteItem('refreshToken');
-      } catch (storageError: any) {
-        const storageErrorObj = storageError as any;
-        console.error('FULL_LOGOUT_STORAGE_ERROR_OBJECT', storageErrorObj);
-        console.error('FULL_LOGOUT_STORAGE_ERROR_MESSAGE', storageErrorObj?.message);
-        console.error('FULL_LOGOUT_STORAGE_ERROR_STACK', storageErrorObj?.stack);
-      }
-      return { success: false, message: 'Logout failed' };
+      await api.post(`${API_PATHS.auth}/logout`);
+    } catch {
+      // Ignore backend logout failures – we still clear local state
     }
+    await Storage.deleteItem('authToken');
+    await Storage.deleteItem('refreshToken');
+    await Storage.deleteItem('user');
+    return { success: true, message: 'Logout successful' };
   },
 
   /* ------------------------- TOKEN HELPERS ------------------------- */
@@ -251,60 +203,38 @@ const authService = {
   /* -------------------------- REFRESH TOKEN -------------------------- */
 
   async refreshToken(): Promise<{ success: boolean; message: string; data?: { accessToken: string; tokenType: string; expiresIn: number } }> {
-    let refreshTokenValue: string | null = null;
     try {
-      refreshTokenValue = await Storage.getItem('refreshToken');
-      const payloadBody = refreshTokenValue ? { refreshToken: refreshTokenValue } : undefined;
+      const response = await api.post(`${API_PATHS.auth}/refresh-token`);
+      const payload = response?.data ?? null;
 
-      // PRODUCTION DEBUG: Log request URL
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/refresh-token`;
-      console.log('REFRESH_REQUEST_URL:', requestUrl);
+      const accessToken =
+        payload?.data?.accessToken ||
+        payload?.data?.token ||
+        payload?.accessToken ||
+        payload?.token;
 
-      // Get auth token for protected endpoints
-      const authToken = await Storage.getItem('authToken');
-
-      const payload = (await hermesAuthClient.post('/refresh-token', payloadBody, authToken ?? null)) ?? null;
-
-      const accessToken = payload?.data?.accessToken || payload?.data?.token || payload?.accessToken || payload?.token;
-
-      if (!payload?.success || !accessToken) {
+      if (!payload?.success || !accessToken || typeof accessToken !== 'string' || accessToken.length < 10) {
         return {
           success: false,
           message: payload?.message || 'Invalid refresh response',
         };
       }
 
-      if (typeof accessToken !== 'string' || accessToken.length < 10) {
-        return {
-          success: false,
-          message: 'Invalid access token received from refresh',
-        };
-      }
-
       await Storage.setItem('authToken', accessToken);
-      if (payload?.data?.refreshToken && typeof payload.data.refreshToken === 'string') {
-        await Storage.setItem('refreshToken', payload.data.refreshToken);
-      }
 
       return {
         success: true,
         message: 'Token refreshed successfully',
         data: {
-          accessToken: accessToken,
-          tokenType: payload.data.tokenType || 'Bearer',
-          expiresIn: payload.data.expiresIn || 900,
+          accessToken,
+          tokenType: payload.data?.tokenType || 'Bearer',
+          expiresIn: payload.data?.expiresIn || 900,
         },
       };
-    } catch (err: any) {
-      const errorObj = err as any;
-      // Hermes-safe error logging – avoid JSON.stringify on Error objects
-      console.error('FULL_REFRESH_ERROR_OBJECT', errorObj);
-      console.error('FULL_REFRESH_ERROR_MESSAGE', errorObj?.message);
-      console.error('FULL_REFRESH_ERROR_STACK', errorObj?.stack);
-
+    } catch (error: any) {
       return {
         success: false,
-        message: 'Token refresh failed',
+        message: error?.message || 'Token refresh failed',
       };
     }
   },
@@ -313,13 +243,8 @@ const authService = {
 
   async updateProfile(data: Partial<any>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      // PRODUCTION DEBUG: Log request URL
-      const requestUrl = `${API_BASE_URL}${API_PATHS.auth}/profile`;
-      console.log('PROFILE_UPDATE_REQUEST_URL:', requestUrl);
-
-      const authToken = await Storage.getItem('authToken');
-
-      const payload = (await hermesAuthClient.put('/profile', data, authToken ?? null)) ?? null;
+      const response = await api.put(`${API_PATHS.auth}/profile`, data);
+      const payload = response?.data ?? null;
 
       if (!payload?.success) {
         return {
@@ -333,16 +258,10 @@ const authService = {
         message: payload.message || 'Profile updated successfully',
         data: payload.data,
       };
-    } catch (err: any) {
-      const errorObj = err as any;
-      // Hermes-safe error logging – avoid JSON.stringify on Error objects
-      console.error('FULL_UPDATE_PROFILE_ERROR_OBJECT', errorObj);
-      console.error('FULL_UPDATE_PROFILE_ERROR_MESSAGE', errorObj?.message);
-      console.error('FULL_UPDATE_PROFILE_ERROR_STACK', errorObj?.stack);
-
+    } catch (error: any) {
       return {
         success: false,
-        message: 'Profile update failed',
+        message: error?.message || 'Profile update failed',
       };
     }
   },

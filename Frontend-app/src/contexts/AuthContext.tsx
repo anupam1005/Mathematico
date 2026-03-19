@@ -113,16 +113,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.login(email, password);
       
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
-        
-        if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await Storage.setItem('authToken', accessToken);
-        }
-        
-        if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          if (Platform.OS !== 'web') {
-            await Storage.setItem('refreshToken', refreshToken);
-          }
+        const userData = response.data.user;
+        const token = (response.data as any).token || (response.data as any).accessToken;
+
+        if (token && token !== 'null' && token !== 'undefined') {
+          await Storage.setItem('authToken', token);
         }
         
         const user: User = {
@@ -166,17 +161,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(name, email, password);
       
       if (response.success && response.data) {
-        const { user: userData, accessToken, refreshToken } = response.data;
-        
-        // Extract the access token from the response
-        if (accessToken && accessToken !== 'null' && accessToken !== 'undefined') {
-          await Storage.setItem('authToken', accessToken);
-        }
-        
-        if (refreshToken && refreshToken !== 'null' && refreshToken !== 'undefined') {
-          if (Platform.OS !== 'web') {
-            await Storage.setItem('refreshToken', refreshToken);
-          }
+        const userData = response.data.user;
+        const token = response.data.token;
+
+        if (token && token !== 'null' && token !== 'undefined') {
+          await Storage.setItem('authToken', token);
         }
         
         const user: User = {
