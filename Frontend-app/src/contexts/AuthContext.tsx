@@ -114,7 +114,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return { success: false, message: response.message || 'Invalid credentials' };
     } catch (error: any) {
-      const errorMessage = 'An error occurred during login. Please try again.';
+      const errorMessage =
+        error?.message || 'An error occurred during login. Please try again.';
       safeCatch('AuthContext.login')(error);
       return { success: false, message: errorMessage };
     } finally {
@@ -148,7 +149,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       Alert.alert('Registration Failed', message);
       return { success: false, message };
     } catch (error: any) {
-      const errorMessage = 'An error occurred during registration. Please try again.';
+      const errorMessage =
+        error?.message || 'An error occurred during registration. Please try again.';
       safeCatch('AuthContext.register', () => {
         Alert.alert('Registration Error', errorMessage);
       })(error);

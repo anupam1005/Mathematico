@@ -60,6 +60,23 @@ const toRefreshToken = (payload: any): string | null => {
   return typeof token === 'string' && token.length > 10 ? token : null;
 };
 
+const withErrorDiagnostics = (message: string, error: any): string => {
+  const code = typeof error?.code === 'string' ? error.code : null;
+  const status =
+    typeof error?.status === 'number'
+      ? error.status
+      : typeof error?.response?.status === 'number'
+        ? error.response.status
+        : null;
+
+  const details: string[] = [];
+  if (code) details.push(`code=${code}`);
+  if (status !== null) details.push(`status=${status}`);
+
+  if (details.length === 0) return message;
+  return `${message} (${details.join(', ')})`;
+};
+
 const authService = {
   /* ---------------------------- LOGIN ----------------------------- */
 
@@ -107,10 +124,11 @@ const authService = {
         },
       };
     } catch (error: any) {
-      const message =
+      const baseMessage =
         error?.message ||
         error?.data?.message ||
         'Login failed - please check your connection and try again';
+      const message = withErrorDiagnostics(baseMessage, error);
 
       return {
         success: false,
@@ -171,10 +189,11 @@ const authService = {
         },
       };
     } catch (error: any) {
-      const message =
+      const baseMessage =
         error?.message ||
         error?.data?.message ||
         'Registration failed - please check your connection and try again';
+      const message = withErrorDiagnostics(baseMessage, error);
 
       return {
         success: false,
