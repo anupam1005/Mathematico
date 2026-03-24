@@ -13,13 +13,8 @@ const app = express();
 require('./config/trustProxy')(app);
 app.disable('x-powered-by');
 
-// 1) Early minimal CORS headers (set DISABLE_CORS=true to skip — cross-origin browser calls will fail until removed)
-const corsDisabled =
-  process.env.DISABLE_CORS === 'true' || process.env.DISABLE_CORS === '1';
+// 1) Early minimal CORS headers
 app.use((req, res, next) => {
-  if (corsDisabled) {
-    return next();
-  }
   const origin = req.headers.origin;
   if (origin) {
     res.setHeader('Vary', 'Origin');
