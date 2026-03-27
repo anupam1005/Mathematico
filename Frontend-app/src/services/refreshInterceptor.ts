@@ -60,8 +60,14 @@ const isAxiosNetworkError = (error: AxiosError): boolean => {
   return !error.response || code === 'ECONNABORTED' || code === 'ERR_NETWORK';
 };
 
+const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
+  const rawUrl = String(config?.url || '').toLowerCase();
+  return rawUrl.includes('/login') || rawUrl.includes('/register') || rawUrl.includes('/refresh-token');
+};
+
 const shouldRetryNetwork = (error: AxiosError, config?: RetryableConfig): boolean => {
   if (!config || config.skipAuthRefresh) return false;
+  if (isAuthMutationRequest(config)) return false;
   if (config.__retryCount && config.__retryCount >= MAX_NETWORK_RETRIES) return false;
 
   if (isAxiosNetworkError(error)) return true;
@@ -189,6 +195,14 @@ export const installRefreshInterceptor = (
       if (shouldRetryNetwork(error, originalRequest)) {
         originalRequest.__retryCount = (originalRequest.__retryCount || 0) + 1;
         const delayMs = RETRY_BASE_DELAY_MS * 2 ** (originalRequest.__retryCount - 1);
+        console.log('[API:RETRY]', {
+          url: originalRequest.url,
+          method: String(originalRequest.method || 'GET').toUpperCase(),
+          retryCount: originalRequest.__retryCount,
+          delayMs,
+          reasonCode: error.code,
+          status: error.response?.status,
+        });
         await sleep(delayMs);
         return client.request(originalRequest);
       }
