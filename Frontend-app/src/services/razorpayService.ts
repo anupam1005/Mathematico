@@ -3,10 +3,40 @@ import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
+import { tokenStorage } from './tokenStorage';
 
 // Create a service error handler for razorpayService
 const errorHandler = createServiceErrorHandler('razorpayService');
 const mobileApi = withBasePath(API_PATHS.mobile);
+
+const buildRequestHeaders = (authToken?: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+  return headers;
+};
+
+const toPaymentError = (error: any, fallbackMessage: string): RazorpayPaymentResponse => {
+  if (!error?.response) {
+    return {
+      success: false,
+      error: 'NETWORK_ERROR',
+      message: 'Network error. Please check your connection and try again.',
+    };
+  }
+
+  const status = error.response.status;
+  const apiMessage = error.response.data?.message || error.response.data?.error;
+  return {
+    success: false,
+    error: `HTTP_${status}`,
+    message: apiMessage || fallbackMessage,
+  };
+};
 
 // LAZY LOAD: Defer native module initialization to prevent Hermes frozen object crash
 let RazorpayCheckoutNative: any = null;
@@ -63,10 +93,7 @@ class RazorpayService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.post('/payments/create-order', paymentOptions, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
       const data = response.data;
 
@@ -86,9 +113,7 @@ class RazorpayService {
     } catch (error: any) {
       errorHandler.handleError('RazorpayService: Error creating order:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to create payment order. Please check your connection.',
+        ...toPaymentError(error, 'Failed to create payment order'),
       };
     }
   }
@@ -99,10 +124,7 @@ class RazorpayService {
   async verifyPayment(paymentData: any): Promise<RazorpayPaymentResponse> {
     try {
       const response = await mobileApi.post('/payments/verify', paymentData, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${await this.getAuthToken()}`,
-        },
+        headers: buildRequestHeaders(await this.getAuthToken()),
       });
 
       const data = response.data;
@@ -123,9 +145,7 @@ class RazorpayService {
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error verifying payment:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to verify payment',
+        ...toPaymentError(error, 'Failed to verify payment'),
       };
     }
   }
@@ -136,10 +156,7 @@ class RazorpayService {
   async getPaymentHistory(): Promise<RazorpayPaymentResponse> {
     try {
       const response = await mobileApi.get('/payments/history', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${await this.getAuthToken()}`,
-        },
+        headers: buildRequestHeaders(await this.getAuthToken()),
       });
 
       const data = response.data;
@@ -160,9 +177,7 @@ class RazorpayService {
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error fetching payment history:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to fetch payment history',
+        ...toPaymentError(error, 'Failed to fetch payment history'),
       };
     }
   }
@@ -178,7 +193,7 @@ class RazorpayService {
     try {
       const response = await mobileApi.get('/payments/config', {
         headers: {
-          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
       });
       const data = response.data;
@@ -200,8 +215,8 @@ class RazorpayService {
    */
   private async getAuthToken(): Promise<string> {
     try {
-      const { Storage } = await import('../utils/storage');
-      const token = await Storage.getItem('authToken');
+      await tokenStorage.hydrate();
+      const token = await tokenStorage.getAccessToken();
       return token || '';
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error getting auth token:', error);

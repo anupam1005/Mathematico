@@ -242,7 +242,7 @@ class BookService {
 
       const response = await adminApi.put(`/books/${bookId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         }
       });
       const payload = response.data;
@@ -264,7 +264,7 @@ class BookService {
 
       const response = await adminApi.put(`/books/${bookId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         }
       });
       const payload = response.data;

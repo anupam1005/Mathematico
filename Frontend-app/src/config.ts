@@ -8,9 +8,19 @@ const readRuntimeApiBaseUrl = (): string | undefined => {
     return fromExtra.trim();
   }
 
+  const fromLegacyExtra = Constants?.expoConfig?.extra?.API_URL;
+  if (typeof fromLegacyExtra === 'string' && fromLegacyExtra.trim().length > 0) {
+    return fromLegacyExtra.trim();
+  }
+
   const fromEnv = process?.env?.EXPO_PUBLIC_API_BASE_URL;
   if (typeof fromEnv === 'string' && fromEnv.trim().length > 0) {
     return fromEnv.trim();
+  }
+
+  const fromLegacyEnv = process?.env?.API_URL;
+  if (typeof fromLegacyEnv === 'string' && fromLegacyEnv.trim().length > 0) {
+    return fromLegacyEnv.trim();
   }
 
   return undefined;

@@ -2,6 +2,7 @@
 import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
+import { tokenStorage } from './tokenStorage';
 
 // Create a service error handler for enrollmentService
 const errorHandler = createServiceErrorHandler('enrollmentService');
@@ -21,6 +22,35 @@ export interface EnrollmentResponse {
   message?: string;
 }
 
+const buildRequestHeaders = (authToken?: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+  return headers;
+};
+
+const toEnrollmentError = (error: any, fallbackMessage: string): EnrollmentResponse => {
+  if (!error?.response) {
+    return {
+      success: false,
+      error: 'NETWORK_ERROR',
+      message: 'Network error. Please check your connection and try again.',
+    };
+  }
+
+  const status = error.response.status;
+  const apiMessage = error.response.data?.message || error.response.data?.error;
+  return {
+    success: false,
+    error: `HTTP_${status}`,
+    message: apiMessage || fallbackMessage,
+  };
+};
+
 class EnrollmentService {
   /**
    * Enroll in a course (after payment verification)
@@ -29,10 +59,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.post(`/courses/${courseId}/enroll`, {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
       
       const data = response.data;
@@ -71,9 +98,7 @@ class EnrollmentService {
       }
       
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to enroll in course. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to enroll in course'),
       };
     }
   }
@@ -87,10 +112,7 @@ class EnrollmentService {
       const endpoint = userId ? `/enrollments?userId=${userId}` : '/enrollments';
       
       const response = await mobileApi.get(endpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -111,9 +133,7 @@ class EnrollmentService {
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error fetching enrollments:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to fetch enrollments. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to fetch enrollments'),
       };
     }
   }
@@ -125,10 +145,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.get(`/enrollments/${enrollmentId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -149,9 +166,7 @@ class EnrollmentService {
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error fetching enrollment:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to fetch enrollment. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to fetch enrollment'),
       };
     }
   }
@@ -163,10 +178,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.put(`/enrollments/${enrollmentId}`, { status }, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -187,9 +199,7 @@ class EnrollmentService {
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error updating enrollment:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to update enrollment. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to update enrollment'),
       };
     }
   }
@@ -201,10 +211,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.delete(`/enrollments/${enrollmentId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -225,9 +232,7 @@ class EnrollmentService {
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error cancelling enrollment:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to cancel enrollment. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to cancel enrollment'),
       };
     }
   }
@@ -239,10 +244,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.get(`/enrollments/${enrollmentId}/progress`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -287,10 +289,7 @@ class EnrollmentService {
     try {
       const authToken = await this.getAuthToken();
       const response = await mobileApi.post(`/enrollments/${enrollmentId}/lessons/${lessonId}/complete`, {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: buildRequestHeaders(authToken),
       });
 
       const data = response.data;
@@ -311,9 +310,7 @@ class EnrollmentService {
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error marking lesson complete:', error);
       return {
-        success: false,
-        error: 'Network error occurred',
-        message: 'Failed to mark lesson complete. Please check your connection.',
+        ...toEnrollmentError(error, 'Failed to mark lesson complete'),
       };
     }
   }
@@ -323,9 +320,8 @@ class EnrollmentService {
    */
   private async getAuthToken(): Promise<string> {
     try {
-      const { Storage } = await import('../utils/storage');
-      const token = await Storage.getItem('authToken');
-      // Avoid leaking non-string values into headers.
+      await tokenStorage.hydrate();
+      const token = await tokenStorage.getAccessToken();
       return typeof token === 'string' ? token : '';
     } catch (error) {
       errorHandler.handleError('EnrollmentService: Error getting auth token:', error);

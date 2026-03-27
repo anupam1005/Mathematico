@@ -228,7 +228,7 @@ class CourseService {
 
       const response = await adminApi.post('/courses/upload-thumbnail', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         },
       });
 
@@ -253,7 +253,7 @@ class CourseService {
         method: 'POST',
         data: formData,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         },
       });
       return response.data.videoUrl;

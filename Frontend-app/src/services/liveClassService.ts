@@ -309,7 +309,7 @@ class LiveClassService {
 
       const response = await adminApi.put(`/live-classes/${liveClassId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         }
       });
       const payload = response.data;

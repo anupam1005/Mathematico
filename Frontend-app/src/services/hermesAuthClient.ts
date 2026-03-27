@@ -42,6 +42,8 @@ const buildHeaders = (token?: string | null): HeadersMap => {
   return headers;
 };
 
+const normalizePath = (path: string): string => (path.startsWith("/") ? path : `/${path}`);
+
 const hermesSafeRequest = (
   method: "POST" | "GET" | "PUT" | "DELETE",
   path: string,
@@ -52,7 +54,9 @@ const hermesSafeRequest = (
     try {
       const xhr = new XMLHttpRequest();
 
-      const url = `${API_BASE_URL}${API_PATHS.auth}${path}`;
+      const normalizedPath = normalizePath(path);
+      const url = `${API_BASE_URL}${API_PATHS.auth}${normalizedPath}`;
+      console.log("Request URL:", url);
 
       xhr.open(method, url, true);
       xhr.timeout = 30000;
@@ -102,6 +106,9 @@ const hermesSafeRequest = (
       };
 
       xhr.onerror = () => {
+        console.log("ERROR:", "Network request failed");
+        console.log("REQUEST URL:", url);
+        console.log("RESPONSE:", xhr.responseText);
         reject({
           message: "Network request failed",
           status: xhr.status || 0,
@@ -112,6 +119,8 @@ const hermesSafeRequest = (
       if (typeof body === "string") xhr.send(body);
       else xhr.send();
     } catch (err) {
+      console.log("ERROR:", (err as any)?.message || "XHR request failed");
+      console.log("RESPONSE:", undefined);
       reject({
         message: "XHR request failed",
       });

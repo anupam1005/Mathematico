@@ -22,7 +22,8 @@ if (missingVars.length > 0) {
 console.log('🔍 Verifying API connectivity...');
 try {
   const apiBaseUrl = String(process.env.EXPO_PUBLIC_API_BASE_URL || '').trim();
-  const response = execSync(`curl -f -s -o /dev/null -w "%{http_code}" ${apiBaseUrl}/health`, { 
+  const healthUrl = `${apiBaseUrl.replace(/\/+$/, '')}/api/v1/auth/health`;
+  const response = execSync(`curl -f -s -o /dev/null -w "%{http_code}" "${healthUrl}"`, {
     timeout: 10000,
     stdio: 'pipe'
   });
