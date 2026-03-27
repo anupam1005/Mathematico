@@ -119,9 +119,18 @@ const describeAuthHeader = (headers: unknown): string => {
   return `Bearer [len=${token.length}]`;
 };
 
+const ensureMutableHeaders = (headers: unknown): Record<string, any> => {
+  if (!headers) return {};
+  if (typeof (headers as any).toJSON === 'function') {
+    return { ...((headers as any).toJSON() as Record<string, any>) };
+  }
+  return { ...(headers as Record<string, any>) };
+};
+
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   const requestUrl = toAbsoluteRequestUrl(error.config || {});
   const method = String(error.config?.method || 'GET').toUpperCase();
+  const isHeadersMutationRuntimeError = /read-only property\s+'NONE'/i.test(String(error.message || ''));
   const isNetworkError = !error.response || error.code === 'ERR_NETWORK';
 
   if (isRequestCancelled(error)) {
@@ -176,6 +185,16 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   }
 
   if (error.code === 'ERR_NETWORK' || !error.response) {
+    if (isHeadersMutationRuntimeError) {
+      return {
+        message: 'Request configuration failed before reaching the network.',
+        code: 'API_ERROR',
+        requestUrl,
+        method,
+        isNetworkError: false,
+        originalError: error,
+      };
+    }
     return {
       message: 'Network error. Please check your connection and try again.',
       code: 'NETWORK_ERROR',
@@ -212,22 +231,20 @@ api.interceptors.request.use(
       // Multipart safety: do NOT force Content-Type for FormData.
       // Let axios set the boundary, otherwise real devices often surface "Network Error".
       if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-        // Axios may store headers as AxiosHeaders; keep type/runtime compatible.
-        const headersAny = (config.headers || {}) as any;
-        if (typeof headersAny.delete === 'function') {
-          headersAny.delete('Content-Type');
-          headersAny.delete('content-type');
-          headersAny.delete('Content-type');
-        } else {
-          const next = { ...(headersAny as Record<string, any>) };
-          delete next['Content-Type'];
-          delete next['content-type'];
-          delete next['Content-type'];
-          config.headers = next as any;
-        }
+        console.log('HEADERS TYPE:', (config.headers as any)?.constructor?.name);
+        console.log('HEADERS OBJECT:', config.headers);
+        const headers = ensureMutableHeaders(config.headers);
+        delete headers['Content-Type'];
+        delete headers['content-type'];
+        delete headers['Content-type'];
+        config.headers = headers as any;
       }
+      console.log('FINAL HEADERS:', config.headers);
 
       const authHeader = describeAuthHeader(config.headers);
+      if (requestUrl === `${String(API_BASE_URL).replace(/\/+$/, '')}/`) {
+        console.log('UNEXPECTED REQUEST:', method, config.url);
+      }
 
       console.log('[API:REQUEST]', {
         method,

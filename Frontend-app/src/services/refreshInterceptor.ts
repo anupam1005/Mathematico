@@ -86,6 +86,16 @@ const isInvalidRefreshResponse = (error: unknown): boolean => {
   );
 };
 
+const ensureMutableHeaders = (
+  headers: InternalAxiosRequestConfig['headers'] | undefined
+): Record<string, string> => {
+  if (!headers) return {};
+  if (typeof (headers as any).toJSON === 'function') {
+    return { ...((headers as any).toJSON() as Record<string, string>) };
+  }
+  return { ...(headers as Record<string, string>) };
+};
+
 const enrichRequestWithAuth = async (
   config: InternalAxiosRequestConfig
 ): Promise<InternalAxiosRequestConfig> => {
@@ -96,11 +106,12 @@ const enrichRequestWithAuth = async (
   const token = await tokenStorage.getAccessToken();
   if (!token) return config;
 
-  config.headers = config.headers || {};
-  const headers = config.headers as Record<string, string>;
-  if (!headers.Authorization) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  console.log('HEADERS TYPE:', (config.headers as any)?.constructor?.name);
+  console.log('HEADERS OBJECT:', config.headers);
+  const headers = ensureMutableHeaders(config.headers);
+  headers.Authorization = `Bearer ${token}`;
+  config.headers = headers as any;
+  console.log('FINAL HEADERS:', config.headers);
 
   return config;
 };
@@ -119,9 +130,6 @@ const refreshTokenRequest = async (
     {
       timeout: timeoutMs,
       skipAuthRefresh: true,
-      headers: {
-        Authorization: '',
-      },
     } as AxiosRequestConfig & { skipAuthRefresh: boolean }
   );
 
@@ -204,8 +212,12 @@ export const installRefreshInterceptor = (
           pendingQueue.push({
             resolve: (token) => {
               if (token) {
-                originalRequest.headers = originalRequest.headers || {};
-                (originalRequest.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+                console.log('HEADERS TYPE:', (originalRequest.headers as any)?.constructor?.name);
+                console.log('HEADERS OBJECT:', originalRequest.headers);
+                const headers = ensureMutableHeaders(originalRequest.headers);
+                headers.Authorization = `Bearer ${token}`;
+                originalRequest.headers = headers as any;
+                console.log('FINAL HEADERS:', originalRequest.headers);
               }
               resolve(client.request(originalRequest));
             },
@@ -229,8 +241,12 @@ export const installRefreshInterceptor = (
 
         authFailureNotified = false;
         flushQueue(null, token);
-        originalRequest.headers = originalRequest.headers || {};
-        (originalRequest.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+        console.log('HEADERS TYPE:', (originalRequest.headers as any)?.constructor?.name);
+        console.log('HEADERS OBJECT:', originalRequest.headers);
+        const headers = ensureMutableHeaders(originalRequest.headers);
+        headers.Authorization = `Bearer ${token}`;
+        originalRequest.headers = headers as any;
+        console.log('FINAL HEADERS:', originalRequest.headers);
         return client.request(originalRequest);
       } catch (refreshError) {
         safeCatch('refreshInterceptor.refreshTokenRequest')(refreshError);

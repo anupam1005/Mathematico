@@ -103,9 +103,11 @@ export default function RegisterScreen({ navigation }: any) {
       if (!result.success) {
         setApiError(result.message || 'Registration failed. Please check your information and try again.');
       }
-    } catch (error) {
-      // Hermes-safe error handling is centralized in safeCatch/auth stack.
-      setApiError('An unexpected error occurred. Please try again.');
+    } catch (error: any) {
+      const message = error?.isNetworkError
+        ? 'Network issue'
+        : error?.message || 'An unexpected error occurred. Please try again.';
+      setApiError(message);
     } finally {
       setIsSubmitting(false);
     }
