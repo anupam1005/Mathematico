@@ -33,6 +33,12 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+try {
+  console.log('[API] BASE URL:', api.defaults.baseURL);
+} catch {
+  // ignore
+}
+
 const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
   const rawUrl = String(config.url || '');
   if (/^https?:\/\//i.test(rawUrl)) {
@@ -76,6 +82,41 @@ const estimatePayloadSizeBytes = (payload: unknown): number => {
   } catch {
     return -1;
   }
+};
+
+const isWriteMethod = (method: unknown): boolean => {
+  const m = String(method || 'GET').toUpperCase();
+  return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE';
+};
+
+const previewPayload = (payload: unknown): unknown => {
+  if (payload === undefined) return undefined;
+  if (payload === null) return null;
+  if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+    return { __type: 'FormData' };
+  }
+  if (typeof payload === 'string') {
+    return payload.length > 2000 ? `${payload.slice(0, 2000)}…(truncated)` : payload;
+  }
+  try {
+    const json = JSON.stringify(payload);
+    if (json.length > 4000) return `${json.slice(0, 4000)}…(truncated_json)`;
+    return payload;
+  } catch {
+    return { __unserializable: true };
+  }
+};
+
+const describeAuthHeader = (headers: unknown): string => {
+  const h = toRecordHeaders(headers);
+  const raw = h.Authorization || h.authorization || '';
+  if (!raw) return 'MISSING';
+  const trimmed = String(raw).trim();
+  const lower = trimmed.toLowerCase();
+  if (!lower.startsWith('bearer ')) return `INVALID_FORMAT(${trimmed.slice(0, 20)}${trimmed.length > 20 ? '…' : ''})`;
+  const token = trimmed.slice(7).trim();
+  if (!token) return 'INVALID_BEARER_EMPTY';
+  return `Bearer [len=${token.length}]`;
 };
 
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
@@ -167,12 +208,42 @@ api.interceptors.request.use(
       const method = String(config.method || 'GET').toUpperCase();
       const payloadSize = estimatePayloadSizeBytes(config.data);
       (config as any).metadata = { startedAt: Date.now() };
+
+      // Multipart safety: do NOT force Content-Type for FormData.
+      // Let axios set the boundary, otherwise real devices often surface "Network Error".
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        // Axios may store headers as AxiosHeaders; keep type/runtime compatible.
+        const headersAny = (config.headers || {}) as any;
+        if (typeof headersAny.delete === 'function') {
+          headersAny.delete('Content-Type');
+          headersAny.delete('content-type');
+          headersAny.delete('Content-type');
+        } else {
+          const next = { ...(headersAny as Record<string, any>) };
+          delete next['Content-Type'];
+          delete next['content-type'];
+          delete next['Content-type'];
+          config.headers = next as any;
+        }
+      }
+
+      const authHeader = describeAuthHeader(config.headers);
+
       console.log('[API:REQUEST]', {
         method,
         url: requestUrl,
         headers: sanitizeHeaders(config.headers),
+        authHeader,
         payloadSizeBytes: payloadSize,
       });
+
+      if (isWriteMethod(method)) {
+        console.log('[API:WRITE]', {
+          fullUrl: requestUrl,
+          method,
+          payload: previewPayload(config.data),
+        });
+      }
     } catch {
       // Keep request flow intact if diagnostic logging fails.
     }

@@ -112,6 +112,12 @@ const authService = {
         },
       });
 
+      // Final-stage real-device validation: ensure tokens are available immediately after save.
+      try {
+        const stored = await tokenStorage.getAccessToken();
+        console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
+      } catch {}
+
       return {
         success: true,
         message: payload.message || 'Login successful',
@@ -178,6 +184,12 @@ const authService = {
           refreshToken,
         },
       });
+
+      // Final-stage real-device validation: ensure tokens are available immediately after save.
+      try {
+        const stored = await tokenStorage.getAccessToken();
+        console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
+      } catch {}
 
       return {
         success: true,
