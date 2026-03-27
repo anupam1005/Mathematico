@@ -101,13 +101,10 @@ export default function RegisterScreen({ navigation }: any) {
       const result = await register(trimmedName, normalizedEmail, password);
 
       if (!result.success) {
-        setApiError(result.message || 'Registration failed. Please check your information and try again.');
+        setApiError(typeof result.message === 'string' ? result.message : '');
       }
     } catch (error: any) {
-      const message = error?.isNetworkError
-        ? 'Network issue'
-        : error?.message || 'An unexpected error occurred. Please try again.';
-      setApiError(message);
+      setApiError(typeof error?.message === 'string' ? error.message : '');
     } finally {
       setIsSubmitting(false);
     }

@@ -66,13 +66,10 @@ export default function LoginScreen({ navigation }: any) {
       const result = await login(normalizedEmail, password);
       
       if (!result.success) {
-        setApiError(result.message || 'Invalid email or password. Please try again.');
+        setApiError(typeof result.message === 'string' ? result.message : '');
       }
     } catch (error: any) {
-      const message = error?.isNetworkError
-        ? 'Network issue'
-        : error?.message || 'An unexpected error occurred. Please try again.';
-      setApiError(message);
+      setApiError(typeof error?.message === 'string' ? error.message : '');
     } finally {
       setIsSubmitting(false);
     }

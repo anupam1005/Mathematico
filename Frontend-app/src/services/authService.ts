@@ -9,7 +9,7 @@ import { safeCatch } from '../utils/safeCatch';
 
 export interface LoginResponse {
   success: boolean;
-  message: string;
+  message?: string;
   data?: {
     user: any;
     accessToken: string;
@@ -21,7 +21,7 @@ export interface LoginResponse {
 
 export interface RefreshTokenResponse {
   success: boolean;
-  message: string;
+  message?: string;
   data?: {
     accessToken: string;
     refreshToken?: string;
@@ -32,7 +32,7 @@ export interface RefreshTokenResponse {
 
 export interface RegisterResponse {
   success: boolean;
-  message: string;
+  message?: string;
   data?: {
     user: any;
     accessToken: string;
@@ -60,23 +60,6 @@ const toRefreshToken = (payload: any): string | null => {
   return typeof token === 'string' && token.length > 10 ? token : null;
 };
 
-const withErrorDiagnostics = (message: string, error: any): string => {
-  const code = typeof error?.code === 'string' ? error.code : null;
-  const status =
-    typeof error?.status === 'number'
-      ? error.status
-      : typeof error?.response?.status === 'number'
-        ? error.response.status
-        : null;
-
-  const details: string[] = [];
-  if (code) details.push(`code=${code}`);
-  if (status !== null) details.push(`status=${status}`);
-
-  if (details.length === 0) return message;
-  return `${message} (${details.join(', ')})`;
-};
-
 const authService = {
   /* ---------------------------- LOGIN ----------------------------- */
 
@@ -88,7 +71,7 @@ const authService = {
       if (!payload?.success || !payload?.data) {
         return {
           success: false,
-          message: payload?.message || 'Invalid login response',
+          message: payload?.message,
         };
       }
 
@@ -100,7 +83,7 @@ const authService = {
       if (!accessToken) {
         return {
           success: false,
-          message: 'Invalid token received from server',
+          message: payload?.message,
         };
       }
 
@@ -120,7 +103,7 @@ const authService = {
 
       return {
         success: true,
-        message: payload.message || 'Login successful',
+        message: payload.message,
         data: {
           user: rawUser,
           accessToken,
@@ -130,15 +113,9 @@ const authService = {
         },
       };
     } catch (error: any) {
-      const baseMessage =
-        error?.message ||
-        error?.data?.message ||
-        'Login failed - please check your connection and try again';
-      const message = withErrorDiagnostics(baseMessage, error);
-
       return {
         success: false,
-        message,
+        message: error?.message,
       };
     }
   },
@@ -162,7 +139,7 @@ const authService = {
       if (!payload?.success || !payload?.data) {
         return {
           success: false,
-          message: payload?.message || 'Registration failed',
+          message: payload?.message,
         };
       }
 
@@ -173,7 +150,7 @@ const authService = {
       if (!accessToken) {
         return {
           success: false,
-          message: 'Invalid token received from server',
+          message: payload?.message,
         };
       }
 
@@ -193,7 +170,7 @@ const authService = {
 
       return {
         success: true,
-        message: payload.message || 'Registration successful',
+        message: payload.message,
         data: {
           user: rawUser,
           accessToken,
@@ -201,15 +178,9 @@ const authService = {
         },
       };
     } catch (error: any) {
-      const baseMessage =
-        error?.message ||
-        error?.data?.message ||
-        'Registration failed - please check your connection and try again';
-      const message = withErrorDiagnostics(baseMessage, error);
-
       return {
         success: false,
-        message,
+        message: error?.message,
       };
     }
   },

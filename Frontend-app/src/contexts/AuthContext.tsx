@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { Alert } from 'react-native';
 import authService from '../services/authService';
 import { safeCatch } from '../utils/safeCatch';
 
@@ -107,17 +106,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success) {
         const restored = await restoreAuthState();
         if (!restored.isAuthenticated) {
-          return { success: false, message: 'Login failed to initialize session' };
+          return { success: false, message: response.message };
         }
         return { success: true, message: response.message };
       }
 
-      return { success: false, message: response.message || 'Invalid credentials' };
+      return { success: false, message: response.message };
     } catch (error: any) {
-      const errorMessage =
-        error?.message || 'An error occurred during login. Please try again.';
       safeCatch('AuthContext.login')(error);
-      return { success: false, message: errorMessage };
+      return { success: false, message: error?.message };
     } finally {
       setIsLoading(false);
     }
@@ -135,26 +132,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success) {
         const restored = await restoreAuthState();
         if (!restored.isAuthenticated) {
-          return { success: false, message: 'Registration failed to initialize session' };
+          return { success: false, message: response.message };
         }
-        Alert.alert(
-          'Registration Successful',
-          'Welcome to Mathematico! You are now logged in.',
-          [{ text: 'OK' }]
-        );
         return { success: true, message: response.message };
       }
 
-      const message = response.message || 'Registration failed. Please try again.';
-      Alert.alert('Registration Failed', message);
-      return { success: false, message };
+      return { success: false, message: response.message };
     } catch (error: any) {
-      const errorMessage =
-        error?.message || 'An error occurred during registration. Please try again.';
-      safeCatch('AuthContext.register', () => {
-        Alert.alert('Registration Error', errorMessage);
-      })(error);
-      return { success: false, message: errorMessage };
+      safeCatch('AuthContext.register')(error);
+      return { success: false, message: error?.message };
     } finally {
       setIsLoading(false);
     }

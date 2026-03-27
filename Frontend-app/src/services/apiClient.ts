@@ -12,7 +12,7 @@ type ApiErrorCode =
   | 'CANCELLED';
 
 export interface ApiError {
-  message: string;
+  message?: string;
   code: ApiErrorCode;
   status?: number;
   data?: any;
@@ -135,7 +135,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 
   if (isRequestCancelled(error)) {
     return {
-      message: 'Request cancelled',
+      message: error.message,
       code: 'CANCELLED',
       requestUrl,
       method,
@@ -146,7 +146,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 
   if (error.code === 'ECONNABORTED') {
     return {
-      message: 'Request timeout. Please try again.',
+      message: error.message,
       code: 'TIMEOUT',
       requestUrl,
       method,
@@ -158,10 +158,11 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   if (error.response) {
     const status = error.response.status;
     const data = (error.response.data || {}) as any;
+    const backendMessage = typeof data?.message === 'string' ? data.message : undefined;
 
     if (status === 401) {
       return {
-        message: data?.message || 'Session expired. Please login again.',
+        message: backendMessage,
         code: 'UNAUTHORIZED',
         status,
         data,
@@ -173,7 +174,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     }
 
     return {
-      message: data?.message || 'Request failed. Please try again.',
+      message: backendMessage,
       code: 'API_ERROR',
       status,
       data,
@@ -187,7 +188,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   if (error.code === 'ERR_NETWORK' || !error.response) {
     if (isHeadersMutationRuntimeError) {
       return {
-        message: 'Request configuration failed before reaching the network.',
+        message: error.message,
         code: 'API_ERROR',
         requestUrl,
         method,
@@ -196,7 +197,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
       };
     }
     return {
-      message: 'Network error. Please check your connection and try again.',
+      message: error.message,
       code: 'NETWORK_ERROR',
       requestUrl,
       method,
@@ -206,7 +207,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   }
 
   return {
-    message: error.message || 'Request failed. Please try again.',
+    message: error.message,
     code: 'API_ERROR',
     requestUrl,
     method,
@@ -289,6 +290,8 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     try {
+      console.log('RAW RESPONSE:', error.response);
+      console.log('RAW DATA:', error.response?.data);
       const requestUrl = toAbsoluteRequestUrl(error.config || {});
       const method = String(error.config?.method || 'GET').toUpperCase();
       const startedAt = (error.config as any)?.metadata?.startedAt;
