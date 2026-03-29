@@ -65,7 +65,7 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await authApi.post('/login', { email, password });
+      const response = await authApi.post('/login', { email, password }, { skipAuthRefresh: true });
       const payload = response?.data ?? null;
 
       if (!payload?.success || !payload?.data) {
@@ -96,10 +96,8 @@ const authService = {
       });
 
       // Final-stage real-device validation: ensure tokens are available immediately after save.
-      try {
-        const stored = await tokenStorage.getAccessToken();
-        console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
-      } catch {}
+      const stored = await tokenStorage.getAccessToken();
+      console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
 
       return {
         success: true,
@@ -113,10 +111,7 @@ const authService = {
         },
       };
     } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message,
-      };
+      throw error;
     }
   },
 
@@ -132,7 +127,7 @@ const authService = {
         name,
         email,
         password,
-      });
+      }, { skipAuthRefresh: true });
 
       const payload = response?.data ?? null;
 
@@ -163,10 +158,8 @@ const authService = {
       });
 
       // Final-stage real-device validation: ensure tokens are available immediately after save.
-      try {
-        const stored = await tokenStorage.getAccessToken();
-        console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
-      } catch {}
+      const stored = await tokenStorage.getAccessToken();
+      console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
 
       return {
         success: true,
@@ -178,10 +171,7 @@ const authService = {
         },
       };
     } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message,
-      };
+      throw error;
     }
   },
 
@@ -190,8 +180,9 @@ const authService = {
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
       await api.post(`${API_PATHS.auth}/logout`);
-    } catch {
-      // Ignore backend logout failures – we still clear local state
+    } catch (error) {
+      safeCatch('authService.logout')(error);
+      throw error;
     }
     await tokenStorage.clearSession();
     return { success: true, message: 'Logout successful' };
@@ -226,22 +217,16 @@ const authService = {
       const payload = response?.data ?? null;
 
       if (!payload?.success) {
-        return {
-          success: false,
-          message: payload?.message || 'Profile update failed',
-        };
+        return { success: false, message: payload?.message };
       }
 
       return {
         success: true,
-        message: payload.message || 'Profile updated successfully',
+        message: payload.message,
         data: payload.data,
       };
     } catch (error: any) {
-      return {
-        success: false,
-        message: error?.message || 'Profile update failed',
-      };
+      throw error;
     }
   },
 

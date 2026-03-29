@@ -33,6 +33,14 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+const healthApi: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 8000,
+  headers: {
+    Accept: 'application/json',
+  },
+});
+
 try {
   console.log('[API] BASE URL:', api.defaults.baseURL);
 } catch {
@@ -47,6 +55,21 @@ const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
   const base = String(config.baseURL || API_BASE_URL).replace(/\/+$/, '');
   const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
   return `${base}${path}`;
+};
+
+const isRootLikeUrl = (url: string): boolean => {
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === '/') return true;
+  if (/^https?:\/\/[^/]+\/?$/i.test(trimmed)) return true;
+  return false;
+};
+
+const isInvalidRequestConfig = (config: AxiosRequestConfig): boolean => {
+  const rawUrl = String(config.url || '');
+  if (isRootLikeUrl(rawUrl)) return true;
+  const absolute = toAbsoluteRequestUrl(config);
+  if (isRootLikeUrl(absolute)) return true;
+  return false;
 };
 
 const toRecordHeaders = (headers: unknown): Record<string, string> => {
@@ -218,15 +241,15 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 
 const refreshHandle = installRefreshInterceptor(api, {
   timeoutMs: DEFAULT_TIMEOUT_MS,
-  healthPath: `${API_PATHS.auth}/health`,
 });
 
 api.interceptors.request.use(
   (config) => {
-    if (!config.url || config.url === '/' || config.url === '') {
+    if (isInvalidRequestConfig(config)) {
       console.error('❌ BLOCKED INVALID REQUEST:', config);
-      throw new Error('Invalid API request: empty or root URL');
+      return Promise.reject(new Error('Invalid API request: empty or root URL'));
     }
+    console.trace('REQUEST TRACE:', config.url);
     try {
       const requestUrl = toAbsoluteRequestUrl(config);
       const method = String(config.method || 'GET').toUpperCase();
@@ -321,8 +344,16 @@ const normalizePath = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
 };
 
+const validateApiV1Path = (path: string, label: string): string => {
+  const normalized = normalizePath(path);
+  if (!normalized.startsWith('/api/v1/')) {
+    throw new Error(`Invalid API ${label}: expected /api/v1/* path`);
+  }
+  return normalized;
+};
+
 const buildUrl = (basePath: string, path?: string): string => {
-  const normalizedBase = normalizePath(basePath).replace(/\/+$/, '');
+  const normalizedBase = validateApiV1Path(basePath, 'basePath').replace(/\/+$/, '');
 
   if (!path || path === '/' || path === '') {
     throw new Error('Invalid API path: empty path not allowed');
@@ -339,7 +370,7 @@ const buildUrl = (basePath: string, path?: string): string => {
   }
 
   if (normalizedPath.startsWith('/api/')) {
-    return normalizedPath;
+    return validateApiV1Path(normalizedPath, 'path');
   }
 
   return `${normalizedBase}${normalizedPath}`;
@@ -362,11 +393,27 @@ export const withBasePath = (basePath: string) => ({
     return api.patch<T>(buildUrl(basePath, path), data, config);
   },
   request: <T = any>(config: AxiosRequestConfig) => {
-    if (!config.url || config.url === '/' || config.url === '') {
-      throw new Error('Invalid API request: empty or root URL');
+    if (isInvalidRequestConfig(config)) {
+      return Promise.reject(new Error('Invalid API request: empty or root URL'));
     }
     const url = buildUrl(basePath, config.url);
-    return api.request<T>({ ...config, url });
+    const safeConfig: AxiosRequestConfig = {
+      ...config,
+      url,
+      method: config.method,
+      headers: ensureMutableHeaders(config.headers),
+    };
+    if (!safeConfig.url || safeConfig.url === '/' || safeConfig.url === '') {
+      console.error('❌ FATAL: EMPTY URL BEFORE DISPATCH', safeConfig);
+      return Promise.reject(new Error('Invalid request: empty URL'));
+    }
+    console.log('🚨 DISPATCHING REQUEST:', {
+      url: safeConfig.url,
+      baseURL: safeConfig.baseURL || api.defaults.baseURL,
+      full: `${String(safeConfig.baseURL || api.defaults.baseURL || '')}${String(safeConfig.url || '')}`,
+      method: safeConfig.method,
+    });
+    return api.request<T>(safeConfig);
   },
 });
 
@@ -378,7 +425,15 @@ export const createRequestController = () => {
   };
 };
 
-export const runBackendHealthCheck = () => refreshHandle.checkHealth();
+export const runBackendHealthCheck = async (): Promise<boolean> => {
+  try {
+    await healthApi.get(`${API_PATHS.auth}/health`);
+    return true;
+  } catch (error) {
+    console.error('[API:HEALTH_CHECK_FAILED]', error);
+    throw error;
+  }
+};
 
 export const ejectApiInterceptors = () => refreshHandle.eject();
 

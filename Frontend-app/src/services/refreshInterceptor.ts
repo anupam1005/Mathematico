@@ -1,21 +1,16 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
-import NetInfo from '@react-native-community/netinfo';
 
 import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
 
 type RetryableConfig = InternalAxiosRequestConfig & {
-  _retry?: boolean;
-  __retryCount?: number;
   skipAuthRefresh?: boolean;
-  __queued?: boolean;
 };
 
 interface InstallOptions {
   onAuthFailure?: () => Promise<void> | void;
   timeoutMs?: number;
-  healthPath?: string;
 }
 
 interface RefreshResponse {
@@ -65,10 +60,21 @@ const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
   return rawUrl.includes('/login') || rawUrl.includes('/register') || rawUrl.includes('/refresh-token');
 };
 
-const shouldRetryNetwork = (error: AxiosError, config?: RetryableConfig): boolean => {
+const isInvalidRequestUrl = (config: InternalAxiosRequestConfig): boolean => {
+  const rawUrl = String(config.url || '').trim();
+  if (!rawUrl || rawUrl === '/') return true;
+  if (/^https?:\/\/[^/]+\/?$/i.test(rawUrl)) return true;
+  return false;
+};
+
+const shouldRetryNetwork = (
+  error: AxiosError,
+  config: RetryableConfig | undefined,
+  retryCount: number
+): boolean => {
   if (!config || config.skipAuthRefresh) return false;
   if (isAuthMutationRequest(config)) return false;
-  if (config.__retryCount && config.__retryCount >= MAX_NETWORK_RETRIES) return false;
+  if (retryCount >= MAX_NETWORK_RETRIES) return false;
 
   if (isAxiosNetworkError(error)) return true;
   const status = error.response?.status;
@@ -100,6 +106,61 @@ const ensureMutableHeaders = (
     return { ...((headers as any).toJSON() as Record<string, string>) };
   }
   return { ...(headers as Record<string, string>) };
+};
+
+const rebuildRequest = (
+  original: RetryableConfig,
+  token?: string
+): AxiosRequestConfig => {
+  if (!original.url) {
+    throw new Error('FATAL: Missing URL before retry');
+  }
+  const url = String(original.url || '').trim();
+  if (!url || url === '/' || /^https?:\/\/[^/]+\/?$/i.test(url)) {
+    throw new Error('FATAL: Invalid URL in retry rebuild');
+  }
+
+  const method = String(original.method || 'GET').toUpperCase();
+
+  const headers = ensureMutableHeaders(original.headers);
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let data = original.data;
+  if (data && typeof data === 'object') {
+    try {
+      data = JSON.parse(JSON.stringify(data));
+    } catch {
+      data = undefined;
+    }
+  }
+
+  let params = original.params;
+  if (params && typeof params === 'object') {
+    try {
+      params = JSON.parse(JSON.stringify(params));
+    } catch {
+      params = undefined;
+    }
+  }
+
+  console.log('RETRY BUILD:', {
+    url,
+    method,
+    hasData: !!data,
+    hasParams: !!params,
+  });
+
+  return {
+    url,
+    method: method.toUpperCase(),
+    baseURL: original.baseURL || undefined,
+    headers,
+    data,
+    params,
+    timeout: original.timeout || 20000,
+  };
 };
 
 const enrichRequestWithAuth = async (
@@ -157,16 +218,11 @@ export const installRefreshInterceptor = (
   options: InstallOptions = {}
 ) => {
   const timeoutMs = options.timeoutMs ?? 20000;
-  const healthPath =
-    options.healthPath && options.healthPath.startsWith('/api/')
-      ? options.healthPath
-      : '/api/v1/auth/health';
-  if (!healthPath.startsWith('/api/')) {
-    throw new Error('Invalid healthPath: must start with /api/');
-  }
 
   let isRefreshing = false;
   let authFailureNotified = false;
+  const retriedRequests = new WeakSet<object>();
+  const retryCountByRequest = new WeakMap<object, number>();
   let pendingQueue: Array<{
     resolve: (token: string | null) => void;
     reject: (error: any) => void;
@@ -183,9 +239,16 @@ export const installRefreshInterceptor = (
 
   const requestInterceptorId = client.interceptors.request.use(
     async (config) => {
-      if (!config.url || config.url === '/' || config.url === '') {
+      if (isInvalidRequestUrl(config)) {
         console.error('❌ BLOCKED INVALID REQUEST:', config);
-        throw new Error('Invalid API request: empty or root URL');
+        return Promise.reject(new Error('Invalid API request: empty or root URL'));
+      }
+      console.trace('REQUEST TRACE:', config.url);
+      if (isAuthMutationRequest(config as RetryableConfig)) {
+        if (!config.timeout) {
+          config.timeout = timeoutMs;
+        }
+        return config;
       }
       const withAuth = await enrichRequestWithAuth(config);
       if (!withAuth.timeout) {
@@ -202,26 +265,39 @@ export const installRefreshInterceptor = (
       const originalRequest = error.config as RetryableConfig | undefined;
       if (!originalRequest) return Promise.reject(error);
 
-      if (shouldRetryNetwork(error, originalRequest)) {
-        originalRequest.__retryCount = (originalRequest.__retryCount || 0) + 1;
-        const delayMs = RETRY_BASE_DELAY_MS * 2 ** (originalRequest.__retryCount - 1);
+      const currentRetryCount = retryCountByRequest.get(originalRequest) || 0;
+      if (shouldRetryNetwork(error, originalRequest, currentRetryCount)) {
+        const nextRetryCount = currentRetryCount + 1;
+        retryCountByRequest.set(originalRequest, nextRetryCount);
+        const delayMs = RETRY_BASE_DELAY_MS * 2 ** (nextRetryCount - 1);
         console.log('[API:RETRY]', {
           url: originalRequest.url,
           method: String(originalRequest.method || 'GET').toUpperCase(),
-          retryCount: originalRequest.__retryCount,
+          retryCount: nextRetryCount,
           delayMs,
           reasonCode: error.code,
           status: error.response?.status,
         });
         await sleep(delayMs);
-        return client.request(originalRequest);
+        let retryConfig: AxiosRequestConfig;
+        try {
+          retryConfig = rebuildRequest(originalRequest);
+        } catch (rebuildError) {
+          return Promise.reject(rebuildError);
+        }
+        if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
+          console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
+          return Promise.reject(new Error('Invalid retry dispatch'));
+        }
+        return client.request(retryConfig);
       }
 
       const status = error.response?.status;
       const shouldRefresh =
         status === 401 &&
-        !originalRequest._retry &&
+        !retriedRequests.has(originalRequest) &&
         !originalRequest.skipAuthRefresh &&
+        !isAuthMutationRequest(originalRequest) &&
         hasBearerHeader(originalRequest) &&
         !String(originalRequest.url || '').includes('/refresh-token');
 
@@ -229,21 +305,25 @@ export const installRefreshInterceptor = (
         return Promise.reject(error);
       }
 
-      originalRequest._retry = true;
+      retriedRequests.add(originalRequest);
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({
             resolve: (token) => {
-              if (token) {
-                console.log('HEADERS TYPE:', (originalRequest.headers as any)?.constructor?.name);
-                console.log('HEADERS OBJECT:', originalRequest.headers);
-                const headers = ensureMutableHeaders(originalRequest.headers);
-                headers.Authorization = `Bearer ${token}`;
-                originalRequest.headers = headers as any;
-                console.log('FINAL HEADERS:', originalRequest.headers);
+              let retryConfig: AxiosRequestConfig;
+              try {
+                retryConfig = rebuildRequest(originalRequest, token || undefined);
+              } catch (rebuildError) {
+                reject(rebuildError);
+                return;
               }
-              resolve(client.request(originalRequest));
+              if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
+                console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
+                reject(new Error('Invalid retry dispatch'));
+                return;
+              }
+              resolve(client.request(retryConfig));
             },
             reject,
           });
@@ -265,13 +345,12 @@ export const installRefreshInterceptor = (
 
         authFailureNotified = false;
         flushQueue(null, token);
-        console.log('HEADERS TYPE:', (originalRequest.headers as any)?.constructor?.name);
-        console.log('HEADERS OBJECT:', originalRequest.headers);
-        const headers = ensureMutableHeaders(originalRequest.headers);
-        headers.Authorization = `Bearer ${token}`;
-        originalRequest.headers = headers as any;
-        console.log('FINAL HEADERS:', originalRequest.headers);
-        return client.request(originalRequest);
+        const retryConfig = rebuildRequest(originalRequest, token);
+        if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
+          console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
+          return Promise.reject(new Error('Invalid retry dispatch'));
+        }
+        return client.request(retryConfig);
       } catch (refreshError) {
         safeCatch('refreshInterceptor.refreshTokenRequest')(refreshError);
         if (isInvalidRefreshResponse(refreshError)) {
@@ -289,28 +368,12 @@ export const installRefreshInterceptor = (
     }
   );
 
-  const checkHealth = async (): Promise<boolean> => {
-    const net = await NetInfo.fetch();
-    if (!net.isConnected) return false;
-
-    try {
-      await client.get(healthPath, {
-        timeout: 8000,
-        skipAuthRefresh: true,
-      } as AxiosRequestConfig & { skipAuthRefresh: boolean });
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   return {
     eject: () => {
       client.interceptors.request.eject(requestInterceptorId);
       client.interceptors.response.eject(responseInterceptorId);
       pendingQueue = [];
     },
-    checkHealth,
   };
 };
 
