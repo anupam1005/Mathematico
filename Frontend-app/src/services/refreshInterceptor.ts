@@ -157,7 +157,13 @@ export const installRefreshInterceptor = (
   options: InstallOptions = {}
 ) => {
   const timeoutMs = options.timeoutMs ?? 20000;
-  const healthPath = options.healthPath ?? '/health';
+  const healthPath =
+    options.healthPath && options.healthPath.startsWith('/api/')
+      ? options.healthPath
+      : '/api/v1/auth/health';
+  if (!healthPath.startsWith('/api/')) {
+    throw new Error('Invalid healthPath: must start with /api/');
+  }
 
   let isRefreshing = false;
   let authFailureNotified = false;
@@ -177,6 +183,10 @@ export const installRefreshInterceptor = (
 
   const requestInterceptorId = client.interceptors.request.use(
     async (config) => {
+      if (!config.url || config.url === '/' || config.url === '') {
+        console.error('❌ BLOCKED INVALID REQUEST:', config);
+        throw new Error('Invalid API request: empty or root URL');
+      }
       const withAuth = await enrichRequestWithAuth(config);
       if (!withAuth.timeout) {
         withAuth.timeout = timeoutMs;

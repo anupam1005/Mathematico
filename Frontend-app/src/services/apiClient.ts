@@ -223,6 +223,10 @@ const refreshHandle = installRefreshInterceptor(api, {
 
 api.interceptors.request.use(
   (config) => {
+    if (!config.url || config.url === '/' || config.url === '') {
+      console.error('❌ BLOCKED INVALID REQUEST:', config);
+      throw new Error('Invalid API request: empty or root URL');
+    }
     try {
       const requestUrl = toAbsoluteRequestUrl(config);
       const method = String(config.method || 'GET').toUpperCase();
@@ -320,7 +324,9 @@ const normalizePath = (path: string): string => {
 const buildUrl = (basePath: string, path?: string): string => {
   const normalizedBase = normalizePath(basePath).replace(/\/+$/, '');
 
-  if (!path) return normalizedBase;
+  if (!path || path === '/' || path === '') {
+    throw new Error('Invalid API path: empty path not allowed');
+  }
 
   if (/^https?:\/\//i.test(path)) {
     return path;
@@ -356,7 +362,10 @@ export const withBasePath = (basePath: string) => ({
     return api.patch<T>(buildUrl(basePath, path), data, config);
   },
   request: <T = any>(config: AxiosRequestConfig) => {
-    const url = buildUrl(basePath, config.url || '');
+    if (!config.url || config.url === '/' || config.url === '') {
+      throw new Error('Invalid API request: empty or root URL');
+    }
+    const url = buildUrl(basePath, config.url);
     return api.request<T>({ ...config, url });
   },
 });
