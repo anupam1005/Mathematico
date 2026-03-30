@@ -158,14 +158,6 @@ const describeAuthHeader = (headers: unknown): string => {
   return `Bearer [len=${token.length}]`;
 };
 
-const ensureMutableHeaders = (headers: unknown): Record<string, any> => {
-  if (!headers) return {};
-  if (typeof (headers as any).toJSON === 'function') {
-    return { ...((headers as any).toJSON() as Record<string, any>) };
-  }
-  return { ...(headers as Record<string, any>) };
-};
-
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   const safeCode = readAxiosErrorCodeSafe(error);
   const requestUrl = toAbsoluteRequestUrl(error.config || {});
@@ -278,11 +270,11 @@ api.interceptors.request.use(
       if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
         console.log('HEADERS TYPE:', (config.headers as any)?.constructor?.name);
         console.log('HEADERS OBJECT:', config.headers);
-        const headers = ensureMutableHeaders(config.headers);
-        delete headers['Content-Type'];
-        delete headers['content-type'];
-        delete headers['Content-type'];
-        config.headers = headers as any;
+        if (config.headers) {
+          delete (config.headers as any)['Content-Type'];
+          delete (config.headers as any)['content-type'];
+          delete (config.headers as any)['Content-type'];
+        }
       }
       console.log('FINAL HEADERS:', config.headers);
 
@@ -418,7 +410,7 @@ export const withBasePath = (basePath: string) => ({
       ...config,
       url,
       method: config.method,
-      headers: ensureMutableHeaders(config.headers),
+      headers: config.headers,
     };
     if (!safeConfig.url || safeConfig.url === '/' || safeConfig.url === '') {
       console.error('❌ FATAL: EMPTY URL BEFORE DISPATCH', safeConfig);

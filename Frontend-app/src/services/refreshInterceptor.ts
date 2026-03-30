@@ -104,16 +104,6 @@ const isInvalidRefreshResponse = (error: unknown): boolean => {
   );
 };
 
-const ensureMutableHeaders = (
-  headers: InternalAxiosRequestConfig['headers'] | undefined
-): Record<string, string> => {
-  if (!headers) return {};
-  if (typeof (headers as any).toJSON === 'function') {
-    return { ...((headers as any).toJSON() as Record<string, string>) };
-  }
-  return { ...(headers as Record<string, string>) };
-};
-
 const rebuildRequest = (
   original: RetryableConfig,
   token?: string
@@ -127,11 +117,6 @@ const rebuildRequest = (
   }
 
   const method = String(original.method || 'GET').toUpperCase();
-
-  const headers = ensureMutableHeaders(original.headers);
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
 
   let data = original.data;
   if (data && typeof data === 'object') {
@@ -158,15 +143,20 @@ const rebuildRequest = (
     hasParams: !!params,
   });
 
-  return {
+  const retryConfig: AxiosRequestConfig = {
     url,
     method: method.toUpperCase(),
     baseURL: original.baseURL || undefined,
-    headers,
+    headers: original.headers as any,
     data,
     params,
     timeout: original.timeout || 20000,
   };
+  if (token) {
+    retryConfig.headers = retryConfig.headers || {};
+    (retryConfig.headers as any).Authorization = `Bearer ${token}`;
+  }
+  return retryConfig;
 };
 
 const enrichRequestWithAuth = async (
@@ -178,13 +168,9 @@ const enrichRequestWithAuth = async (
   await tokenStorage.hydrate();
   const token = await tokenStorage.getAccessToken();
   if (!token) return config;
-
-  console.log('HEADERS TYPE:', (config.headers as any)?.constructor?.name);
-  console.log('HEADERS OBJECT:', config.headers);
-  const headers = ensureMutableHeaders(config.headers);
-  headers.Authorization = `Bearer ${token}`;
-  config.headers = headers as any;
-  console.log('FINAL HEADERS:', config.headers);
+  if (config.headers) {
+    (config.headers as any).Authorization = `Bearer ${token}`;
+  }
 
   return config;
 };
