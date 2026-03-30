@@ -51,7 +51,13 @@ const hasBearerHeader = (config?: RetryableConfig): boolean => {
 };
 
 const isAxiosNetworkError = (error: AxiosError): boolean => {
-  const code = error.code || '';
+  let code: string | undefined;
+  try {
+    const maybe = (error as any)?.code;
+    code = typeof maybe === 'string' ? maybe : undefined;
+  } catch {
+    code = undefined;
+  }
   return !error.response || code === 'ECONNABORTED' || code === 'ERR_NETWORK';
 };
 
@@ -275,7 +281,14 @@ export const installRefreshInterceptor = (
           method: String(originalRequest.method || 'GET').toUpperCase(),
           retryCount: nextRetryCount,
           delayMs,
-          reasonCode: error.code,
+          reasonCode: (() => {
+            try {
+              const maybe = (error as any)?.code;
+              return typeof maybe === 'string' ? maybe : undefined;
+            } catch {
+              return undefined;
+            }
+          })(),
           status: error.response?.status,
         });
         await sleep(delayMs);
@@ -381,5 +394,10 @@ export const isRequestCancelled = (error: unknown): boolean => {
   if (!error) return false;
   if (axios.isCancel(error)) return true;
   const maybeError = error as AxiosError;
-  return maybeError.code === 'ERR_CANCELED';
+  try {
+    const maybe = (maybeError as any)?.code;
+    return maybe === 'ERR_CANCELED';
+  } catch {
+    return false;
+  }
 };

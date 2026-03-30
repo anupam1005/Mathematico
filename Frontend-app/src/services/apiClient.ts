@@ -48,13 +48,20 @@ try {
 }
 
 const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
-  const rawUrl = String(config.url || '');
+  const rawUrl = String(config.url ?? '').trim();
+  if (!rawUrl) return '';
   if (/^https?:\/\//i.test(rawUrl)) {
     return rawUrl;
   }
   const base = String(config.baseURL || API_BASE_URL).replace(/\/+$/, '');
   const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
   return `${base}${path}`;
+};
+
+const safeMethodFromConfig = (config: AxiosRequestConfig | undefined): string => {
+  const raw = config?.method;
+  if (!raw) return 'UNKNOWN';
+  return String(raw).toUpperCase();
 };
 
 const isRootLikeUrl = (url: string): boolean => {
@@ -107,6 +114,15 @@ const estimatePayloadSizeBytes = (payload: unknown): number => {
   }
 };
 
+const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
+  try {
+    const maybe = (error as any)?.code;
+    return typeof maybe === 'string' ? maybe : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const isWriteMethod = (method: unknown): boolean => {
   const m = String(method || 'GET').toUpperCase();
   return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE';
@@ -151,10 +167,11 @@ const ensureMutableHeaders = (headers: unknown): Record<string, any> => {
 };
 
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
+  const safeCode = readAxiosErrorCodeSafe(error);
   const requestUrl = toAbsoluteRequestUrl(error.config || {});
-  const method = String(error.config?.method || 'GET').toUpperCase();
+  const method = safeMethodFromConfig(error.config);
   const isHeadersMutationRuntimeError = /read-only property\s+'NONE'/i.test(String(error.message || ''));
-  const isNetworkError = !error.response || error.code === 'ERR_NETWORK';
+  const isNetworkError = !error.response || safeCode === 'ERR_NETWORK';
 
   if (isRequestCancelled(error)) {
     return {
@@ -167,7 +184,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     };
   }
 
-  if (error.code === 'ECONNABORTED') {
+  if (safeCode === 'ECONNABORTED') {
     return {
       message: error.message,
       code: 'TIMEOUT',
@@ -208,7 +225,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     };
   }
 
-  if (error.code === 'ERR_NETWORK' || !error.response) {
+  if (safeCode === 'ERR_NETWORK' || !error.response) {
     if (isHeadersMutationRuntimeError) {
       return {
         message: error.message,
@@ -320,12 +337,12 @@ api.interceptors.response.use(
       console.log('RAW RESPONSE:', error.response);
       console.log('RAW DATA:', error.response?.data);
       const requestUrl = toAbsoluteRequestUrl(error.config || {});
-      const method = String(error.config?.method || 'GET').toUpperCase();
+      const method = safeMethodFromConfig(error.config);
       const startedAt = (error.config as any)?.metadata?.startedAt;
       const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
       console.log('[API:ERROR]', {
         message: error.message,
-        code: error.code,
+        code: readAxiosErrorCodeSafe(error),
         method,
         url: requestUrl,
         status: error.response?.status,
