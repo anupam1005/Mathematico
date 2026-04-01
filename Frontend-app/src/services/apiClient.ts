@@ -25,6 +25,7 @@ export interface ApiError {
 const DEFAULT_TIMEOUT_MS = 20000;
 
 const api: AxiosInstance = axios.create({
+  adapter: 'fetch',
   baseURL: API_BASE_URL,
   timeout: DEFAULT_TIMEOUT_MS,
   headers: {
@@ -34,6 +35,7 @@ const api: AxiosInstance = axios.create({
 });
 
 const healthApi: AxiosInstance = axios.create({
+  adapter: 'fetch',
   baseURL: API_BASE_URL,
   timeout: 8000,
   headers: {
@@ -114,10 +116,14 @@ const estimatePayloadSizeBytes = (payload: unknown): number => {
   }
 };
 
+/** Own-property only — avoid triggering Hermes issues from inherited `code` getters on DOM errors. */
 const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
   try {
-    const maybe = (error as any)?.code;
-    return typeof maybe === 'string' ? maybe : undefined;
+    if (error == null || typeof error !== 'object') return undefined;
+    const desc = Object.getOwnPropertyDescriptor(error, 'code');
+    if (!desc || desc.value === undefined || desc.value === null) return undefined;
+    const v = desc.value;
+    return typeof v === 'string' ? v : undefined;
   } catch {
     return undefined;
   }
@@ -176,7 +182,10 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     };
   }
 
-  if (safeCode === 'ECONNABORTED') {
+  const looksLikeTimeout =
+    safeCode === 'ECONNABORTED' ||
+    /timeout of \d+ms exceeded|exceeded the time limit/i.test(String(error.message || ''));
+  if (looksLikeTimeout) {
     return {
       message: error.message,
       code: 'TIMEOUT',

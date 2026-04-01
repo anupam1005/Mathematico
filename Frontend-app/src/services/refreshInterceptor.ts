@@ -4,6 +4,29 @@ import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
 
+/** Own-property `code` only — same rationale as apiClient (Hermes / DOM errors). */
+const readAxiosErrorCodeOwn = (error: unknown): string | undefined => {
+  try {
+    if (error == null || typeof error !== 'object') return undefined;
+    const desc = Object.getOwnPropertyDescriptor(error, 'code');
+    if (!desc || desc.value === undefined || desc.value === null) return undefined;
+    const v = desc.value;
+    return typeof v === 'string' ? v : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const setAuthorizationHeader = (headers: unknown, value: string): void => {
+  if (!headers || typeof headers !== 'object') return;
+  const h = headers as { set?: (k: string, v: string) => void } & Record<string, unknown>;
+  if (typeof h.set === 'function') {
+    h.set('Authorization', value);
+  } else {
+    h.Authorization = value;
+  }
+};
+
 type RetryableConfig = InternalAxiosRequestConfig & {
   skipAuthRefresh?: boolean;
 };
@@ -51,14 +74,9 @@ const hasBearerHeader = (config?: RetryableConfig): boolean => {
 };
 
 const isAxiosNetworkError = (error: AxiosError): boolean => {
-  let code: string | undefined;
-  try {
-    const maybe = (error as any)?.code;
-    code = typeof maybe === 'string' ? maybe : undefined;
-  } catch {
-    code = undefined;
-  }
-  return !error.response || code === 'ECONNABORTED' || code === 'ERR_NETWORK';
+  if (!error.response) return true;
+  const code = readAxiosErrorCodeOwn(error);
+  return code === 'ECONNABORTED' || code === 'ERR_NETWORK';
 };
 
 const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
@@ -154,7 +172,7 @@ const rebuildRequest = (
   };
   if (token) {
     retryConfig.headers = retryConfig.headers || {};
-    (retryConfig.headers as any).Authorization = `Bearer ${token}`;
+    setAuthorizationHeader(retryConfig.headers, `Bearer ${token}`);
   }
   return retryConfig;
 };
@@ -169,7 +187,7 @@ const enrichRequestWithAuth = async (
   const token = await tokenStorage.getAccessToken();
   if (!token) return config;
   if (config.headers) {
-    (config.headers as any).Authorization = `Bearer ${token}`;
+    setAuthorizationHeader(config.headers, `Bearer ${token}`);
   }
 
   return config;
@@ -267,14 +285,7 @@ export const installRefreshInterceptor = (
           method: String(originalRequest.method || 'GET').toUpperCase(),
           retryCount: nextRetryCount,
           delayMs,
-          reasonCode: (() => {
-            try {
-              const maybe = (error as any)?.code;
-              return typeof maybe === 'string' ? maybe : undefined;
-            } catch {
-              return undefined;
-            }
-          })(),
+          reasonCode: readAxiosErrorCodeOwn(error),
           status: error.response?.status,
         });
         await sleep(delayMs);
@@ -379,11 +390,5 @@ export const installRefreshInterceptor = (
 export const isRequestCancelled = (error: unknown): boolean => {
   if (!error) return false;
   if (axios.isCancel(error)) return true;
-  const maybeError = error as AxiosError;
-  try {
-    const maybe = (maybeError as any)?.code;
-    return maybe === 'ERR_CANCELED';
-  } catch {
-    return false;
-  }
+  return readAxiosErrorCodeOwn(error) === 'ERR_CANCELED';
 };
