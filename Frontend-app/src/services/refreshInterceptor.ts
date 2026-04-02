@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
 import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
@@ -17,14 +17,48 @@ const readAxiosErrorCodeOwn = (error: unknown): string | undefined => {
   }
 };
 
-const setAuthorizationHeader = (headers: unknown, value: string): void => {
-  if (!headers || typeof headers !== 'object') return;
-  const h = headers as { set?: (k: string, v: string) => void } & Record<string, unknown>;
-  if (typeof h.set === 'function') {
-    h.set('Authorization', value);
-  } else {
-    h.Authorization = value;
+/**
+ * Hermes-safe: read header values only (AxiosHeaders#toJSON), then build a fresh plain object.
+ * Never mutate AxiosHeaders / fetch Headers / or assign into config.headers in place.
+ */
+const isAxiosHeadersLike = (headers: unknown): headers is AxiosHeaders => {
+  if (headers == null || typeof headers !== 'object') return false;
+  if (headers instanceof AxiosHeaders) return true;
+  const h = headers as { toJSON?: unknown; get?: unknown; set?: unknown };
+  return typeof h.toJSON === 'function' && typeof h.get === 'function' && typeof h.set === 'function';
+};
+
+export const toPlainHeaders = (headers: unknown): Record<string, string> => {
+  if (headers == null || typeof headers !== 'object') return {};
+  try {
+    if (isAxiosHeadersLike(headers)) {
+      const json = headers.toJSON(true) as Record<string, unknown>;
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(json)) {
+        if (v == null) continue;
+        out[k] = Array.isArray(v) ? String(v[v.length - 1] ?? '') : String(v);
+      }
+      return out;
+    }
+  } catch {
+    // fall through to generic copy
   }
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers as Record<string, unknown>)) {
+    if (v == null) continue;
+    out[k] = typeof v === 'string' ? v : String(v);
+  }
+  return out;
+};
+
+/** Plain-object multipart rule: let the runtime set multipart boundaries (no Content-Type). */
+export const omitContentTypeKeys = (plain: Record<string, string>): Record<string, string> => {
+  const next: Record<string, string> = {};
+  for (const [k, v] of Object.entries(plain)) {
+    if (k.toLowerCase() === 'content-type') continue;
+    next[k] = v;
+  }
+  return next;
 };
 
 type RetryableConfig = InternalAxiosRequestConfig & {
@@ -67,9 +101,8 @@ const parseRefreshToken = (payload: RefreshResponse): string | null => {
 };
 
 const hasBearerHeader = (config?: RetryableConfig): boolean => {
-  if (!config?.headers) return false;
-  const headers = config.headers as Record<string, unknown>;
-  const rawAuth = headers.Authorization ?? headers.authorization;
+  const plain = toPlainHeaders(config?.headers);
+  const rawAuth = plain.Authorization ?? plain.authorization;
   return typeof rawAuth === 'string' && rawAuth.trim().toLowerCase().startsWith('bearer ');
 };
 
@@ -137,7 +170,9 @@ const rebuildRequest = (
   const method = String(original.method || 'GET').toUpperCase();
 
   let data = original.data;
-  if (data && typeof data === 'object') {
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    // keep reference — JSON cloning destroys multipart bodies
+  } else if (data && typeof data === 'object') {
     try {
       data = JSON.parse(JSON.stringify(data));
     } catch {
@@ -154,26 +189,32 @@ const rebuildRequest = (
     }
   }
 
-  console.log('RETRY BUILD:', {
-    url,
-    method,
-    hasData: !!data,
-    hasParams: !!params,
-  });
+  if (__DEV__) {
+    console.log('RETRY BUILD:', {
+      url,
+      method,
+      hasData: !!data,
+      hasParams: !!params,
+    });
+  }
+
+  const basePlain = toPlainHeaders(original.headers);
+  let headersPlain: Record<string, string> = token
+    ? { ...basePlain, Authorization: `Bearer ${token}` }
+    : { ...basePlain };
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    headersPlain = omitContentTypeKeys(headersPlain);
+  }
 
   const retryConfig: AxiosRequestConfig = {
     url,
     method: method.toUpperCase(),
     baseURL: original.baseURL || undefined,
-    headers: original.headers as any,
+    headers: headersPlain,
     data,
     params,
     timeout: original.timeout || 20000,
   };
-  if (token) {
-    retryConfig.headers = retryConfig.headers || {};
-    setAuthorizationHeader(retryConfig.headers, `Bearer ${token}`);
-  }
   return retryConfig;
 };
 
@@ -182,15 +223,20 @@ const enrichRequestWithAuth = async (
 ): Promise<InternalAxiosRequestConfig> => {
   const retryable = config as RetryableConfig;
 
-  if (retryable.skipAuthRefresh) return config;
+  if (retryable.skipAuthRefresh) {
+    const plain = toPlainHeaders(config.headers);
+    return { ...config, headers: plain } as InternalAxiosRequestConfig;
+  }
   await tokenStorage.hydrate();
   const token = await tokenStorage.getAccessToken();
-  if (!token) return config;
-  if (config.headers) {
-    setAuthorizationHeader(config.headers, `Bearer ${token}`);
+  const plain = toPlainHeaders(config.headers);
+  if (!token) {
+    return { ...config, headers: plain } as InternalAxiosRequestConfig;
   }
-
-  return config;
+  return {
+    ...config,
+    headers: { ...plain, Authorization: `Bearer ${token}` },
+  } as InternalAxiosRequestConfig;
 };
 
 const refreshTokenRequest = async (
@@ -253,18 +299,19 @@ export const installRefreshInterceptor = (
         console.error('❌ BLOCKED INVALID REQUEST:', config);
         return Promise.reject(new Error('Invalid API request: empty or root URL'));
       }
-      console.trace('REQUEST TRACE:', config.url);
       if (isAuthMutationRequest(config as RetryableConfig)) {
-        if (!config.timeout) {
-          config.timeout = timeoutMs;
-        }
-        return config;
+        const plain = toPlainHeaders(config.headers);
+        return {
+          ...config,
+          headers: plain,
+          timeout: config.timeout ?? timeoutMs,
+        } as InternalAxiosRequestConfig;
       }
       const withAuth = await enrichRequestWithAuth(config);
-      if (!withAuth.timeout) {
-        withAuth.timeout = timeoutMs;
-      }
-      return withAuth;
+      return {
+        ...withAuth,
+        timeout: withAuth.timeout ?? timeoutMs,
+      } as InternalAxiosRequestConfig;
     },
     (error) => Promise.reject(error)
   );
@@ -280,14 +327,16 @@ export const installRefreshInterceptor = (
         const nextRetryCount = currentRetryCount + 1;
         retryCountByRequest.set(originalRequest, nextRetryCount);
         const delayMs = RETRY_BASE_DELAY_MS * 2 ** (nextRetryCount - 1);
-        console.log('[API:RETRY]', {
-          url: originalRequest.url,
-          method: String(originalRequest.method || 'GET').toUpperCase(),
-          retryCount: nextRetryCount,
-          delayMs,
-          reasonCode: readAxiosErrorCodeOwn(error),
-          status: error.response?.status,
-        });
+        if (__DEV__) {
+          console.log('[API:RETRY]', {
+            url: originalRequest.url,
+            method: String(originalRequest.method || 'GET').toUpperCase(),
+            retryCount: nextRetryCount,
+            delayMs,
+            reasonCode: readAxiosErrorCodeOwn(error),
+            status: error.response?.status,
+          });
+        }
         await sleep(delayMs);
         let retryConfig: AxiosRequestConfig;
         try {

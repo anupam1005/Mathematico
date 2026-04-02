@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponseHeaders, RawAxiosRequestHeaders } from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
-import { installRefreshInterceptor, isRequestCancelled } from './refreshInterceptor';
+import { installRefreshInterceptor, isRequestCancelled, omitContentTypeKeys, toPlainHeaders } from './refreshInterceptor';
 
 type ApiErrorCode =
   | 'OFFLINE'
@@ -43,10 +43,12 @@ const healthApi: AxiosInstance = axios.create({
   },
 });
 
-try {
-  console.log('[API] BASE URL:', api.defaults.baseURL);
-} catch {
-  // ignore
+if (__DEV__) {
+  try {
+    console.log('[API] BASE URL:', api.defaults.baseURL);
+  } catch {
+    // ignore
+  }
 }
 
 const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
@@ -267,92 +269,91 @@ api.interceptors.request.use(
       console.error('❌ BLOCKED INVALID REQUEST:', config);
       return Promise.reject(new Error('Invalid API request: empty or root URL'));
     }
-    console.trace('REQUEST TRACE:', config.url);
-    try {
-      const requestUrl = toAbsoluteRequestUrl(config);
-      const method = String(config.method || 'GET').toUpperCase();
-      const payloadSize = estimatePayloadSizeBytes(config.data);
-      (config as any).metadata = { startedAt: Date.now() };
 
-      // Multipart safety: do NOT force Content-Type for FormData.
-      // Let axios set the boundary, otherwise real devices often surface "Network Error".
-      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-        console.log('HEADERS TYPE:', (config.headers as any)?.constructor?.name);
-        console.log('HEADERS OBJECT:', config.headers);
-        if (config.headers) {
-          delete (config.headers as any)['Content-Type'];
-          delete (config.headers as any)['content-type'];
-          delete (config.headers as any)['Content-type'];
-        }
-      }
-      console.log('FINAL HEADERS:', config.headers);
+    const startedAt = Date.now();
+    let next = { ...config, metadata: { startedAt } } as typeof config & { metadata: { startedAt: number } };
 
-      const authHeader = describeAuthHeader(config.headers);
-      if (requestUrl === `${String(API_BASE_URL).replace(/\/+$/, '')}/`) {
-        console.log('UNEXPECTED REQUEST:', method, config.url);
-      }
-
-      console.log('[API:REQUEST]', {
-        method,
-        url: requestUrl,
-        headers: sanitizeHeaders(config.headers),
-        authHeader,
-        payloadSizeBytes: payloadSize,
-      });
-
-      if (isWriteMethod(method)) {
-        console.log('[API:WRITE]', {
-          fullUrl: requestUrl,
-          method,
-          payload: previewPayload(config.data),
-        });
-      }
-    } catch {
-      // Keep request flow intact if diagnostic logging fails.
+    // Multipart: new plain headers without Content-Type — never delete/mutate axios header objects (Hermes).
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      const plain = toPlainHeaders(next.headers);
+      next = {
+        ...next,
+        headers: omitContentTypeKeys(plain),
+      } as typeof next;
     }
-    return config;
+
+    if (__DEV__) {
+      try {
+        const requestUrl = toAbsoluteRequestUrl(next);
+        const method = String(next.method || 'GET').toUpperCase();
+        const payloadSize = estimatePayloadSizeBytes(next.data);
+        const authHeader = describeAuthHeader(next.headers);
+        if (requestUrl === `${String(API_BASE_URL).replace(/\/+$/, '')}/`) {
+          console.log('UNEXPECTED REQUEST:', method, next.url);
+        }
+        console.log('[API:REQUEST]', {
+          method,
+          url: requestUrl,
+          headers: sanitizeHeaders(next.headers),
+          authHeader,
+          payloadSizeBytes: payloadSize,
+        });
+        if (isWriteMethod(method)) {
+          console.log('[API:WRITE]', {
+            fullUrl: requestUrl,
+            method,
+            payload: previewPayload(next.data),
+          });
+        }
+      } catch {
+        // diagnostic logging only
+      }
+    }
+
+    return next;
   },
   (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(
   (response) => {
-    try {
-      const requestUrl = toAbsoluteRequestUrl(response.config || {});
-      const method = String(response.config?.method || 'GET').toUpperCase();
-      const startedAt = (response.config as any)?.metadata?.startedAt;
-      const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
-      console.log('[API:RESPONSE]', {
-        method,
-        url: requestUrl,
-        status: response.status,
-        durationMs,
-      });
-    } catch {
-      // Keep response flow intact if diagnostic logging fails.
+    if (__DEV__) {
+      try {
+        const requestUrl = toAbsoluteRequestUrl(response.config || {});
+        const method = String(response.config?.method || 'GET').toUpperCase();
+        const startedAt = (response.config as any)?.metadata?.startedAt;
+        const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
+        console.log('[API:RESPONSE]', {
+          method,
+          url: requestUrl,
+          status: response.status,
+          durationMs,
+        });
+      } catch {
+        // diagnostic logging only
+      }
     }
     return response;
   },
   async (error: AxiosError) => {
-    try {
-      console.log('RAW RESPONSE:', error.response);
-      console.log('RAW DATA:', error.response?.data);
-      const requestUrl = toAbsoluteRequestUrl(error.config || {});
-      const method = safeMethodFromConfig(error.config);
-      const startedAt = (error.config as any)?.metadata?.startedAt;
-      const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
-      console.log('[API:ERROR]', {
-        message: error.message,
-        code: readAxiosErrorCodeSafe(error),
-        method,
-        url: requestUrl,
-        status: error.response?.status,
-        durationMs,
-        kind: error.response ? 'server_error' : 'network_error',
-        responseData: error.response?.data,
-      });
-    } catch {
-      // Keep response flow intact if diagnostic logging fails.
+    if (__DEV__) {
+      try {
+        const requestUrl = toAbsoluteRequestUrl(error.config || {});
+        const method = safeMethodFromConfig(error.config);
+        const startedAt = (error.config as any)?.metadata?.startedAt;
+        const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
+        console.log('[API:ERROR]', {
+          message: error.message,
+          code: readAxiosErrorCodeSafe(error),
+          method,
+          url: requestUrl,
+          status: error.response?.status,
+          durationMs,
+          kind: error.response ? 'server_error' : 'network_error',
+        });
+      } catch {
+        // diagnostic logging only
+      }
     }
     return Promise.reject(await normalizeApiError(error));
   }
@@ -425,12 +426,14 @@ export const withBasePath = (basePath: string) => ({
       console.error('❌ FATAL: EMPTY URL BEFORE DISPATCH', safeConfig);
       return Promise.reject(new Error('Invalid request: empty URL'));
     }
-    console.log('🚨 DISPATCHING REQUEST:', {
-      url: safeConfig.url,
-      baseURL: safeConfig.baseURL || api.defaults.baseURL,
-      full: `${String(safeConfig.baseURL || api.defaults.baseURL || '')}${String(safeConfig.url || '')}`,
-      method: safeConfig.method,
-    });
+    if (__DEV__) {
+      console.log('DISPATCHING REQUEST:', {
+        url: safeConfig.url,
+        baseURL: safeConfig.baseURL || api.defaults.baseURL,
+        full: `${String(safeConfig.baseURL || api.defaults.baseURL || '')}${String(safeConfig.url || '')}`,
+        method: safeConfig.method,
+      });
+    }
     return api.request<T>(safeConfig);
   },
 });
