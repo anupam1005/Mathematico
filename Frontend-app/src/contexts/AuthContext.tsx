@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { Alert } from 'react-native';
 import authService from '../services/authService';
 import { safeCatch } from '../utils/safeCatch';
 
@@ -24,7 +25,7 @@ interface AuthContextType {
   login: (
     email: string,
     password: string
-  ) => Promise<{ success: boolean; message?: string }>;
+  ) => Promise<{ success: boolean; message?: string; user?: User }>;
   register: (
     name: string,
     email: string,
@@ -48,14 +49,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const bootstrapRef = useRef<Promise<void> | null>(null);
   const logoutRef = useRef<Promise<void> | null>(null);
+  const loginInFlightRef = useRef(false);
 
   const restoreAuthState = async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
     try {
       const restored = await authService.restoreSession();
       const nextUser = (restored.user || null) as User | null;
       const nextIsAuthenticated = Boolean(restored.isAuthenticated);
+      if (loginInFlightRef.current) {
+        return { user, isAuthenticated };
+      }
       setUser(nextUser);
       setIsAuthenticated(nextIsAuthenticated);
+      console.log('[AUTH] restore session applied:', {
+        isAuthenticated: nextIsAuthenticated,
+        hasUser: Boolean(nextUser),
+      });
       return { user: nextUser, isAuthenticated: nextIsAuthenticated };
     } catch (error: any) {
       safeCatch('AuthContext.restoreAuthState')(error);
@@ -63,6 +72,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(false);
       return { user: null, isAuthenticated: false };
     }
+  };
+
+  const normalizeUser = (rawUser: any): User | null => {
+    if (!rawUser || typeof rawUser !== 'object') return null;
+    const role = rawUser.role || (rawUser.is_admin ? 'admin' : 'student');
+    const isAdmin = role === 'admin' || Boolean(rawUser.is_admin) || Boolean(rawUser.isAdmin);
+    return {
+      ...rawUser,
+      role,
+      isAdmin,
+      is_admin: isAdmin,
+    } as User;
   };
 
   const bootstrap = async (): Promise<void> => {
@@ -98,17 +119,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (
     email: string,
     password: string
-  ): Promise<{ success: boolean; message?: string }> => {
+  ): Promise<{ success: boolean; message?: string; user?: User }> => {
     try {
+      loginInFlightRef.current = true;
       setIsLoading(true);
       const response = await authService.login(email, password);
 
       if (response.success) {
-        const restored = await restoreAuthState();
-        if (!restored.isAuthenticated) {
-          return { success: false, message: response.message };
+        const nextUser = normalizeUser(response.data?.user);
+        if (!nextUser) {
+          return { success: false, message: 'Invalid login user payload' };
         }
-        return { success: true, message: response.message };
+        // Immediate in-memory auth update to avoid login screen loop.
+        setUser(nextUser);
+        setIsAuthenticated(true);
+        console.log('AUTH STATE: authenticated=true');
+        return { success: true, message: response.message, user: nextUser };
       }
 
       return { success: false, message: response.message };
@@ -116,6 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       safeCatch('AuthContext.login')(error);
       return { success: false, message: error?.message };
     } finally {
+      loginInFlightRef.current = false;
       setIsLoading(false);
     }
   };
@@ -130,10 +157,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register(name, email, password);
 
       if (response.success) {
-        const restored = await restoreAuthState();
-        if (!restored.isAuthenticated) {
-          return { success: false, message: response.message };
-        }
+        // Registration should not auto-authenticate; continue to login flow.
+        setUser(null);
+        setIsAuthenticated(false);
         return { success: true, message: response.message };
       }
 

@@ -22,6 +22,8 @@ router.post('/register', asyncHandler(authController.register));
 router.get('/register', methodNotAllowed('POST', '/register'));
 router.post('/logout', asyncHandler(authController.logout));
 router.post('/refresh-token', asyncHandler(authController.refreshToken));
+router.post('/refresh', asyncHandler(authController.refreshToken));
+router.get('/refresh', methodNotAllowed('POST', '/refresh'));
 router.post('/forgot-password', asyncHandler(authController.forgotPassword));
 router.post('/reset-password', asyncHandler(authController.resetPassword));
 router.post('/verify-email', asyncHandler(authController.verifyEmail));

@@ -67,8 +67,8 @@ const checkPasswordChangedAfter = async (user, tokenIat) => {
     return userWithPasswordChange.changedPasswordAfter(tokenIat);
   } catch (error) {
     console.error('Password change check error:', error);
-    // In case of error, allow the request (fail open)
-    return false;
+    // Never fail-open in authentication checks.
+    throw new Error('PASSWORD_CHANGE_CHECK_FAILED');
   }
 };
 
@@ -83,6 +83,8 @@ const checkPasswordChangedAfter = async (user, tokenIat) => {
  */
 const strictAuthenticateToken = async (req, res, next) => {
   try {
+    const authHeader = req.headers && (req.headers.authorization || req.headers.Authorization);
+    console.log('[AUTH_MIDDLEWARE] header:', typeof authHeader === 'string' ? `present(len=${authHeader.length})` : 'missing');
     const token = getBearerToken(req);
     if (!token) {
       return res.status(401).json({
@@ -95,6 +97,11 @@ const strictAuthenticateToken = async (req, res, next) => {
 
     // Strict JWT verification
     const decoded = strictVerifyAccessToken(token);
+    console.log('[AUTH_MIDDLEWARE] token decoded:', {
+      sub: decoded?.sub || decoded?.id || null,
+      role: decoded?.role || null,
+      hasIat: typeof decoded?.iat === 'number',
+    });
     
     // Ensure database connection for password change check
     await connectDB();

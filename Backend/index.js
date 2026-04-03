@@ -8,10 +8,15 @@ const { serverlessEnvironmentValidator } = require('./middleware/serverlessEnvir
 const { serverlessErrorGuard, timeoutGuard } = require('./middleware/serverlessErrorGuard');
 const { createAuthProtection } = require('./middleware/authProtection');
 const { rateLimiterHealthCheck } = require('./middleware/serverlessRateLimiter');
+const { validateJwtConfig } = require('./utils/jwt');
 
 const app = express();
 require('./config/trustProxy')(app);
 app.disable('x-powered-by');
+
+// Fail fast at boot if JWT config is invalid.
+validateJwtConfig();
+console.log('[BOOT] JWT secret validation: OK');
 
 // 1) Early minimal CORS headers
 app.use((req, res, next) => {
@@ -24,7 +29,7 @@ app.use((req, res, next) => {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'false');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -57,6 +62,11 @@ app.get('/health', async (req, res, next) => {
 
 app.get('/health/rate-limiter', (req, res) => {
   return res.status(200).json(rateLimiterHealthCheck());
+});
+
+// Prevent noisy 404s from browser favicon probes.
+app.get(['/favicon.ico', '/favicon.png'], (req, res) => {
+  return res.status(204).end();
 });
 
 // 2) Body parser

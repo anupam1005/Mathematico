@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,13 +21,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { designSystem } from '../styles/designSystem';
 
 export default function LoginScreen({ navigation }: any) {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [apiError, setApiError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasRedirectedRef = useRef(false);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -66,14 +67,31 @@ export default function LoginScreen({ navigation }: any) {
       const result = await login(normalizedEmail, password);
       
       if (!result.success) {
-        setApiError(typeof result.message === 'string' ? result.message : '');
+        setApiError(typeof result.message === 'string' ? result.message : 'Login failed');
       }
     } catch (error: any) {
-      setApiError(typeof error?.message === 'string' ? error.message : '');
+      setApiError(typeof error?.message === 'string' ? error.message : 'Login failed');
     } finally {
       setIsSubmitting(false);
     }
   }, [email, password, login, isSubmitting, isLoading]);
+
+  useEffect(() => {
+    if (hasRedirectedRef.current) return;
+    if (!isAuthenticated || !user) return;
+    hasRedirectedRef.current = true;
+    const isAdmin = user.role === 'admin' || Boolean(user.isAdmin) || Boolean(user.is_admin);
+    console.log('[AUTH] redirect trigger:', isAdmin ? 'admin' : 'student');
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'MainTabs',
+          params: isAdmin ? { screen: 'Admin' } : { screen: 'Home' },
+        },
+      ],
+    });
+  }, [isAuthenticated, user, navigation]);
 
 
   return (

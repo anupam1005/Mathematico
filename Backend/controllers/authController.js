@@ -64,6 +64,25 @@ const scheduleSecurityLog = (logFn) => {
   });
 };
 
+const authSuccessResponse = (message, user, tokens) => ({
+  success: true,
+  message,
+  data: {
+    user,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    tokenType: 'Bearer',
+    expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn || process.env.JWT_ACCESS_EXPIRES_IN || '15m') / 1000
+  },
+  timestamp: new Date().toISOString()
+});
+
+const authFailureResponse = (message) => ({
+  success: false,
+  message,
+  timestamp: new Date().toISOString()
+});
+
 // Debug logging for environment variables (development only)
 if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_ENV === 'true') {
   console.log(' Admin Credentials Debug:');
@@ -147,22 +166,12 @@ const login = async (req, res) => {
       }
       
       const tokens = generateTokenPair(dbAdmin);
+      console.log('[AUTH] Token issued:', { role: 'admin', userId: String(dbAdmin._id), hasRefreshToken: Boolean(tokens.refreshToken) });
 
       // Get safe user profile (minimal response)
       const safeUser = dbAdmin.getSafeProfile();
 
-      return res.json({
-        success: true,
-        message: 'Admin login successful',
-        data: {
-          user: safeUser,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          tokenType: 'Bearer',
-          expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
-        },
-        timestamp: new Date().toISOString()
-      });
+      return res.json(authSuccessResponse('Admin login successful', safeUser, tokens));
     }
 
     // Regular user login - find user in database with explicit password selection
@@ -219,22 +228,12 @@ const login = async (req, res) => {
 
     // Generate token pair
     const tokens = generateTokenPair(user);
+    console.log('[AUTH] Token issued:', { role: user.role, userId: String(user._id), hasRefreshToken: Boolean(tokens.refreshToken) });
 
     // Get safe user profile (minimal response)
     const safeUser = user.getSafeProfile();
 
-    return res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: safeUser,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        tokenType: 'Bearer',
-        expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
-      },
-      timestamp: new Date().toISOString()
-    });
+    return res.json(authSuccessResponse('Login successful', safeUser, tokens));
     
   } catch (error) {
     if (res.headersSent) {
@@ -262,11 +261,7 @@ const login = async (req, res) => {
       clientMessage = 'Service temporarily unavailable. Please try again later.';
     }
 
-    const response = {
-      success: false,
-      message: clientMessage,
-      timestamp: new Date().toISOString()
-    };
+    const response = authFailureResponse(clientMessage);
 
     // Only include error details in non-production
     if (process.env.NODE_ENV !== 'production') {
@@ -369,22 +364,12 @@ const register = async (req, res) => {
 
     // Generate token pair (stateless tokens only)
     const tokens = generateTokenPair(user);
+    console.log('[AUTH] Token issued:', { role: user.role, userId: String(user._id), hasRefreshToken: Boolean(tokens.refreshToken) });
 
     // Get safe user profile (minimal response)
     const safeUser = user.getSafeProfile();
 
-    return res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      data: {
-        user: safeUser,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        tokenType: 'Bearer',
-        expiresIn: getTokenExpirationMs(tokens.accessTokenExpiresIn) / 1000 // Convert to seconds
-      },
-      timestamp: new Date().toISOString()
-    });
+    return res.status(201).json(authSuccessResponse('Registration successful', safeUser, tokens));
     
   } catch (error) {
     if (res.headersSent) {
@@ -432,11 +417,7 @@ const register = async (req, res) => {
       clientMessage = 'Service temporarily unavailable. Please try again later.';
     }
 
-    const response = {
-      success: false,
-      message: clientMessage,
-      timestamp: new Date().toISOString()
-    };
+    const response = authFailureResponse(clientMessage);
 
     // Only include error details in non-production
     if (process.env.NODE_ENV !== 'production') {
@@ -552,11 +533,14 @@ const refreshToken = async (req, res) => {
 
     // Stateless issuance without DB writes and without refresh rotation
     const accessToken = generateMinimalAccessToken(user);
+    const safeUser = user.getSafeProfile();
+    console.log('[AUTH] Refresh token issued:', { userId: String(user._id), role: user.role });
 
     return res.json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
+        user: safeUser,
         accessToken,
         refreshToken: refreshTokenValue,
         tokenType: 'Bearer',
@@ -574,12 +558,7 @@ const refreshToken = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    return res.status(500).json({
-      success: false,
-      message: 'Token refresh failed',
-      error: 'Internal Server Error',
-      timestamp: new Date().toISOString()
-    });
+    return res.status(500).json(authFailureResponse('Token refresh failed'));
   }
 };
 

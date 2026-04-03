@@ -35,7 +35,7 @@ export interface RegisterResponse {
   message?: string;
   data?: {
     user: any;
-    accessToken: string;
+    accessToken?: string;
     refreshToken?: string;
   };
 }
@@ -60,6 +60,21 @@ const toRefreshToken = (payload: any): string | null => {
   return typeof token === 'string' && token.length > 10 ? token : null;
 };
 
+const toLoginErrorMessage = (error: any): string => {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (code === 'TIMEOUT') return 'Login timed out. Please check your connection and try again.';
+  if (code === 'NETWORK_ERROR' || code === 'OFFLINE') return 'Unable to reach server. Please check your internet connection.';
+  if (code === 'API_ERROR' && !error?.status) return 'Server is unreachable right now. Please try again.';
+  if (code === 'CANCELLED') return 'Login request was cancelled. Please try again.';
+  const backendMessage =
+    typeof error?.data?.message === 'string'
+      ? error.data.message
+      : typeof error?.message === 'string'
+        ? error.message
+        : '';
+  return backendMessage || 'Login failed. Please try again.';
+};
+
 const authService = {
   /* ---------------------------- LOGIN ----------------------------- */
 
@@ -67,12 +82,10 @@ const authService = {
     try {
       const response = await authApi.post('/login', { email, password }, { skipAuthRefresh: true });
       const payload = response?.data ?? null;
+      console.log('[AUTH] login response received');
 
       if (!payload?.success || !payload?.data) {
-        return {
-          success: false,
-          message: payload?.message,
-        };
+        throw new Error(payload?.message || 'Invalid login response payload');
       }
 
       // Normalize backend shape for mobile clients
@@ -80,11 +93,12 @@ const authService = {
       const accessToken = toBearerToken(payload);
       const refreshToken = toRefreshToken(payload);
 
+      if (!rawUser || typeof rawUser !== 'object') {
+        throw new Error('Login response missing user object');
+      }
+
       if (!accessToken) {
-        return {
-          success: false,
-          message: payload?.message,
-        };
+        throw new Error(payload?.message || 'Login response missing access token');
       }
 
       await tokenStorage.setSession({
@@ -97,7 +111,8 @@ const authService = {
 
       // Final-stage real-device validation: ensure tokens are available immediately after save.
       const stored = await tokenStorage.getAccessToken();
-      console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
+      console.log('[AUTH] token stored:', stored ? `present(len=${stored.length})` : 'missing');
+      console.log('LOGIN SUCCESS: session stored');
 
       return {
         success: true,
@@ -111,7 +126,7 @@ const authService = {
         },
       };
     } catch (error: any) {
-      throw error;
+      throw new Error(toLoginErrorMessage(error));
     }
   },
 
@@ -139,34 +154,13 @@ const authService = {
       }
 
       const rawUser = payload.data.user || payload.data || null;
-      const accessToken = toBearerToken(payload);
       const refreshToken = toRefreshToken(payload);
-
-      if (!accessToken) {
-        return {
-          success: false,
-          message: payload?.message,
-        };
-      }
-
-      await tokenStorage.setSession({
-        user: rawUser,
-        tokens: {
-          accessToken,
-          refreshToken,
-        },
-      });
-
-      // Final-stage real-device validation: ensure tokens are available immediately after save.
-      const stored = await tokenStorage.getAccessToken();
-      console.log('TOKEN AFTER SAVE:', stored ? `Bearer [len=${stored.length}]` : 'MISSING');
 
       return {
         success: true,
         message: payload.message,
         data: {
           user: rawUser,
-          accessToken,
           refreshToken: refreshToken || undefined,
         },
       };
@@ -233,10 +227,19 @@ const authService = {
   async restoreSession(): Promise<{ user: any | null; isAuthenticated: boolean }> {
     try {
       await tokenStorage.hydrate();
-      const { user, accessToken, refreshToken } = await tokenStorage.getSession();
+      const { user, accessToken } = await tokenStorage.getSession();
+      const isAuthenticated = Boolean(accessToken && user);
+      console.log('[AUTH] restore session result:', {
+        hasToken: Boolean(accessToken),
+        hasUser: Boolean(user),
+        isAuthenticated,
+      });
+      if (!isAuthenticated && (accessToken || user)) {
+        await tokenStorage.clearSession();
+      }
       return {
         user,
-        isAuthenticated: Boolean(accessToken && refreshToken && user),
+        isAuthenticated,
       };
     } catch (error) {
       safeCatch('authService.restoreSession')(error);

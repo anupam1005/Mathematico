@@ -42,6 +42,16 @@ const validateHttpsBaseUrl = (url: string): string => {
     throw new Error('Invalid API base URL: HTTPS is required');
   }
 
+  const hostname = parsed.hostname.toLowerCase();
+  const isLocalHost =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname.endsWith('.local');
+  if (isLocalHost) {
+    throw new Error('Invalid API base URL: localhost is not allowed');
+  }
+
   return normalized;
 };
 
@@ -59,3 +69,4 @@ const resolveApiBaseUrl = (): string => {
 };
 
 export const API_BASE_URL = validateHttpsBaseUrl(resolveApiBaseUrl());
+console.log('[CONFIG] API_BASE_URL:', API_BASE_URL);
