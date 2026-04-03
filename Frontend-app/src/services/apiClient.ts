@@ -3,6 +3,9 @@ import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
 import { installRefreshInterceptor, isRequestCancelled, omitContentTypeKeys, toPlainHeaders } from './refreshInterceptor';
 
+// Force React Native XHR adapter for deterministic production networking
+const xhrAdapter = require('axios/lib/adapters/xhr');
+
 type ApiErrorCode =
   | 'OFFLINE'
   | 'TIMEOUT'
@@ -25,22 +28,22 @@ export interface ApiError {
 const DEFAULT_TIMEOUT_MS = 20000;
 
 const api: AxiosInstance = axios.create({
-  adapter: 'fetch',
   baseURL: API_BASE_URL,
   timeout: DEFAULT_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
+  adapter: xhrAdapter, // 🔥 FORCE RN NETWORK LAYER
 });
 
 const healthApi: AxiosInstance = axios.create({
-  adapter: 'fetch',
   baseURL: API_BASE_URL,
   timeout: 8000,
   headers: {
     Accept: 'application/json',
   },
+  adapter: xhrAdapter, // 🔥 FORCE RN NETWORK LAYER
 });
 
 if (__DEV__) {
@@ -270,6 +273,10 @@ api.interceptors.request.use(
       return Promise.reject(new Error('Invalid API request: empty or root URL'));
     }
 
+    // Production-safe logging for request validation
+    console.log('[API FIX] Request starting:', config.url);
+    console.log('[API FINAL] Request:', config.url);
+
     const startedAt = Date.now();
     let next = { ...config, metadata: { startedAt } } as typeof config & { metadata: { startedAt: number } };
 
@@ -317,6 +324,10 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    // Production-safe logging for response validation
+    console.log('[API FIX] Response received:', response.status);
+    console.log('[API FINAL] Response:', response.status);
+
     if (__DEV__) {
       try {
         const requestUrl = toAbsoluteRequestUrl(response.config || {});
@@ -336,6 +347,10 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
+    // Production-safe logging for error validation
+    console.log('[API FIX] Error occurred:', error?.message);
+    console.log('[API FINAL] Error:', error?.message);
+
     if (__DEV__) {
       try {
         const requestUrl = toAbsoluteRequestUrl(error.config || {});
