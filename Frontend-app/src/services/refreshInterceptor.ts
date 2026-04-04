@@ -340,3 +340,4 @@ export const isRequestCancelled = (error: unknown): boolean => {
   if (axios.isCancel(error)) return true;
   return readAxiosErrorCodeOwn(error) === 'ERR_CANCELED';
 };
+
