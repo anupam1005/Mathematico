@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosHeaders, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
 import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
@@ -15,50 +15,6 @@ const readAxiosErrorCodeOwn = (error: unknown): string | undefined => {
   } catch {
     return undefined;
   }
-};
-
-/**
- * Hermes-safe: read header values only (AxiosHeaders#toJSON), then build a fresh plain object.
- * Never mutate AxiosHeaders / fetch Headers / or assign into config.headers in place.
- */
-const isAxiosHeadersLike = (headers: unknown): headers is AxiosHeaders => {
-  if (headers == null || typeof headers !== 'object') return false;
-  if (headers instanceof AxiosHeaders) return true;
-  const h = headers as { toJSON?: unknown; get?: unknown; set?: unknown };
-  return typeof h.toJSON === 'function' && typeof h.get === 'function' && typeof h.set === 'function';
-};
-
-export const toPlainHeaders = (headers: unknown): Record<string, string> => {
-  if (headers == null || typeof headers !== 'object') return {};
-  try {
-    if (isAxiosHeadersLike(headers)) {
-      const json = headers.toJSON(true) as Record<string, unknown>;
-      const out: Record<string, string> = {};
-      for (const [k, v] of Object.entries(json)) {
-        if (v == null) continue;
-        out[k] = Array.isArray(v) ? String(v[v.length - 1] ?? '') : String(v);
-      }
-      return out;
-    }
-  } catch {
-    // fall through to generic copy
-  }
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(headers as Record<string, unknown>)) {
-    if (v == null) continue;
-    out[k] = typeof v === 'string' ? v : String(v);
-  }
-  return out;
-};
-
-/** Plain-object multipart rule: let the runtime set multipart boundaries (no Content-Type). */
-export const omitContentTypeKeys = (plain: Record<string, string>): Record<string, string> => {
-  const next: Record<string, string> = {};
-  for (const [k, v] of Object.entries(plain)) {
-    if (k.toLowerCase() === 'content-type') continue;
-    next[k] = v;
-  }
-  return next;
 };
 
 type RetryableConfig = InternalAxiosRequestConfig & {
@@ -101,9 +57,10 @@ const parseRefreshToken = (payload: RefreshResponse): string | null => {
 };
 
 const hasBearerHeader = (config?: RetryableConfig): boolean => {
-  const plain = toPlainHeaders(config?.headers);
-  const rawAuth = plain.Authorization ?? plain.authorization;
-  return typeof rawAuth === 'string' && rawAuth.trim().toLowerCase().startsWith('bearer ');
+  const h = config?.headers as Record<string, unknown> | undefined;
+  if (!h || typeof h !== 'object') return false;
+  const raw = h.Authorization ?? h.authorization;
+  return typeof raw === 'string' && raw.trim().toLowerCase().startsWith('bearer ');
 };
 
 const isAxiosNetworkError = (error: AxiosError): boolean => {
@@ -115,13 +72,6 @@ const isAxiosNetworkError = (error: AxiosError): boolean => {
 const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
   const rawUrl = String(config?.url || '').toLowerCase();
   return rawUrl.includes('/login') || rawUrl.includes('/register') || rawUrl.includes('/refresh-token');
-};
-
-const isInvalidRequestUrl = (config: InternalAxiosRequestConfig): boolean => {
-  const rawUrl = String(config.url || '').trim();
-  if (!rawUrl || rawUrl === '/') return true;
-  if (/^https?:\/\/[^/]+\/?$/i.test(rawUrl)) return true;
-  return false;
 };
 
 const shouldRetryNetwork = (
@@ -155,88 +105,32 @@ const isInvalidRefreshResponse = (error: unknown): boolean => {
   );
 };
 
-const rebuildRequest = (
-  original: RetryableConfig,
-  token?: string
-): AxiosRequestConfig => {
+const rebuildRequest = (original: RetryableConfig, token?: string): AxiosRequestConfig => {
   if (!original.url) {
     throw new Error('FATAL: Missing URL before retry');
   }
   const url = String(original.url || '').trim();
-  if (!url || url === '/' || /^https?:\/\/[^/]+\/?$/i.test(url)) {
+  if (!url || url === '/' || url === '') {
     throw new Error('FATAL: Invalid URL in retry rebuild');
   }
 
   const method = String(original.method || 'GET').toUpperCase();
-
-  let data = original.data;
-  if (typeof FormData !== 'undefined' && data instanceof FormData) {
-    // keep reference — JSON cloning destroys multipart bodies
-  } else if (data && typeof data === 'object') {
-    try {
-      data = JSON.parse(JSON.stringify(data));
-    } catch {
-      data = undefined;
-    }
-  }
-
-  let params = original.params;
-  if (params && typeof params === 'object') {
-    try {
-      params = JSON.parse(JSON.stringify(params));
-    } catch {
-      params = undefined;
-    }
-  }
-
-  if (__DEV__) {
-    console.log('RETRY BUILD:', {
-      url,
-      method,
-      hasData: !!data,
-      hasParams: !!params,
-    });
-  }
-
-  const basePlain = toPlainHeaders(original.headers);
-  let headersPlain: Record<string, string> = token
-    ? { ...basePlain, Authorization: `Bearer ${token}` }
-    : { ...basePlain };
-  if (typeof FormData !== 'undefined' && data instanceof FormData) {
-    headersPlain = omitContentTypeKeys(headersPlain);
-  }
+  const data = original.data;
+  const params = original.params;
 
   const retryConfig: AxiosRequestConfig = {
     url,
-    method: method.toUpperCase(),
-    baseURL: original.baseURL || undefined,
-    headers: headersPlain,
+    method,
+    baseURL: original.baseURL,
+    headers: {
+      ...(original.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     data,
     params,
     timeout: original.timeout || 20000,
   };
   return retryConfig;
-};
-
-const enrichRequestWithAuth = async (
-  config: InternalAxiosRequestConfig
-): Promise<InternalAxiosRequestConfig> => {
-  const retryable = config as RetryableConfig;
-
-  if (retryable.skipAuthRefresh) {
-    const plain = toPlainHeaders(config.headers);
-    return { ...config, headers: plain } as InternalAxiosRequestConfig;
-  }
-  await tokenStorage.hydrate();
-  const token = await tokenStorage.getAccessToken();
-  const plain = toPlainHeaders(config.headers);
-  if (!token) {
-    return { ...config, headers: plain } as InternalAxiosRequestConfig;
-  }
-  return {
-    ...config,
-    headers: { ...plain, Authorization: `Bearer ${token}` },
-  } as InternalAxiosRequestConfig;
 };
 
 const refreshTokenRequest = async (
@@ -295,23 +189,28 @@ export const installRefreshInterceptor = (
 
   const requestInterceptorId = client.interceptors.request.use(
     async (config) => {
-      if (isInvalidRequestUrl(config)) {
-        console.error('❌ BLOCKED INVALID REQUEST:', config);
-        return Promise.reject(new Error('Invalid API request: empty or root URL'));
+      if (!config.url || config.url === '/' || config.url.trim() === '') {
+        return Promise.reject(new Error('Invalid API request'));
       }
-      if (isAuthMutationRequest(config as RetryableConfig)) {
-        const plain = toPlainHeaders(config.headers);
-        return {
-          ...config,
-          headers: plain,
-          timeout: config.timeout ?? timeoutMs,
-        } as InternalAxiosRequestConfig;
+
+      const retryable = config as RetryableConfig;
+      if (retryable.skipAuthRefresh) {
+        config.timeout = config.timeout ?? timeoutMs;
+        return config;
       }
-      const withAuth = await enrichRequestWithAuth(config);
-      return {
-        ...withAuth,
-        timeout: withAuth.timeout ?? timeoutMs,
-      } as InternalAxiosRequestConfig;
+
+      await tokenStorage.hydrate();
+      const token = await tokenStorage.getAccessToken();
+
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`,
+        } as InternalAxiosRequestConfig['headers'];
+      }
+
+      config.timeout = config.timeout ?? timeoutMs;
+      return config;
     },
     (error) => Promise.reject(error)
   );
@@ -370,19 +269,19 @@ export const installRefreshInterceptor = (
         return new Promise((resolve, reject) => {
           pendingQueue.push({
             resolve: (token) => {
-              let retryConfig: AxiosRequestConfig;
+              let retryCfg: AxiosRequestConfig;
               try {
-                retryConfig = rebuildRequest(originalRequest, token || undefined);
+                retryCfg = rebuildRequest(originalRequest, token || undefined);
               } catch (rebuildError) {
                 reject(rebuildError);
                 return;
               }
-              if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
-                console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
+              if (!retryCfg.url || retryCfg.url === '/' || retryCfg.url === '') {
+                console.error('❌ FATAL BLOCK: retry with invalid URL', retryCfg);
                 reject(new Error('Invalid retry dispatch'));
                 return;
               }
-              resolve(client.request(retryConfig));
+              resolve(client.request(retryCfg));
             },
             reject,
           });
