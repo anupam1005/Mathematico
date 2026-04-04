@@ -1,7 +1,7 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponseHeaders, RawAxiosRequestHeaders } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
-import { installRefreshInterceptor, isRequestCancelled, omitContentTypeKeys, toPlainHeaders } from './refreshInterceptor';
+import { installRefreshInterceptor, isRequestCancelled } from './refreshInterceptor';
 
 type ApiErrorCode =
   | 'OFFLINE'
@@ -22,11 +22,9 @@ export interface ApiError {
   originalError?: unknown;
 }
 
-const DEFAULT_TIMEOUT_MS = 20000;
-
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: DEFAULT_TIMEOUT_MS,
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -81,41 +79,6 @@ const isInvalidRequestConfig = (config: AxiosRequestConfig): boolean => {
   return false;
 };
 
-const toRecordHeaders = (headers: unknown): Record<string, string> => {
-  if (!headers || typeof headers !== 'object') return {};
-  const source = headers as RawAxiosRequestHeaders | AxiosResponseHeaders | Record<string, unknown>;
-  const result: Record<string, string> = {};
-  Object.entries(source).forEach(([k, v]) => {
-    if (v === undefined || v === null) return;
-    result[k] = String(v);
-  });
-  return result;
-};
-
-const sanitizeHeaders = (headers: unknown): Record<string, string> => {
-  const normalized = toRecordHeaders(headers);
-  const redacted: Record<string, string> = {};
-  Object.entries(normalized).forEach(([k, v]) => {
-    if (/authorization|cookie|token|secret|password/i.test(k)) {
-      redacted[k] = '[REDACTED]';
-    } else {
-      redacted[k] = v;
-    }
-  });
-  return redacted;
-};
-
-const estimatePayloadSizeBytes = (payload: unknown): number => {
-  if (payload === null || payload === undefined) return 0;
-  if (typeof payload === 'string') return payload.length;
-  if (typeof FormData !== 'undefined' && payload instanceof FormData) return -1;
-  try {
-    return JSON.stringify(payload).length;
-  } catch {
-    return -1;
-  }
-};
-
 /** Own-property only — avoid triggering Hermes issues from inherited `code` getters on DOM errors. */
 const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
   try {
@@ -127,41 +90,6 @@ const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
   } catch {
     return undefined;
   }
-};
-
-const isWriteMethod = (method: unknown): boolean => {
-  const m = String(method || 'GET').toUpperCase();
-  return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE';
-};
-
-const previewPayload = (payload: unknown): unknown => {
-  if (payload === undefined) return undefined;
-  if (payload === null) return null;
-  if (typeof FormData !== 'undefined' && payload instanceof FormData) {
-    return { __type: 'FormData' };
-  }
-  if (typeof payload === 'string') {
-    return payload.length > 2000 ? `${payload.slice(0, 2000)}…(truncated)` : payload;
-  }
-  try {
-    const json = JSON.stringify(payload);
-    if (json.length > 4000) return `${json.slice(0, 4000)}…(truncated_json)`;
-    return payload;
-  } catch {
-    return { __unserializable: true };
-  }
-};
-
-const describeAuthHeader = (headers: unknown): string => {
-  const h = toRecordHeaders(headers);
-  const raw = h.Authorization || h.authorization || '';
-  if (!raw) return 'MISSING';
-  const trimmed = String(raw).trim();
-  const lower = trimmed.toLowerCase();
-  if (!lower.startsWith('bearer ')) return `INVALID_FORMAT(${trimmed.slice(0, 20)}${trimmed.length > 20 ? '…' : ''})`;
-  const token = trimmed.slice(7).trim();
-  if (!token) return 'INVALID_BEARER_EMPTY';
-  return `Bearer [len=${token.length}]`;
 };
 
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
@@ -258,113 +186,33 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 };
 
 const refreshHandle = installRefreshInterceptor(api, {
-  timeoutMs: DEFAULT_TIMEOUT_MS,
+  timeoutMs: 20000,
 });
 
 api.interceptors.request.use(
   (config) => {
-    if (isInvalidRequestConfig(config)) {
-      console.error('❌ BLOCKED INVALID REQUEST:', config);
-      return Promise.reject(new Error('Invalid API request: empty or root URL'));
+    if (!config.url || config.url === '/' || config.url.trim() === '') {
+      console.error('❌ INVALID REQUEST URL:', config);
+      return Promise.reject(new Error('Invalid API request'));
     }
 
-    // Production-safe logging for request validation
-    console.log('[API FIX] Request starting:', config.url);
-    console.log('[API FINAL] Request:', config.url);
+    console.log('[API] Request:', config.url);
 
-    const startedAt = Date.now();
-    let next = { ...config, metadata: { startedAt } } as typeof config & { metadata: { startedAt: number } };
-
-    // Multipart: new plain headers without Content-Type — never delete/mutate axios header objects (Hermes).
-    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-      const plain = toPlainHeaders(next.headers);
-      next = {
-        ...next,
-        headers: omitContentTypeKeys(plain),
-      } as typeof next;
-    }
-
-    if (__DEV__) {
-      try {
-        const requestUrl = toAbsoluteRequestUrl(next);
-        const method = String(next.method || 'GET').toUpperCase();
-        const payloadSize = estimatePayloadSizeBytes(next.data);
-        const authHeader = describeAuthHeader(next.headers);
-        if (requestUrl === `${String(API_BASE_URL).replace(/\/+$/, '')}/`) {
-          console.log('UNEXPECTED REQUEST:', method, next.url);
-        }
-        console.log('[API:REQUEST]', {
-          method,
-          url: requestUrl,
-          headers: sanitizeHeaders(next.headers),
-          authHeader,
-          payloadSizeBytes: payloadSize,
-        });
-        if (isWriteMethod(method)) {
-          console.log('[API:WRITE]', {
-            fullUrl: requestUrl,
-            method,
-            payload: previewPayload(next.data),
-          });
-        }
-      } catch {
-        // diagnostic logging only
-      }
-    }
-
-    return next;
+    return {
+      ...config,
+      metadata: { startedAt: Date.now() },
+    };
   },
   (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(
   (response) => {
-    // Production-safe logging for response validation
-    console.log('[API FIX] Response received:', response.status);
-    console.log('[API FINAL] Response:', response.status);
-
-    if (__DEV__) {
-      try {
-        const requestUrl = toAbsoluteRequestUrl(response.config || {});
-        const method = String(response.config?.method || 'GET').toUpperCase();
-        const startedAt = (response.config as any)?.metadata?.startedAt;
-        const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
-        console.log('[API:RESPONSE]', {
-          method,
-          url: requestUrl,
-          status: response.status,
-          durationMs,
-        });
-      } catch {
-        // diagnostic logging only
-      }
-    }
+    console.log('[API] Response:', response.status);
     return response;
   },
   async (error: AxiosError) => {
-    // Production-safe logging for error validation
-    console.log('[API FIX] Error occurred:', error?.message);
-    console.log('[API FINAL] Error:', error?.message);
-
-    if (__DEV__) {
-      try {
-        const requestUrl = toAbsoluteRequestUrl(error.config || {});
-        const method = safeMethodFromConfig(error.config);
-        const startedAt = (error.config as any)?.metadata?.startedAt;
-        const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
-        console.log('[API:ERROR]', {
-          message: error.message,
-          code: readAxiosErrorCodeSafe(error),
-          method,
-          url: requestUrl,
-          status: error.response?.status,
-          durationMs,
-          kind: error.response ? 'server_error' : 'network_error',
-        });
-      } catch {
-        // diagnostic logging only
-      }
-    }
+    console.log('[API] Error:', error?.message);
     return Promise.reject(await normalizeApiError(error));
   }
 );
