@@ -3,9 +3,6 @@ import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
 import { installRefreshInterceptor, isRequestCancelled, omitContentTypeKeys, toPlainHeaders } from './refreshInterceptor';
 
-// Force React Native XHR adapter for deterministic production networking
-const xhrAdapter = require('axios/lib/adapters/xhr');
-
 type ApiErrorCode =
   | 'OFFLINE'
   | 'TIMEOUT'
@@ -34,7 +31,6 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  adapter: xhrAdapter, // 🔥 FORCE RN NETWORK LAYER
 });
 
 const healthApi: AxiosInstance = axios.create({
@@ -43,7 +39,6 @@ const healthApi: AxiosInstance = axios.create({
   headers: {
     Accept: 'application/json',
   },
-  adapter: xhrAdapter, // 🔥 FORCE RN NETWORK LAYER
 });
 
 if (__DEV__) {
