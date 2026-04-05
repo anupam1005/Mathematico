@@ -1,21 +1,14 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+  AxiosRequestHeaders,
+} from 'axios';
 
 import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
-
-/** Own-property `code` only — same rationale as apiClient (Hermes / DOM errors). */
-const readAxiosErrorCodeOwn = (error: unknown): string | undefined => {
-  try {
-    if (error == null || typeof error !== 'object') return undefined;
-    const desc = Object.getOwnPropertyDescriptor(error, 'code');
-    if (!desc || desc.value === undefined || desc.value === null) return undefined;
-    const v = desc.value;
-    return typeof v === 'string' ? v : undefined;
-  } catch {
-    return undefined;
-  }
-};
 
 type RetryableConfig = InternalAxiosRequestConfig & {
   skipAuthRefresh?: boolean;
@@ -40,7 +33,7 @@ interface RefreshResponse {
 const MAX_NETWORK_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 400;
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 const parseAccessToken = (payload: RefreshResponse): string | null => {
   return (
@@ -56,22 +49,17 @@ const parseRefreshToken = (payload: RefreshResponse): string | null => {
   return payload?.data?.refreshToken || null;
 };
 
-const hasBearerHeader = (config?: RetryableConfig): boolean => {
-  const h = config?.headers as Record<string, unknown> | undefined;
-  if (!h || typeof h !== 'object') return false;
-  const raw = h.Authorization ?? h.authorization;
-  return typeof raw === 'string' && raw.trim().toLowerCase().startsWith('bearer ');
-};
-
 const isAxiosNetworkError = (error: AxiosError): boolean => {
-  if (!error.response) return true;
-  const code = readAxiosErrorCodeOwn(error);
-  return code === 'ECONNABORTED' || code === 'ERR_NETWORK';
+  return !error.response;
 };
 
 const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
-  const rawUrl = String(config?.url || '').toLowerCase();
-  return rawUrl.includes('/login') || rawUrl.includes('/register') || rawUrl.includes('/refresh-token');
+  const url = String(config?.url || '').toLowerCase();
+  return (
+    url.includes('/login') ||
+    url.includes('/register') ||
+    url.includes('/refresh-token')
+  );
 };
 
 const shouldRetryNetwork = (
@@ -84,53 +72,38 @@ const shouldRetryNetwork = (
   if (retryCount >= MAX_NETWORK_RETRIES) return false;
 
   if (isAxiosNetworkError(error)) return true;
+
   const status = error.response?.status;
   return status === 429 || (typeof status === 'number' && status >= 500);
 };
 
-const isInvalidRefreshResponse = (error: unknown): boolean => {
-  const axiosError = error as AxiosError | undefined;
-  const status = axiosError?.response?.status;
-  if (status !== 400 && status !== 401) return false;
+const buildHeaders = (token?: string | null): AxiosRequestHeaders => {
+  const headers: any = {
+    'Content-Type': 'application/json',
+  };
 
-  const message = String((axiosError?.response?.data as any)?.message || '').toLowerCase();
-  if (!message) return true;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
-  return (
-    message.includes('refresh') ||
-    message.includes('token') ||
-    message.includes('invalid') ||
-    message.includes('expired') ||
-    message.includes('unauthorized')
-  );
+  return headers as AxiosRequestHeaders;
 };
 
-const rebuildRequest = (original: RetryableConfig, token?: string): AxiosRequestConfig => {
-  if (!original.url) {
-    throw new Error('FATAL: Missing URL before retry');
-  }
-  const url = String(original.url || '').trim();
-  if (!url || url === '/' || url === '') {
-    throw new Error('FATAL: Invalid URL in retry rebuild');
-  }
+const rebuildRequest = (
+  original: RetryableConfig,
+  token?: string
+): AxiosRequestConfig => {
+  if (!original.url) throw new Error('Missing URL');
 
-  const method = String(original.method || 'GET').toUpperCase();
-  const data = original.data;
-  const params = original.params;
-
-  const retryConfig: AxiosRequestConfig = {
-    url,
-    method,
+  return {
+    url: original.url,
+    method: original.method,
     baseURL: original.baseURL,
-    headers: {
-      ...(original.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    data,
-    params,
+    data: original.data,
+    params: original.params,
     timeout: original.timeout || 20000,
+    headers: buildHeaders(token) as any,
   };
-  return retryConfig;
 };
 
 const refreshTokenRequest = async (
@@ -139,9 +112,10 @@ const refreshTokenRequest = async (
 ): Promise<string | null> => {
   await tokenStorage.hydrate();
   const refreshToken = await tokenStorage.getRefreshToken();
+
   if (!refreshToken) return null;
 
-  const response = await client.post<RefreshResponse>(
+  const res = await client.post<RefreshResponse>(
     `${API_PATHS.auth}/refresh-token`,
     { refreshToken },
     {
@@ -150,17 +124,17 @@ const refreshTokenRequest = async (
     } as AxiosRequestConfig & { skipAuthRefresh: boolean }
   );
 
-  const payload = response?.data;
-  const nextAccessToken = parseAccessToken(payload);
-  if (!nextAccessToken) return null;
+  const newAccess = parseAccessToken(res.data);
+  if (!newAccess) return null;
 
-  const nextRefresh = parseRefreshToken(payload) || refreshToken;
+  const newRefresh = parseRefreshToken(res.data) || refreshToken;
+
   await Promise.all([
-    tokenStorage.setAccessToken(nextAccessToken),
-    tokenStorage.setRefreshToken(nextRefresh),
+    tokenStorage.setAccessToken(newAccess),
+    tokenStorage.setRefreshToken(newRefresh),
   ]);
 
-  return nextAccessToken;
+  return newAccess;
 };
 
 export const installRefreshInterceptor = (
@@ -170,174 +144,113 @@ export const installRefreshInterceptor = (
   const timeoutMs = options.timeoutMs ?? 20000;
 
   let isRefreshing = false;
-  let authFailureNotified = false;
-  const retriedRequests = new WeakSet<object>();
-  const retryCountByRequest = new WeakMap<object, number>();
-  let pendingQueue: Array<{
+  let queue: Array<{
     resolve: (token: string | null) => void;
-    reject: (error: any) => void;
+    reject: (err: any) => void;
   }> = [];
 
   const flushQueue = (error: any, token: string | null) => {
-    const queued = pendingQueue;
-    pendingQueue = [];
-    queued.forEach(({ resolve, reject }) => {
-      if (error) reject(error);
-      else resolve(token);
+    queue.forEach((p) => {
+      if (error) p.reject(error);
+      else p.resolve(token);
     });
+    queue = [];
   };
 
-  const requestInterceptorId = client.interceptors.request.use(
-    async (config) => {
-      if (!config.url || config.url === '/' || config.url.trim() === '') {
-        return Promise.reject(new Error('Invalid API request'));
+  // ✅ REQUEST INTERCEPTOR (HERMES SAFE)
+  const reqId = client.interceptors.request.use(async (config) => {
+    const retryable = config as RetryableConfig;
+
+    if (retryable.skipAuthRefresh) return config;
+
+    await tokenStorage.hydrate();
+    const token = await tokenStorage.getAccessToken();
+
+    if (token) {
+      if (config.headers && typeof (config.headers as any).set === 'function') {
+        (config.headers as any).set('Authorization', `Bearer ${token}`);
+      } else {
+        config.headers = buildHeaders(token) as any;
       }
+    }
 
-      const retryable = config as RetryableConfig;
-      if (retryable.skipAuthRefresh) {
-        config.timeout = config.timeout ?? timeoutMs;
-        return config;
-      }
+    config.timeout = config.timeout ?? timeoutMs;
+    return config;
+  });
 
-      await tokenStorage.hydrate();
-      const token = await tokenStorage.getAccessToken();
-
-      if (token) {
-        config.headers = {
-          ...config.headers,
-          Authorization: `Bearer ${token}`,
-        } as InternalAxiosRequestConfig['headers'];
-      }
-
-      config.timeout = config.timeout ?? timeoutMs;
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  const responseInterceptorId = client.interceptors.response.use(
-    (response) => response,
+  // ✅ RESPONSE INTERCEPTOR
+  const resId = client.interceptors.response.use(
+    (res) => res,
     async (error: AxiosError) => {
-      const originalRequest = error.config as RetryableConfig | undefined;
-      if (!originalRequest) return Promise.reject(error);
+      const original = error.config as RetryableConfig;
+      if (!original) return Promise.reject(error);
 
-      const currentRetryCount = retryCountByRequest.get(originalRequest) || 0;
-      if (shouldRetryNetwork(error, originalRequest, currentRetryCount)) {
-        const nextRetryCount = currentRetryCount + 1;
-        retryCountByRequest.set(originalRequest, nextRetryCount);
-        const delayMs = RETRY_BASE_DELAY_MS * 2 ** (nextRetryCount - 1);
-        if (__DEV__) {
-          console.log('[API:RETRY]', {
-            url: originalRequest.url,
-            method: String(originalRequest.method || 'GET').toUpperCase(),
-            retryCount: nextRetryCount,
-            delayMs,
-            reasonCode: readAxiosErrorCodeOwn(error),
-            status: error.response?.status,
+      // 🔁 NETWORK RETRY
+      const retryCount = (original as any)._retryCount || 0;
+
+      if (shouldRetryNetwork(error, original, retryCount)) {
+        (original as any)._retryCount = retryCount + 1;
+        await sleep(RETRY_BASE_DELAY_MS);
+
+        return client.request(rebuildRequest(original));
+      }
+
+      // 🔐 TOKEN REFRESH
+      if (
+        error.response?.status === 401 &&
+        !original.skipAuthRefresh &&
+        !isAuthMutationRequest(original)
+      ) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            queue.push({
+              resolve: (token) => {
+                resolve(
+                  client.request(
+                    rebuildRequest(original, token || undefined)
+                  )
+                );
+              },
+              reject,
+            });
           });
         }
-        await sleep(delayMs);
-        let retryConfig: AxiosRequestConfig;
+
+        isRefreshing = true;
+
         try {
-          retryConfig = rebuildRequest(originalRequest);
-        } catch (rebuildError) {
-          return Promise.reject(rebuildError);
-        }
-        if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
-          console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
-          return Promise.reject(new Error('Invalid retry dispatch'));
-        }
-        return client.request(retryConfig);
-      }
+          const newToken = await refreshTokenRequest(client, timeoutMs);
 
-      const status = error.response?.status;
-      const shouldRefresh =
-        status === 401 &&
-        !retriedRequests.has(originalRequest) &&
-        !originalRequest.skipAuthRefresh &&
-        !isAuthMutationRequest(originalRequest) &&
-        hasBearerHeader(originalRequest) &&
-        !String(originalRequest.url || '').includes('/refresh-token');
-
-      if (!shouldRefresh) {
-        return Promise.reject(error);
-      }
-
-      retriedRequests.add(originalRequest);
-
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          pendingQueue.push({
-            resolve: (token) => {
-              let retryCfg: AxiosRequestConfig;
-              try {
-                retryCfg = rebuildRequest(originalRequest, token || undefined);
-              } catch (rebuildError) {
-                reject(rebuildError);
-                return;
-              }
-              if (!retryCfg.url || retryCfg.url === '/' || retryCfg.url === '') {
-                console.error('❌ FATAL BLOCK: retry with invalid URL', retryCfg);
-                reject(new Error('Invalid retry dispatch'));
-                return;
-              }
-              resolve(client.request(retryCfg));
-            },
-            reject,
-          });
-        });
-      }
-
-      isRefreshing = true;
-      try {
-        const token = await refreshTokenRequest(client, timeoutMs);
-        if (!token) {
-          await tokenStorage.clearSession();
-          if (!authFailureNotified) {
-            authFailureNotified = true;
+          if (!newToken) {
+            await tokenStorage.clearSession();
+            flushQueue(new Error('Session expired'), null);
             options.onAuthFailure?.();
+            return Promise.reject(error);
           }
-          flushQueue(new Error('Refresh token invalid'), null);
+
+          flushQueue(null, newToken);
+          return client.request(rebuildRequest(original, newToken));
+        } catch (e) {
+          safeCatch('refreshInterceptor')(e);
+          flushQueue(e, null);
           return Promise.reject(error);
+        } finally {
+          isRefreshing = false;
         }
-
-        authFailureNotified = false;
-        flushQueue(null, token);
-        const retryConfig = rebuildRequest(originalRequest, token);
-        if (!retryConfig.url || retryConfig.url === '/' || retryConfig.url === '') {
-          console.error('❌ FATAL BLOCK: retry with invalid URL', retryConfig);
-          return Promise.reject(new Error('Invalid retry dispatch'));
-        }
-        return client.request(retryConfig);
-      } catch (refreshError) {
-        safeCatch('refreshInterceptor.refreshTokenRequest')(refreshError);
-        if (isInvalidRefreshResponse(refreshError)) {
-          await tokenStorage.clearSession();
-          if (!authFailureNotified) {
-            authFailureNotified = true;
-            options.onAuthFailure?.();
-          }
-        }
-        flushQueue(refreshError, null);
-        return Promise.reject(error);
-      } finally {
-        isRefreshing = false;
       }
+
+      return Promise.reject(error);
     }
   );
 
   return {
     eject: () => {
-      client.interceptors.request.eject(requestInterceptorId);
-      client.interceptors.response.eject(responseInterceptorId);
-      pendingQueue = [];
+      client.interceptors.request.eject(reqId);
+      client.interceptors.response.eject(resId);
     },
   };
 };
 
 export const isRequestCancelled = (error: unknown): boolean => {
-  if (!error) return false;
-  if (axios.isCancel(error)) return true;
-  return readAxiosErrorCodeOwn(error) === 'ERR_CANCELED';
+  return axios.isCancel(error);
 };
-
