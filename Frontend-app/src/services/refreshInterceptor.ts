@@ -3,7 +3,6 @@ import axios, {
   AxiosInstance,
   AxiosRequestConfig,
   InternalAxiosRequestConfig,
-  AxiosRequestHeaders,
 } from 'axios';
 
 import { API_PATHS } from '../constants/apiPaths';
@@ -77,18 +76,9 @@ const shouldRetryNetwork = (
   return status === 429 || (typeof status === 'number' && status >= 500);
 };
 
-const buildHeaders = (token?: string | null): AxiosRequestHeaders => {
-  const headers: any = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers as AxiosRequestHeaders;
-};
-
+/**
+ * ✅ FINAL SAFE RETRY BUILDER
+ */
 const rebuildRequest = (
   original: RetryableConfig,
   token?: string
@@ -102,7 +92,9 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: buildHeaders(token) as any,
+    headers: (token
+      ? { Authorization: `Bearer ${token}` }
+      : {}) as any,
   };
 };
 
@@ -157,7 +149,7 @@ export const installRefreshInterceptor = (
     queue = [];
   };
 
-  // ✅ REQUEST INTERCEPTOR (HERMES SAFE)
+  // ✅ FINAL SAFE REQUEST INTERCEPTOR
   const reqId = client.interceptors.request.use(async (config) => {
     const retryable = config as RetryableConfig;
 
@@ -167,11 +159,9 @@ export const installRefreshInterceptor = (
     const token = await tokenStorage.getAccessToken();
 
     if (token) {
-      if (config.headers && typeof (config.headers as any).set === 'function') {
-        (config.headers as any).set('Authorization', `Bearer ${token}`);
-      } else {
-        config.headers = buildHeaders(token) as any;
-      }
+      config.headers = {
+        Authorization: `Bearer ${token}`,
+      } as any;
     }
 
     config.timeout = config.timeout ?? timeoutMs;
