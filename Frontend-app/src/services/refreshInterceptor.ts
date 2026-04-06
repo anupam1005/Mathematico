@@ -2,15 +2,15 @@ import axios, {
   AxiosError,
   AxiosInstance,
   AxiosRequestConfig,
-  InternalAxiosRequestConfig,
 } from 'axios';
 
 import { API_PATHS } from '../constants/apiPaths';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
 
-type RetryableConfig = InternalAxiosRequestConfig & {
+type RetryableConfig = AxiosRequestConfig & {
   skipAuthRefresh?: boolean;
+  _retryCount?: number;
 };
 
 interface InstallOptions {
@@ -154,6 +154,7 @@ export const installRefreshInterceptor = (
     const retryable = config as RetryableConfig;
 
     if (retryable.skipAuthRefresh) return config;
+    if (isAuthMutationRequest(retryable)) return config;
 
     await tokenStorage.hydrate();
     const token = await tokenStorage.getAccessToken();
