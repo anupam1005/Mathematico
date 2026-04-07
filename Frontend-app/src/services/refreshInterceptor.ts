@@ -92,9 +92,10 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: (token
-      ? { Authorization: `Bearer ${token}` }
-      : {}) as any,
+    headers: {
+      ...(original.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    } as any,
   };
 };
 
@@ -160,9 +161,9 @@ export const installRefreshInterceptor = (
     const token = await tokenStorage.getAccessToken();
 
     if (token) {
-      config.headers = {
-        Authorization: `Bearer ${token}`,
-      } as any;
+      const existing = (config.headers || {}) as Record<string, string>;
+      existing.Authorization = `Bearer ${token}`;
+      config.headers = existing as any;
     }
 
     config.timeout = config.timeout ?? timeoutMs;

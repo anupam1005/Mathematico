@@ -43,6 +43,23 @@ const buildHeaders = (token?: string | null): HeadersMap => {
 };
 
 const normalizePath = (path: string): string => (path.startsWith("/") ? path : `/${path}`);
+const normalizeBaseOrigin = (url: string): string => url.replace(/\/+$/, "");
+const normalizeApiPrefix = (path: string): string => {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return normalized.replace(/\/+$/, "");
+};
+
+const buildAuthUrl = (path: string): string => {
+  const normalizedPath = normalizePath(path);
+  const base = normalizeBaseOrigin(API_BASE_URL);
+  const authPrefix = normalizeApiPrefix(API_PATHS.auth);
+  const url = `${base}${authPrefix}${normalizedPath}`;
+  const duplicatedApiPrefix = /\/api\/v1\/api\/v1\//i.test(url);
+  if (duplicatedApiPrefix) {
+    throw new Error("Invalid auth URL: duplicated /api/v1 segment");
+  }
+  return url;
+};
 
 const hermesSafeRequest = (
   method: "POST" | "GET" | "PUT" | "DELETE",
@@ -54,8 +71,7 @@ const hermesSafeRequest = (
     try {
       const xhr = new XMLHttpRequest();
 
-      const normalizedPath = normalizePath(path);
-      const url = `${API_BASE_URL}${API_PATHS.auth}${normalizedPath}`;
+      const url = buildAuthUrl(path);
       console.log("Request URL:", url);
 
       xhr.open(method, url, true);

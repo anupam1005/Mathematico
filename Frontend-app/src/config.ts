@@ -52,6 +52,13 @@ const validateHttpsBaseUrl = (url: string): string => {
     throw new Error('Invalid API base URL: localhost is not allowed');
   }
 
+  const hasPath = parsed.pathname && parsed.pathname !== '/';
+  const hasSearch = Boolean(parsed.search);
+  const hasHash = Boolean(parsed.hash);
+  if (hasPath || hasSearch || hasHash) {
+    throw new Error('Invalid API base URL: use origin only (example: https://api.example.com)');
+  }
+
   return normalized;
 };
 
@@ -61,11 +68,7 @@ const resolveApiBaseUrl = (): string => {
     return FALLBACK_API_BASE_URL;
   }
 
-  try {
-    return validateHttpsBaseUrl(runtimeUrl);
-  } catch {
-    return FALLBACK_API_BASE_URL;
-  }
+  return validateHttpsBaseUrl(runtimeUrl);
 };
 
 export const API_BASE_URL = validateHttpsBaseUrl(resolveApiBaseUrl());
