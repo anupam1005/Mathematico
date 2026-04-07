@@ -3,6 +3,7 @@ import api, { withBasePath } from './apiClient';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
 import { createSafeError } from '../utils/safeError';
+import { hermesAuthClient } from './hermesAuthClient';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -82,8 +83,8 @@ const authService = {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await authApi.post('/login', { email, password }, { skipAuthRefresh: true });
-      const payload = response?.data ?? null;
+      console.log('[AUTH_TRANSPORT] login -> hermesAuthClient');
+      const payload = await hermesAuthClient.post('/login', { email, password });
       console.log('[AUTH] login response received');
 
       if (!payload?.success || !payload?.data) {
@@ -140,13 +141,12 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      const response = await authApi.post('/register', {
+      console.log('[AUTH_TRANSPORT] register -> hermesAuthClient');
+      const payload = await hermesAuthClient.post('/register', {
         name,
         email,
         password,
-      }, { skipAuthRefresh: true });
-
-      const payload = response?.data ?? null;
+      });
 
       if (!payload?.success || !payload?.data) {
         return {
