@@ -2,6 +2,7 @@ import { API_PATHS } from '../constants/apiPaths';
 import api, { withBasePath } from './apiClient';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
+import { createSafeError } from '../utils/safeError';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -61,16 +62,17 @@ const toRefreshToken = (payload: any): string | null => {
 };
 
 const toLoginErrorMessage = (error: any): string => {
-  const code = typeof error?.code === 'string' ? error.code : '';
+  const safe = createSafeError(error);
+  const code = typeof safe?.code === 'string' ? safe.code : '';
   if (code === 'TIMEOUT') return 'Login timed out. Please check your connection and try again.';
   if (code === 'NETWORK_ERROR' || code === 'OFFLINE') return 'Unable to reach server. Please check your internet connection.';
-  if (code === 'API_ERROR' && !error?.status) return 'Server is unreachable right now. Please try again.';
+  if (code === 'API_ERROR' && !safe?.response?.status) return 'Server is unreachable right now. Please try again.';
   if (code === 'CANCELLED') return 'Login request was cancelled. Please try again.';
   const backendMessage =
-    typeof error?.data?.message === 'string'
-      ? error.data.message
-      : typeof error?.message === 'string'
-        ? error.message
+    typeof safe?.response?.data?.message === 'string'
+      ? safe.response.data.message
+      : typeof safe?.message === 'string'
+        ? safe.message
         : '';
   return backendMessage || 'Login failed. Please try again.';
 };

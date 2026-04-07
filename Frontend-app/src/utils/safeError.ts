@@ -7,6 +7,7 @@
 export const createSafeError = (error: any) => {
   const safe: any = { 
     message: 'Request failed', 
+    code: '',
     response: null, 
     config: null 
   };
@@ -20,7 +21,17 @@ export const createSafeError = (error: any) => {
     // Ignore - keep default message
   }
   
-  // NEVER access error.code - it's the property that triggers NONE error
+  // Read only own-property descriptors to avoid invoking problematic inherited getters.
+  try {
+    if (error && typeof error === 'object') {
+      const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
+      if (codeDesc && typeof codeDesc.value === 'string') {
+        safe.code = codeDesc.value;
+      }
+    }
+  } catch (e) {
+    // Ignore - keep default empty code
+  }
   
   // Safely extract response - wrap each property access in try-catch
   try {
