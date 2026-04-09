@@ -34,6 +34,36 @@ const RETRY_BASE_DELAY_MS = 400;
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+const toMutableHeaders = (headers?: AxiosRequestConfig['headers']): Record<string, string> => {
+  const out: Record<string, string> = {};
+  if (!headers) return out;
+  try {
+    const source = headers as any;
+    if (typeof source.toJSON === 'function') {
+      const json = source.toJSON();
+      if (json && typeof json === 'object') {
+        Object.keys(json).forEach((key) => {
+          const value = (json as Record<string, unknown>)[key];
+          if (value !== undefined && value !== null) out[key] = String(value);
+        });
+        return out;
+      }
+    }
+  } catch {
+    // Fall through to generic object copy
+  }
+
+  try {
+    Object.keys(headers as Record<string, unknown>).forEach((key) => {
+      const value = (headers as Record<string, unknown>)[key];
+      if (value !== undefined && value !== null) out[key] = String(value);
+    });
+  } catch {
+    // Ignore and return what we have
+  }
+  return out;
+};
+
 const parseAccessToken = (payload: RefreshResponse): string | null => {
   return (
     payload?.data?.accessToken ||
@@ -92,10 +122,11 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: {
-      ...(original.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    } as any,
+    headers: (() => {
+      const nextHeaders = toMutableHeaders(original.headers);
+      if (token) nextHeaders.Authorization = `Bearer ${token}`;
+      return nextHeaders as any;
+    })(),
   };
 };
 
@@ -161,9 +192,9 @@ export const installRefreshInterceptor = (
     const token = await tokenStorage.getAccessToken();
 
     if (token) {
-      const existing = (config.headers || {}) as Record<string, string>;
-      existing.Authorization = `Bearer ${token}`;
-      config.headers = existing as any;
+      const nextHeaders = toMutableHeaders(config.headers);
+      nextHeaders.Authorization = `Bearer ${token}`;
+      config.headers = nextHeaders as any;
     }
 
     config.timeout = config.timeout ?? timeoutMs;
