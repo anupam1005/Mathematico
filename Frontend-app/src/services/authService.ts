@@ -1,5 +1,6 @@
 import { API_PATHS } from '../constants/apiPaths';
-import api, { withBasePath } from './apiClient';
+import api from './apiClient';
+import { postAuthJson } from './authHttp';
 import { tokenStorage } from './tokenStorage';
 import { safeCatch } from '../utils/safeCatch';
 import { createSafeError } from '../utils/safeError';
@@ -45,8 +46,6 @@ export interface RegisterResponse {
 /* Auth Service                                                       */
 /* ------------------------------------------------------------------ */
 
-const authApi = withBasePath(API_PATHS.auth);
-
 const toBearerToken = (payload: any): string | null => {
   const token =
     payload?.data?.accessToken ||
@@ -77,14 +76,28 @@ const toLoginErrorMessage = (error: any): string => {
   return backendMessage || 'Login failed. Please try again.';
 };
 
+const toRegisterErrorMessage = (error: any): string => {
+  const safe = createSafeError(error);
+  const code = typeof safe?.code === 'string' ? safe.code : '';
+  if (code === 'TIMEOUT') return 'Registration timed out. Please check your connection and try again.';
+  if (code === 'NETWORK_ERROR' || code === 'OFFLINE') return 'Unable to reach server. Please check your internet connection.';
+  if (code === 'CANCELLED') return 'Registration was cancelled. Please try again.';
+  const backendMessage =
+    typeof safe?.response?.data?.message === 'string'
+      ? safe.response.data.message
+      : typeof safe?.message === 'string'
+        ? safe.message
+        : '';
+  return backendMessage || 'Registration failed. Please try again.';
+};
+
 const authService = {
   /* ---------------------------- LOGIN ----------------------------- */
 
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      console.log('[AUTH_TRANSPORT] login -> axios(authApi)');
-      const response = await authApi.post('/login', { email, password });
-      const payload = response?.data;
+      console.log('[AUTH_TRANSPORT] login -> fetch(authHttp)');
+      const payload = await postAuthJson<any>('/login', { email, password });
       console.log('[AUTH] login response received');
 
       if (!payload?.success || !payload?.data) {
@@ -141,13 +154,12 @@ const authService = {
     password: string
   ): Promise<RegisterResponse> {
     try {
-      console.log('[AUTH_TRANSPORT] register -> axios(authApi)');
-      const response = await authApi.post('/register', {
+      console.log('[AUTH_TRANSPORT] register -> fetch(authHttp)');
+      const payload = await postAuthJson<any>('/register', {
         name,
         email,
         password,
       });
-      const payload = response?.data;
 
       if (!payload?.success || !payload?.data) {
         return {
@@ -168,7 +180,7 @@ const authService = {
         },
       };
     } catch (error: any) {
-      throw error;
+      throw new Error(toRegisterErrorMessage(error));
     }
   },
 

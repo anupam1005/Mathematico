@@ -197,9 +197,6 @@ api.interceptors.request.use(
     }
 
     console.log('[API] Request:', config.url);
-    if (config.url && /\/api\/v1\/auth\/(login|register)/i.test(String(config.url))) {
-      console.warn('[AUTH_TRANSPORT] unexpected axios auth route:', config.url);
-    }
 
     return {
       ...config,
