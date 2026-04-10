@@ -214,9 +214,9 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   };
 };
 
-const refreshHandle = installRefreshInterceptor(api, {
-  timeoutMs: 20000,
-});
+//const refreshHandle = installRefreshInterceptor(api, {
+  //timeoutMs: 20000,
+//});
 
 api.interceptors.request.use(
   (config) => {
@@ -343,6 +343,6 @@ export const runBackendHealthCheck = async (): Promise<boolean> => {
   }
 };
 
-export const ejectApiInterceptors = () => refreshHandle.eject();
+//export const ejectApiInterceptors = () => refreshHandle.eject();
 
 export default api;
