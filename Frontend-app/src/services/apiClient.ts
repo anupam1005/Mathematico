@@ -58,6 +58,35 @@ const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
   return `${base}${path}`;
 };
 
+const toPlainHeaders = (headers?: AxiosRequestConfig['headers']): Record<string, string> => {
+  const out: Record<string, string> = {};
+  if (!headers) return out;
+  try {
+    const source = headers as any;
+    if (typeof source.toJSON === 'function') {
+      const json = source.toJSON();
+      if (json && typeof json === 'object') {
+        Object.keys(json).forEach((key) => {
+          const value = (json as Record<string, unknown>)[key];
+          if (value !== undefined && value !== null) out[key] = String(value);
+        });
+        return out;
+      }
+    }
+  } catch {
+    // fall through to generic object copy
+  }
+  try {
+    Object.keys(headers as Record<string, unknown>).forEach((key) => {
+      const value = (headers as Record<string, unknown>)[key];
+      if (value !== undefined && value !== null) out[key] = String(value);
+    });
+  } catch {
+    return {};
+  }
+  return out;
+};
+
 const safeMethodFromConfig = (config: AxiosRequestConfig | undefined): string => {
   const raw = config?.method;
   if (!raw) return 'UNKNOWN';
@@ -278,7 +307,7 @@ export const withBasePath = (basePath: string) => ({
       ...config,
       url,
       method: config.method,
-      headers: config.headers,
+      headers: { ...toPlainHeaders(config.headers) },
     };
     if (!safeConfig.url || safeConfig.url === '/' || safeConfig.url === '') {
       console.error('❌ FATAL: EMPTY URL BEFORE DISPATCH', safeConfig);

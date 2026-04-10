@@ -34,7 +34,9 @@ const RETRY_BASE_DELAY_MS = 400;
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const toMutableHeaders = (headers?: AxiosRequestConfig['headers']): Record<string, string> => {
+const toMutableHeaders = (
+  headers?: AxiosRequestConfig['headers']
+): Record<string, string> => {
   const out: Record<string, string> = {};
   if (!headers) return out;
   try {
@@ -62,6 +64,27 @@ const toMutableHeaders = (headers?: AxiosRequestConfig['headers']): Record<strin
     // Ignore and return what we have
   }
   return out;
+};
+
+const cloneConfigWithPlainHeaders = (
+  config: RetryableConfig,
+  overrides: Partial<RetryableConfig> = {}
+): RetryableConfig => {
+  const cloned: RetryableConfig = {
+    ...config,
+    ...overrides,
+    headers: (() => {
+      try {
+        return {
+          ...toMutableHeaders(config.headers),
+          ...toMutableHeaders(overrides.headers as AxiosRequestConfig['headers']),
+        };
+      } catch {
+        return {};
+      }
+    })(),
+  };
+  return cloned;
 };
 
 const parseAccessToken = (payload: RefreshResponse): string | null => {
@@ -125,6 +148,16 @@ const rebuildRequest = (
 ): AxiosRequestConfig => {
   if (!original.url) throw new Error('Missing URL');
 
+  const nextHeaders = (() => {
+    try {
+      const cloned = toMutableHeaders(original.headers);
+      if (token) cloned.Authorization = `Bearer ${token}`;
+      return cloned;
+    } catch {
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    }
+  })();
+
   return {
     url: original.url,
     method: original.method,
@@ -132,11 +165,8 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: (() => {
-      const nextHeaders = toMutableHeaders(original.headers);
-      if (token) nextHeaders.Authorization = `Bearer ${token}`;
-      return nextHeaders as any;
-    })(),
+    headers: { ...nextHeaders } as any,
+    skipAuthRefresh: original.skipAuthRefresh,
   };
 };
 
@@ -196,19 +226,30 @@ export const installRefreshInterceptor = (
     const retryable = config as RetryableConfig;
 
     if (retryable.skipAuthRefresh) return config;
-    if (isAuthMutationRequest(retryable)) return config;
+    if (isAuthMutationRequest(retryable)) {
+      return {
+        ...config,
+        headers: { ...toMutableHeaders(config.headers) },
+      };
+    }
 
     await tokenStorage.hydrate();
     const token = await tokenStorage.getAccessToken();
 
-    if (token) {
-      const nextHeaders = toMutableHeaders(config.headers);
-      nextHeaders.Authorization = `Bearer ${token}`;
-      config.headers = nextHeaders as any;
+    const nextConfig = cloneConfigWithPlainHeaders(retryable);
+
+    try {
+      if (token) {
+        const nextHeaders = toMutableHeaders(nextConfig.headers);
+        nextHeaders.Authorization = `Bearer ${token}`;
+        nextConfig.headers = { ...nextHeaders } as any;
+      }
+    } catch {
+      nextConfig.headers = token ? { Authorization: `Bearer ${token}` } : {};
     }
 
-    config.timeout = config.timeout ?? timeoutMs;
-    return config;
+    nextConfig.timeout = nextConfig.timeout ?? timeoutMs;
+    return nextConfig;
   });
 
   // ✅ RESPONSE INTERCEPTOR

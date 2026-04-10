@@ -1,10 +1,10 @@
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
 
-const JSON_HEADERS: Record<string, string> = {
+const createJsonHeaders = (): Record<string, string> => ({
   'Content-Type': 'application/json',
   Accept: 'application/json',
-};
+});
 
 const buildAuthUrl = (relativePath: string): string => {
   const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
@@ -25,7 +25,7 @@ export async function postAuthJson<T>(relativePath: string, body: unknown, timeo
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: JSON_HEADERS,
+      headers: createJsonHeaders(),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
