@@ -91,6 +91,16 @@ const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
   );
 };
 
+const getAuthorizationHeaderToken = (headers?: AxiosRequestConfig['headers']): string | null => {
+  const normalized = toMutableHeaders(headers);
+  const value = normalized.Authorization || normalized.authorization;
+  if (!value) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(String(value).trim());
+  if (!match) return null;
+  const token = match[1]?.trim();
+  return token || null;
+};
+
 const shouldRetryNetwork = (
   error: AxiosError,
   config: RetryableConfig | undefined,
@@ -245,7 +255,23 @@ export const installRefreshInterceptor = (
           const newToken = await refreshTokenRequest(client, timeoutMs);
 
           if (!newToken) {
-            await tokenStorage.clearSession();
+            await tokenStorage.hydrate();
+            const requestToken = getAuthorizationHeaderToken(original.headers);
+            const currentToken = await tokenStorage.getAccessToken();
+            const shouldSkipSessionClear =
+              Boolean(requestToken) &&
+              Boolean(currentToken) &&
+              requestToken !== currentToken;
+
+            if (shouldSkipSessionClear) {
+              console.log('[AUTH_REFRESH] stale 401 ignored', {
+                requestTokenLen: requestToken?.length ?? 0,
+                currentTokenLen: currentToken?.length ?? 0,
+              });
+            } else {
+              console.log('[AUTH_REFRESH] clearing session after refresh failure');
+              await tokenStorage.clearSession();
+            }
             flushQueue(new Error('Session expired'), null);
             options.onAuthFailure?.();
             return Promise.reject(error);

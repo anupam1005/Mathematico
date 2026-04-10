@@ -98,9 +98,19 @@ const authService = {
     try {
       console.log('[AUTH_TRANSPORT] login -> fetch(authHttp)');
       const payload = await postAuthJson<any>('/login', { email, password });
-      console.log('[AUTH] login response received');
+      console.log('[AUTH] login response received', {
+        success: payload?.success === true,
+        hasData: Boolean(payload?.data),
+        hasUser: Boolean(payload?.data?.user || payload?.data),
+        hasAccessToken: Boolean(toBearerToken(payload)),
+      });
 
       if (!payload?.success || !payload?.data) {
+        console.log('[AUTH] login invalid payload', {
+          success: payload?.success === true,
+          hasData: Boolean(payload?.data),
+          message: payload?.message,
+        });
         throw new Error(payload?.message || 'Invalid login response payload');
       }
 
@@ -110,10 +120,12 @@ const authService = {
       const refreshToken = toRefreshToken(payload);
 
       if (!rawUser || typeof rawUser !== 'object') {
+        console.log('[AUTH] login missing user object');
         throw new Error('Login response missing user object');
       }
 
       if (!accessToken) {
+        console.log('[AUTH] login missing access token');
         throw new Error(payload?.message || 'Login response missing access token');
       }
 
@@ -126,8 +138,16 @@ const authService = {
       });
 
       // Final-stage real-device validation: ensure tokens are available immediately after save.
-      const stored = await tokenStorage.getAccessToken();
-      console.log('[AUTH] token stored:', stored ? `present(len=${stored.length})` : 'missing');
+      const [storedAccessToken, storedSession] = await Promise.all([
+        tokenStorage.getAccessToken(),
+        tokenStorage.getSession(),
+      ]);
+      console.log('[AUTH] token stored:', storedAccessToken ? `present(len=${storedAccessToken.length})` : 'missing');
+      console.log('[AUTH] session stored:', {
+        hasUser: Boolean(storedSession.user),
+        hasAccessToken: Boolean(storedSession.accessToken),
+        hasRefreshToken: Boolean(storedSession.refreshToken),
+      });
       console.log('LOGIN SUCCESS: session stored');
 
       return {
@@ -142,6 +162,12 @@ const authService = {
         },
       };
     } catch (error: any) {
+      const safe = createSafeError(error);
+      console.log('[AUTH] login failed', {
+        code: safe?.code,
+        status: safe?.response?.status,
+        message: safe?.message,
+      });
       throw new Error(toLoginErrorMessage(error));
     }
   },

@@ -21,6 +21,7 @@ export async function postAuthJson<T>(relativePath: string, body: unknown, timeo
   const url = buildAuthUrl(relativePath);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  console.log('[AUTH_HTTP] POST start', { url, timeoutMs });
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -36,23 +37,34 @@ export async function postAuthJson<T>(relativePath: string, body: unknown, timeo
     } catch {
       data = { message: text || 'Invalid response from server' };
     }
+    const payload = data as Record<string, unknown> | null;
+    console.log('[AUTH_HTTP] POST response', {
+      url,
+      status: res.status,
+      ok: res.ok,
+      hasPayload: Boolean(payload),
+      success: payload?.success === true,
+      hasData: Boolean(payload?.data),
+      message: typeof payload?.message === 'string' ? payload.message : undefined,
+    });
 
-    const payload = data as Record<string, unknown>;
+    const typedPayload = (data as Record<string, unknown>) || {};
 
     if (!res.ok) {
       const msg =
-        typeof payload?.message === 'string'
-          ? payload.message
+        typeof typedPayload?.message === 'string'
+          ? typedPayload.message
           : `Request failed (${res.status})`;
       const err = new Error(msg) as Error & { status?: number; response?: { status: number; data: unknown } };
       err.status = res.status;
-      err.response = { status: res.status, data: payload };
+      err.response = { status: res.status, data: typedPayload };
       throw err;
     }
 
     return data as T;
   } catch (e: unknown) {
     if (e && typeof e === 'object' && (e as Error).name === 'AbortError') {
+      console.log('[AUTH_HTTP] POST timeout', { url, timeoutMs });
       const err = new Error('Request timed out') as Error & { code?: string };
       err.code = 'TIMEOUT';
       throw err;
@@ -63,9 +75,15 @@ export async function postAuthJson<T>(relativePath: string, body: unknown, timeo
       'response' in (e as object) &&
       (e as { response?: unknown }).response != null;
     if (!hasResponse && e instanceof Error) {
+      console.log('[AUTH_HTTP] POST network failure', { url, message: e.message });
       const err = new Error(e.message || 'Unable to reach server') as Error & { code?: string };
       err.code = 'NETWORK_ERROR';
       throw err;
+    }
+    if (e instanceof Error) {
+      console.log('[AUTH_HTTP] POST failure', { url, message: e.message });
+    } else {
+      console.log('[AUTH_HTTP] POST failure', { url, error: String(e) });
     }
     throw e;
   } finally {

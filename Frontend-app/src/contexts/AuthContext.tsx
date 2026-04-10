@@ -50,13 +50,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const bootstrapRef = useRef<Promise<void> | null>(null);
   const logoutRef = useRef<Promise<void> | null>(null);
   const loginInFlightRef = useRef(false);
+  const authMutationEpochRef = useRef(0);
 
   const restoreAuthState = async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
+    const restoreEpoch = authMutationEpochRef.current;
     try {
       const restored = await authService.restoreSession();
       const nextUser = (restored.user || null) as User | null;
       const nextIsAuthenticated = Boolean(restored.isAuthenticated);
-      if (loginInFlightRef.current) {
+      if (loginInFlightRef.current || restoreEpoch !== authMutationEpochRef.current) {
+        console.log('[AUTH] restore session skipped: stale restore', {
+          loginInFlight: loginInFlightRef.current,
+          restoreEpoch,
+          currentEpoch: authMutationEpochRef.current,
+        });
         return { user, isAuthenticated };
       }
       setUser(nextUser);
@@ -121,6 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string
   ): Promise<{ success: boolean; message?: string; user?: User }> => {
     try {
+      authMutationEpochRef.current += 1;
       loginInFlightRef.current = true;
       setIsLoading(true);
       const response = await authService.login(email, password);
@@ -133,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Immediate in-memory auth update to avoid login screen loop.
         setUser(nextUser);
         setIsAuthenticated(true);
-        console.log('AUTH STATE: authenticated=true');
+        console.log('AUTH STATE: authenticated=true', { authEpoch: authMutationEpochRef.current });
         return { success: true, message: response.message, user: nextUser };
       }
 
@@ -143,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { success: false, message: error?.message };
     } finally {
       loginInFlightRef.current = false;
+      authMutationEpochRef.current += 1;
       setIsLoading(false);
     }
   };
