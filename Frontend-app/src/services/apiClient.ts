@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
-import { installRefreshInterceptor, isRequestCancelled } from './refreshInterceptor';
+import { isRequestCancelled } from './refreshInterceptor';
 
 type ApiErrorCode =
   | 'OFFLINE'
@@ -58,56 +58,6 @@ const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
   return `${base}${path}`;
 };
 
-const toPlainHeaders = (headers?: AxiosRequestConfig['headers']): Record<string, string> => {
-  const out: Record<string, string> = {};
-  if (!headers) return out;
-  
-  // Hermes-safe: Try known header keys directly instead of enumeration
-  const knownHeaders = [
-    'content-type', 'Content-Type',
-    'accept', 'Accept',
-    'authorization', 'Authorization',
-    'x-requested-with', 'X-Requested-With'
-  ];
-  
-  try {
-    const source = headers as any;
-    if (typeof source.toJSON === 'function') {
-      const json = source.toJSON();
-      if (json && typeof json === 'object') {
-        // Try known headers from JSON
-        knownHeaders.forEach(key => {
-          if (key in json) {
-            const value = json[key];
-            if (value !== undefined && value !== null) {
-              out[key] = String(value);
-            }
-          }
-        });
-        return out;
-      }
-    }
-  } catch {
-    // fall through to direct header access
-  }
-  
-  try {
-    // Hermes-safe: Direct access to known headers only
-    knownHeaders.forEach(key => {
-      if (key in (headers as object)) {
-        const value = (headers as Record<string, unknown>)[key];
-        if (value !== undefined && value !== null) {
-          out[key] = String(value);
-        }
-      }
-    });
-  } catch {
-    // Return empty headers if all attempts fail
-  }
-  
-  return out;
-};
-
 const safeMethodFromConfig = (config: AxiosRequestConfig | undefined): string => {
   const raw = config?.method;
   if (!raw) return 'UNKNOWN';
@@ -129,7 +79,6 @@ const isInvalidRequestConfig = (config: AxiosRequestConfig): boolean => {
   return false;
 };
 
-/** Own-property only — avoid triggering Hermes issues from inherited `code` getters on DOM errors. */
 const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
   try {
     if (error == null || typeof error !== 'object') return undefined;
@@ -146,8 +95,9 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   const safeCode = readAxiosErrorCodeSafe(error);
   const requestUrl = toAbsoluteRequestUrl(error.config || {});
   const method = safeMethodFromConfig(error.config);
-  const isHeadersMutationRuntimeError = /read-only property\s+'NONE'/i.test(String(error.message || ''));
-  const isNetworkError = !error.response || safeCode === 'ERR_NETWORK';
+  const isHeadersMutationRuntimeError = /read-only property\s+'NONE'/i.test(
+    String(error.message || '')
+  );
 
   if (isRequestCancelled(error)) {
     return {
@@ -162,7 +112,10 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 
   const looksLikeTimeout =
     safeCode === 'ECONNABORTED' ||
-    /timeout of \d+ms exceeded|exceeded the time limit/i.test(String(error.message || ''));
+    /timeout of \d+ms exceeded|exceeded the time limit/i.test(
+      String(error.message || '')
+    );
+
   if (looksLikeTimeout) {
     return {
       message: error.message,
@@ -177,7 +130,8 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   if (error.response) {
     const status = error.response.status;
     const data = (error.response.data || {}) as any;
-    const backendMessage = typeof data?.message === 'string' ? data.message : undefined;
+    const backendMessage =
+      typeof data?.message === 'string' ? data.message : undefined;
 
     if (status === 401) {
       return {
@@ -204,44 +158,33 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     };
   }
 
-  if (safeCode === 'ERR_NETWORK' || !error.response) {
-    if (isHeadersMutationRuntimeError) {
-      return {
-        message: error.message,
-        code: 'API_ERROR',
-        requestUrl,
-        method,
-        isNetworkError: false,
-        originalError: error,
-      };
-    }
+  // 🔥 IMPORTANT: treat Hermes NONE error as safe API error (not crash)
+  if (isHeadersMutationRuntimeError) {
     return {
       message: error.message,
-      code: 'NETWORK_ERROR',
+      code: 'API_ERROR',
       requestUrl,
       method,
-      isNetworkError: true,
+      isNetworkError: false,
       originalError: error,
     };
   }
 
   return {
     message: error.message,
-    code: 'API_ERROR',
+    code: 'NETWORK_ERROR',
     requestUrl,
     method,
-    isNetworkError,
+    isNetworkError: true,
     originalError: error,
   };
 };
 
-//const refreshHandle = installRefreshInterceptor(api, {
-  //timeoutMs: 20000,
-//});
+// ❌ interceptor removed (keep disabled)
 
 api.interceptors.request.use(
   (config) => {
-    if (!config.url || config.url === '/' || config.url.trim() === '') {
+    if (!config.url || config.url.trim() === '' || config.url === '/') {
       console.error('❌ INVALID REQUEST URL:', config);
       return Promise.reject(new Error('Invalid API request'));
     }
@@ -280,7 +223,10 @@ const validateApiV1Path = (path: string, label: string): string => {
 };
 
 const buildUrl = (basePath: string, path?: string): string => {
-  const normalizedBase = validateApiV1Path(basePath, 'basePath').replace(/\/+$/, '');
+  const normalizedBase = validateApiV1Path(basePath, 'basePath').replace(
+    /\/+$/,
+    ''
+  );
 
   if (!path || path === '/' || path === '') {
     throw new Error('Invalid API path: empty path not allowed');
@@ -292,7 +238,10 @@ const buildUrl = (basePath: string, path?: string): string => {
 
   const normalizedPath = normalizePath(path);
 
-  if (normalizedPath === normalizedBase || normalizedPath.startsWith(`${normalizedBase}/`)) {
+  if (
+    normalizedPath === normalizedBase ||
+    normalizedPath.startsWith(`${normalizedBase}/`)
+  ) {
     return normalizedPath;
   }
 
@@ -321,27 +270,18 @@ export const withBasePath = (basePath: string) => ({
   },
   request: <T = any>(config: AxiosRequestConfig) => {
     if (isInvalidRequestConfig(config)) {
-      return Promise.reject(new Error('Invalid API request: empty or root URL'));
+      return Promise.reject(new Error('Invalid API request'));
     }
+
     const url = buildUrl(basePath, config.url);
+
     const safeConfig: AxiosRequestConfig = {
       ...config,
       url,
       method: config.method,
-      headers: { ...toPlainHeaders(config.headers) },
+      headers: config.headers || {}, // 🔥 SAFE FIX (NO MUTATION)
     };
-    if (!safeConfig.url || safeConfig.url === '/' || safeConfig.url === '') {
-      console.error('❌ FATAL: EMPTY URL BEFORE DISPATCH', safeConfig);
-      return Promise.reject(new Error('Invalid request: empty URL'));
-    }
-    if (__DEV__) {
-      console.log('DISPATCHING REQUEST:', {
-        url: safeConfig.url,
-        baseURL: safeConfig.baseURL || api.defaults.baseURL,
-        full: `${String(safeConfig.baseURL || api.defaults.baseURL || '')}${String(safeConfig.url || '')}`,
-        method: safeConfig.method,
-      });
-    }
+
     return api.request<T>(safeConfig);
   },
 });
@@ -363,7 +303,5 @@ export const runBackendHealthCheck = async (): Promise<boolean> => {
     throw error;
   }
 };
-
-//export const ejectApiInterceptors = () => refreshHandle.eject();
 
 export default api;
