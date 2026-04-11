@@ -39,30 +39,50 @@ const toMutableHeaders = (
 ): Record<string, string> => {
   const out: Record<string, string> = {};
   if (!headers) return out;
+  
+  // Hermes-safe: Try known header keys directly instead of enumeration
+  const knownHeaders = [
+    'content-type', 'Content-Type',
+    'accept', 'Accept',
+    'authorization', 'Authorization',
+    'x-requested-with', 'X-Requested-With'
+  ];
+  
   try {
     const source = headers as any;
     if (typeof source.toJSON === 'function') {
       const json = source.toJSON();
       if (json && typeof json === 'object') {
-        Object.keys(json).forEach((key) => {
-          const value = (json as Record<string, unknown>)[key];
-          if (value !== undefined && value !== null) out[key] = String(value);
+        // Try known headers from JSON
+        knownHeaders.forEach(key => {
+          if (key in json) {
+            const value = json[key];
+            if (value !== undefined && value !== null) {
+              out[key] = String(value);
+            }
+          }
         });
         return out;
       }
     }
   } catch {
-    // Fall through to generic object copy
+    // Fall through to direct header access
   }
 
   try {
-    Object.keys(headers as Record<string, unknown>).forEach((key) => {
-      const value = (headers as Record<string, unknown>)[key];
-      if (value !== undefined && value !== null) out[key] = String(value);
+    // Hermes-safe: Direct access to known headers only
+    knownHeaders.forEach(key => {
+      if (key in (headers as object)) {
+        const value = (headers as Record<string, unknown>)[key];
+        if (value !== undefined && value !== null) {
+          out[key] = String(value);
+        }
+      }
     });
   } catch {
     // Ignore and return what we have
   }
+  
   return out;
 };
 

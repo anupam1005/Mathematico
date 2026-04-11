@@ -1,13 +1,6 @@
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
 
-const createJsonHeaders = (): Record<string, string> => {
-  return {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-};
-
 const buildAuthUrl = (relativePath: string): string => {
   const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
   const base = API_BASE_URL.replace(/\/+$/, '');
@@ -30,13 +23,11 @@ export async function postAuthJson<T>(
   console.log('[AUTH_HTTP] POST start', { url, timeoutMs });
 
   try {
-    // 🔥 CRITICAL FIX: Force plain headers (no RN mutation)
-    const rawHeaders = createJsonHeaders();
-    const safeHeaders: Record<string, string> = {};
-
-    Object.keys(rawHeaders).forEach((key) => {
-      safeHeaders[key] = String(rawHeaders[key]);
-    });
+    // Hermes-safe: Direct header assignment (no enumeration)
+    const safeHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
 
     // 🔥 CRITICAL FIX: Use globalThis.fetch (avoid patched fetch)
     const res = await globalThis.fetch(url, {
