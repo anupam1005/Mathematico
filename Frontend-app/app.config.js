@@ -17,9 +17,9 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '9.0.1',
-    // Force Hermes everywhere (Expo + native Android/iOS) for consistent runtime behavior.
-    jsEngine: 'hermes',
+    version: '9.0.2',
+    // Must match native `hermesEnabled=false` + JSC in Gradle (Hermes disabled for production stability).
+    jsEngine: 'jsc',
     orientation: 'portrait',
     owner: 'mathematico232',
     icon: './assets/icon.png',
@@ -38,11 +38,10 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 86,
+      versionCode: 87,
       permissions: ['INTERNET'],
       usesCleartextTraffic: false,
-      // Explicitly set JS engine for Android as well (for EAS build compatibility)
-      jsEngine: 'hermes',
+      jsEngine: 'jsc',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
