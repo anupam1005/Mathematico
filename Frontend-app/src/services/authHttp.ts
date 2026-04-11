@@ -17,10 +17,10 @@ export async function postAuthJson<T>(
   timeoutMs = 20000
 ): Promise<T> {
   const url = buildAuthUrl(relativePath);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   console.log('[AUTH_HTTP] POST start', { url, timeoutMs });
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
     // Hermes-safe: Direct header assignment (no enumeration)
@@ -29,13 +29,27 @@ export async function postAuthJson<T>(
       Accept: 'application/json',
     };
 
-    // 🔥 CRITICAL FIX: Use globalThis.fetch (avoid patched fetch)
-    const res = await globalThis.fetch(url, {
+    // Timeout via Promise.race — do not pass AbortSignal to fetch. RN's AbortController
+    // polyfill has been linked to TypeError: Cannot assign to read-only property 'NONE'.
+    const fetchPromise = globalThis.fetch(url, {
       method: 'POST',
       headers: safeHeaders,
       body: JSON.stringify(body),
-      signal: controller.signal,
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        const err = new Error('Request timed out');
+        err.name = 'AbortError';
+        reject(err);
+      }, timeoutMs);
+    });
+
+    const res = await Promise.race([fetchPromise, timeoutPromise]);
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    }
 
     const text = await res.text();
 
@@ -117,6 +131,35 @@ export async function postAuthJson<T>(
 
     throw e;
   } finally {
-    clearTimeout(timer);
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+/**
+ * __DEV__ only: minimal GET with fetch (no AbortSignal) to isolate networking from auth POST body.
+ * Call from a dev screen or `await devProbeAuthHealth()` in the RN debugger.
+ */
+export async function devProbeAuthHealth(): Promise<{
+  ok: boolean;
+  status?: number;
+  error?: string;
+}> {
+  if (!__DEV__) {
+    return { ok: false, error: 'dev only' };
+  }
+  const base = API_BASE_URL.replace(/\/+$/, '');
+  const prefix = API_PATHS.auth.startsWith('/') ? API_PATHS.auth : `/${API_PATHS.auth}`;
+  const url = `${base}${prefix}/health`;
+  try {
+    const res = await globalThis.fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    return { ok: res.ok, status: res.status };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg };
   }
 }
