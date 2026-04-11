@@ -63,6 +63,7 @@
     "react-refresh": "^0.14.2"
   },
   "devDependencies": {
+    "@react-native/gradle-plugin": "0.73.4",
     "@react-native-community/cli": "latest",
     "@react-native/metro-config": "0.73.5",
     "@testing-library/jest-dom": "^6.9.1",
