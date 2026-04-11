@@ -22,82 +22,46 @@ export interface ApiError {
   originalError?: unknown;
 }
 
+// ✅ SAFE AXIOS INSTANCE (NO MUTATION RISK)
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 20000,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  },
 });
 
 const healthApi: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 8000,
-  headers: {
-    Accept: 'application/json',
-  },
 });
 
 if (__DEV__) {
   try {
     console.log('[API] BASE URL:', api.defaults.baseURL);
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 const toAbsoluteRequestUrl = (config: AxiosRequestConfig): string => {
   const rawUrl = String(config.url ?? '').trim();
   if (!rawUrl) return '';
-  if (/^https?:\/\//i.test(rawUrl)) {
-    return rawUrl;
-  }
+  if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
+
   const base = String(config.baseURL || API_BASE_URL).replace(/\/+$/, '');
   const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
   return `${base}${path}`;
 };
 
 const safeMethodFromConfig = (config: AxiosRequestConfig | undefined): string => {
-  const raw = config?.method;
-  if (!raw) return 'UNKNOWN';
-  return String(raw).toUpperCase();
-};
-
-const isRootLikeUrl = (url: string): boolean => {
-  const trimmed = url.trim();
-  if (!trimmed || trimmed === '/') return true;
-  if (/^https?:\/\/[^/]+\/?$/i.test(trimmed)) return true;
-  return false;
+  return config?.method ? String(config.method).toUpperCase() : 'UNKNOWN';
 };
 
 const isInvalidRequestConfig = (config: AxiosRequestConfig): boolean => {
   const rawUrl = String(config.url || '');
-  if (isRootLikeUrl(rawUrl)) return true;
-  const absolute = toAbsoluteRequestUrl(config);
-  if (isRootLikeUrl(absolute)) return true;
+  if (!rawUrl || rawUrl === '/') return true;
   return false;
 };
 
-const readAxiosErrorCodeSafe = (error: unknown): string | undefined => {
-  try {
-    if (error == null || typeof error !== 'object') return undefined;
-    const desc = Object.getOwnPropertyDescriptor(error, 'code');
-    if (!desc || desc.value === undefined || desc.value === null) return undefined;
-    const v = desc.value;
-    return typeof v === 'string' ? v : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
 const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
-  const safeCode = readAxiosErrorCodeSafe(error);
   const requestUrl = toAbsoluteRequestUrl(error.config || {});
   const method = safeMethodFromConfig(error.config);
-  const isHeadersMutationRuntimeError = /read-only property\s+'NONE'/i.test(
-    String(error.message || '')
-  );
 
   if (isRequestCancelled(error)) {
     return {
@@ -110,13 +74,7 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
     };
   }
 
-  const looksLikeTimeout =
-    safeCode === 'ECONNABORTED' ||
-    /timeout of \d+ms exceeded|exceeded the time limit/i.test(
-      String(error.message || '')
-    );
-
-  if (looksLikeTimeout) {
+  if (error.code === 'ECONNABORTED') {
     return {
       message: error.message,
       code: 'TIMEOUT',
@@ -129,40 +87,13 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
 
   if (error.response) {
     const status = error.response.status;
-    const data = (error.response.data || {}) as any;
-    const backendMessage =
-      typeof data?.message === 'string' ? data.message : undefined;
-
-    if (status === 401) {
-      return {
-        message: backendMessage,
-        code: 'UNAUTHORIZED',
-        status,
-        data,
-        requestUrl,
-        method,
-        isNetworkError: false,
-        originalError: error,
-      };
-    }
+    const data = error.response.data as any;
 
     return {
-      message: backendMessage,
-      code: 'API_ERROR',
+      message: data?.message,
+      code: status === 401 ? 'UNAUTHORIZED' : 'API_ERROR',
       status,
       data,
-      requestUrl,
-      method,
-      isNetworkError: false,
-      originalError: error,
-    };
-  }
-
-  // 🔥 IMPORTANT: treat Hermes NONE error as safe API error (not crash)
-  if (isHeadersMutationRuntimeError) {
-    return {
-      message: error.message,
-      code: 'API_ERROR',
       requestUrl,
       method,
       isNetworkError: false,
@@ -180,12 +111,11 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   };
 };
 
-// ❌ interceptor removed (keep disabled)
+// ❌ NO HEADER MUTATION ANYWHERE
 
 api.interceptors.request.use(
   (config) => {
     if (!config.url || config.url.trim() === '' || config.url === '/') {
-      console.error('❌ INVALID REQUEST URL:', config);
       return Promise.reject(new Error('Invalid API request'));
     }
 
@@ -193,7 +123,10 @@ api.interceptors.request.use(
 
     return {
       ...config,
-      metadata: { startedAt: Date.now() },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
     };
   },
   (error) => Promise.reject(error)
@@ -210,79 +143,45 @@ api.interceptors.response.use(
   }
 );
 
-const normalizePath = (path: string): string => {
-  return path.startsWith('/') ? path : `/${path}`;
-};
-
-const validateApiV1Path = (path: string, label: string): string => {
-  const normalized = normalizePath(path);
-  if (!normalized.startsWith('/api/v1/')) {
-    throw new Error(`Invalid API ${label}: expected /api/v1/* path`);
-  }
-  return normalized;
-};
-
 const buildUrl = (basePath: string, path?: string): string => {
-  const normalizedBase = validateApiV1Path(basePath, 'basePath').replace(
-    /\/+$/,
-    ''
-  );
-
-  if (!path || path === '/' || path === '') {
-    throw new Error('Invalid API path: empty path not allowed');
+  if (!path || path === '/') {
+    throw new Error('Invalid API path');
   }
 
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
+  if (/^https?:\/\//i.test(path)) return path;
 
-  const normalizedPath = normalizePath(path);
-
-  if (
-    normalizedPath === normalizedBase ||
-    normalizedPath.startsWith(`${normalizedBase}/`)
-  ) {
-    return normalizedPath;
-  }
-
-  if (normalizedPath.startsWith('/api/')) {
-    return validateApiV1Path(normalizedPath, 'path');
-  }
-
-  return `${normalizedBase}${normalizedPath}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${basePath}${normalizedPath}`;
 };
 
 export const withBasePath = (basePath: string) => ({
-  get: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return api.get<T>(buildUrl(basePath, path), config);
-  },
-  delete: <T = any>(path: string, config?: AxiosRequestConfig) => {
-    return api.delete<T>(buildUrl(basePath, path), config);
-  },
-  post: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.post<T>(buildUrl(basePath, path), data, config);
-  },
-  put: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.put<T>(buildUrl(basePath, path), data, config);
-  },
-  patch: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) => {
-    return api.patch<T>(buildUrl(basePath, path), data, config);
-  },
+  get: <T = any>(path: string, config?: AxiosRequestConfig) =>
+    api.get<T>(buildUrl(basePath, path), config),
+
+  delete: <T = any>(path: string, config?: AxiosRequestConfig) =>
+    api.delete<T>(buildUrl(basePath, path), config),
+
+  post: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) =>
+    api.post<T>(buildUrl(basePath, path), data, config),
+
+  put: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) =>
+    api.put<T>(buildUrl(basePath, path), data, config),
+
+  patch: <T = any>(path: string, data?: any, config?: AxiosRequestConfig) =>
+    api.patch<T>(buildUrl(basePath, path), data, config),
+
   request: <T = any>(config: AxiosRequestConfig) => {
     if (isInvalidRequestConfig(config)) {
       return Promise.reject(new Error('Invalid API request'));
     }
 
-    const url = buildUrl(basePath, config.url);
-
-    const safeConfig: AxiosRequestConfig = {
+    return api.request<T>({
       ...config,
-      url,
-      method: config.method,
-      headers: config.headers || {}, // 🔥 SAFE FIX (NO MUTATION)
-    };
-
-    return api.request<T>(safeConfig);
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    });
   },
 });
 

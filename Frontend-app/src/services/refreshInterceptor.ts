@@ -34,79 +34,6 @@ const RETRY_BASE_DELAY_MS = 400;
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const toMutableHeaders = (
-  headers?: AxiosRequestConfig['headers']
-): Record<string, string> => {
-  const out: Record<string, string> = {};
-  if (!headers) return out;
-  
-  // Hermes-safe: Try known header keys directly instead of enumeration
-  const knownHeaders = [
-    'content-type', 'Content-Type',
-    'accept', 'Accept',
-    'authorization', 'Authorization',
-    'x-requested-with', 'X-Requested-With'
-  ];
-  
-  try {
-    const source = headers as any;
-    if (typeof source.toJSON === 'function') {
-      const json = source.toJSON();
-      if (json && typeof json === 'object') {
-        // Try known headers from JSON
-        knownHeaders.forEach(key => {
-          if (key in json) {
-            const value = json[key];
-            if (value !== undefined && value !== null) {
-              out[key] = String(value);
-            }
-          }
-        });
-        return out;
-      }
-    }
-  } catch {
-    // Fall through to direct header access
-  }
-
-  try {
-    // Hermes-safe: Direct access to known headers only
-    knownHeaders.forEach(key => {
-      if (key in (headers as object)) {
-        const value = (headers as Record<string, unknown>)[key];
-        if (value !== undefined && value !== null) {
-          out[key] = String(value);
-        }
-      }
-    });
-  } catch {
-    // Ignore and return what we have
-  }
-  
-  return out;
-};
-
-const cloneConfigWithPlainHeaders = (
-  config: RetryableConfig,
-  overrides: Partial<RetryableConfig> = {}
-): RetryableConfig => {
-  const cloned: RetryableConfig = {
-    ...config,
-    ...overrides,
-    headers: (() => {
-      try {
-        return {
-          ...toMutableHeaders(config.headers),
-          ...toMutableHeaders(overrides.headers as AxiosRequestConfig['headers']),
-        };
-      } catch {
-        return {};
-      }
-    })(),
-  };
-  return cloned;
-};
-
 const parseAccessToken = (payload: RefreshResponse): string | null => {
   return (
     payload?.data?.accessToken ||
@@ -134,16 +61,6 @@ const isAuthMutationRequest = (config?: RetryableConfig): boolean => {
   );
 };
 
-const getAuthorizationHeaderToken = (headers?: AxiosRequestConfig['headers']): string | null => {
-  const normalized = toMutableHeaders(headers);
-  const value = normalized.Authorization || normalized.authorization;
-  if (!value) return null;
-  const match = /^Bearer\s+(.+)$/i.exec(String(value).trim());
-  if (!match) return null;
-  const token = match[1]?.trim();
-  return token || null;
-};
-
 const shouldRetryNetwork = (
   error: AxiosError,
   config: RetryableConfig | undefined,
@@ -159,24 +76,12 @@ const shouldRetryNetwork = (
   return status === 429 || (typeof status === 'number' && status >= 500);
 };
 
-/**
- * ✅ FINAL SAFE RETRY BUILDER
- */
+// ✅ SAFE REQUEST BUILDER (NO HEADER MUTATION)
 const rebuildRequest = (
   original: RetryableConfig,
   token?: string
 ): AxiosRequestConfig => {
   if (!original.url) throw new Error('Missing URL');
-
-  const nextHeaders = (() => {
-    try {
-      const cloned = toMutableHeaders(original.headers);
-      if (token) cloned.Authorization = `Bearer ${token}`;
-      return cloned;
-    } catch {
-      return token ? { Authorization: `Bearer ${token}` } : {};
-    }
-  })();
 
   return {
     url: original.url,
@@ -185,7 +90,16 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: { ...nextHeaders } as any,
+    headers: token
+      ? {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        }
+      : {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
     skipAuthRefresh: original.skipAuthRefresh,
   };
 };
@@ -205,6 +119,10 @@ const refreshTokenRequest = async (
     {
       timeout: timeoutMs,
       skipAuthRefresh: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
     } as AxiosRequestConfig & { skipAuthRefresh: boolean }
   );
 
@@ -241,35 +159,30 @@ export const installRefreshInterceptor = (
     queue = [];
   };
 
-  // ✅ FINAL SAFE REQUEST INTERCEPTOR
+  // ✅ SAFE REQUEST INTERCEPTOR
   const reqId = client.interceptors.request.use(async (config) => {
     const retryable = config as RetryableConfig;
 
     if (retryable.skipAuthRefresh) return config;
-    if (isAuthMutationRequest(retryable)) {
-      return {
-        ...config,
-        headers: { ...toMutableHeaders(config.headers) },
-      };
-    }
+    if (isAuthMutationRequest(retryable)) return config;
 
     await tokenStorage.hydrate();
     const token = await tokenStorage.getAccessToken();
 
-    const nextConfig = cloneConfigWithPlainHeaders(retryable);
-
-    try {
-      if (token) {
-        const nextHeaders = toMutableHeaders(nextConfig.headers);
-        nextHeaders.Authorization = `Bearer ${token}`;
-        nextConfig.headers = { ...nextHeaders } as any;
-      }
-    } catch {
-      nextConfig.headers = token ? { Authorization: `Bearer ${token}` } : {};
-    }
-
-    nextConfig.timeout = nextConfig.timeout ?? timeoutMs;
-    return nextConfig;
+    return {
+      ...config,
+      timeout: config.timeout ?? timeoutMs,
+      headers: token
+        ? {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          }
+        : {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+    };
   });
 
   // ✅ RESPONSE INTERCEPTOR
@@ -279,17 +192,14 @@ export const installRefreshInterceptor = (
       const original = error.config as RetryableConfig;
       if (!original) return Promise.reject(error);
 
-      // 🔁 NETWORK RETRY
       const retryCount = (original as any)._retryCount || 0;
 
       if (shouldRetryNetwork(error, original, retryCount)) {
         (original as any)._retryCount = retryCount + 1;
         await sleep(RETRY_BASE_DELAY_MS);
-
         return client.request(rebuildRequest(original));
       }
 
-      // 🔐 TOKEN REFRESH
       if (
         error.response?.status === 401 &&
         !original.skipAuthRefresh &&
@@ -298,13 +208,8 @@ export const installRefreshInterceptor = (
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             queue.push({
-              resolve: (token) => {
-                resolve(
-                  client.request(
-                    rebuildRequest(original, token || undefined)
-                  )
-                );
-              },
+              resolve: (token) =>
+                resolve(client.request(rebuildRequest(original, token || undefined))),
               reject,
             });
           });
@@ -316,23 +221,7 @@ export const installRefreshInterceptor = (
           const newToken = await refreshTokenRequest(client, timeoutMs);
 
           if (!newToken) {
-            await tokenStorage.hydrate();
-            const requestToken = getAuthorizationHeaderToken(original.headers);
-            const currentToken = await tokenStorage.getAccessToken();
-            const shouldSkipSessionClear =
-              Boolean(requestToken) &&
-              Boolean(currentToken) &&
-              requestToken !== currentToken;
-
-            if (shouldSkipSessionClear) {
-              console.log('[AUTH_REFRESH] stale 401 ignored', {
-                requestTokenLen: requestToken?.length ?? 0,
-                currentTokenLen: currentToken?.length ?? 0,
-              });
-            } else {
-              console.log('[AUTH_REFRESH] clearing session after refresh failure');
-              await tokenStorage.clearSession();
-            }
+            await tokenStorage.clearSession();
             flushQueue(new Error('Session expired'), null);
             options.onAuthFailure?.();
             return Promise.reject(error);
