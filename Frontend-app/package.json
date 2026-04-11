@@ -103,8 +103,5 @@
     "react-native"
   ],
   "author": "",
-  "license": "MIT",
-  "overrides": {
-    "@react-native/gradle-plugin": "0.76.9"
-  }
+  "license": "MIT"
 }
