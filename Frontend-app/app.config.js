@@ -18,8 +18,7 @@ export default {
     name: 'Mathematico',
     slug: 'mathematico-app',
     version: '9.0.2',
-    // Must match native `hermesEnabled=false` + JSC in Gradle (Hermes disabled for production stability).
-    jsEngine: 'jsc',
+    // Hermes is required for react-native-reanimated / worklets native builds on RN 0.81+ (JSC + worklets breaks link step).
     orientation: 'portrait',
     owner: 'adminmathematicoofficial',
     icon: './assets/icon.png',
@@ -41,7 +40,6 @@ export default {
       versionCode: 87,
       permissions: ['INTERNET'],
       usesCleartextTraffic: false,
-      jsEngine: 'jsc',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
