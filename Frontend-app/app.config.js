@@ -21,14 +21,14 @@ export default {
     // Must match native `hermesEnabled=false` + JSC in Gradle (Hermes disabled for production stability).
     jsEngine: 'jsc',
     orientation: 'portrait',
-    owner: 'mathematico232',
+    owner: 'adminmathematicoofficial',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: 'e0cd2373-4003-4661-ab5c-3b202f8e6754'
+        projectId: 'e357abd1-860b-44c0-9015-47e2e4f0b02f'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
