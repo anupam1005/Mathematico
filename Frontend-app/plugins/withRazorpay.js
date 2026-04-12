@@ -31,15 +31,18 @@ ${additions.join('\n')}`
 
   // Modify app-level build.gradle
   config = withAppBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes('implementation "com.razorpay:checkout"')) {
+    if (config.modResults.contents.includes('com.razorpay:checkout')) {
       return config;
     }
 
-    // Add Razorpay dependency with a stable version
+    // Add Razorpay dependency; exclude transitive AARs that duplicate classes inside checkout (Gradle checkReleaseDuplicateClasses).
     config.modResults.contents = config.modResults.contents.replace(
       /dependencies\s*\{/,
       (match) => `${match}
-    implementation "com.razorpay:checkout:1.6.38"`
+    implementation("com.razorpay:checkout:1.6.38") {
+        exclude group: "com.razorpay", module: "standard-core"
+        exclude group: "com.razorpay", module: "core"
+    }`
     );
 
     return config;
