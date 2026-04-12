@@ -53,16 +53,14 @@ ${additions.join('\n')}`
       );
     }
 
-    if (contents.includes('@generated begin razorpay-exclude-transitive')) {
-      config.modResults.contents = contents;
-      return config;
+    if (!contents.includes('@generated begin razorpay-exclude-transitive')) {
+      contents = contents.replace(
+        /dependencies\s*\{/,
+        (m) => `${RAZORPAY_EXCLUDE_BLOCK}\n\n${m}`
+      );
     }
 
-    config.modResults.contents = contents.replace(
-      /dependencies\s*\{/,
-      (m) => `${RAZORPAY_EXCLUDE_BLOCK}\n\n${m}`
-    );
-
+    config.modResults.contents = contents;
     return config;
   });
 
