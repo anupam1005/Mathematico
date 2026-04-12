@@ -51,10 +51,6 @@ export default {
         descriptors: ['Educational', 'Learning']
       }
     },
-    plugins: [
-      'expo-secure-store',
-      'expo-font',
-      ...(ENABLE_RAZORPAY ? ['./plugins/withRazorpay.js'] : [])
-    ]
+    plugins: ['expo-secure-store', 'expo-font']
   }
 };

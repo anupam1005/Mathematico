@@ -1,11 +1,10 @@
-// Razorpay Payment Service
+// Razorpay payment service — WebView Checkout.js only (no native SDK).
 import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { createServiceErrorHandler } from '../utils/serviceErrorHandler';
 import { Platform } from 'react-native';
 import { tokenStorage } from './tokenStorage';
 
-// Create a service error handler for razorpayService
 const errorHandler = createServiceErrorHandler('razorpayService');
 const mobileApi = withBasePath(API_PATHS.mobile);
 
@@ -38,24 +37,6 @@ const toPaymentError = (error: any, fallbackMessage: string): RazorpayPaymentRes
   };
 };
 
-// LAZY LOAD: Defer native module initialization to prevent Hermes frozen object crash
-let RazorpayCheckoutNative: any = null;
-
-// Lazy-load the Razorpay native module only when needed
-const getRazorpayCheckout = () => {
-  if (RazorpayCheckoutNative !== null) {
-    return RazorpayCheckoutNative;
-  }
-  
-  try {
-    RazorpayCheckoutNative = require('react-native-razorpay');
-    return RazorpayCheckoutNative;
-  } catch (error) {
-    RazorpayCheckoutNative = (typeof globalThis !== 'undefined' ? (globalThis as any).RazorpayCheckout : null);
-    return RazorpayCheckoutNative;
-  }
-};
-
 export interface RazorpayOrder {
   id: string;
   amount: number;
@@ -83,12 +64,42 @@ export interface PaymentOptions {
   };
 }
 
+/** Serializable object passed to Razorpay Checkout.js in the WebView (no functions). */
+export interface RazorpayWebCheckoutPayload {
+  key: string;
+  amount: string;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  image?: string;
+  prefill: {
+    name: string;
+    email: string;
+    contact: string;
+  };
+  theme: { color: string };
+  method: {
+    upi: boolean;
+    card: boolean;
+    netbanking: boolean;
+    wallet: boolean;
+  };
+}
+
+export interface PrepareWebCheckoutInput {
+  orderId: string;
+  amountRupees: number;
+  currency: string;
+  description: string;
+  customerName: string;
+  email: string;
+  contact?: string;
+}
+
 class RazorpayService {
   private config: any = null;
 
-  /**
-   * Create a Razorpay order
-   */
   async createOrder(paymentOptions: PaymentOptions): Promise<RazorpayPaymentResponse> {
     try {
       const authToken = await this.getAuthToken();
@@ -118,9 +129,6 @@ class RazorpayService {
     }
   }
 
-  /**
-   * Verify payment signature
-   */
   async verifyPayment(paymentData: any): Promise<RazorpayPaymentResponse> {
     try {
       const response = await mobileApi.post('/payments/verify', paymentData, {
@@ -150,9 +158,6 @@ class RazorpayService {
     }
   }
 
-  /**
-   * Get payment history
-   */
   async getPaymentHistory(): Promise<RazorpayPaymentResponse> {
     try {
       const response = await mobileApi.get('/payments/history', {
@@ -182,9 +187,6 @@ class RazorpayService {
     }
   }
 
-  /**
-   * Get Razorpay configuration from backend
-   */
   private async getConfig(): Promise<any> {
     if (this.config) {
       return this.config;
@@ -205,14 +207,10 @@ class RazorpayService {
       }
     } catch (error) {
       errorHandler.handleError('RazorpayService: Error loading configuration:', error);
-      // Don't return empty config - throw error so user knows payment won't work
       throw new Error('Payment service configuration failed. Please contact support.');
     }
   }
 
-  /**
-   * Get auth token from storage
-   */
   private async getAuthToken(): Promise<string> {
     try {
       await tokenStorage.hydrate();
@@ -224,123 +222,74 @@ class RazorpayService {
     }
   }
 
-  /**
-   * Format amount for Razorpay (amount in paise)
-   */
   formatAmount(amount: number): number {
     return Math.round(amount * 100);
   }
 
-  /**
-   * Format amount for display (amount in rupees)
-   */
   formatDisplayAmount(amount: number): number {
     return amount / 100;
   }
 
   /**
-   * Open Razorpay checkout
+   * Builds options for Razorpay Checkout.js (WebView). Call after createOrder succeeds.
+   * Uses public key_id from your backend — never embed key_secret in the app.
    */
-  async openCheckout(options: any): Promise<RazorpayPaymentResponse> {
+  async prepareWebCheckoutOptions(input: PrepareWebCheckoutInput): Promise<{
+    success: boolean;
+    data?: RazorpayWebCheckoutPayload;
+    message?: string;
+    error?: string;
+  }> {
+    if (Platform.OS === 'web') {
+      return {
+        success: false,
+        error: 'Web platform not supported',
+        message: 'Use the mobile app to complete payment.',
+      };
+    }
+
     try {
-      // Check if running on web platform
-      if (Platform.OS === 'web') {
-        return {
-          success: false,
-          error: 'Web platform not supported',
-          message: 'Razorpay payment is only available on mobile devices. Please use the mobile app to complete your purchase.',
-        };
-      }
-      
-      // Lazy-load RazorpayCheckout module
-      const RazorpayCheckout = getRazorpayCheckout();
-      
-      // Check if RazorpayCheckout is available
-      if (!RazorpayCheckout || !RazorpayCheckout.open) {
-        return {
-          success: false,
-          error: 'Razorpay SDK not available',
-          message: 'Payment service is not available. Please ensure the app is properly installed.',
-        };
-      }
-      
-      // Get secure configuration from backend
       const config = await this.getConfig();
-      
       if (!config.keyId) {
         return {
           success: false,
           error: 'Configuration error',
-          message: 'Razorpay configuration is not available. Please contact support.',
+          message: 'Razorpay is not configured. Please contact support.',
         };
       }
-      
-      const razorpayOptions = {
-        description: options.description || 'Payment for Mathematico',
-        image: 'https://mathematico.com/logo.png',
-        currency: options.currency || config.currency,
+
+      const amountPaise = this.formatAmount(input.amountRupees);
+      const payload: RazorpayWebCheckoutPayload = {
         key: config.keyId,
-        amount: this.formatAmount(options.amount).toString(),
-        name: config.name,
-        order_id: options.order_id,
+        amount: String(amountPaise),
+        currency: input.currency || config.currency || 'INR',
+        order_id: input.orderId,
+        name: config.name || 'Mathematico',
+        description: input.description,
+        image: 'https://mathematico.com/logo.png',
         prefill: {
-          email: options.email || '',
-          contact: options.contact || '',
-          name: options.name || ''
+          name: input.customerName,
+          email: input.email || '',
+          contact: input.contact || '',
         },
         theme: {
-          color: config?.theme?.color || '#3399cc'
+          color: config?.theme?.color || '#3399cc',
         },
         method: {
-          upi: false,  // Disable UPI payment method
+          upi: false,
           card: true,
           netbanking: true,
-          wallet: true
-        }
+          wallet: true,
+        },
       };
 
-      const data = await RazorpayCheckout.open(razorpayOptions);
-      
-      return {
-        success: true,
-        data: data,
-        message: 'Payment completed successfully',
-      };
+      return { success: true, data: payload };
     } catch (error: any) {
-      errorHandler.handleError('RazorpayService: Payment failed:', error);
-      
-      // Safely extract error message using try-catch
-      let errorMsg = '';
-      try {
-        if (error && error.message) {
-          errorMsg = String(error.message).toLowerCase();
-        }
-      } catch (e) {
-        // Property access failed, continue with empty string
-      }
-      
-      // Handle native module not available
-      if (errorMsg.includes('_nativemodule')) {
-        return {
-          success: false,
-          error: 'Payment service unavailable',
-          message: 'Payment service is not available. Please ensure the app is properly installed and try again.',
-        };
-      }
-      
-      // Handle user cancellation
-      if (errorMsg.includes('cancel') || errorMsg.includes('cancelled')) {
-        return {
-          success: false,
-          error: 'Payment cancelled by user',
-          message: 'Payment was cancelled',
-        };
-      }
-      
+      errorHandler.handleError('RazorpayService: prepareWebCheckoutOptions:', error);
       return {
         success: false,
-        error: 'Payment failed',
-        message: 'Payment could not be completed',
+        error: 'CONFIG_ERROR',
+        message: error?.message || 'Could not prepare checkout',
       };
     }
   }

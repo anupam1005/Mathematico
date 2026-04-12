@@ -49,61 +49,29 @@ export default function CheckoutScreen({ navigation, route }: any) {
         return;
       }
 
-      // Open Razorpay checkout
-      const payment = await razorpayService.openCheckout({
-        order_id: order.data.id,
-        amount: totalAmount,
+      const prepared = await razorpayService.prepareWebCheckoutOptions({
+        orderId: order.data.id,
+        amountRupees: totalAmount,
         currency: CURRENCY_CONFIG.code,
-        name: user?.name || 'User',
-        email: user?.email || '',
         description: `Payment for ${itemData.title || 'item'}`,
+        customerName: user?.name || 'User',
+        email: user?.email || '',
+        contact: '',
       });
 
-      if (payment.success && payment.data) {
-        // Verify payment with backend
-        const verification = await razorpayService.verifyPayment({
-          razorpay_order_id: order.data.id,
-          razorpay_payment_id: payment.data.razorpay_payment_id,
-          razorpay_signature: payment.data.razorpay_signature,
-        });
-
-        if (verification.success) {
-          Alert.alert(
-            'Payment Successful!', 
-            'You have been enrolled successfully.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Navigate based on type
-                  if (type === 'course') {
-                    navigation.navigate('CourseDetail', { courseId: itemId });
-                  } else {
-                    navigation.navigate('MainTabs');
-                  }
-                }
-              }
-            ]
-          );
-        } else {
-          Alert.alert(
-            'Payment Verification Failed',
-            'Payment was successful but enrollment failed. Please contact support.',
-            [
-              {
-                text: 'Contact Support',
-                onPress: () => navigation.navigate('Support')
-              },
-              {
-                text: 'OK',
-                style: 'cancel'
-              }
-            ]
-          );
-        }
-      } else {
-        Alert.alert('Payment Cancelled', payment.message || 'Payment was cancelled');
+      if (!prepared.success || !prepared.data) {
+        Alert.alert('Error', prepared.message || 'Could not start payment');
+        return;
       }
+
+      navigation.navigate('RazorpayCheckout', {
+        webOptions: prepared.data,
+        itemContext: {
+          itemId,
+          itemData,
+          type,
+        },
+      });
     } catch (error) {
       safeCatch('CheckoutScreen.handlePayment', () => {
         Alert.alert(

@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // Import theme
 import { theme } from './src/styles/theme';
+import type { RazorpayWebCheckoutPayload } from './src/services/razorpayService';
 
 // Import Auth Context
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -27,6 +28,14 @@ type RootStackParamList = {
   CourseDetail: { courseId: string };
   LiveClassDetail: { classId: string };
   Checkout: { itemId: string; itemData: any; type: 'book' | 'course' | 'liveClass' };
+  RazorpayCheckout: {
+    webOptions: RazorpayWebCheckoutPayload;
+    itemContext: {
+      itemId: string;
+      itemData: any;
+      type: 'book' | 'course' | 'liveClass';
+    };
+  };
   SecurePdf: { bookId: string; bookTitle?: string };
   About: undefined;
   PrivacyPolicy: undefined;
@@ -52,6 +61,7 @@ const BookDetailScreen = React.lazy(() => import('./src/screens/BookDetailScreen
 const CourseDetailScreen = React.lazy(() => import('./src/screens/CourseDetailScreen'));
 const LiveClassDetailScreen = React.lazy(() => import('./src/screens/LiveClassDetailScreen'));
 const CheckoutScreen = React.lazy(() => import('./src/screens/CheckoutScreen'));
+const RazorpayCheckoutScreen = React.lazy(() => import('./src/screens/RazorpayCheckoutScreen'));
 
 const SecurePdfScreen = React.lazy(() =>
   import('./src/screens/SecurePdfScreen').catch((error) => {
@@ -207,6 +217,15 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Checkout',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="RazorpayCheckout"
+        component={RazorpayCheckoutScreen}
+        options={{
+          headerShown: true,
+          title: 'Pay securely',
           headerBackTitle: 'Back',
         }}
       />
