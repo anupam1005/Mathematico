@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
+import { createSafeError } from '../utils/safeError';
 
 // ✅ CLEAN AXIOS INSTANCE (NO HEADERS HERE)
 const authClient = axios.create({
@@ -39,31 +40,35 @@ export async function postAuthJson<T>(
 
     return res.data as T;
   } catch (error: any) {
+    // Normalize hostile Axios/Hermes errors WITHOUT mutating Error instances
+    const safe = createSafeError(error);
     const message =
-      error?.response?.data?.message ||
-      error?.message ||
+      (typeof safe?.response?.data?.message === 'string' && safe.response.data.message) ||
+      (typeof safe?.message === 'string' && safe.message) ||
       'Request failed';
 
-    const status = error?.response?.status;
+    const status = safe?.response?.status ?? null;
 
     console.log('[AUTH_HTTP] AXIOS error', {
       message,
       status,
     });
 
-    const err = new Error(message) as any;
+    const axiosCode = typeof safe?.code === 'string' ? safe.code : '';
+    const classifiedCode =
+      axiosCode === 'ECONNABORTED'
+        ? 'TIMEOUT'
+        : !safe?.response
+          ? 'NETWORK_ERROR'
+          : 'API_ERROR';
 
-    // ✅ SAFE ERROR CLASSIFICATION
-    if (error?.code === 'ECONNABORTED') {
-      err.code = 'TIMEOUT';
-    } else if (!error?.response) {
-      err.code = 'NETWORK_ERROR';
-    } else {
-      err.code = 'API_ERROR';
-    }
-
-    err.status = status;
-
-    throw err;
+    // IMPORTANT: Always throw a NEW plain object (no mutation, no shared templates).
+    throw {
+      code: classifiedCode,
+      message,
+      status,
+      response: safe?.response ?? null,
+      config: safe?.config ?? null,
+    };
   }
 }

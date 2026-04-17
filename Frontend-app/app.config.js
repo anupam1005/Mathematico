@@ -17,7 +17,7 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '9.0.2',
+    version: '9.0.3',
     // Hermes is required for react-native-reanimated / worklets native builds on RN 0.81+ (JSC + worklets breaks link step).
     orientation: 'portrait',
     owner: 'adminmathematicoofficial',
@@ -37,7 +37,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 87,
+      versionCode: 88,
       permissions: ['INTERNET'],
       usesCleartextTraffic: false,
       adaptiveIcon: {

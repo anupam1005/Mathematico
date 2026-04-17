@@ -5,61 +5,63 @@
  */
 
 export const createSafeError = (error: any) => {
-  const safe: any = { 
-    message: 'Request failed', 
+  const safe: any = {
+    message: 'Request failed',
     code: '',
-    response: null, 
-    config: null 
+    response: null,
+    config: null,
   };
-  
-  // Safely extract message - wrap in try-catch
-  try { 
-    if (error && error.message) {
-      safe.message = String(error.message); 
+
+  const safeOwnValue = (obj: any, key: string) => {
+    try {
+      if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) return undefined;
+      const desc = Object.getOwnPropertyDescriptor(obj, key);
+      return desc ? desc.value : undefined;
+    } catch {
+      return undefined;
     }
-  } catch (e) { 
-    // Ignore - keep default message
-  }
-  
-  // Read only own-property descriptors to avoid invoking problematic inherited getters.
-  try {
-    if (error && typeof error === 'object') {
-      const codeDesc = Object.getOwnPropertyDescriptor(error, 'code');
-      if (codeDesc && typeof codeDesc.value === 'string') {
-        safe.code = codeDesc.value;
-      }
+  };
+
+  // Only read own-property descriptors to avoid invoking hostile inherited getters.
+  const messageVal = safeOwnValue(error, 'message');
+  if (typeof messageVal === 'string' && messageVal) {
+    safe.message = messageVal;
+  } else if (messageVal != null) {
+    try {
+      safe.message = String(messageVal);
+    } catch {
+      // ignore
     }
-  } catch (e) {
-    // Ignore - keep default empty code
   }
-  
-  // Safely extract response - wrap each property access in try-catch
-  try {
-    if (error && error.response) {
-      safe.response = {};
-      try { safe.response.status = error.response.status; } catch (e) { /* ignore */ }
-      try { 
-        const responseData = error.response.data;
-        safe.response = { ...safe.response };
-        safe.response.data = responseData; 
-      } catch (e) { /* ignore */ }
-      try { safe.response.statusText = error.response.statusText; } catch (e) { /* ignore */ }
-    }
-  } catch (e) { 
-    safe.response = null;
+
+  const codeVal = safeOwnValue(error, 'code');
+  if (typeof codeVal === 'string') {
+    safe.code = codeVal;
   }
-  
-  // Safely extract config
-  try {
-    if (error && error.config) {
-      safe.config = {};
-      try { safe.config.url = error.config.url; } catch (e) { /* ignore */ }
-      try { safe.config.method = error.config.method; } catch (e) { /* ignore */ }
-      try { safe.config._retry = error.config._retry; } catch (e) { /* ignore */ }
-    }
-  } catch (e) { 
-    safe.config = null;
+
+  const responseObj = safeOwnValue(error, 'response');
+  if (responseObj && typeof responseObj === 'object') {
+    const statusVal = safeOwnValue(responseObj, 'status');
+    const dataVal = safeOwnValue(responseObj, 'data');
+    const statusTextVal = safeOwnValue(responseObj, 'statusText');
+    safe.response = {
+      status: typeof statusVal === 'number' ? statusVal : undefined,
+      data: dataVal,
+      statusText: typeof statusTextVal === 'string' ? statusTextVal : undefined,
+    };
   }
-  
-  return safe;
+
+  const configObj = safeOwnValue(error, 'config');
+  if (configObj && typeof configObj === 'object') {
+    const urlVal = safeOwnValue(configObj, 'url');
+    const methodVal = safeOwnValue(configObj, 'method');
+    const retryVal = safeOwnValue(configObj, '_retry');
+    safe.config = {
+      url: typeof urlVal === 'string' ? urlVal : undefined,
+      method: typeof methodVal === 'string' ? methodVal : undefined,
+      _retry: typeof retryVal === 'boolean' ? retryVal : undefined,
+    };
+  }
+
+  return { ...safe };
 };
