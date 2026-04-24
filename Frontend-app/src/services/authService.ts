@@ -163,10 +163,12 @@ const authService = {
       };
     } catch (error: any) {
       const safe = createSafeError(error);
-      console.log('[AUTH] login failed', {
+      console.log('[AUTH] login failed details:', {
         code: safe?.code,
         status: safe?.response?.status,
         message: safe?.message,
+        responseData: safe?.response?.data,
+        fullError: JSON.stringify(error, null, 2)
       });
       throw new Error(toLoginErrorMessage(error));
     }

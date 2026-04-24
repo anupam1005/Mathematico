@@ -18,19 +18,33 @@ app.disable('x-powered-by');
 validateJwtConfig();
 console.log('[BOOT] JWT secret validation: OK');
 
-// 1) Early minimal CORS headers
+// 1) Early minimal CORS headers - Production Hardened
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  const isProduction = process.env.NODE_ENV === 'production';
+
   if (origin) {
-    res.setHeader('Vary', 'Origin');
+    // Reflect the origin dynamically
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
   } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Mobile apps usually don't send an Origin header.
+    // In production, we allow these requests but don't set the wildcard '*'
+    // to avoid security/credential conflicts.
+    if (!isProduction) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    // Note: If no Origin is provided, Access-Control-Allow-Origin is technically not required
+    // for non-browser clients (Native Apps), but we set it to '*' in dev for ease of use.
   }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+  
+  // Credentials must be true for our JWT cookie/refresh strategy
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }

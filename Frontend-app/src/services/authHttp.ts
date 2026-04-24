@@ -52,6 +52,8 @@ export async function postAuthJson<T>(
     console.log('[AUTH_HTTP] AXIOS error', {
       message,
       status,
+      responseData: safe?.response?.data,
+      rawError: error?.message || String(error)
     });
 
     const axiosCode = typeof safe?.code === 'string' ? safe.code : '';

@@ -147,6 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return { success: false, message: response.message };
     } catch (error: any) {
+      console.error('[AUTH CONTEXT] login exception:', error);
       safeCatch('AuthContext.login')(error);
       return { success: false, message: error?.message };
     } finally {
