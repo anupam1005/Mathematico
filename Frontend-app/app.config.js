@@ -7,7 +7,7 @@ export default {
   expo: {
     name: 'Mathematico',
     slug: 'mathematico-app',
-    version: '9.0.3',
+    version: '9.0.4',
     orientation: 'portrait',
     owner: 'adminmathematicoofficial',
     icon: './assets/icon.png',
@@ -26,7 +26,7 @@ export default {
     },
     android: {
       package: 'com.anupam1505.mathematicoapp',
-      versionCode: 88,
+      versionCode: 89,
       permissions: ['INTERNET'],
       usesCleartextTraffic: true,
       adaptiveIcon: {
