@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logoutRef = useRef<Promise<void> | null>(null);
   const loginInFlightRef = useRef(false);
   const authMutationEpochRef = useRef(0);
+  const sessionLockRef = useRef(0); // Timestamp until which session is locked
 
   const restoreAuthState = async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
     const restoreEpoch = authMutationEpochRef.current;
@@ -58,11 +59,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const restored = await authService.restoreSession();
       const nextUser = (restored.user || null) as User | null;
       const nextIsAuthenticated = Boolean(restored.isAuthenticated);
-      if (loginInFlightRef.current || restoreEpoch !== authMutationEpochRef.current) {
-        console.log('[AUTH] restore session skipped: stale restore', {
+      if (loginInFlightRef.current || restoreEpoch !== authMutationEpochRef.current || Date.now() < sessionLockRef.current) {
+        console.log('[AUTH] restore session skipped: stale restore or session locked', {
           loginInFlight: loginInFlightRef.current,
           restoreEpoch,
           currentEpoch: authMutationEpochRef.current,
+          sessionLocked: Date.now() < sessionLockRef.current,
         });
         return { user, isAuthenticated };
       }
@@ -139,6 +141,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return { success: false, message: 'Invalid login user payload' };
         }
         // Immediate in-memory auth update to avoid login screen loop.
+        authMutationEpochRef.current += 1; // Increment again to block stale restores
+        sessionLockRef.current = Date.now() + 5000; // Lock session for 5 seconds to allow UI transition
         setUser(nextUser);
         setIsAuthenticated(true);
         console.log('AUTH STATE: authenticated=true', { authEpoch: authMutationEpochRef.current });

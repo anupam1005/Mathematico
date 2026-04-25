@@ -28,7 +28,8 @@ export async function postAuthJson<T>(
       // ✅ SAFE HEADERS PER REQUEST (NO MUTATION)
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'MathematicoApp/1.0 (Android)',
       },
       timeout: 20000,
     });

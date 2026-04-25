@@ -82,15 +82,18 @@ export default function LoginScreen({ navigation }: any) {
     hasRedirectedRef.current = true;
     const isAdmin = user.role === 'admin' || Boolean(user.isAdmin) || Boolean(user.is_admin);
     console.log('[AUTH] redirect trigger:', isAdmin ? 'admin' : 'student');
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'MainTabs',
-          params: isAdmin ? { screen: 'Admin' } : { screen: 'Home' },
-        },
-      ],
-    });
+    const timeoutId = setTimeout(() => {
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            params: isAdmin ? { screen: 'Admin' } : { screen: 'Home' },
+          },
+        ],
+      });
+    }, 100);
+    return () => clearTimeout(timeoutId);
   }, [isAuthenticated, user, navigation]);
 
 

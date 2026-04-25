@@ -104,10 +104,22 @@ export default function RegisterScreen({ navigation }: any) {
         setApiError(typeof result.message === 'string' ? result.message : '');
         return;
       }
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      const { Alert } = require('react-native');
+      Alert.alert(
+        'Success',
+        'Your account has been created successfully. Please sign in to continue.',
+        [
+          {
+            text: 'Sign In Now',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
+          }
+        ]
+      );
     } catch (error: any) {
       setApiError(typeof error?.message === 'string' ? error.message : '');
     } finally {

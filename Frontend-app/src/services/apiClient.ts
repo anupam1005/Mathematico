@@ -125,7 +125,8 @@ api.interceptors.request.use(
       ...config,
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'MathematicoApp/1.0 (Android)',
       },
     };
   },
