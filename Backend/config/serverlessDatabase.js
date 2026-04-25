@@ -11,7 +11,8 @@ const mongoOptions = {
   connectTimeoutMS: 15000,
   maxIdleTimeMS: 30000,
   retryWrites: true,
-  retryReads: true
+  retryReads: true,
+  family: 4 // Force IPv4 to prevent Vercel Node 20 timeouts
 };
 
 mongoose.set('bufferCommands', false);
