@@ -33,21 +33,21 @@ function AdminTabs() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: string;
           if (route.name === 'Dashboard') {
-            iconName = 'dashboard';
+            iconName = 'view-dashboard';
           } else if (route.name === 'Books') {
             iconName = 'book';
           } else if (route.name === 'Courses') {
             iconName = 'school';
           } else if (route.name === 'LiveClasses') {
-            iconName = 'videocam';
+            iconName = 'video';
           } else if (route.name === 'Users') {
-            iconName = 'people';
+            iconName = 'account-group';
           } else if (route.name === 'Payments') {
-            iconName = 'payment';
+            iconName = 'credit-card';
           } else if (route.name === 'Settings') {
-            iconName = 'settings';
+            iconName = 'cog';
           } else {
-            iconName = 'help';
+            iconName = 'help-circle';
           }
 
           return <Icon name={iconName} size={size} color={color} />;

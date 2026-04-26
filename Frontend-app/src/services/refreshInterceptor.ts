@@ -90,16 +90,10 @@ const rebuildRequest = (
     data: original.data,
     params: original.params,
     timeout: original.timeout || 20000,
-    headers: token
-      ? {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        }
-      : {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+    headers: {
+      ...(original.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     skipAuthRefresh: original.skipAuthRefresh,
   };
 };
@@ -170,8 +164,16 @@ export const installRefreshInterceptor = (
     const token = await tokenStorage.getAccessToken();
 
     config.timeout = config.timeout ?? timeoutMs;
-    config.headers.set('Content-Type', 'application/json');
-    config.headers.set('Accept', 'application/json');
+    
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
+    
+    if (!isFormData && !config.headers.has('Content-Type')) {
+      config.headers.set('Content-Type', 'application/json');
+    }
+    
+    if (!config.headers.has('Accept')) {
+      config.headers.set('Accept', 'application/json');
+    }
     if (token) {
       config.headers.set('Authorization', `Bearer ${token}`);
     }

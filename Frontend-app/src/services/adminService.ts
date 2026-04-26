@@ -34,42 +34,29 @@ const buildAuthHeaders = (token?: string | null, extra?: PlainHeaders): PlainHea
 
 const adminApi = withBasePath(API_PATHS.admin);
 
-// Helper function for admin API calls using axios only (no fetch, no interceptors)
+// Helper function for admin API calls using axios only
 const adminFetch = async (method: string, path: string, data?: any): Promise<any> => {
   try {
-    const token = await authService.getToken();
-
     // Preserve existing debug signal, but avoid logging full absolute URLs
     console.log('ADMIN_FETCH_PATH:', path);
 
     const upper = String(method || '').toUpperCase();
 
-    // JSON by default (except FormData uploads where axios must set boundary)
-    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    // Axios will naturally set boundaries for FormData if we DO NOT explicitly set Content-Type.
+    // The refreshInterceptor will also skip setting application/json for FormData.
+    const config = undefined;
 
-    const baseHeaders: PlainHeaders = isFormData
-      ? buildAuthHeaders(token)
-      : buildAuthHeaders(token, {
-          'Content-Type': 'application/json',
-        });
-
-    // Do not set Content-Type for FormData; axios will set correct multipart boundary.
-    if (isFormData) {
-      delete baseHeaders['Content-Type'];
-    }
-
-    if (upper === 'GET') return (await adminApi.get(path, { headers: baseHeaders })).data;
-    if (upper === 'DELETE') return (await adminApi.delete(path, { headers: baseHeaders })).data;
-    if (upper === 'POST') return (await adminApi.post(path, data, { headers: baseHeaders })).data;
-    if (upper === 'PUT') return (await adminApi.put(path, data, { headers: baseHeaders })).data;
-    if (upper === 'PATCH') return (await adminApi.patch(path, data, { headers: baseHeaders })).data;
+    if (upper === 'GET') return (await adminApi.get(path, config)).data;
+    if (upper === 'DELETE') return (await adminApi.delete(path, config)).data;
+    if (upper === 'POST') return (await adminApi.post(path, data, config)).data;
+    if (upper === 'PUT') return (await adminApi.put(path, data, config)).data;
+    if (upper === 'PATCH') return (await adminApi.patch(path, data, config)).data;
 
     return (
       await adminApi.request({
         method: upper as any,
         url: path,
         data,
-        headers: baseHeaders,
       })
     ).data;
   } catch (error) {

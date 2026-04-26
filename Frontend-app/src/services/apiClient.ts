@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
-import { isRequestCancelled } from './refreshInterceptor';
+import { isRequestCancelled, installRefreshInterceptor } from './refreshInterceptor';
 
 type ApiErrorCode =
   | 'OFFLINE'
@@ -111,24 +111,14 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   };
 };
 
-// ❌ NO HEADER MUTATION ANYWHERE
-
-api.interceptors.request.use(
-  (config) => {
-    if (!config.url || config.url.trim() === '' || config.url === '/') {
-      return Promise.reject(new Error('Invalid API request'));
-    }
-
-    console.log('[API] Request:', config.url);
-
-    config.headers.set('Content-Type', 'application/json');
-    config.headers.set('Accept', 'application/json');
-    config.headers.set('User-Agent', 'MathematicoApp/1.0 (Android)');
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Initialize refresh interceptor to attach tokens and handle 401 retries
+installRefreshInterceptor(api, {
+  timeoutMs: 20000,
+  onAuthFailure: () => {
+    console.log('[API] Auth failure, session expired');
+    // We can emit an event or call authService.logout() if needed.
+  }
+});
 
 api.interceptors.response.use(
   (response) => {
@@ -176,8 +166,7 @@ export const withBasePath = (basePath: string) => ({
     return api.request<T>({
       ...config,
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        ...config?.headers,
       },
     });
   },
