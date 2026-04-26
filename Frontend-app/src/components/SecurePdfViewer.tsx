@@ -8,55 +8,13 @@ import { safeCatch } from '../utils/safeCatch';
 
 interface SecurePdfViewerProps {
   bookId: string;
+  viewerUrl: string;
   onClose: () => void;
 }
 
-const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) => {
-  const [viewerUrl, setViewerUrl] = useState<string>('');
+const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const mobileApi = withBasePath(API_PATHS.mobile);
-
-  useEffect(() => {
-    fetchSecureViewerUrl();
-  }, [bookId]);
-
-  const fetchSecureViewerUrl = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const { Storage } = await import('../utils/storage');
-      
-      // Get auth token for authenticated requests
-      const token = await Storage.getItem('authToken');
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-      
-      // Add authentication header if token exists
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await mobileApi.get(`/books/${bookId}/viewer`, { headers });
-      const data = response.data;
-
-      if (data.success && data.data?.viewerUrl) {
-        setViewerUrl(data.data.viewerUrl);
-      } else {
-        setError(data.message || 'Failed to load PDF viewer');
-      }
-    } catch (err) {
-      safeCatch('SecurePdfViewer.fetchSecureViewerUrl', () => {
-        setError('Network error. Please check your connection.');
-      })(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleWebViewError = () => {
     setError('Failed to load PDF. Please try again.');
@@ -132,7 +90,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         <iframe 
           class="pdf-viewer" 
           id="pdfFrame"
-          src="https://docs.google.com/viewer?url=${encodeURIComponent(viewerUrl)}&embedded=true"
+          src="https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewerUrl + (viewerUrl.includes('?') ? '&' : '?') + '_cb=' + Date.now())}"
           frameborder="0"
           scrolling="auto"
           onload="document.getElementById('loading').style.display='none';"
@@ -181,9 +139,6 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>{error}</Text>
-        <Button mode="contained" onPress={fetchSecureViewerUrl} style={styles.retryButton}>
-          Retry
-        </Button>
         <Button mode="outlined" onPress={onClose} style={styles.closeButton}>
           Close
         </Button>
@@ -195,9 +150,6 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>PDF URL not available</Text>
-        <Button mode="contained" onPress={fetchSecureViewerUrl} style={styles.retryButton}>
-          Retry
-        </Button>
       </View>
     );
   }
@@ -223,29 +175,19 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
         mixedContentMode="never"
         originWhitelist={['https://*', 'about:blank', 'data:*']}
         onShouldStartLoadWithRequest={(request: any) => {
-          // Allow only known-good viewer hosts/URLs used by our embedded HTML
           const url = request.url.toLowerCase();
-
-          // Our iframe uses Google Docs Viewer; allow it (and its common supporting hosts).
+          
+          // Allow standard web protocols and data URIs
           if (
-            url.includes('docs.google.com') ||
-            url.includes('googleusercontent.com') ||
-            url.includes('gstatic.com')
-          ) {
-            return true;
-          }
-
-          // Allow Cloudinary PDFs and data URLs
-          if (
-            url.includes('cloudinary.com') ||
-            url.includes('res.cloudinary.com') ||
+            url.startsWith('http://') ||
+            url.startsWith('https://') ||
             url.startsWith('data:') ||
-            url.startsWith('about:blank') ||
+            url.startsWith('about:') ||
             url.startsWith('file://')
           ) {
             return true;
           }
-          // Block other URLs for security
+          
           return false;
         }}
         onHttpError={(syntheticEvent: any) => {
@@ -261,8 +203,8 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, onClose }) =>
           return (
             <View style={styles.container}>
               <Text style={styles.errorText}>Failed to render PDF: {errorMessage}</Text>
-              <Button mode="contained" onPress={fetchSecureViewerUrl} style={styles.retryButton}>
-                Retry
+              <Button mode="outlined" onPress={onClose} style={styles.closeButton}>
+                Close
               </Button>
             </View>
           );

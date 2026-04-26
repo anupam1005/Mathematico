@@ -380,36 +380,38 @@ export default function HomeScreen({ navigation }: any) {
       </View>
 
       {/* Statistics Section */}
-      <StatsCard
-        title="Platform Statistics"
-        stats={[
-          {
-            icon: 'school',
-            value: `${stats.totalCourses}+`,
-            label: 'Courses',
-            color: designSystem.colors.primary,
-          },
-          {
-            icon: 'book-open-variant',
-            value: `${stats.totalBooks}+`,
-            label: 'Books',
-            color: designSystem.colors.secondary,
-          },
-          {
-            icon: 'video',
-            value: `${stats.totalLiveClasses}+`,
-            label: 'Live Classes',
-            color: designSystem.colors.accent,
-          },
-          {
-            icon: 'account-group',
-            value: `${stats.totalStudents}+`,
-            label: 'Students',
-            color: designSystem.colors.info,
-          },
-        ]}
-        columns={4}
-      />
+      <View style={{ marginHorizontal: designSystem.spacing.lg }}>
+        <StatsCard
+          title="Platform Statistics"
+          stats={[
+            {
+              icon: 'school',
+              value: `${stats.totalCourses}+`,
+              label: 'Courses',
+              color: designSystem.colors.primary,
+            },
+            {
+              icon: 'book-open-variant',
+              value: `${stats.totalBooks}+`,
+              label: 'Books',
+              color: designSystem.colors.secondary,
+            },
+            {
+              icon: 'video',
+              value: `${stats.totalLiveClasses}+`,
+              label: 'Live Classes',
+              color: designSystem.colors.accent,
+            },
+            {
+              icon: 'account-group',
+              value: `${stats.totalStudents}+`,
+              label: 'Students',
+              color: designSystem.colors.info,
+            },
+          ]}
+          columns={4}
+        />
+      </View>
 
       {/* Why Choose Our Platform */}
       <UnifiedCard variant="elevated" style={styles.featuresCard}>
@@ -462,7 +464,11 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: designSystem.spacing.lg }}
+        >
           {loading && !dataLoaded ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading courses...</Text>
@@ -485,14 +491,18 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: designSystem.spacing.lg }}
+        >
           {loading && !dataLoaded ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading books...</Text>
             </View>
           ) : (
             featuredBooks.map((book, index) => (
-              <View key={book.id || index}>
+              <View key={book.id || index} style={{ marginRight: index === featuredBooks.length - 1 ? 0 : 0 }}>
                 {renderBookCard(book, index)}
               </View>
             ))
@@ -525,7 +535,9 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Title style={styles.sectionTitle}>Quick Actions</Title>
+        <View style={styles.sectionHeader}>
+          <Title style={styles.sectionTitle}>Quick Actions</Title>
+        </View>
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}

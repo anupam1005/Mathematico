@@ -82,7 +82,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
         ) : viewerUrl ? (
           (() => {
             const SecurePdfViewer = require('../components/SecurePdfViewer').default;
-            return <SecurePdfViewer bookId={bookId} onClose={handleClose} />;
+            return <SecurePdfViewer bookId={bookId} viewerUrl={viewerUrl} onClose={handleClose} />;
           })()
         ) : (
           <View style={styles.center}>

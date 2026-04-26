@@ -27,6 +27,21 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
     setLoading(true);
     try {
+      if (totalAmount <= 0) {
+        // Free enrollment - bypass Razorpay completely
+        const { enrollmentService } = require('../services/enrollmentService');
+        const enrollRes = await enrollmentService.enrollInCourse(itemId);
+        
+        if (enrollRes.success) {
+          Alert.alert('Success', 'You have been enrolled successfully for free!');
+          navigation.navigate('MainTabs');
+          return;
+        } else {
+          Alert.alert('Error', enrollRes.message || 'Failed to enroll');
+          return;
+        }
+      }
+
       const { razorpayService } =
         require('../services/razorpayService');
 
@@ -117,7 +132,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              'Pay Now'
+              totalAmount > 0 ? 'Pay Now' : 'Enroll for Free'
             )}
           </Button>
         </Card.Content>

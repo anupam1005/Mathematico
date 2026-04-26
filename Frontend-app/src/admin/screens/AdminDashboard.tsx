@@ -186,7 +186,7 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
                   />
                 )}
               </TouchableOpacity>
-              <Icon name="cog" size={48} color={designSystem.colors.primary} />
+              <Icon name="cog" size={28} color={designSystem.colors.primary} />
             </View>
           </View>
         </UnifiedCard>
@@ -444,13 +444,12 @@ const styles = StyleSheet.create({
     marginVertical: designSystem.spacing.sm,
   },
   recentSection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     paddingHorizontal: designSystem.spacing.md,
-    gap: designSystem.spacing.sm,
+    gap: designSystem.spacing.md,
     marginBottom: designSystem.spacing.xl,
   },
   recentCard: {
-    flex: 1,
     ...designSystem.shadows.sm,
   },
   recentItem: {
