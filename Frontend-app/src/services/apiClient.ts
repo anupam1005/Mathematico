@@ -165,6 +165,7 @@ export const withBasePath = (basePath: string) => ({
 
     return api.request<T>({
       ...config,
+      url: config.url ? buildUrl(basePath, config.url) : undefined,
       headers: {
         ...config?.headers,
       },

@@ -72,11 +72,9 @@ const hydrateMemoryCache = async (): Promise<void> => {
 
   hydrationPromise = (async () => {
     try {
-      const [storedAccess, storedRefresh, storedUser] = await Promise.all([
-        Storage.getItem<string>(ACCESS_TOKEN_KEY, false),
-        Storage.getItem<string>(REFRESH_TOKEN_KEY, false),
-        Storage.getItem<string>(USER_KEY, false),
-      ]);
+      const storedAccess = await Storage.getItem<string>(ACCESS_TOKEN_KEY, false);
+      const storedRefresh = await Storage.getItem<string>(REFRESH_TOKEN_KEY, false);
+      const storedUser = await Storage.getItem<string>(USER_KEY, false);
 
       memoryAccessToken = normalizeToken(storedAccess);
       memoryRefreshToken = normalizeToken(storedRefresh);
@@ -143,11 +141,9 @@ export const tokenStorage = {
     memoryRefreshToken = normalizedRefresh;
     memoryUser = user ?? null;
 
-    await Promise.all([
-      persistAccessToken(memoryAccessToken),
-      persistRefreshToken(memoryRefreshToken),
-      persistUser(memoryUser),
-    ]);
+    await persistAccessToken(memoryAccessToken);
+    await persistRefreshToken(memoryRefreshToken);
+    await persistUser(memoryUser);
   },
 
   async getSession<T = any>(): Promise<{ user: T | null; accessToken: string | null; refreshToken: string | null }> {
@@ -164,11 +160,9 @@ export const tokenStorage = {
     memoryRefreshToken = null;
     memoryUser = null;
     hydrated = true;
-    await Promise.all([
-      Storage.deleteItem(ACCESS_TOKEN_KEY),
-      Storage.deleteItem(REFRESH_TOKEN_KEY),
-      Storage.deleteItem(USER_KEY),
-    ]);
+    await Storage.deleteItem(ACCESS_TOKEN_KEY);
+    await Storage.deleteItem(REFRESH_TOKEN_KEY);
+    await Storage.deleteItem(USER_KEY);
   },
 };
 

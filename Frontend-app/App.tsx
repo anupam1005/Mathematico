@@ -99,13 +99,13 @@ function MainTabs() {
           } else if (route.name === 'Courses') {
             iconName = 'school';
           } else if (route.name === 'LiveClasses') {
-            iconName = 'videocam';
+            iconName = 'video';
           } else if (route.name === 'Admin') {
-            iconName = 'admin-panel-settings';
+            iconName = 'shield-account';
           } else if (route.name === 'Profile') {
-            iconName = 'person';
+            iconName = 'account';
           } else {
-            iconName = 'help';
+            iconName = 'help-circle';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
