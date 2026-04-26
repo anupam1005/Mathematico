@@ -121,14 +121,11 @@ api.interceptors.request.use(
 
     console.log('[API] Request:', config.url);
 
-    return {
-      ...config,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'MathematicoApp/1.0 (Android)',
-      },
-    };
+    config.headers.set('Content-Type', 'application/json');
+    config.headers.set('Accept', 'application/json');
+    config.headers.set('User-Agent', 'MathematicoApp/1.0 (Android)');
+
+    return config;
   },
   (error) => Promise.reject(error)
 );

@@ -169,20 +169,14 @@ export const installRefreshInterceptor = (
     await tokenStorage.hydrate();
     const token = await tokenStorage.getAccessToken();
 
-    return {
-      ...config,
-      timeout: config.timeout ?? timeoutMs,
-      headers: token
-        ? {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          }
-        : {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-    };
+    config.timeout = config.timeout ?? timeoutMs;
+    config.headers.set('Content-Type', 'application/json');
+    config.headers.set('Accept', 'application/json');
+    if (token) {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return config;
   });
 
   // ✅ RESPONSE INTERCEPTOR
