@@ -126,14 +126,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
     </html>
   ` : '';
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#6200ea" />
-        <Text style={styles.loadingText}>Loading secure PDF viewer...</Text>
-      </View>
-    );
-  }
+
 
   if (error) {
     return (
@@ -156,6 +149,12 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
 
   return (
     <View style={styles.container}>
+      {loading && (
+        <View style={[StyleSheet.absoluteFill, styles.container, { zIndex: 10 }]}>
+          <ActivityIndicator size="large" color="#6200ea" />
+          <Text style={styles.loadingText}>Loading secure PDF viewer...</Text>
+        </View>
+      )}
       <WebView
         source={{ html: securePdfHtml }}
         style={styles.webView}

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { Suspense } from 'react';
+import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -8,23 +8,17 @@ import { Icon } from '../components/Icon';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const AdminDashboard = React.lazy(() => import('./screens/AdminDashboard'));
-const AdminBooks = React.lazy(() => import('./screens/AdminBooks'));
-const AdminCourses = React.lazy(() => import('./screens/AdminCourses'));
-const AdminLiveClasses = React.lazy(() => import('./screens/AdminLiveClasses'));
-const AdminUsers = React.lazy(() => import('./screens/AdminUsers'));
-const AdminPayments = React.lazy(() => import('./screens/AdminPayments'));
-const AdminSettings = React.lazy(() => import('./screens/AdminSettings'));
+import AdminDashboard from './screens/AdminDashboard';
+import AdminBooks from './screens/AdminBooks';
+import AdminCourses from './screens/AdminCourses';
+import AdminLiveClasses from './screens/AdminLiveClasses';
+import AdminUsers from './screens/AdminUsers';
+import AdminPayments from './screens/AdminPayments';
+import AdminSettings from './screens/AdminSettings';
 
-const BookForm = React.lazy(() => import('./screens/BookForm'));
-const CourseForm = React.lazy(() => import('./screens/CourseForm'));
-const LiveClassForm = React.lazy(() => import('./screens/LiveClassForm'));
-
-const AdminLoading = () => (
-  <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color="#3b82f6" />
-  </View>
-);
+import BookForm from './screens/BookForm';
+import CourseForm from './screens/CourseForm';
+import LiveClassForm from './screens/LiveClassForm';
 
 function AdminTabs() {
   return (
@@ -112,40 +106,38 @@ function AdminTabs() {
 
 export default function AdminNavigator() {
   return (
-    <Suspense fallback={<AdminLoading />}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="AdminTabs" component={AdminTabs} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminTabs" component={AdminTabs} />
 
-        {/* Form Screens */}
-        <Stack.Screen
-          name="BookForm"
-          component={BookForm}
-          options={{
-            headerShown: true,
-            title: 'Book Form',
-            headerBackTitle: 'Back',
-          }}
-        />
-        <Stack.Screen
-          name="CourseForm"
-          component={CourseForm}
-          options={{
-            headerShown: true,
-            title: 'Course Form',
-            headerBackTitle: 'Back',
-          }}
-        />
-        <Stack.Screen
-          name="LiveClassForm"
-          component={LiveClassForm}
-          options={{
-            headerShown: true,
-            title: 'Live Class Form',
-            headerBackTitle: 'Back',
-          }}
-        />
-      </Stack.Navigator>
-    </Suspense>
+      {/* Form Screens */}
+      <Stack.Screen
+        name="BookForm"
+        component={BookForm}
+        options={{
+          headerShown: true,
+          title: 'Book Form',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="CourseForm"
+        component={CourseForm}
+        options={{
+          headerShown: true,
+          title: 'Course Form',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="LiveClassForm"
+        component={LiveClassForm}
+        options={{
+          headerShown: true,
+          title: 'Live Class Form',
+          headerBackTitle: 'Back',
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 

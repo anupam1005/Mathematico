@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -49,33 +49,28 @@ type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
-const HomeScreen = React.lazy(() => import('./src/screens/HomeScreen'));
-const BooksScreen = React.lazy(() => import('./src/screens/BooksScreen'));
-const CoursesScreen = React.lazy(() => import('./src/screens/CoursesScreen'));
-const LiveClassesScreen = React.lazy(() => import('./src/screens/LiveClassesScreen'));
-const ProfileScreen = React.lazy(() => import('./src/screens/ProfileScreen'));
-const LoginScreen = React.lazy(() => import('./src/screens/LoginScreen'));
-const RegisterScreen = React.lazy(() => import('./src/screens/RegisterScreen'));
+import HomeScreen from './src/screens/HomeScreen';
+import BooksScreen from './src/screens/BooksScreen';
+import CoursesScreen from './src/screens/CoursesScreen';
+import LiveClassesScreen from './src/screens/LiveClassesScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 
-const BookDetailScreen = React.lazy(() => import('./src/screens/BookDetailScreen'));
-const CourseDetailScreen = React.lazy(() => import('./src/screens/CourseDetailScreen'));
-const LiveClassDetailScreen = React.lazy(() => import('./src/screens/LiveClassDetailScreen'));
-const CheckoutScreen = React.lazy(() => import('./src/screens/CheckoutScreen'));
-const RazorpayCheckoutScreen = React.lazy(() => import('./src/screens/RazorpayCheckoutScreen'));
+import BookDetailScreen from './src/screens/BookDetailScreen';
+import CourseDetailScreen from './src/screens/CourseDetailScreen';
+import LiveClassDetailScreen from './src/screens/LiveClassDetailScreen';
+import CheckoutScreen from './src/screens/CheckoutScreen';
+import RazorpayCheckoutScreen from './src/screens/RazorpayCheckoutScreen';
 
-const SecurePdfScreen = React.lazy(() =>
-  import('./src/screens/SecurePdfScreen').catch((error) => {
-    safeCatch('App.SecurePdfScreen.import')(error);
-    return { default: () => null };
-  })
-);
+import SecurePdfScreen from './src/screens/SecurePdfScreen';
 
-const AboutScreen = React.lazy(() => import('./src/screens/AboutScreen'));
-const PrivacyPolicyScreen = React.lazy(() => import('./src/screens/PrivacyPolicyScreen'));
-const TermsOfUseScreen = React.lazy(() => import('./src/screens/TermsOfUseScreen'));
-const SettingsScreen = React.lazy(() => import('./src/screens/SettingsScreen'));
+import AboutScreen from './src/screens/AboutScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
-const AdminNavigator = React.lazy(() => import('./src/admin/AdminNavigator'));
+import AdminNavigator from './src/admin/AdminNavigator';
 
 const AppLoading = () => (
   <View style={styles.loadingContainer}>
@@ -338,9 +333,7 @@ function AppContent() {
       <PaperProvider theme={theme as any}>
         <AuthProvider>
           <NavigationContainer>
-            <Suspense fallback={<AppLoading />}>
               <AppNavigator />
-            </Suspense>
           </NavigationContainer>
         </AuthProvider>
       </PaperProvider>
