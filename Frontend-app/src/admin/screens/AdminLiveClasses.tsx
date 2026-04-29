@@ -53,11 +53,7 @@ export default function AdminLiveClasses({ navigation }: any) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  useEffect(() => {
-    loadLiveClasses();
-  }, [searchQuery, filterStatus]);
-
-  // Refresh data when screen comes into focus
+  // Initial load on mount/focus
   useFocusEffect(
     React.useCallback(() => {
       loadLiveClasses();
@@ -65,6 +61,15 @@ export default function AdminLiveClasses({ navigation }: any) {
   );
 
   const loadLiveClasses = async () => {
+    let isFinished = false;
+    // Failsafe timeout
+    const fallbackTimer = setTimeout(() => {
+      if (!isFinished) {
+        console.warn('--- loadLiveClasses TIMEOUT FAILSAFE TRIGGERED ---');
+        setIsLoading(false);
+      }
+    }, 15000);
+
     try {
       setIsLoading(true);
       const response = await adminService.getAllLiveClasses();
@@ -83,6 +88,8 @@ export default function AdminLiveClasses({ navigation }: any) {
         setLiveClasses([]);
       })(error);
     } finally {
+      isFinished = true;
+      clearTimeout(fallbackTimer);
       setIsLoading(false);
     }
   };

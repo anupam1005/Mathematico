@@ -40,7 +40,8 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
       // In a real app, you'd call getBookById
       try {
         adminService.getAllBooks().then((res: any) => {
-          const book = res.data?.find((b: any) => {
+          const booksArray = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+          const book = booksArray.find((b: any) => {
             const currentBookId = b.id || b._id || b.Id;
             return currentBookId === bookId;
           });
@@ -134,14 +135,22 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
       // Handle cover image upload
       if (formData.coverImage && typeof formData.coverImage === 'object' && 'uri' in formData.coverImage) {
         if (formData.coverImage.uri) {
-          data.append("coverImage", { uri: formData.coverImage.uri, type: "image/jpeg", name: "cover.jpg" } as any);
+          data.append("coverImage", { 
+            uri: formData.coverImage.uri, 
+            type: formData.coverImage.type || "image/jpeg", 
+            name: formData.coverImage.name || "cover.jpg" 
+          } as any);
         }
       }
       
       // Handle PDF file upload
       if (formData.pdfFile && typeof formData.pdfFile === 'object' && 'uri' in formData.pdfFile) {
         if (formData.pdfFile.uri) {
-          data.append("pdfFile", { uri: formData.pdfFile.uri, type: "application/pdf", name: formData.pdfFile.name || "book.pdf" } as any);
+          data.append("pdfFile", { 
+            uri: formData.pdfFile.uri, 
+            type: formData.pdfFile.type || "application/pdf", 
+            name: formData.pdfFile.name || "book.pdf" 
+          } as any);
         }
       }
 

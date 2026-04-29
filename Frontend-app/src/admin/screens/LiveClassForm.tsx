@@ -342,14 +342,10 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       if (formData.image) {
         // If it's a new image (has uri)
         if (typeof formData.image === 'object' && 'uri' in formData.image && formData.image.uri) {
-          // Extract filename and type from URI if available
-          const uriParts = formData.image.uri.split('.');
-          const fileType = uriParts[uriParts.length - 1];
-          
           formDataToSend.append('image', {
             uri: formData.image.uri,
-            name: `liveclass_${Date.now()}.${fileType}`,
-            type: `image/${fileType}`
+            name: formData.image.name || 'liveclass.jpg',
+            type: formData.image.type || 'image/jpeg'
           } as any);
         } 
         // If it's an existing image URL (string)

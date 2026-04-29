@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -52,15 +53,27 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editForm, setEditForm] = useState<Partial<User>>({});
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  // Initial load on mount/focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUsers();
+    }, [])
+  );
 
   useEffect(() => {
     filterUsers();
   }, [users, searchQuery, filterStatus, filterRole]);
 
   const loadUsers = async () => {
+    let isFinished = false;
+    // Failsafe timeout
+    const fallbackTimer = setTimeout(() => {
+      if (!isFinished) {
+        console.warn('--- loadUsers TIMEOUT FAILSAFE TRIGGERED ---');
+        setIsLoading(false);
+      }
+    }, 15000);
+
     try {
       setIsLoading(true);
       const response = await adminService.getAllUsers();
@@ -81,6 +94,8 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
         setUsers([]);
       })(error);
     } finally {
+      isFinished = true;
+      clearTimeout(fallbackTimer);
       setIsLoading(false);
     }
   };

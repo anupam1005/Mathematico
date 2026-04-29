@@ -52,11 +52,7 @@ export default function AdminCourses({ navigation }: any) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  useEffect(() => {
-    loadCourses();
-  }, [searchQuery, filterStatus]);
-
-  // Refresh data when screen comes into focus
+  // Initial load on mount/focus
   useFocusEffect(
     React.useCallback(() => {
       loadCourses();
@@ -64,6 +60,15 @@ export default function AdminCourses({ navigation }: any) {
   );
 
   const loadCourses = async () => {
+    let isFinished = false;
+    // Failsafe timeout
+    const fallbackTimer = setTimeout(() => {
+      if (!isFinished) {
+        console.warn('--- loadCourses TIMEOUT FAILSAFE TRIGGERED ---');
+        setIsLoading(false);
+      }
+    }, 15000);
+
     try {
       setIsLoading(true);
       const response = await adminService.getAllCourses();
@@ -82,6 +87,8 @@ export default function AdminCourses({ navigation }: any) {
         setCourses([]);
       })(error);
     } finally {
+      isFinished = true;
+      clearTimeout(fallbackTimer);
       setIsLoading(false);
     }
   };

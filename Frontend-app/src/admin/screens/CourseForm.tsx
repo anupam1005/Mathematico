@@ -36,7 +36,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     if (courseId) {
       setLoading(true);
       adminService.getAllCourses().then((res: any) => {
-        const course = res.data?.find((c: any) => c.id === courseId);
+        const coursesArray = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+        const course = coursesArray.find((c: any) => c.id === courseId || c._id === courseId || c.Id === courseId);
         if (course) {
           setFormData({
             ...course,
@@ -152,14 +153,22 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       // Handle image upload (as thumbnail)
       if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
         if (formData.image.uri) {
-          data.append("image", { uri: formData.image.uri, type: "image/jpeg", name: "course.jpg" } as any);
+          data.append("image", { 
+            uri: formData.image.uri, 
+            type: formData.image.type || "image/jpeg", 
+            name: formData.image.name || "course.jpg" 
+          } as any);
         }
       }
       
       // Handle PDF upload
       if (formData.pdf && typeof formData.pdf === 'object' && 'uri' in formData.pdf) {
         if (formData.pdf.uri) {
-          data.append("pdf", { uri: formData.pdf.uri, type: "application/pdf", name: ('name' in formData.pdf ? formData.pdf.name : "course.pdf") || "course.pdf" } as any);
+          data.append("pdf", { 
+            uri: formData.pdf.uri, 
+            type: formData.pdf.type || "application/pdf", 
+            name: formData.pdf.name || "course.pdf" 
+          } as any);
         }
       }
 

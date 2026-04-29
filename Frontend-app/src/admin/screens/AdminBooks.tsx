@@ -59,37 +59,33 @@ export default function AdminBooks({ navigation }: any) {
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadBooks();
-  }, [searchQuery, filterStatus]);
-
-  // Add navigation listener for when returning from BookForm
-  useEffect(() => {
-    const unsubscribe = nav.addListener('focus', () => {
-      loadBooks();
-    });
-
-    return unsubscribe;
-  }, [nav]);
-
-  // Refresh data when screen comes into focus
+  // Initial load on mount/focus
   useFocusEffect(
     React.useCallback(() => {
-      // Add a small delay to ensure the previous screen has fully unmounted
-      const timer = setTimeout(() => {
-        loadBooks();
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }, [])
+      loadBooks();
+    }, [searchQuery, filterStatus])
   );
 
   const loadBooks = async () => {
+    let isFinished = false;
+    // Failsafe timeout
+    const fallbackTimer = setTimeout(() => {
+      if (!isFinished) {
+        console.warn('--- loadBooks TIMEOUT FAILSAFE TRIGGERED ---');
+        setIsLoading(false);
+      }
+    }, 15000);
+
     try {
+      console.log('--- loadBooks started ---');
       setIsLoading(true);
-      const response = await adminService.getAllBooks();
+      setError(null);
       
+      console.log('--- calling adminService.getAllBooks() ---');
+      const response = await adminService.getAllBooks();
+      console.log('--- adminService.getAllBooks() resolved ---', !!response, response?.success);
       
       // Handle the response structure correctly
       if (response && response.success && response.data) {
@@ -101,10 +97,14 @@ export default function AdminBooks({ navigation }: any) {
         setBooks([]);
       }
     } catch (error) {
+      console.error('--- loadBooks caught error ---', error);
       safeCatch('AdminBooks.loadBooks', () => {
         setBooks([]);
       })(error);
     } finally {
+      isFinished = true;
+      clearTimeout(fallbackTimer);
+      console.log('--- loadBooks finally executing ---');
       setIsLoading(false);
     }
   };

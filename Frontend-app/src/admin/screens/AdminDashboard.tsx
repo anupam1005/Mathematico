@@ -31,8 +31,6 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
-    
     // Set up auto-refresh every 30 seconds
     const refreshInterval = setInterval(() => {
       loadDashboardData();
@@ -45,11 +43,24 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
   }, []);
 
   const loadDashboardData = async () => {
+    let isFinished = false;
+    // Failsafe timeout
+    const fallbackTimer = setTimeout(() => {
+      if (!isFinished) {
+        console.warn('--- loadDashboardData TIMEOUT FAILSAFE TRIGGERED ---');
+        setIsLoading(false);
+        setError('Request timed out');
+      }
+    }, 15000);
+
     try {
+      console.log('--- loadDashboardData started ---');
       setIsLoading(true);
       setError(null);
       
+      console.log('--- calling adminService.getDashboardStats() ---');
       const response = await adminService.getDashboardStats();
+      console.log('--- adminService.getDashboardStats() resolved ---', !!response, response?.success);
       
       // Check if response is successful
       if (!response.success) {
@@ -61,11 +72,11 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       
       // Map backend data to frontend structure
       const dashboardData: DashboardStats = {
-        totalUsers: data?.totalUsers || 0,
-        totalBooks: data?.totalBooks || 0,
-        totalCourses: data?.totalCourses || 0,
-        totalLiveClasses: data?.totalLiveClasses || 0,
-        totalRevenue: data?.totalRevenue || 0,
+        totalUsers: Number(data?.totalUsers) || 0,
+        totalBooks: Number(data?.totalBooks) || 0,
+        totalCourses: Number(data?.totalCourses) || 0,
+        totalLiveClasses: Number(data?.totalLiveClasses) || 0,
+        totalRevenue: Number(data?.totalRevenue) || 0,
         courseStats: data?.courseStats || { total: 0, published: 0, draft: 0 },
         liveClassStats: data?.liveClassStats || { total: 0, upcoming: 0, completed: 0 },
         recentUsers: Array.isArray(data?.recentUsers) ? data.recentUsers : [],
@@ -75,12 +86,16 @@ export default function AdminDashboard({ navigation }: { navigation: any }) {
       setStats(dashboardData);
       setLastUpdated(new Date());
     } catch (error) {
+      console.error('--- loadDashboardData caught error ---', error);
       safeCatch('AdminDashboard.loadDashboardData', () => {
         setError('Failed to load dashboard data');
         // Don't set empty data - let the error message show
         setStats(null);
       })(error);
     } finally {
+      isFinished = true;
+      clearTimeout(fallbackTimer);
+      console.log('--- loadDashboardData finally executing ---');
       setIsLoading(false);
     }
   };
