@@ -1,3 +1,4 @@
+import { DeviceEventEmitter } from 'react-native';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config';
 import { API_PATHS } from '../constants/apiPaths';
@@ -116,7 +117,7 @@ installRefreshInterceptor(api, {
   timeoutMs: 20000,
   onAuthFailure: () => {
     console.log('[API] Auth failure, session expired');
-    // We can emit an event or call authService.logout() if needed.
+    DeviceEventEmitter.emit('session_expired');
   }
 });
 

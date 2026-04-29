@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { Alert } from 'react-native';
+import { Alert, DeviceEventEmitter } from 'react-native';
 import authService from '../services/authService';
 import { safeCatch } from '../utils/safeCatch';
 
@@ -119,6 +119,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     bootstrap().catch(safeCatch('AuthContext.bootstrap.useEffect'));
+
+    const subscription = DeviceEventEmitter.addListener('session_expired', () => {
+      console.log('[AuthContext] session_expired event received, logging out');
+      logout();
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const checkAuthStatus = async () => {

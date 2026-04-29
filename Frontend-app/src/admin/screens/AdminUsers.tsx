@@ -45,6 +45,7 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRole, setFilterRole] = useState('all');
@@ -76,8 +77,13 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
 
     try {
       setIsLoading(true);
+      setError(null);
       const response = await adminService.getAllUsers();
       
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to load users');
+      }
+
       // Handle the response structure correctly
       let users = [];
       if (response && Array.isArray(response)) {
@@ -89,8 +95,9 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       }
       
       setUsers(users);
-    } catch (error) {
+    } catch (error: any) {
       safeCatch('AdminUsers.loadUsers', () => {
+        setError(error?.message || 'Failed to load users');
         setUsers([]);
       })(error);
     } finally {
@@ -341,6 +348,25 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
           </View>
         </View>
       </View>
+      
+      {error && (
+        <UnifiedCard variant="outlined" style={{ borderColor: designSystem.colors.error, marginHorizontal: 16, marginTop: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="alert-circle" size={24} color={designSystem.colors.error} />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
+                {error}
+              </Text>
+              <TouchableOpacity 
+                style={{ marginTop: 8 }}
+                onPress={loadUsers}
+              >
+                <Text style={{ color: designSystem.colors.primary, fontWeight: 'bold' }}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </UnifiedCard>
+      )}
 
       {/* Search and Filters */}
       <View style={styles.filtersContainer}>

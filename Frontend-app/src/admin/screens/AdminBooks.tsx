@@ -88,6 +88,10 @@ export default function AdminBooks({ navigation }: any) {
       console.log('--- adminService.getAllBooks() resolved ---', !!response, response?.success);
       
       // Handle the response structure correctly
+      if (!response.success && !Array.isArray(response)) {
+        throw new Error(response.error || 'Failed to load books');
+      }
+
       if (response && response.success && response.data) {
         const booksArray = Array.isArray(response.data) ? response.data : [];
         setBooks(booksArray);
@@ -96,9 +100,10 @@ export default function AdminBooks({ navigation }: any) {
       } else {
         setBooks([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('--- loadBooks caught error ---', error);
       safeCatch('AdminBooks.loadBooks', () => {
+        setError(error?.message || 'Failed to load books');
         setBooks([]);
       })(error);
     } finally {
@@ -388,6 +393,25 @@ export default function AdminBooks({ navigation }: any) {
           </View>
         </View>
       </UnifiedCard>
+
+      {error && (
+        <UnifiedCard variant="outlined" style={[styles.searchCard, { borderColor: designSystem.colors.error, marginTop: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Icon name="alert-circle" size={24} color={designSystem.colors.error} />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
+                {error}
+              </Text>
+              <TouchableOpacity 
+                style={{ marginTop: 8 }}
+                onPress={loadBooks}
+              >
+                <Text style={{ color: designSystem.colors.primary, fontWeight: 'bold' }}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </UnifiedCard>
+      )}
 
       {/* Search and Filters */}
       <UnifiedCard variant="outlined" style={styles.searchCard}>
