@@ -77,7 +77,17 @@ export default function AdminLiveClasses({ navigation }: any) {
 
       // Handle the response structure correctly
       if (response && response.success && response.data) {
-        setLiveClasses(Array.isArray(response.data) ? response.data : []);
+        let classesArray = [];
+        if (Array.isArray(response.data)) {
+          classesArray = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          classesArray = response.data.data;
+        } else if (response.data.liveClasses && Array.isArray(response.data.liveClasses)) {
+          classesArray = response.data.liveClasses;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          classesArray = response.data.items;
+        }
+        setLiveClasses(classesArray);
       } else if (response && Array.isArray(response)) {
         setLiveClasses(response);
       } else {

@@ -76,7 +76,17 @@ export default function AdminCourses({ navigation }: any) {
 
       // Handle the response structure correctly
       if (response && response.success && response.data) {
-        setCourses(Array.isArray(response.data) ? response.data : []);
+        let coursesArray = [];
+        if (Array.isArray(response.data)) {
+          coursesArray = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          coursesArray = response.data.data;
+        } else if (response.data.courses && Array.isArray(response.data.courses)) {
+          coursesArray = response.data.courses;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          coursesArray = response.data.items;
+        }
+        setCourses(coursesArray);
       } else if (response && Array.isArray(response)) {
         setCourses(response);
       } else {

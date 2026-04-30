@@ -1,6 +1,6 @@
 // src/admin/screens/CourseForm.tsx
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { adminService } from "../../services/adminService";
@@ -199,7 +199,8 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
       <CustomTextInput
         label="Title"
         value={formData.title}
@@ -217,7 +218,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         mode="outlined"
         multiline
         numberOfLines={3}
-        leftIcon="description"
+        leftIcon="text-box-outline"
       />
 
       <CustomTextInput
@@ -227,7 +228,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="attach-money"
+        leftIcon="currency-usd"
       />
 
       <CustomTextInput
@@ -237,7 +238,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="attach-money"
+        leftIcon="currency-usd"
       />
 
       <View style={styles.pickerContainer}>
@@ -294,7 +295,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         onChangeText={t => setFormData({ ...formData, subject: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="menu-book"
+        leftIcon="book-open-variant"
       />
 
       <CustomTextInput
@@ -303,7 +304,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         onChangeText={t => setFormData({ ...formData, grade: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="grade"
+        leftIcon="star-outline"
       />
 
       <CustomTextInput
@@ -313,7 +314,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="schedule"
+        leftIcon="clock-outline"
       />
 
       <CustomTextInput
@@ -358,7 +359,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="people"
+        leftIcon="account-group"
       />
 
       <View style={styles.imageSection}>
@@ -407,6 +408,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{courseId ? "Update Course" : "Create Course"}</Text>}
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

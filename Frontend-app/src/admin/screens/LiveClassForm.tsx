@@ -10,7 +10,8 @@ import {
   ActivityIndicator, 
   Platform,
   Keyboard,
-  Image
+  Image,
+  KeyboardAvoidingView
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -601,6 +602,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
   };
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView 
       style={[styles.container, keyboardVisible && styles.containerWithKeyboard]} 
       contentContainerStyle={{ paddingBottom: 50 }}
@@ -613,7 +615,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         onChangeText={(text) => handleInputChange('title', text)}
         style={styles.input}
         mode="outlined"
-        leftIcon="videocam"
+        leftIcon="video"
       />
 
       <CustomTextInput
@@ -624,7 +626,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         mode="outlined"
         multiline
         numberOfLines={3}
-        leftIcon="description"
+        leftIcon="text-box-outline"
       />
 
       <View style={styles.pickerContainer}>
@@ -664,7 +666,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         onChangeText={(text) => handleInputChange('subject', text)}
         style={styles.input}
         mode="outlined"
-        leftIcon="menu-book"
+        leftIcon="book-open-variant"
       />
 
       <CustomTextInput
@@ -673,7 +675,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         onChangeText={(text) => handleInputChange('grade', text)}
         style={styles.input}
         mode="outlined"
-        leftIcon="grade"
+        leftIcon="star-outline"
       />
 
       <View style={styles.pickerContainer}>
@@ -708,7 +710,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="access-time"
+        leftIcon="clock-outline"
       />
 
       {/* Scheduled Date and Time - Separate Sections */}
@@ -880,7 +882,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="people"
+        leftIcon="account-group"
       />
 
       <CustomTextInput
@@ -972,6 +974,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

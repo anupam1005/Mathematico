@@ -93,7 +93,16 @@ export default function AdminBooks({ navigation }: any) {
       }
 
       if (response && response.success && response.data) {
-        const booksArray = Array.isArray(response.data) ? response.data : [];
+        let booksArray = [];
+        if (Array.isArray(response.data)) {
+          booksArray = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          booksArray = response.data.data;
+        } else if (response.data.books && Array.isArray(response.data.books)) {
+          booksArray = response.data.books;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          booksArray = response.data.items;
+        }
         setBooks(booksArray);
       } else if (response && Array.isArray(response)) {
         setBooks(response);

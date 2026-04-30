@@ -1,6 +1,6 @@
 // src/admin/screens/BookForm.tsx
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { adminService } from "../../services/adminService";
@@ -183,7 +183,8 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
       <CustomTextInput
         label="Title"
         value={formData.title}
@@ -211,7 +212,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         mode="outlined"
         multiline
         numberOfLines={3}
-        leftIcon="description"
+        leftIcon="text-box-outline"
       />
 
       <CustomTextInput
@@ -238,7 +239,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         onChangeText={t => setFormData({ ...formData, grade: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="grade"
+        leftIcon="star-outline"
       />
 
       <CustomTextInput
@@ -248,7 +249,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"
-        leftIcon="description"
+        leftIcon="file-document-outline"
       />
 
       <CustomTextInput
@@ -266,7 +267,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         onChangeText={t => setFormData({ ...formData, status: t })}
         style={styles.input}
         mode="outlined"
-        leftIcon="info"
+        leftIcon="information-outline"
       />
 
       <View style={styles.imageSection}>
@@ -328,6 +329,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         )}
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -43,6 +43,18 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const normalizeUser = (rawUser: any): User | null => {
+  if (!rawUser || typeof rawUser !== 'object') return null;
+  const role = rawUser.role || (rawUser.is_admin ? 'admin' : 'student');
+  const isAdmin = role === 'admin' || Boolean(rawUser.is_admin) || Boolean(rawUser.isAdmin);
+  return {
+    ...rawUser,
+    role,
+    isAdmin,
+    is_admin: isAdmin,
+  } as User;
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const restoreEpoch = authMutationEpochRef.current;
     try {
       const restored = await authService.restoreSession();
-      const nextUser = (restored.user || null) as User | null;
+      const nextUser = restored.user ? normalizeUser(restored.user) : null;
       const nextIsAuthenticated = Boolean(restored.isAuthenticated);
       if (loginInFlightRef.current || restoreEpoch !== authMutationEpochRef.current || Date.now() < sessionLockRef.current) {
         console.log('[AUTH] restore session skipped: stale restore or session locked', {
@@ -83,17 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const normalizeUser = (rawUser: any): User | null => {
-    if (!rawUser || typeof rawUser !== 'object') return null;
-    const role = rawUser.role || (rawUser.is_admin ? 'admin' : 'student');
-    const isAdmin = role === 'admin' || Boolean(rawUser.is_admin) || Boolean(rawUser.isAdmin);
-    return {
-      ...rawUser,
-      role,
-      isAdmin,
-      is_admin: isAdmin,
-    } as User;
-  };
+
 
   const bootstrap = async (): Promise<void> => {
     if (bootstrapRef.current) {
