@@ -23,7 +23,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
     subject: "",
     grade: "",
     status: "draft",
-    students: "",
+    maxStudents: "",
     duration: "",
     instructorName: "",
     image: null,
@@ -43,7 +43,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
             ...course,
             price: course.price?.toString(),
             originalPrice: course.originalPrice?.toString(),
-            students: course.students?.toString(),
+            maxStudents: course.maxStudents?.toString(),
             image: null,
             pdf: null,
           });
@@ -55,7 +55,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   }, [courseId]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['image'] as any, quality: 0.7 });
     if (!result.canceled) setFormData({ ...formData, image: result.assets[0] });
   };
 
@@ -104,9 +104,9 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       return Alert.alert("Error", "Original price must be a valid positive number");
     }
     
-    // Validate students is a number if provided
-    if (formData.students && (isNaN(Number(formData.students)) || Number(formData.students) < 0)) {
-      return Alert.alert("Error", "Students count must be a valid number");
+    // Validate maxStudents is a number if provided
+    if (formData.maxStudents && (isNaN(Number(formData.maxStudents)) || Number(formData.maxStudents) < 0)) {
+      return Alert.alert("Error", "Max students count must be a valid positive number");
     }
     
     // Validate duration is a number
@@ -129,7 +129,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         subject: formData.subject.trim(),
         grade: formData.grade.trim(),
         status: formData.status || 'draft',
-        students: formData.students ? Number(formData.students) : 0,
+        maxStudents: formData.maxStudents ? Number(formData.maxStudents) : null,
         duration: Number(formData.duration),
         instructor: {
           name: formData.instructorName.trim()
@@ -153,10 +153,13 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       // Handle image upload (as thumbnail)
       if (formData.image && typeof formData.image === 'object' && 'uri' in formData.image) {
         if (formData.image.uri) {
+          let mimeType = formData.image.mimeType || formData.image.type || "image/jpeg";
+          if (mimeType === "image" || mimeType === "success") mimeType = "image/jpeg";
+          
           data.append("image", { 
             uri: formData.image.uri, 
-            type: formData.image.type || "image/jpeg", 
-            name: formData.image.name || "course.jpg" 
+            type: mimeType, 
+            name: formData.image.fileName || formData.image.name || "course.jpg" 
           } as any);
         }
       }
@@ -164,10 +167,13 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       // Handle PDF upload
       if (formData.pdf && typeof formData.pdf === 'object' && 'uri' in formData.pdf) {
         if (formData.pdf.uri) {
+          let mimeType = formData.pdf.mimeType || formData.pdf.type || "application/pdf";
+          if (mimeType === "success") mimeType = "application/pdf";
+          
           data.append("pdf", { 
             uri: formData.pdf.uri, 
-            type: formData.pdf.type || "application/pdf", 
-            name: formData.pdf.name || "course.pdf" 
+            type: mimeType, 
+            name: formData.pdf.fileName || formData.pdf.name || "course.pdf" 
           } as any);
         }
       }
@@ -278,6 +284,14 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
                 [
                   { text: 'Mathematics', onPress: () => setFormData({ ...formData, category: 'mathematics' }) },
                   { text: 'Physics', onPress: () => setFormData({ ...formData, category: 'physics' }) },
+                  { text: 'Chemistry', onPress: () => setFormData({ ...formData, category: 'chemistry' }) },
+                  { text: 'Biology', onPress: () => setFormData({ ...formData, category: 'biology' }) },
+                  { text: 'Computer Science', onPress: () => setFormData({ ...formData, category: 'computer_science' }) },
+                  { text: 'Engineering', onPress: () => setFormData({ ...formData, category: 'engineering' }) },
+                  { text: 'Science', onPress: () => setFormData({ ...formData, category: 'science' }) },
+                  { text: 'General', onPress: () => setFormData({ ...formData, category: 'general' }) },
+                  { text: 'Preparation', onPress: () => setFormData({ ...formData, category: 'preparation' }) },
+                  { text: 'Remedial', onPress: () => setFormData({ ...formData, category: 'remedial' }) },
                   { text: 'Cancel', style: 'cancel' }
                 ]
               );
@@ -353,9 +367,9 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
       </View>
 
       <CustomTextInput
-        label="Students"
-        value={formData.students}
-        onChangeText={t => setFormData({ ...formData, students: t })}
+        label="Max Students"
+        value={formData.maxStudents}
+        onChangeText={t => setFormData({ ...formData, maxStudents: t })}
         style={styles.input}
         mode="outlined"
         keyboardType="numeric"

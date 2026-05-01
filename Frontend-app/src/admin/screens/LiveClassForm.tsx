@@ -343,10 +343,13 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
       if (formData.image) {
         // If it's a new image (has uri)
         if (typeof formData.image === 'object' && 'uri' in formData.image && formData.image.uri) {
+          let mimeType = formData.image.mimeType || formData.image.type || "image/jpeg";
+          if (mimeType === "image" || mimeType === "success") mimeType = "image/jpeg";
+          
           formDataToSend.append('image', {
             uri: formData.image.uri,
-            name: formData.image.name || 'liveclass.jpg',
-            type: formData.image.type || 'image/jpeg'
+            name: formData.image.fileName || formData.image.name || 'liveclass.jpg',
+            type: mimeType
           } as any);
         } 
         // If it's an existing image URL (string)
@@ -439,7 +442,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['image'] as any,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,

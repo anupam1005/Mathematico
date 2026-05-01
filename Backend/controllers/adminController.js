@@ -631,7 +631,8 @@ const createBook = async (req, res) => {
       publisher,
       publicationYear,
       language = 'en',
-      tags = []
+      tags = [],
+      status
     } = req.body;
 
     // Validate category against enum values
@@ -729,7 +730,7 @@ const createBook = async (req, res) => {
       tags: Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim()),
       coverImage: coverImageUrl || '',
       pdfFile: pdfFileUrl || '',
-      status: 'draft', // Start as draft
+      status: ['draft', 'published', 'archived', 'pending_review'].includes(status) ? status : (status || 'draft'),
       createdBy: req.user?.id, // Use admin ID from auth middleware
       isAvailable: true
     };
@@ -1063,7 +1064,8 @@ const createCourse = async (req, res) => {
       thumbnail,
       startDate,
       endDate,
-      enrollmentDeadline
+      enrollmentDeadline,
+      maxStudents
     } = req.body;
 
     const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'preparation', 'remedial'];
@@ -1174,7 +1176,8 @@ const createCourse = async (req, res) => {
       isAvailable: true,
       startDate,
       endDate,
-      enrollmentDeadline
+      enrollmentDeadline,
+      maxStudents: maxStudents ? parseInt(maxStudents, 10) : undefined
     };
 
     const course = await CourseModel.create(courseData);

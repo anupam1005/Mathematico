@@ -126,7 +126,7 @@ class AdminService {
     try {
       let response;
       try {
-        response = await adminFetch('POST', '/dashboard');
+        response = await adminFetch('GET', '/dashboard');
       } catch (dashError) {
         // Fallback to /stats if /dashboard is missing or fails
         response = await adminFetch('GET', '/stats');

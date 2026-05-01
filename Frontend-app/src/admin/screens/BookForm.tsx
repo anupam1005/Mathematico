@@ -71,7 +71,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
   }, [bookId, isEditing]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['image'] as any, quality: 0.7 });
     if (!result.canceled) setFormData({ ...formData, coverImage: result.assets[0] });
   };
 
@@ -135,10 +135,13 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
       // Handle cover image upload
       if (formData.coverImage && typeof formData.coverImage === 'object' && 'uri' in formData.coverImage) {
         if (formData.coverImage.uri) {
+          let mimeType = formData.coverImage.mimeType || formData.coverImage.type || "image/jpeg";
+          if (mimeType === "image" || mimeType === "success") mimeType = "image/jpeg";
+          
           data.append("coverImage", { 
             uri: formData.coverImage.uri, 
-            type: formData.coverImage.type || "image/jpeg", 
-            name: formData.coverImage.name || "cover.jpg" 
+            type: mimeType, 
+            name: formData.coverImage.fileName || formData.coverImage.name || "cover.jpg" 
           } as any);
         }
       }
@@ -146,10 +149,13 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
       // Handle PDF file upload
       if (formData.pdfFile && typeof formData.pdfFile === 'object' && 'uri' in formData.pdfFile) {
         if (formData.pdfFile.uri) {
+          let mimeType = formData.pdfFile.mimeType || formData.pdfFile.type || "application/pdf";
+          if (mimeType === "success") mimeType = "application/pdf";
+          
           data.append("pdfFile", { 
             uri: formData.pdfFile.uri, 
-            type: formData.pdfFile.type || "application/pdf", 
-            name: formData.pdfFile.name || "book.pdf" 
+            type: mimeType, 
+            name: formData.pdfFile.fileName || formData.pdfFile.name || "book.pdf" 
           } as any);
         }
       }
@@ -215,14 +221,36 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         leftIcon="text-box-outline"
       />
 
-      <CustomTextInput
-        label="Category"
-        value={formData.category}
-        onChangeText={t => setFormData({ ...formData, category: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="folder"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Category</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Category',
+                'Choose the book category',
+                [
+                  { text: 'Mathematics', onPress: () => setFormData({ ...formData, category: 'mathematics' }) },
+                  { text: 'Physics', onPress: () => setFormData({ ...formData, category: 'physics' }) },
+                  { text: 'Chemistry', onPress: () => setFormData({ ...formData, category: 'chemistry' }) },
+                  { text: 'Biology', onPress: () => setFormData({ ...formData, category: 'biology' }) },
+                  { text: 'Computer Science', onPress: () => setFormData({ ...formData, category: 'computer_science' }) },
+                  { text: 'Engineering', onPress: () => setFormData({ ...formData, category: 'engineering' }) },
+                  { text: 'Science', onPress: () => setFormData({ ...formData, category: 'science' }) },
+                  { text: 'General', onPress: () => setFormData({ ...formData, category: 'general' }) },
+                  { text: 'Reference', onPress: () => setFormData({ ...formData, category: 'reference' }) },
+                  { text: 'Textbook', onPress: () => setFormData({ ...formData, category: 'textbook' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.category || 'Select Category'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <CustomTextInput
         label="Subject"
@@ -261,14 +289,30 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         leftIcon="tag"
       />
 
-      <CustomTextInput
-        label="Status"
-        value={formData.status}
-        onChangeText={t => setFormData({ ...formData, status: t })}
-        style={styles.input}
-        mode="outlined"
-        leftIcon="information-outline"
-      />
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Status</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Status',
+                'Choose the book status',
+                [
+                  { text: 'Draft', onPress: () => setFormData({ ...formData, status: 'draft' }) },
+                  { text: 'Published', onPress: () => setFormData({ ...formData, status: 'published' }) },
+                  { text: 'Archived', onPress: () => setFormData({ ...formData, status: 'archived' }) },
+                  { text: 'Pending Review', onPress: () => setFormData({ ...formData, status: 'pending_review' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.status || 'Select Status'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.imageSection}>
         <Text style={styles.sectionLabel}>Cover Image</Text>
@@ -369,6 +413,12 @@ const styles = StyleSheet.create({
     ...designSystem.typography.label,
     fontWeight: "bold",
   },
+  pickerContainer: { marginTop: 10 },
+  pickerLabel: { fontSize: 16, fontWeight: "bold", marginBottom: 5, color: designSystem.colors.textPrimary },
+  pickerWrapper: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, backgroundColor: "#f9f9f9" },
+  pickerButton: { padding: 15, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  pickerText: { fontSize: 16, color: "#333" },
+  pickerArrow: { fontSize: 12, color: "#666" },
   imageSection: {
     marginTop: designSystem.spacing.lg,
     marginBottom: designSystem.spacing.sm,
