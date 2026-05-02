@@ -138,6 +138,7 @@ router.get('/', (req, res) => {
 
 // Dashboard routes
 router.get('/dashboard', safeHandler(adminController.getDashboard, 'getDashboard'));
+router.get('/stats', safeHandler(adminController.getDashboard, 'getDashboard')); // Fallback for adminService
 
 // User management routes
 router.get('/users', safeHandler(adminController.getAllUsers, 'getAllUsers'));

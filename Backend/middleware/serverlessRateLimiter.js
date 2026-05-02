@@ -13,29 +13,29 @@ const crypto = require('crypto');
 // Rate limiter configurations
 const RATE_LIMITER_CONFIGS = {
   authLimiterSoft: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // High threshold for auth
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // Increased from 20
     message: 'Too many authentication attempts. Please try again later.',
     skipSuccessfulRequests: false,
     skipFailedRequests: false
   },
   authLimiterStrict: {
-    windowMs: 15 * 60 * 1000, // 15 minutes  
-    max: 10, // Stricter for registration
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 50, // Increased from 10
     message: 'Too many registration attempts. Please try again later.',
     skipSuccessfulRequests: false,
     skipFailedRequests: false
   },
   adminLimiterStrict: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Very strict for admin
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // Increased from 5
     message: 'Too many admin attempts. Please try again later.',
     skipSuccessfulRequests: false,
     skipFailedRequests: false
   },
   publicLimiterSoft: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Very permissive for public routes
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 500, // Increased from 100
     message: 'Too many requests. Please try again later.',
     skipSuccessfulRequests: false,
     skipFailedRequests: false

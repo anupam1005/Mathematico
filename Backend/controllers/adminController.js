@@ -96,12 +96,29 @@ const getDashboard = async (req, res) => {
         .lean() : []
     ]);
 
+    // Calculate real revenue from PaymentModel
+    let totalRevenue = 0;
+    if (PaymentModel) {
+      try {
+        const revenueData = await PaymentModel.aggregate([
+          { $match: { status: 'captured' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        if (revenueData && revenueData.length > 0) {
+          totalRevenue = Math.round((revenueData[0].total / 100) * 100) / 100; // Convert from paise to rupees
+        }
+      } catch (revError) {
+        console.error('Error calculating revenue:', revError);
+        totalRevenue = 0;
+      }
+    }
+
     const dashboardData = {
       totalUsers,
       totalBooks,
       totalCourses,
       totalLiveClasses,
-      totalRevenue: 0, // TODO: Implement revenue calculation
+      totalRevenue,
       courseStats: { 
         total: totalCourses, 
         published: publishedCourses, 
@@ -2084,6 +2101,57 @@ const getAdminInfo = async (req, res) => {
   }
 };
 
+/**
+ * Get detailed book statistics
+ */
+const getBookStats = async (req, res) => {
+  try {
+    await connectDB();
+    const [total, published, draft] = await Promise.all([
+      BookModel ? BookModel.countDocuments({}) : 0,
+      BookModel ? BookModel.countDocuments({ status: 'published' }) : 0,
+      BookModel ? BookModel.countDocuments({ status: 'draft' }) : 0
+    ]);
+    res.json({ success: true, data: { total, published, draft } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch book stats', error: error.message });
+  }
+};
+
+/**
+ * Get detailed course statistics
+ */
+const getCourseStats = async (req, res) => {
+  try {
+    await connectDB();
+    const [total, published, draft] = await Promise.all([
+      CourseModel ? CourseModel.countDocuments({}) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'published' }) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'draft' }) : 0
+    ]);
+    res.json({ success: true, data: { total, published, draft } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch course stats', error: error.message });
+  }
+};
+
+/**
+ * Get detailed live class statistics
+ */
+const getLiveClassStats = async (req, res) => {
+  try {
+    await connectDB();
+    const [total, upcoming, completed] = await Promise.all([
+      LiveClassModel ? LiveClassModel.countDocuments({}) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: 'scheduled' }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: 'completed' }) : 0
+    ]);
+    res.json({ success: true, data: { total, upcoming, completed } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch live class stats', error: error.message });
+  }
+};
+
 module.exports = {
   // Dashboard
   getDashboard,
@@ -2131,9 +2199,9 @@ module.exports = {
   uploadFile: withTimeout(uploadFile),
   
   // Statistics
-  getBookStats: (req, res) => res.json({ success: true, data: { total: 0, published: 0, draft: 0 } }),
-  getCourseStats: (req, res) => res.json({ success: true, data: { total: 0, published: 0, draft: 0 } }),
-  getLiveClassStats: (req, res) => res.json({ success: true, data: { total: 0, upcoming: 0, completed: 0 } }),
+  getBookStats,
+  getCourseStats,
+  getLiveClassStats,
   
   // Settings
   getSettings: async (req, res) => {

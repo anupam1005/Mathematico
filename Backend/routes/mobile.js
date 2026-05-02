@@ -81,20 +81,7 @@ router.get('/app-info', mobileController.getAppInfo);
 router.get('/info', mobileController.getAppInfo);
 
 // Statistics
-router.get('/stats', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      totalBooks: 0,
-      totalCourses: 0,
-      totalLiveClasses: 0,
-      totalStudents: 0,
-      activeUsers: 0
-    },
-    message: 'Statistics retrieved successfully',
-    timestamp: new Date().toISOString()
-  });
-});
+router.get('/stats', mobileController.getStats);
 
 // Settings routes
 router.get('/settings', strictAuthenticateToken, profileController.getUserSettings);

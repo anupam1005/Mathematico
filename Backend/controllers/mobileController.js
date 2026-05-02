@@ -41,11 +41,12 @@ const withTimeout = (fn, timeoutMs = 25000) => {
 };
 
 // Import models
-let BookModel, CourseModel, LiveClassModel;
+let BookModel, CourseModel, LiveClassModel, UserModel;
 try {
   BookModel = require('../models/Book');
   CourseModel = require('../models/Course');
   LiveClassModel = require('../models/LiveClass');
+  UserModel = require('../models/User');
   if (process.env.NODE_ENV !== 'production' && !global.modelsLoaded) {
     console.log('✅ Mobile models loaded successfully');
     global.modelsLoaded = true;
@@ -1666,6 +1667,47 @@ const markLessonComplete = async (req, res) => {
   }
 };
 
+/**
+ * Get aggregate statistics for mobile app
+ */
+const getStats = async (req, res) => {
+  try {
+    await connectDB();
+
+    const activeThreshold = new Date();
+    activeThreshold.setMonth(activeThreshold.getMonth() - 1);
+
+    const [totalBooks, totalCourses, totalLiveClasses, totalStudents, activeUsers] = await Promise.all([
+      BookModel ? BookModel.countDocuments({ status: 'published', isAvailable: true }) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'published', isAvailable: true }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: { $in: ['scheduled', 'live'] }, isAvailable: true }) : 0,
+      UserModel ? UserModel.countDocuments({ role: 'student' }) : 0,
+      UserModel ? UserModel.countDocuments({ role: 'student', lastLogin: { $gte: activeThreshold } }) : 0
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalBooks,
+        totalCourses,
+        totalLiveClasses,
+        totalStudents,
+        activeUsers
+      },
+      message: 'Statistics retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Mobile: Error fetching stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 module.exports = {
   getAllCourses: withTimeout(getAllCourses),
   getAllBooks: withTimeout(getAllBooks),
@@ -1679,6 +1721,7 @@ module.exports = {
   getFeaturedContent: withTimeout(getFeaturedContent),
   getCourseById: withTimeout(getCourseById),
   getCategories: withTimeout(getCategories),
+  getStats: withTimeout(getStats),
   search: withTimeout(searchContent),
   searchContent: withTimeout(searchContent),
   getAppInfo: withTimeout(getMobileInfo),

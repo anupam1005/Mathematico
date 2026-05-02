@@ -107,10 +107,10 @@ export default function HomeScreen({ navigation }: any) {
       if (statsRes && statsRes.success && statsRes.data) {
         const d = statsRes.data;
         setStats({
-          totalCourses: d.totalCourses ?? d.courses ?? 0,
-          totalBooks: d.totalBooks ?? d.books ?? 0,
-          totalLiveClasses: d.totalLiveClasses ?? d.liveClasses ?? 0,
-          totalStudents: d.totalStudents ?? d.students ?? 0,
+          totalCourses: d.totalCourses ?? 0,
+          totalBooks: d.totalBooks ?? 0,
+          totalLiveClasses: d.totalLiveClasses ?? 0,
+          totalStudents: d.totalStudents ?? 0,
         });
         return;
       }
