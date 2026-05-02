@@ -59,11 +59,13 @@ export default function AdminBooks({ navigation }: any) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial load on mount/focus
+  // Reload list whenever the screen comes into focus.
+  // Search/filter are applied client-side on already-fetched data, so they
+  // must NOT be in the dependency array (that would re-fetch on every keystroke).
   useFocusEffect(
     React.useCallback(() => {
       loadBooks();
-    }, [searchQuery, filterStatus])
+    }, [])
   );
 
   const loadBooks = async () => {

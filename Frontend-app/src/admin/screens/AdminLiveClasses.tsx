@@ -21,7 +21,6 @@ import {
 import { Icon } from '../../components/Icon';
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
-import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -44,7 +43,6 @@ interface LiveClass {
 }
 
 export default function AdminLiveClasses({ navigation }: any) {
-  const {} = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,11 +51,13 @@ export default function AdminLiveClasses({ navigation }: any) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  // Initial load on mount/focus
+  // Reload list whenever the screen comes into focus.
+  // Search/filter are applied client-side on already-fetched data, so they
+  // must NOT be in the dependency array (that would re-fetch on every keystroke).
   useFocusEffect(
     React.useCallback(() => {
       loadLiveClasses();
-    }, [searchQuery, filterStatus])
+    }, [])
   );
 
   const loadLiveClasses = async () => {

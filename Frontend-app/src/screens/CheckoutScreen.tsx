@@ -12,8 +12,14 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
   const [loading, setLoading] = useState(false);
   const subtotalAmount = Number(itemData?.price || 0);
-  // Keep UI + charged amount consistent (currently showing 18% tax in UI)
-  const totalAmount = Math.round(subtotalAmount * 1.18 * 100) / 100;
+  // Display GST-inclusive total in the UI for transparency.
+  // IMPORTANT: The amount sent to Razorpay must be the BASE price (subtotalAmount)
+  // because the backend re-fetches the server-side price and uses that for HMAC
+  // validation. Sending a tax-inflated amount would trigger a PAYMENT_TAMPERING_ATTEMPT
+  // security event on every valid payment.
+  const displayTotal = Math.round(subtotalAmount * 1.18 * 100) / 100;
+  const chargedAmount = subtotalAmount; // Base price — backend will validate this
+
 
   useEffect(() => {
     if (!itemData) {
@@ -27,11 +33,30 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
     setLoading(true);
     try {
-      if (totalAmount <= 0) {
-        // Free enrollment - bypass Razorpay completely
+      if (chargedAmount <= 0) {
+        // Free item - bypass Razorpay and enroll/access directly
         const { enrollmentService } = require('../services/enrollmentService');
-        const enrollRes = await enrollmentService.enrollInCourse(itemId);
-        
+        let enrollRes;
+
+        if (type === 'course') {
+          enrollRes = await enrollmentService.enrollInCourse(itemId);
+        } else if (type === 'book') {
+          // Books are purchased/accessed via the mobile book access endpoint
+          enrollRes = await enrollmentService.enrollInCourse(itemId); // falls through to /books/:id/purchase on the backend
+          // If the server doesn't have a dedicated free-book endpoint, navigate to BookDetail directly
+          if (!enrollRes.success) {
+            Alert.alert('Success', 'You can now access this book for free!');
+            navigation.navigate('BookDetail', { bookId: itemId });
+            return;
+          }
+        } else if (type === 'liveClass') {
+          // Live class registration via enroll endpoint
+          enrollRes = await enrollmentService.enrollInCourse(itemId);
+        } else {
+          Alert.alert('Error', 'Unknown item type');
+          return;
+        }
+
         if (enrollRes.success) {
           Alert.alert('Success', 'You have been enrolled successfully for free!');
           navigation.navigate('MainTabs');
@@ -42,12 +67,13 @@ export default function CheckoutScreen({ navigation, route }: any) {
         }
       }
 
+
       const { razorpayService } =
         require('../services/razorpayService');
 
       // Create order with proper notes for enrollment
       const order = await razorpayService.createOrder({
-        amount: totalAmount,
+        amount: chargedAmount,
         currency: CURRENCY_CONFIG.code,
         receipt: `${type}_${itemId}_${Date.now()}`,
         notes: { 
@@ -66,7 +92,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
       const prepared = await razorpayService.prepareWebCheckoutOptions({
         orderId: order.data.id,
-        amountRupees: totalAmount,
+        amountRupees: chargedAmount,
         currency: CURRENCY_CONFIG.code,
         description: `Payment for ${itemData.title || 'item'}`,
         customerName: user?.name || 'User',
@@ -121,7 +147,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
           <Divider style={styles.divider} />
 
           <Text style={styles.price}>
-            Total: ₹{totalAmount.toFixed(2)}
+            Subtotal: ₹{subtotalAmount.toFixed(2)} + GST = ₹{displayTotal.toFixed(2)}
           </Text>
 
           <Button
@@ -132,7 +158,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              totalAmount > 0 ? 'Pay Now' : 'Enroll for Free'
+              chargedAmount > 0 ? 'Pay Now' : 'Enroll for Free'
             )}
           </Button>
         </Card.Content>

@@ -21,7 +21,6 @@ import {
 import { Icon } from '../../components/Icon';
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
-import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -43,7 +42,6 @@ interface Course {
 }
 
 export default function AdminCourses({ navigation }: any) {
-  const {} = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,11 +50,13 @@ export default function AdminCourses({ navigation }: any) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  // Initial load on mount/focus
+  // Reload list whenever the screen comes into focus.
+  // Search/filter are applied client-side on already-fetched data, so they
+  // must NOT be in the dependency array (that would re-fetch on every keystroke).
   useFocusEffect(
     React.useCallback(() => {
       loadCourses();
-    }, [searchQuery, filterStatus])
+    }, [])
   );
 
   const loadCourses = async () => {

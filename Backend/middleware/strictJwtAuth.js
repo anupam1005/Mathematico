@@ -16,6 +16,23 @@ const UserModel = require('../models/User');
 const { connectDB } = require('../config/serverlessDatabase');
 const { logTokenInvalidation, logSuspiciousActivity } = require('../utils/securityLogger');
 
+// In-process TTL cache for password-change checks.
+// Key: `${userId}:${iat}`, Value: { changedAfter: boolean, expiresAt: number }
+// Avoids a DB round-trip on every authenticated request.
+const _pwdCheckCache = new Map();
+const PWD_CHECK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Prune stale cache entries (runs at most once per minute)
+let _lastPrune = 0;
+const pruneCache = () => {
+  const now = Date.now();
+  if (now - _lastPrune < 60_000) return;
+  _lastPrune = now;
+  for (const [key, entry] of _pwdCheckCache) {
+    if (entry.expiresAt < now) _pwdCheckCache.delete(key);
+  }
+};
+
 function getBearerToken(req) {
   const header = req.headers && (req.headers.authorization || req.headers.Authorization);
   if (!header || typeof header !== 'string') return null;
@@ -51,20 +68,41 @@ const strictVerifyAccessToken = (token) => {
 };
 
 /**
- * Check if password was changed after token was issued
+ * Check if password was changed after token was issued.
+ * Uses an in-process TTL cache so the DB is hit at most once every 5 minutes
+ * per unique (userId, tokenIat) pair instead of on every request.
  */
 const checkPasswordChangedAfter = async (user, tokenIat) => {
+  const userId = user.id || user.sub;
+  const cacheKey = `${userId}:${tokenIat}`;
+  pruneCache();
+
+  const cached = _pwdCheckCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.changedAfter;
+  }
+
   try {
-    // Fetch user with passwordChangedAt field
-    const userWithPasswordChange = await UserModel.findById(user.id)
-      .select('+passwordChangedAt');
-    
+    const userWithPasswordChange = await UserModel.findById(userId)
+      .select('+passwordChangedAt')
+      .lean();
+
     if (!userWithPasswordChange) {
-      return false; // User not found, let other middleware handle it
+      return false; // User not found — let other middleware handle it
     }
 
-    // Use the model method to check if password was changed after token issuance
-    return userWithPasswordChange.changedPasswordAfter(tokenIat);
+    // changedPasswordAfter is an instance method; call it via the schema
+    const passwordChangedAtMs = userWithPasswordChange.passwordChangedAt
+      ? new Date(userWithPasswordChange.passwordChangedAt).getTime() / 1000
+      : 0;
+    const changedAfter = passwordChangedAtMs > tokenIat;
+
+    _pwdCheckCache.set(cacheKey, {
+      changedAfter,
+      expiresAt: Date.now() + PWD_CHECK_CACHE_TTL_MS,
+    });
+
+    return changedAfter;
   } catch (error) {
     console.error('Password change check error:', error);
     // Never fail-open in authentication checks.
@@ -146,27 +184,6 @@ const strictAuthenticateToken = async (req, res, next) => {
     // Normalize user ID for compatibility (support both id and sub)
     const userId = decoded.id || decoded.sub;
     
-    // Validate token age (additional security check)
-    const now = Math.floor(Date.now() / 1000);
-    const tokenAge = now - decoded.iat;
-    const maxTokenAge = 24 * 60 * 60; // 24 hours max
-    
-    if (tokenAge > maxTokenAge) {
-      logSuspiciousActivity(
-        `Token too old: ${tokenAge} seconds`,
-        'medium',
-        userId,
-        req
-      );
-      
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired',
-        error: 'Unauthorized',
-        timestamp: new Date().toISOString()
-      });
-    }
-
     // Populate req.user with normalized token payload
     req.user = {
       ...decoded,

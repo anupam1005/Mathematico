@@ -99,30 +99,37 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadStats = async () => {
     try {
+      // Use the mobileService stats endpoint which returns aggregate counts directly.
+      // This avoids fetching up to 3×1000 records just to read .length.
+      const { mobileService } = await import('../services/mobileService');
+      const statsRes = await mobileService.getStats().catch(() => null);
+
+      if (statsRes && statsRes.success && statsRes.data) {
+        const d = statsRes.data;
+        setStats({
+          totalCourses: d.totalCourses ?? d.courses ?? 0,
+          totalBooks: d.totalBooks ?? d.books ?? 0,
+          totalLiveClasses: d.totalLiveClasses ?? d.liveClasses ?? 0,
+          totalStudents: d.totalStudents ?? d.students ?? 0,
+        });
+        return;
+      }
+
+      // Fallback: fetch first page only and use pagination total if available
       const [courses, books, liveClasses] = await Promise.all([
-        courseService.getCourses(1, 1000).catch((error) => {
-          safeCatch('HomeScreen.loadStats.courses')(error);
-          return { data: [] };
-        }),
-        bookService.getBooks(1, 1000).catch((error) => {
-          safeCatch('HomeScreen.loadStats.books')(error);
-          return { data: [] };
-        }),
-        liveClassService.getLiveClasses(1, 1000).catch((error) => {
-          safeCatch('HomeScreen.loadStats.liveClasses')(error);
-          return { data: [] };
-        }),
+        courseService.getCourses(1, 1).catch(() => ({ data: [], total: 0 })),
+        bookService.getBooks(1, 1).catch(() => ({ data: [], total: 0 })),
+        liveClassService.getLiveClasses(1, 1).catch(() => ({ data: [], total: 0 })),
       ]);
 
       setStats({
-        totalCourses: courses.data ? courses.data.length : 0,
-        totalBooks: books.data ? books.data.length : 0,
-        totalLiveClasses: liveClasses.data ? liveClasses.data.length : 0,
+        totalCourses: (courses as any).total ?? (courses as any).data?.length ?? 0,
+        totalBooks: (books as any).total ?? (books as any).data?.length ?? 0,
+        totalLiveClasses: (liveClasses as any).total ?? (liveClasses as any).data?.length ?? 0,
         totalStudents: 0,
       });
     } catch (error) {
       safeCatch('HomeScreen.loadStats')(error);
-      // Don't set empty data on error
     }
   };
 

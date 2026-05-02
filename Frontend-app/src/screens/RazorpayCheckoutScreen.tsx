@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -104,7 +104,15 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
   const { webOptions, itemContext } = route.params;
   const webViewRef = useRef<WebView>(null);
   const injectedRef = useRef(false);
+  const cdnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(true);
+
+  // Clear CDN timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (cdnTimeoutRef.current) clearTimeout(cdnTimeoutRef.current);
+    };
+  }, []);
 
   const runCheckout = useCallback(() => {
     if (injectedRef.current) return;
@@ -117,8 +125,28 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
   }, [webOptions]);
 
   const onLoadEnd = useCallback(() => {
+    // Cancel CDN timeout — page loaded successfully
+    if (cdnTimeoutRef.current) {
+      clearTimeout(cdnTimeoutRef.current);
+      cdnTimeoutRef.current = null;
+    }
     setTimeout(runCheckout, Platform.OS === 'android' ? 150 : 50);
   }, [runCheckout]);
+
+  // Start a timeout as soon as the WebView mounts. If the page hasn't fired
+  // onLoadEnd within 15s (Razorpay CDN unreachable), show an error.
+  const onLoadStart = useCallback(() => {
+    if (cdnTimeoutRef.current) clearTimeout(cdnTimeoutRef.current);
+    cdnTimeoutRef.current = setTimeout(() => {
+      if (!injectedRef.current) {
+        Alert.alert(
+          'Connection error',
+          'Could not load the payment page. Please check your internet connection and try again.',
+          [{ text: 'Go Back', onPress: () => navigation.goBack() }]
+        );
+      }
+    }, 15000);
+  }, [navigation]);
 
   const handleMessage = async (event: WebViewMessageEvent) => {
     let parsed: {
@@ -226,6 +254,7 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
       <WebView
         ref={webViewRef}
         source={{ html: CHECKOUT_HTML, baseUrl: 'https://mathematico.com' }}
+        onLoadStart={onLoadStart}
         onLoadEnd={onLoadEnd}
         onMessage={handleMessage}
         javaScriptEnabled

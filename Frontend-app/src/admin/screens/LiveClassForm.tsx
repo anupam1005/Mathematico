@@ -146,7 +146,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         setIsLoading(false);
       }
     }
-  }, [liveClassId, adminService]);
+  }, [liveClassId]);
 
   // Pre-fill form from route params for edit mode
   useEffect(() => {
