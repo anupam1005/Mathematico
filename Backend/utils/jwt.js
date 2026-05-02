@@ -8,6 +8,7 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // Lo
 function getJwtSecrets() {
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
   const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // Core validation for all environments
   if (!jwtSecret) {
