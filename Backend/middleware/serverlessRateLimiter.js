@@ -1,15 +1,11 @@
 /**
- * SERVERLESS-SAFE RATE LIMITER - FINAL VERSION
- * 
- * GUARANTEES:
- * - NEVER throws exceptions
- * - NEVER ends request lifecycle 
- * - ALWAYS calls next()
- * - NEVER crashes middleware chain
- * - ALWAYS returns JSON responses
- * 
- * Designed for React Native mobile clients on Vercel serverless
- * Prevents "XHR request failed" at all costs
+ * rateLimiter.js — In-memory rate limiter middleware
+ *
+ * Guarantees:
+ * - Never throws exceptions
+ * - Never ends request lifecycle unexpectedly
+ * - Always calls next() on non-limited requests
+ * - Always returns JSON responses on 429
  */
 
 const crypto = require('crypto');
@@ -46,17 +42,14 @@ const RATE_LIMITER_CONFIGS = {
   }
 };
 
-// In-memory store for serverless environments
-// Note: This resets on cold start, but prevents XHR failures
+// In-memory store (persists for the lifetime of the process on Railway/Render)
 const memoryStore = new Map();
 
 /**
- * Safe IP resolution utility for mobile networks and serverless
- * Priority order: x-forwarded-for → socket.remoteAddress → connection.remoteAddress → req.ip → fallback
+ * Safe IP resolution — supports proxies (Railway, Render, Fly.io all set X-Forwarded-For)
  */
 const getClientIp = (req) => {
   try {
-    // Try X-Forwarded-For header first (Vercel sets this)
     const forwardedFor = req.headers?.['x-forwarded-for'];
     if (forwardedFor && typeof forwardedFor === 'string') {
       const ips = forwardedFor.split(',').map(ip => ip.trim());
@@ -195,8 +188,7 @@ class MemoryRateLimitStore {
 const rateLimitStore = new MemoryRateLimitStore();
 
 /**
- * Serverless-safe rate limiter middleware
- * NEVER throws, ALWAYS calls next(), ALWAYS returns JSON
+ * Rate limiter middleware factory
  */
 const createServerlessRateLimiter = (config) => {
   return async (req, res, next) => {
@@ -299,7 +291,7 @@ const rateLimiterHealthCheck = () => {
   try {
     return {
       status: 'healthy',
-      message: 'Serverless rate limiter is operational',
+      message: 'Rate limiter is operational',
       type: 'memory_store',
       entries: rateLimitStore.store.size,
       timestamp: new Date().toISOString()

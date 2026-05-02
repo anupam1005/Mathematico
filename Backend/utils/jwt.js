@@ -9,13 +9,9 @@ function getJwtSecrets() {
   const jwtSecret = (process.env.JWT_SECRET || '').trim();
   const jwtRefreshSecret = (process.env.JWT_REFRESH_SECRET || '').trim();
 
-  // Vercel-optimized validation
-  const isVercel = process.env.VERCEL === '1';
-  const isProduction = process.env.NODE_ENV === 'production';
-
   // Core validation for all environments
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET environment variable is required. Please configure it in your Vercel dashboard.');
+    throw new Error('JWT_SECRET environment variable is required. Set it in your Railway / Render environment variables.');
   }
 
   // Production-specific security checks
@@ -49,7 +45,6 @@ function getJwtSecrets() {
   // Log successful validation (without exposing secrets)
   console.log('[JWT] JWT configuration validated successfully', {
     environment: process.env.NODE_ENV,
-    isVercel,
     hasAccessSecret: !!jwtSecret,
     hasRefreshSecret: !!jwtRefreshSecret,
     accessSecretLength: jwtSecret.length,

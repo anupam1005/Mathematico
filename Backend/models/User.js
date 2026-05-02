@@ -583,6 +583,6 @@ userSchema.statics.findActiveUsers = function() {
 };
 
 // Serverless-safe model export pattern
-// In serverless environments (Vercel), models may persist across invocations
+// Models are cached on the module level to prevent re-registration across hot reloads
 // This pattern prevents "Cannot overwrite model User" errors
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);

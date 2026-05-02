@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Use memory storage for serverless mode (Vercel)
+// Use memory storage — files are uploaded to Cloudinary immediately after receipt
 const storage = multer.memoryStorage();
 
 const getMaxUploadBytes = () => {
@@ -108,8 +108,8 @@ router.get('/info', (req, res) => {
     },
     note: 'Use your registered admin account credentials to login',
     curlExample: {
-      login: `curl -X POST ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://api.mathematico.in'}/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'`,
-      access: `curl -X GET ${process.env.BACKEND_URL || process.env.VERCEL_URL || 'https://api.mathematico.in'}/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"`
+      login: `curl -X POST ${process.env.BACKEND_URL || 'https://api.mathematico.in'}/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'`,
+      access: `curl -X GET ${process.env.BACKEND_URL || 'https://api.mathematico.in'}/api/v1/admin -H "Authorization: Bearer YOUR_TOKEN_HERE"`
     }
   });
 });

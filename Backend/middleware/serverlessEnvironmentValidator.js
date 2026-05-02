@@ -1,14 +1,12 @@
 /**
- * SERVERLESS ENVIRONMENT VALIDATOR - MOBILE-FIRST FINAL VERSION
- * 
- * RULES:
+ * environmentValidator.js — Startup environment validation middleware
+ *
+ * Rules:
  * - FRONTEND_URL required ONLY if ENABLE_WEB_CLIENT=true
  * - MOBILE_DEEP_LINK_URL required if password reset enabled
- * - Auth routes bypass env middleware (NEVER block login/register)
+ * - Auth routes bypass env middleware (never block login/register)
  * - Health route bypasses env middleware
- * - Warn → don't throw → for optional services
- * - Only throw for: MONGO_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
- * - Never causes "XHR request failed"
+ * - Only hard-fail for: MONGO_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
  */
 
 // Cache validation results to avoid repeated checks

@@ -1,81 +1,87 @@
+/**
+ * database.js — Persistent MongoDB connection for Railway / Render / Fly.io
+ *
+ * Differences from the old serverless version:
+ * - Higher pool size (10 → 20) because connections are truly persistent
+ * - Reconnect events instead of per-request reconnect logic
+ * - bufferCommands = true so queries queue while reconnecting (safe on persistent server)
+ * - No cold-start workarounds needed
+ */
+
 const mongoose = require('mongoose');
 
-const CONNECTION_TIMEOUT_MS = 45000;
-
 const mongoOptions = {
-  bufferCommands: false,
-  maxPoolSize: 10,
-  minPoolSize: 0,
-  serverSelectionTimeoutMS: 15000,
+  maxPoolSize: 20,         // Larger pool — connections are reused across all requests
+  minPoolSize: 5,          // Keep 5 warm connections at all times
+  serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
   connectTimeoutMS: 15000,
-  maxIdleTimeMS: 30000,
+  heartbeatFrequencyMS: 10000, // Detect dropped connections faster
   retryWrites: true,
   retryReads: true,
-  family: 4 // Force IPv4 to prevent Vercel Node 20 timeouts
+  family: 4               // Force IPv4
 };
 
-mongoose.set('bufferCommands', false);
+let _connectionPromise = null;
+let _lastError = null;
+let _lastConnectedAt = null;
 
-if (!global.__mongooseCache) {
-  global.__mongooseCache = {
-    conn: null,
-    promise: null,
-    lastError: null,
-    lastConnectedAt: null
-  };
-}
+// ─── Connection events ────────────────────────────────────────────────────────
 
-const withTimeout = (promise, timeoutMs, label) => {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`${label} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-    })
-  ]);
-};
+mongoose.connection.on('connected', () => {
+  _lastConnectedAt = new Date().toISOString();
+  _lastError = null;
+  console.log(`[DB] MongoDB connected — ${mongoose.connection.host}/${mongoose.connection.name}`);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[DB] MongoDB disconnected — will auto-reconnect');
+});
+
+mongoose.connection.on('reconnected', () => {
+  _lastConnectedAt = new Date().toISOString();
+  console.log('[DB] MongoDB reconnected');
+});
+
+mongoose.connection.on('error', (err) => {
+  _lastError = err;
+  console.error('[DB] MongoDB error:', err.message);
+});
+
+// ─── Connect ──────────────────────────────────────────────────────────────────
 
 const connectDB = async () => {
-  if (global.__mongooseCache.conn && mongoose.connection.readyState === 1) {
-    return global.__mongooseCache.conn;
+  // Already connected — return immediately
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
   }
 
   if (!process.env.MONGO_URI) {
     throw new Error('MONGO_URI environment variable is required');
   }
 
-  if (!global.__mongooseCache.promise) {
-    global.__mongooseCache.promise = (async () => {
-      try {
-        const mongooseInstance = await withTimeout(
-          mongoose.connect(process.env.MONGO_URI, mongoOptions),
-          CONNECTION_TIMEOUT_MS,
-          'MongoDB connection'
-        );
-
-        global.__mongooseCache.conn = mongooseInstance.connection;
-        global.__mongooseCache.lastConnectedAt = new Date().toISOString();
-        global.__mongooseCache.lastError = null;
-        return global.__mongooseCache.conn;
-      } catch (error) {
-        global.__mongooseCache.conn = null;
-        global.__mongooseCache.lastError = error;
-        throw error;
-      } finally {
-        global.__mongooseCache.promise = null;
-      }
-    })();
+  // If a connection is in progress, wait for it
+  if (_connectionPromise) {
+    return _connectionPromise;
   }
 
-  return withTimeout(global.__mongooseCache.promise, CONNECTION_TIMEOUT_MS, 'MongoDB handshake');
+  _connectionPromise = mongoose
+    .connect(process.env.MONGO_URI, mongoOptions)
+    .then((m) => {
+      _connectionPromise = null;
+      return m.connection;
+    })
+    .catch((err) => {
+      _lastError = err;
+      _connectionPromise = null;
+      throw err;
+    });
+
+  return _connectionPromise;
 };
 
-/**
- * Serverless-safe health check - reflects real DB state
- * NEVER forces new connections
- */
+// ─── Health check ─────────────────────────────────────────────────────────────
+
 const performHealthCheck = async () => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -86,27 +92,26 @@ const performHealthCheck = async () => {
         database: null,
         ping: 'no_connection',
         error: 'No active database connection',
-        lastConnectionError: global.__mongooseCache.lastError?.message || null
+        lastConnectionError: _lastError?.message || null
       };
     }
 
-    const connection = mongoose.connection;
     let pingResult = 'failed';
     try {
-      const pingResponse = await connection.db.admin().ping();
-      pingResult = pingResponse ? 'success' : 'failed';
+      const pong = await mongoose.connection.db.admin().ping();
+      pingResult = pong ? 'success' : 'failed';
     } catch (_) {
       pingResult = 'failed';
     }
 
     return {
       connected: true,
-      readyState: connection.readyState,
-      host: connection.host,
-      database: connection.name,
+      readyState: mongoose.connection.readyState,
+      host: mongoose.connection.host,
+      database: mongoose.connection.name,
       ping: pingResult,
-      lastConnectedAt: global.__mongooseCache.lastConnectedAt,
-      lastConnectionError: global.__mongooseCache.lastError?.message || null
+      lastConnectedAt: _lastConnectedAt,
+      lastConnectionError: _lastError?.message || null
     };
   } catch (healthError) {
     return {
@@ -116,66 +121,62 @@ const performHealthCheck = async () => {
       database: mongoose.connection.name,
       ping: 'failed',
       error: healthError.message,
-      lastConnectionError: global.__mongooseCache.lastError?.message || null
+      lastConnectionError: _lastError?.message || null
     };
   }
 };
 
-/**
- * Graceful shutdown utility
- */
+// ─── Graceful shutdown ────────────────────────────────────────────────────────
+
 const closeConnection = async () => {
   try {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.connection.close();
-      global.__mongooseCache.conn = null;
-      global.__mongooseCache.promise = null;
+      console.log('[DB] MongoDB connection closed gracefully');
     }
   } catch (error) {
-    console.error('MONGO_CLOSE_ERROR', { error: error.message });
+    console.error('[DB] Error closing MongoDB connection:', error.message);
   }
 };
 
-/**
- * Connection status utility
- */
+// Hook into process termination so Railway can do a clean shutdown
+process.on('SIGINT', async () => {
+  await closeConnection();
+  process.exit(0);
+});
+process.on('SIGTERM', async () => {
+  await closeConnection();
+  process.exit(0);
+});
+
+// ─── Status utility ───────────────────────────────────────────────────────────
+
 const getConnectionStatus = () => {
-  const states = {
-    0: 'disconnected',
-    1: 'connected', 
-    2: 'connecting',
-    3: 'disconnecting'
-  };
-  
+  const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
   return {
     readyState: mongoose.connection.readyState,
-    state: states[mongoose.connection.readyState],
+    state: states[mongoose.connection.readyState] || 'unknown',
     host: mongoose.connection.host,
     database: mongoose.connection.name,
-    lastConnectedAt: global.__mongooseCache.lastConnectedAt,
-    lastConnectionError: global.__mongooseCache.lastError?.message || null
+    lastConnectedAt: _lastConnectedAt,
+    lastConnectionError: _lastError?.message || null
   };
 };
 
-/**
- * Database health check for monitoring
- */
 const databaseHealthCheck = async () => {
-  const status = getConnectionStatus();
   const health = await performHealthCheck();
-  
   return {
     status: health.connected ? 'healthy' : 'unhealthy',
     message: health.connected ? 'Database is operational' : 'Database is not operational',
-    connection: status,
+    connection: getConnectionStatus(),
     health,
     timestamp: new Date().toISOString()
   };
 };
 
-module.exports = { 
+module.exports = {
   connectDB,
-  performHealthCheck, 
+  performHealthCheck,
   closeConnection,
   getConnectionStatus,
   databaseHealthCheck

@@ -1,14 +1,13 @@
 /**
- * SERVERLESS ERROR GUARD - GLOBAL ERROR BOUNDARY
- * 
- * PURPOSE:
- * - Catches ANY async middleware failure
- * - Prevents "XHR request failed" in React Native
- * - Guarantees JSON response for ALL errors
+ * errorGuard.js — Global error boundary middleware
+ *
+ * Purpose:
+ * - Catches any async middleware failure
+ * - Guarantees a JSON response for all errors
  * - Never hangs requests
  * - Never returns HTML or empty responses
- * 
- * POSITION: Before all business routes, after rate limiters
+ *
+ * Position: After all business routes
  */
 
 /**
@@ -234,7 +233,7 @@ const sizeGuard = (maxSizeBytes = 10 * 1024 * 1024) => { // 10MB default
 const errorGuardHealthCheck = () => {
   return {
     status: 'healthy',
-    message: 'Serverless error guard is operational',
+    message: 'Error guard is operational',
     features: {
       errorBoundary: true,
       timeoutGuard: true,

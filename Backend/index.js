@@ -93,7 +93,7 @@ app.use('/api/v1', ensureDatabase);
 // CRITICAL: Webhook route must use express.raw() BEFORE express.json() is registered.
 // Razorpay sends a raw JSON body and we must verify the HMAC signature against the
 // exact bytes received. Once express.json() parses the body, the raw Buffer is lost
-// and signature verification will always fail on Vercel serverless.
+// and signature verification will always fail on a platform that pre-parses the body.
 app.use('/api/v1/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook'));
 
 // 4) Environment validator
@@ -154,12 +154,31 @@ process.on('unhandledRejection', (reason) => {
 
 process.on('uncaughtException', (error) => {
   console.error('[UNCAUGHT_EXCEPTION]', error);
+  // Give the logger time to flush then exit — the process manager will restart us
+  setTimeout(() => process.exit(1), 1000);
 });
 
+// Connect to DB eagerly on boot (not per-request like in serverless)
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().catch((error) => {
-    console.error('[BOOT] Initial DB connect failed:', error.message);
-  });
+  connectDB()
+    .then(() => console.log('[BOOT] MongoDB connected successfully'))
+    .catch((error) => {
+      console.error('[BOOT] Initial DB connect failed:', error.message);
+      // Don't crash — serverlessDatabase will retry on each request
+    });
 }
 
-module.exports = app;
+// ─── Server startup ──────────────────────────────────────────────────────────
+// On persistent servers (Railway, Render, Fly.io): app.listen() starts an HTTP server
+// On Railway / Render / Fly.io: app.listen() starts a persistent HTTP server
+if (process.env.NODE_ENV === 'test') {
+  // Export for test runners
+  module.exports = app;
+} else {
+  const PORT = parseInt(process.env.PORT || '3000', 10);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[BOOT] Server listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+  });
+  // Also export for any require()-based usage
+  module.exports = app;
+}

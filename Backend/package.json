@@ -1,12 +1,11 @@
 {
   "name": "mathematico-backend",
   "version": "2.0.1",
-  "description": "Backend API for Mathematico — optimized for Android and Web clients.",
+  "description": "Backend API for Mathematico — Node.js/Express, hosted on Railway.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "vercel-build": "echo '✅ Build complete'",
     "postinstall": "echo '📦 Dependencies installed successfully'"
   },
   "dependencies": {
