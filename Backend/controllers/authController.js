@@ -90,7 +90,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_ENV === 'true') {
   console.log('  ADMIN_PASSWORD configured:', Boolean(ADMIN_PASSWORD));
   console.log('  ADMIN_CONFIGURED:', ADMIN_CONFIGURED);
   console.log('  ADMIN_EMAIL length:', ADMIN_EMAIL.length);
-  console.log('  ADMIN_PASSWORD length:', ADMIN_PASSWORD.length);
+  console.log('  ADMIN_PASSWORD length:', ADMIN_PASSWORD ? ADMIN_PASSWORD.length : 'NOT SET');
 }
 
 /**
@@ -628,9 +628,11 @@ const forgotPassword = async (req, res) => {
 
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
+      // SECURITY: Always return success to prevent email enumeration attacks
+      return res.json({
+        success: true,
+        message: 'If an account with this email exists, a password reset link has been sent.',
+        timestamp: new Date().toISOString()
       });
     }
 
@@ -651,7 +653,12 @@ const forgotPassword = async (req, res) => {
       resetUrl = `${mobileDeepLinkUrl}?action=reset-password&token=${resetToken}`;
     } else {
       // No fallback - strict production behavior
-      throw new Error('Password reset requires either FRONTEND_URL or MOBILE_DEEP_LINK_URL environment variables');
+      console.error('[AUTH] Password reset URL cannot be constructed — FRONTEND_URL and MOBILE_DEEP_LINK_URL both missing');
+      return res.status(503).json({
+        success: false,
+        message: 'Password reset is not available at this time. Please contact support.',
+        timestamp: new Date().toISOString()
+      });
     }
 
     try {

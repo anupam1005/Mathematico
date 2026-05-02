@@ -55,7 +55,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
   }, [courseId]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['image'] as any, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (!result.canceled) setFormData({ ...formData, image: result.assets[0] });
   };
 

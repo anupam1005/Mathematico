@@ -28,7 +28,6 @@ export default {
       package: 'com.anupam1505.mathematicoapp',
       versionCode: 89,
       permissions: ['INTERNET'],
-      usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff'
@@ -38,6 +37,6 @@ export default {
         descriptors: ['Educational', 'Learning']
       }
     },
-    plugins: ['expo-secure-store', 'expo-font']
+    plugins: ['expo-secure-store', 'expo-font', 'expo-image-picker', 'expo-document-picker']
   }
 };

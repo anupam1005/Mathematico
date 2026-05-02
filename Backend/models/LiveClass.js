@@ -678,4 +678,4 @@ liveClassSchema.statics.searchClasses = function(query, filters = {}) {
   return this.find(searchQuery).sort({ score: { $meta: 'textScore' } });
 };
 
-module.exports = mongoose.model('LiveClass', liveClassSchema);
+module.exports = mongoose.models.LiveClass || mongoose.model('LiveClass', liveClassSchema);

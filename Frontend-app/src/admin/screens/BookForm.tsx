@@ -71,7 +71,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
   }, [bookId, isEditing]);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['image'] as any, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (!result.canceled) setFormData({ ...formData, coverImage: result.assets[0] });
   };
 

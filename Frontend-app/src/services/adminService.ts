@@ -4,6 +4,8 @@ import authService from './authService';
 import { API_PATHS } from '../constants/apiPaths';
 import { withBasePath } from './apiClient';
 import { createSafeError } from '../utils/safeError';
+import { tokenStorage } from './tokenStorage';
+import { API_BASE_URL } from '../config';
 
 /* ------------------------------------------------------------------ */
 /* Admin network layer                                                */
@@ -42,8 +44,31 @@ const adminFetch = async (method: string, path: string, data?: any): Promise<any
 
     const upper = String(method || '').toUpperCase();
 
-    // Axios will naturally set boundaries for FormData if we DO NOT explicitly set Content-Type.
-    // The refreshInterceptor will also skip setting application/json for FormData.
+    // Use native fetch for FormData to avoid Axios hanging bugs in React Native
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    if (isFormData) {
+      await tokenStorage.hydrate();
+      const token = await tokenStorage.getAccessToken();
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      const fullUrl = `${API_BASE_URL}${API_PATHS.admin}${normalizedPath}`;
+      
+      console.log('ADMIN_FETCH_FORM_DATA:', fullUrl);
+      const response = await fetch(fullUrl, {
+        method: upper,
+        body: data,
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.message || responseData.error || 'Request failed');
+      }
+      return responseData;
+    }
+
     const config = undefined;
 
     if (upper === 'GET') return (await adminApi.get(path, config)).data;

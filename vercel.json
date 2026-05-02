@@ -8,5 +8,8 @@
       "memory": 2048
     }
   },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/Backend/index.js" }
+  ],
   "regions": ["iad1"]
-}
+}

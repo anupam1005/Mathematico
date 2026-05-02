@@ -21,7 +21,6 @@ import {
 import { Icon } from '../../components/Icon';
 import { adminService } from '../../services/adminService';
 import { getStatusColor, getLevelColor } from '../../utils/colorHelpers';
-import { useAuth } from '../../contexts/AuthContext';
 import { designSystem, layoutStyles, textStyles } from '../../styles/designSystem';
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -50,7 +49,6 @@ interface Book {
 }
 
 export default function AdminBooks({ navigation }: any) {
-  const {} = useAuth();
   const nav = useNavigation();
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -90,6 +90,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 3) DB connection middleware
 app.use('/api/v1', ensureDatabase);
 
+// CRITICAL: Webhook route must use express.raw() BEFORE express.json() is registered.
+// Razorpay sends a raw JSON body and we must verify the HMAC signature against the
+// exact bytes received. Once express.json() parses the body, the raw Buffer is lost
+// and signature verification will always fail on Vercel serverless.
+app.use('/api/v1/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook'));
+
 // 4) Environment validator
 app.use(serverlessEnvironmentValidator);
 
@@ -118,7 +124,7 @@ app.use('/api/v1/student', require('./routes/student'));
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/v1/payments', require('./routes/payment'));
 app.use('/api/v1/secure-pdf', require('./routes/securePdf'));
-app.use('/api/v1/webhook', require('./routes/webhook'));
+// Note: /api/v1/webhook is registered earlier with express.raw() before express.json()
 
 app.get('/api/v1', (req, res) => {
   return res.status(200).json({

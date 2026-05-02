@@ -143,6 +143,6 @@ PaymentSchema.pre('save', function(next) {
   next();
 });
 
-const Payment = mongoose.model('Payment', PaymentSchema);
+const Payment = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);
 
 module.exports = Payment;
