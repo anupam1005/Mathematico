@@ -64,7 +64,14 @@ const adminFetch = async (method: string, path: string, data?: any): Promise<any
       
       const responseData = await response.json();
       if (!response.ok) {
-        throw new Error(responseData.message || responseData.error || 'Request failed');
+        // Create an error that includes the detailed backend error message if available
+        const errorMsg = responseData.message || responseData.error || 'Request failed';
+        const technicalError = responseData.error || responseData.message || '';
+        const combinedMessage = technicalError && technicalError !== errorMsg 
+          ? `${errorMsg}: ${technicalError}` 
+          : errorMsg;
+        
+        throw new Error(combinedMessage);
       }
       return responseData;
     }
@@ -138,7 +145,13 @@ export interface DashboardStats {
 // Helper function to process fetch responses
 const processResponse = (response: any): ApiResponse<any> => {
   if (response && response.success === false) {
-    throw new Error(response.message || response.error || 'Request failed');
+    const errorMsg = response.message || response.error || 'Request failed';
+    const technicalError = response.error || response.message || '';
+    const combinedMessage = technicalError && technicalError !== errorMsg 
+      ? `${errorMsg}: ${technicalError}` 
+      : errorMsg;
+      
+    throw new Error(combinedMessage);
   }
   
   return response || { success: true };

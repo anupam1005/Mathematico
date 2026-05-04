@@ -15,17 +15,13 @@ if (keyId && keySecret) {
       key_id: keyId,
       key_secret: keySecret,
     });
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Razorpay initialized successfully');
-    }
+    console.log('[BOOT] Razorpay initialized successfully (Key ID present)');
   } catch (error) {
     console.error('❌ Failed to initialize Razorpay:', error.message);
     razorpay = null;
   }
 } else {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('⚠️ Razorpay credentials not configured. Payment features will be unavailable.');
-  }
+  console.warn('⚠️ Razorpay credentials not configured. Payment features will be unavailable.');
 }
 
 /**
@@ -33,6 +29,10 @@ if (keyId && keySecret) {
  */
 const createOrder = async (req, res) => {
   try {
+    // Ensure database connection
+    const { connectDB } = require('../config/database');
+    await connectDB();
+
     // Check if Razorpay feature is enabled
     if (!isRazorpayEnabled()) {
       securityLogger.logSecurityEvent({
@@ -52,7 +52,9 @@ const createOrder = async (req, res) => {
       });
     }
     
-    const { amount, currency = 'INR', receipt, notes, courseId, itemType } = req.body;
+    const { amount, currency = 'INR', receipt, notes } = req.body;
+    const courseId = req.body.courseId || notes?.courseId;
+    const itemType = req.body.itemType || notes?.itemType || 'course';
     
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -62,6 +64,8 @@ const createOrder = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
+
+    console.log(`[PAYMENT] Creating order: amount=${amount}, type=${itemType}, id=${courseId || 'none'}`);
 
     // Verify Razorpay is initialized
     if (!razorpay || !razorpay.orders) {
@@ -159,7 +163,9 @@ const createOrder = async (req, res) => {
       notes: orderNotes
     };
 
+    console.log('[PAYMENT] Options built, calling Razorpay API...');
     const order = await razorpay.orders.create(options);
+    console.log(`[PAYMENT] Order created: ${order.id}`);
     
     securityLogger.logSecurityEvent({
       eventType: 'PAYMENT_ORDER_CREATED',
@@ -214,6 +220,10 @@ const createOrder = async (req, res) => {
  */
 const verifyPayment = async (req, res) => {
   try {
+    // Ensure database connection
+    const { connectDB } = require('../config/database');
+    await connectDB();
+
     // Check if Razorpay feature is enabled
     if (!isRazorpayEnabled()) {
       securityLogger.logSecurityEvent({

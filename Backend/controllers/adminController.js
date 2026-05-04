@@ -668,14 +668,19 @@ const createBook = async (req, res) => {
       price,
       currency = 'INR',
       isFree = false,
-      isbn,
-      edition,
-      publisher,
-      publicationYear,
-      language = 'en',
       tags = [],
-      status
+      status,
+      level = 'Foundation'
     } = req.body;
+
+    // Normalize empty strings to undefined to avoid unique index conflicts (like ISBN)
+    const normalizedIsbn = isbn && isbn.trim() !== '' ? isbn.trim() : undefined;
+    const normalizedEdition = edition && edition.trim() !== '' ? edition.trim() : undefined;
+    const normalizedPublisher = publisher && publisher.trim() !== '' ? publisher.trim() : undefined;
+    const normalizedAuthor = author && author.trim() !== '' ? author.trim() : 'Unknown Author';
+    const normalizedSubject = subject && subject.trim() !== '' ? subject.trim() : 'Mathematics';
+    const normalizedGrade = grade && grade.trim() !== '' ? grade.trim() : 'All Levels';
+    const normalizedDescription = description && description.trim() !== '' ? description.trim() : 'No description provided';
 
     // Validate category against enum values
     const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'reference', 'textbook'];
@@ -764,15 +769,16 @@ const createBook = async (req, res) => {
       price: price ? parseFloat(price) : undefined,
       currency,
       isFree: isFree === 'true' || isFree === true,
-      isbn,
-      edition,
-      publisher,
+      isbn: normalizedIsbn,
+      edition: normalizedEdition,
+      publisher: normalizedPublisher,
       publicationYear: publicationYear ? parseInt(publicationYear) : undefined,
       language,
-      tags: Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim()),
+      tags: Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()) : []),
       coverImage: coverImageUrl || '',
       pdfFile: pdfFileUrl || '',
       status: ['draft', 'published', 'archived', 'pending_review'].includes(status) ? status : (status || 'draft'),
+      level: level || 'Foundation',
       createdBy: req.user?.id, // Use admin ID from auth middleware
       isAvailable: true
     };
@@ -1110,6 +1116,13 @@ const createCourse = async (req, res) => {
       maxStudents
     } = req.body;
 
+    // Normalize empty strings
+    const normalizedTitle = title && title.trim() !== '' ? title.trim() : 'Untitled Course';
+    const normalizedDescriptionText = description && description.trim() !== '' ? description.trim() : 'No description provided';
+    const normalizedSubjectText = subject && subject.trim() !== '' ? subject.trim() : 'General';
+    const normalizedGradeText = grade && grade.trim() !== '' ? grade.trim() : 'All Levels';
+    const normalizedInstructorName = instructorName && instructorName.trim() !== '' ? instructorName.trim() : (instructorUser && instructorUser.name) || 'Admin';
+
     const validCategories = ['mathematics', 'physics', 'chemistry', 'biology', 'computer_science', 'engineering', 'science', 'general', 'preparation', 'remedial'];
     const normalizedCategory = validCategories.includes(String(category || '').toLowerCase())
       ? String(category).toLowerCase()
@@ -1193,12 +1206,12 @@ const createCourse = async (req, res) => {
         : [];
 
     const courseData = {
-      title: title || 'Untitled Course',
-      description: description || 'No description provided',
+      title: normalizedTitle,
+      description: normalizedDescriptionText,
       shortDescription,
       category: normalizedCategory,
-      subject: subject || 'General',
-      grade: grade || 'All Levels',
+      subject: normalizedSubjectText,
+      grade: normalizedGradeText,
       level: normalizedLevel,
       price: normalizedPrice,
       currency,
@@ -1208,9 +1221,11 @@ const createCourse = async (req, res) => {
       thumbnail: thumbnailUrl,
       pdfFile: pdfFileUrl || '',
       instructor: {
-        name: instructorName || (instructorUser && instructorUser.name) || 'Admin',
+        name: normalizedInstructorName,
         bio: instructorBio || '',
-        qualifications: parsedQualifications,
+        qualifications: Array.isArray(instructorQualifications) 
+          ? instructorQualifications 
+          : (typeof instructorQualifications === 'string' ? instructorQualifications.split(',').map(v => v.trim()).filter(Boolean) : []),
         experience: instructorExperience || ''
       },
       createdBy: req.user?.id,
@@ -1650,15 +1665,23 @@ const createLiveClass = async (req, res) => {
         experience: req.body.instructorExperience || ''
       },
       // Add timezone if not provided
-      timezone: req.body.timezone || 'Asia/Kolkata'
+      timezone: req.body.timezone || 'Asia/Kolkata',
+      // Ensure thumbnail is always present
+      thumbnail: 'https://via.placeholder.com/800x450.png?text=Live+Class'
     };
+
+    // Normalize array fields
+    const parsedQualifications = Array.isArray(req.body.instructorQualifications)
+      ? req.body.instructorQualifications
+      : typeof req.body.instructorQualifications === 'string'
+        ? req.body.instructorQualifications.split(',').map(v => v.trim()).filter(Boolean)
+        : [];
+
+    liveClassData.instructor.qualifications = parsedQualifications;
 
     // Handle file upload if present
     if (req.file) {
       try {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('📤 Uploading thumbnail to Cloudinary...');
-        }
         const imageResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
@@ -1676,13 +1699,12 @@ const createLiveClass = async (req, res) => {
           uploadStream.end(req.file.buffer);
         });
         liveClassData.thumbnail = imageResult.secure_url;
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ Thumbnail uploaded:', imageResult.secure_url);
-        }
       } catch (uploadError) {
-        console.error('❌ File upload error:', uploadError);
-        // Continue with default thumbnail
+        console.error('❌ Live class thumbnail upload error:', uploadError);
+        // Default already set
       }
+    } else if (req.body.thumbnail || req.body.image) {
+      liveClassData.thumbnail = req.body.thumbnail || req.body.image;
     }
 
     // If no thumbnail provided, use a default placeholder
