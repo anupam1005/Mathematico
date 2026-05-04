@@ -281,6 +281,7 @@ bookSchema.index({ status: 1 });
 bookSchema.index({ featured: 1 });
 bookSchema.index({ createdAt: -1 });
 bookSchema.index({ 'ratings.average': -1 });
+bookSchema.index({ 'purchasedBy.student': 1 });
 
 // Pre-save middleware to generate slug
 bookSchema.pre('save', function(next) {

@@ -130,7 +130,7 @@ const validateOptionalServices = () => {
 /**
  * Main validation function
  */
-const validateServerlessEnvironment = () => {
+const validateEnvironment = () => {
   const now = Date.now();
   const currentEnv = process.env.NODE_ENV || 'development';
   
@@ -183,7 +183,7 @@ const validateServerlessEnvironment = () => {
  * Serverless-safe environment validation middleware
  * Never throws, always returns JSON response for errors
  */
-const serverlessEnvironmentValidator = (req, res, next) => {
+const environmentValidator = (req, res, next) => {
   // Bypass environment validation for critical endpoints
   const bypassPaths = [
     '/api/v1/auth/login',
@@ -200,7 +200,7 @@ const serverlessEnvironmentValidator = (req, res, next) => {
   }
   
   try {
-    const validation = validateServerlessEnvironment();
+    const validation = validateEnvironment();
     
     if (!validation.valid) {
       console.error('[ENV_VALIDATION] Critical errors detected:', {
@@ -313,7 +313,7 @@ const getServerlessChecklist = () => {
  * Health check for environment validator
  */
 const environmentValidatorHealthCheck = () => {
-  const validation = validateServerlessEnvironment();
+  const validation = validateEnvironment();
   
   return {
     status: validation.valid ? 'healthy' : 'unhealthy',
@@ -329,8 +329,8 @@ const environmentValidatorHealthCheck = () => {
 };
 
 module.exports = {
-  serverlessEnvironmentValidator,
-  validateServerlessEnvironment,
-  getServerlessChecklist,
+  environmentValidator,
+  validateEnvironment,
+  getServerlessChecklist, // Keep for now as it's a specific term
   environmentValidatorHealthCheck
 };

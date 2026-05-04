@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { connectDB } = require('../config/serverlessDatabase');
+const { connectDB } = require('../config/database');
 
 /**
  * Middleware to ensure MongoDB connection before handling requests

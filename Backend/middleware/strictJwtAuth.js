@@ -13,7 +13,7 @@
 
 const { verifyAccessToken } = require('../utils/jwt');
 const UserModel = require('../models/User');
-const { connectDB } = require('../config/serverlessDatabase');
+const { connectDB } = require('../config/database');
 const { logTokenInvalidation, logSuspiciousActivity } = require('../utils/securityLogger');
 
 // In-process TTL cache for password-change checks.

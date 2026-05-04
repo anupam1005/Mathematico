@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { upload } = require('../utils/fileUpload');
 const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
-const { asyncHandler } = require('../middleware/serverlessErrorGuard');
+const { asyncHandler } = require('../middleware/errorGuard');
 
 const methodNotAllowed = (expectedMethod, path) => (req, res) => {
   res.status(405).json({

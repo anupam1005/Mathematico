@@ -1,5 +1,5 @@
 // Admin Controller - Handles admin panel operations with MongoDB
-const { connectDB } = require('../config/serverlessDatabase');
+const { connectDB } = require('../config/database');
 const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 const { uploadFileToCloud } = require('../utils/fileUpload');
@@ -39,6 +39,13 @@ try {
 } catch (_) {
   PaymentModel = null;
 }
+ 
+// Cache for dashboard statistics to prevent timeouts on Railway
+let dashboardCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 60 * 1000 // 60 seconds
+};
 
 // Configure Cloudinary (with serverless-safe initialization)
 try {
@@ -61,6 +68,17 @@ const getDashboard = async (req, res) => {
     // Ensure database connection
     await connectDB();
     
+    // Check cache first
+    const nowTs = Date.now();
+    if (dashboardCache.data && (nowTs - dashboardCache.timestamp < dashboardCache.ttl)) {
+      return res.json({
+        success: true,
+        data: dashboardCache.data,
+        timestamp: new Date(dashboardCache.timestamp).toISOString(),
+        message: 'Dashboard data retrieved from cache'
+      });
+    }
+
     // Get real statistics from database
     const [
       totalUsers,
@@ -131,6 +149,13 @@ const getDashboard = async (req, res) => {
       },
       recentUsers: recentUsers || [],
       recentCourses: recentCourses || []
+    };
+
+    // Update cache
+    dashboardCache = {
+      data: dashboardData,
+      timestamp: Date.now(),
+      ttl: 60 * 1000
     };
 
     res.json({

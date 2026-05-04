@@ -1,5 +1,5 @@
 // Profile Controller - Handles user profile operations
-const { connectDB } = require('../config/serverlessDatabase');
+const { connectDB } = require('../config/database');
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { Payment, Course, Book, LiveClass, User } = require('../models');
 const { isRazorpayEnabled } = require('../utils/featureFlags');
 const securityLogger = require('../utils/securityLogger');
+const { connectDB } = require('../config/database');
 
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -249,6 +250,9 @@ const handleRazorpayWebhook = async (req, res) => {
   const startTime = Date.now();
   
   try {
+    // Ensure database connection
+    await connectDB();
+    
     // Check if Razorpay feature is enabled
     if (!isRazorpayEnabled()) {
       securityLogger.logSecurityEvent({
@@ -277,8 +281,8 @@ const handleRazorpayWebhook = async (req, res) => {
       // Body is string, convert to Buffer
       rawBody = Buffer.from(rawBody, 'utf8');
     } else if (rawBody && typeof rawBody === 'object') {
-      // Vercel serverless fallback: body is already parsed as object
-      // This happens when Vercel pre-parses the body before our middleware runs
+      // Body reconstruction fallback: body is already parsed as object
+      // This happens if another middleware already parsed the body before express.raw()
       
       // Try to access the original raw body from Vercel's request
       if (req.rawBody) {

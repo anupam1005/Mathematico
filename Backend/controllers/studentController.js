@@ -1,5 +1,5 @@
 // Student Controller - Handles student operations with MongoDB
-const { connectDB } = require('../config/serverlessDatabase');
+const { connectDB } = require('../config/database');
 
 // Import models - serverless-safe direct imports
 // Models use mongoose.models.ModelName || mongoose.model() pattern
@@ -9,12 +9,31 @@ const LiveClassModel = require('../models/LiveClass');
 const UserModel = require('../models/User');
 
 /**
+ * Cache for student dashboard to prevent timeouts
+ * Per-student cache with short TTL (30s)
+ */
+const dashboardCache = new Map();
+const DASHBOARD_CACHE_TTL = 30 * 1000;
+
+/**
  * Get student dashboard
  */
 const getDashboard = async (req, res) => {
   try {
     await connectDB();
     const studentId = req.user.id;
+ 
+    // Check cache
+    const now = Date.now();
+    const cached = dashboardCache.get(studentId.toString());
+    if (cached && (now - cached.timestamp < DASHBOARD_CACHE_TTL)) {
+      return res.json({
+        success: true,
+        data: cached.data,
+        timestamp: new Date(cached.timestamp).toISOString(),
+        message: 'Dashboard data retrieved from cache'
+      });
+    }
 
     // Get enrolled courses count
     const enrolledCoursesCount = await CourseModel.countDocuments({
@@ -98,6 +117,20 @@ const getDashboard = async (req, res) => {
       upcomingClasses: upcomingLiveClasses || [],
       recentBooks: recentPurchasedBooks || []
     };
+
+    // Update cache
+    dashboardCache.set(studentId.toString(), {
+      data: dashboardData,
+      timestamp: now
+    });
+    
+    // Periodically cleanup cache
+    if (dashboardCache.size > 1000) {
+      const cleanupTime = now - DASHBOARD_CACHE_TTL;
+      for (const [key, value] of dashboardCache.entries()) {
+        if (value.timestamp < cleanupTime) dashboardCache.delete(key);
+      }
+    }
     
     res.json({
       success: true,

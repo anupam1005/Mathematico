@@ -14,7 +14,7 @@
  * Serverless error guard middleware
  * Catches any synchronous or asynchronous errors and returns structured JSON
  */
-const serverlessErrorGuard = (err, req, res, next) => {
+const errorGuard = (err, req, res, next) => {
   const errorId = (() => {
     try {
       const crypto = require('crypto');
@@ -245,7 +245,7 @@ const errorGuardHealthCheck = () => {
 };
 
 module.exports = {
-  serverlessErrorGuard,
+  errorGuard,
   asyncHandler,
   timeoutGuard,
   sizeGuard,

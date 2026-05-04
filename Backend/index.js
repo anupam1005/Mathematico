@@ -2,12 +2,12 @@
 
 const express = require('express');
 const helmet = require('helmet');
-const { connectDB, performHealthCheck } = require('./config/serverlessDatabase');
+const { connectDB, performHealthCheck } = require('./config/database');
 const ensureDatabase = require('./middleware/ensureDatabase');
-const { serverlessEnvironmentValidator } = require('./middleware/serverlessEnvironmentValidator');
-const { serverlessErrorGuard, timeoutGuard } = require('./middleware/serverlessErrorGuard');
+const { environmentValidator } = require('./middleware/environmentValidator');
+const { errorGuard, timeoutGuard } = require('./middleware/errorGuard');
 const { createAuthProtection } = require('./middleware/authProtection');
-const { rateLimiterHealthCheck } = require('./middleware/serverlessRateLimiter');
+const { rateLimiterHealthCheck } = require('./middleware/rateLimiter');
 const { validateJwtConfig } = require('./utils/jwt');
 
 const app = express();
@@ -97,7 +97,7 @@ app.use('/api/v1', ensureDatabase);
 app.use('/api/v1/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook'));
 
 // 4) Environment validator
-app.use(serverlessEnvironmentValidator);
+app.use(environmentValidator);
 
 // 5) Helmet
 app.use(
@@ -146,7 +146,7 @@ app.use((req, res) => {
 });
 
 // 8) Error handler
-app.use(serverlessErrorGuard);
+app.use(errorGuard);
 
 process.on('unhandledRejection', (reason) => {
   console.error('[UNHANDLED_REJECTION]', reason);
@@ -164,7 +164,7 @@ if (process.env.NODE_ENV !== 'test') {
     .then(() => console.log('[BOOT] MongoDB connected successfully'))
     .catch((error) => {
       console.error('[BOOT] Initial DB connect failed:', error.message);
-      // Don't crash — serverlessDatabase will retry on each request
+      // Don't crash — database will retry on each request
     });
 }
 

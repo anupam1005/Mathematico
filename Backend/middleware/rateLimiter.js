@@ -190,7 +190,7 @@ const rateLimitStore = new MemoryRateLimitStore();
 /**
  * Rate limiter middleware factory
  */
-const createServerlessRateLimiter = (config) => {
+const createRateLimiter = (config) => {
   return async (req, res, next) => {
     try {
       // Get client IP safely
@@ -279,10 +279,10 @@ const createServerlessRateLimiter = (config) => {
 };
 
 // Create rate limiters
-const authLimiterSoft = createServerlessRateLimiter(RATE_LIMITER_CONFIGS.authLimiterSoft);
-const authLimiterStrict = createServerlessRateLimiter(RATE_LIMITER_CONFIGS.authLimiterStrict);
-const adminLimiterStrict = createServerlessRateLimiter(RATE_LIMITER_CONFIGS.adminLimiterStrict);
-const publicLimiterSoft = createServerlessRateLimiter(RATE_LIMITER_CONFIGS.publicLimiterSoft);
+const authLimiterSoft = createRateLimiter(RATE_LIMITER_CONFIGS.authLimiterSoft);
+const authLimiterStrict = createRateLimiter(RATE_LIMITER_CONFIGS.authLimiterStrict);
+const adminLimiterStrict = createRateLimiter(RATE_LIMITER_CONFIGS.adminLimiterStrict);
+const publicLimiterSoft = createRateLimiter(RATE_LIMITER_CONFIGS.publicLimiterSoft);
 
 /**
  * Health check for rate limiter

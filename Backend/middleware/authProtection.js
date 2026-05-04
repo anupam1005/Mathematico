@@ -9,7 +9,7 @@
  * NEVER blocks auth endpoints due to service failures
  */
 
-const { authLimiterSoft, authLimiterStrict, adminLimiterStrict, publicLimiterSoft } = require('./serverlessRateLimiter');
+const { authLimiterSoft, authLimiterStrict, adminLimiterStrict, publicLimiterSoft } = require('./rateLimiter');
 
 /**
  * Auth endpoint protection configuration

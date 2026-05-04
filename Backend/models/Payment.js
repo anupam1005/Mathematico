@@ -88,6 +88,7 @@ const PaymentSchema = new mongoose.Schema({
 // Compound indexes for performance
 PaymentSchema.index({ userId: 1, status: 1 });
 PaymentSchema.index({ courseId: 1, status: 1 });
+PaymentSchema.index({ status: 1, amount: 1 });
 PaymentSchema.index({ createdAt: -1 });
 
 // Static method to find payment by paymentId or orderId

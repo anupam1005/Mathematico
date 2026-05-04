@@ -101,7 +101,7 @@ function generateMinimalAccessToken(user) {
     issuer: 'mathematico-backend',
     audience: 'mathematico-frontend',
     keyid: 'access-key-v3', // Updated key ID for enhanced security
-    notBefore: Math.floor(Date.now() / 1000) - 60 // Allow 60s clock skew
+    notBefore: '-60s' // Allow 60s clock skew
   });
 }
 
