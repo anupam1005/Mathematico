@@ -14,7 +14,7 @@ const liveClassSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Live class description is required'],
     trim: true,
-    minlength: [10, 'Description must be at least 10 characters'],
+    minlength: [2, 'Description must be at least 2 characters'],
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
   

@@ -6,6 +6,7 @@ const bookSchema = new mongoose.Schema({
     type: String,
     required: false,
     trim: true,
+    minlength: [2, 'Title must be at least 2 characters'],
     maxlength: [200, 'Title cannot exceed 200 characters']
   },
   
@@ -13,6 +14,7 @@ const bookSchema = new mongoose.Schema({
     type: String,
     required: false,
     trim: true,
+    minlength: [2, 'Description must be at least 2 characters'],
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
   
@@ -20,6 +22,7 @@ const bookSchema = new mongoose.Schema({
     type: String,
     required: false,
     trim: true,
+    minlength: [2, 'Author name must be at least 2 characters'],
     maxlength: [100, 'Author name cannot exceed 100 characters']
   },
   

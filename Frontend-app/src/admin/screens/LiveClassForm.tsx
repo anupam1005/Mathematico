@@ -620,6 +620,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         mode="outlined"
         leftIcon="video"
       />
+      <Text style={styles.helperText}>2-200 characters</Text>
 
       <CustomTextInput
         label="Description"
@@ -631,6 +632,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         numberOfLines={3}
         leftIcon="text-box-outline"
       />
+      <Text style={styles.helperText}>2-2000 characters</Text>
 
       <View style={styles.pickerContainer}>
         <Text style={styles.pickerLabel}>Category</Text>
@@ -1098,6 +1100,13 @@ const styles = StyleSheet.create({
   removeImageText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    marginBottom: 10,
+    marginLeft: 4,
   },
 });
 

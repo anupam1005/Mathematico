@@ -20,9 +20,20 @@ export default function CheckoutScreen({ navigation, route }: any) {
   const displayTotal = Math.round(subtotalAmount * 1.18 * 100) / 100;
   const chargedAmount = subtotalAmount; // Base price — backend will validate this
 
+  console.log('[CHECKOUT] Render', { 
+    itemId, 
+    type, 
+    subtotalAmount, 
+    chargedAmount, 
+    displayTotal,
+    loading 
+  });
+
 
   useEffect(() => {
+    console.log('[CHECKOUT] Mounted with params:', route.params);
     if (!itemData) {
+      console.error('[CHECKOUT] Missing itemData in route params');
       Alert.alert('Error', 'Item not found');
       navigation.goBack();
     }
@@ -31,9 +42,11 @@ export default function CheckoutScreen({ navigation, route }: any) {
   const handlePayment = async () => {
     if (!itemData) return;
 
+    console.log('[CHECKOUT] Starting handlePayment', { itemId, type, chargedAmount });
     setLoading(true);
     try {
       if (chargedAmount <= 0) {
+        console.log('[CHECKOUT] Free item detected, enrolling...');
         // Free item - bypass Razorpay and enroll/access directly
         const { enrollmentService } = require('../services/enrollmentService');
         let enrollRes;
@@ -68,10 +81,12 @@ export default function CheckoutScreen({ navigation, route }: any) {
       }
 
 
+      console.log('[CHECKOUT] Creating Razorpay order...');
       const { razorpayService } =
         require('../services/razorpayService');
 
       // Create order with proper notes for enrollment
+      console.log('[CHECKOUT] Calling razorpayService.createOrder');
       const order = await razorpayService.createOrder({
         amount: chargedAmount,
         currency: CURRENCY_CONFIG.code,
@@ -86,9 +101,13 @@ export default function CheckoutScreen({ navigation, route }: any) {
       });
 
       if (!order.success) {
+        console.error('[CHECKOUT] Order creation failed:', order.message);
         Alert.alert('Error', order.message || 'Failed to create payment order');
         return;
       }
+
+      console.log('[CHECKOUT] Order created successfully:', order.data.id);
+      console.log('[CHECKOUT] Preparing web checkout options...');
 
       const prepared = await razorpayService.prepareWebCheckoutOptions({
         orderId: order.data.id,
@@ -101,9 +120,12 @@ export default function CheckoutScreen({ navigation, route }: any) {
       });
 
       if (!prepared.success || !prepared.data) {
+        console.error('[CHECKOUT] Option preparation failed:', prepared.message);
         Alert.alert('Error', prepared.message || 'Could not start payment');
         return;
       }
+
+      console.log('[CHECKOUT] Navigating to RazorpayCheckout screen');
 
       navigation.navigate('RazorpayCheckout', {
         webOptions: prepared.data,
@@ -114,6 +136,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
         },
       });
     } catch (error) {
+      console.error('[CHECKOUT] handlePayment caught error:', error);
       safeCatch('CheckoutScreen.handlePayment', () => {
         Alert.alert(
           'Payment Failed', 
@@ -152,8 +175,13 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
           <Button
             mode="contained"
-            onPress={handlePayment}
+            onPress={() => {
+              console.log('[CHECKOUT] Pay Now pressed');
+              handlePayment();
+            }}
             disabled={loading}
+            contentStyle={{ height: 50 }}
+            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />

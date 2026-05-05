@@ -199,6 +199,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         mode="outlined"
         leftIcon="book"
       />
+      <Text style={styles.helperText}>2-200 characters</Text>
 
       <CustomTextInput
         label="Author"
@@ -209,6 +210,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         // Use a valid MaterialCommunityIcons icon name
         leftIcon="account"
       />
+      <Text style={styles.helperText}>2-100 characters</Text>
 
       <CustomTextInput
         label="Description"
@@ -220,6 +222,7 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
         numberOfLines={3}
         leftIcon="text-box-outline"
       />
+      <Text style={styles.helperText}>2-2000 characters</Text>
 
       <View style={styles.pickerContainer}>
         <Text style={styles.pickerLabel}>Category</Text>
@@ -488,5 +491,12 @@ const styles = StyleSheet.create({
     color: designSystem.colors.textInverse,
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  helperText: {
+    ...designSystem.typography.caption,
+    color: designSystem.colors.textSecondary,
+    marginTop: 2,
+    marginBottom: 10,
+    marginLeft: 4,
   },
 });

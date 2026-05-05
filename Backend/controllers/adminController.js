@@ -670,7 +670,12 @@ const createBook = async (req, res) => {
       isFree = false,
       tags = [],
       status,
-      level = 'Foundation'
+      level = 'Foundation',
+      isbn,
+      edition,
+      publisher,
+      publicationYear,
+      language
     } = req.body;
 
     // Normalize empty strings to undefined to avoid unique index conflicts (like ISBN)
@@ -1116,6 +1121,13 @@ const createCourse = async (req, res) => {
       maxStudents
     } = req.body;
 
+    let instructorUser = null;
+    try {
+      instructorUser = await UserModel.findById(req.user.id).select('name email');
+    } catch (error) {
+      console.warn('Unable to load instructor user details:', error.message);
+    }
+
     // Normalize empty strings
     const normalizedTitle = title && title.trim() !== '' ? title.trim() : 'Untitled Course';
     const normalizedDescriptionText = description && description.trim() !== '' ? description.trim() : 'No description provided';
@@ -1136,12 +1148,6 @@ const createCourse = async (req, res) => {
     const validStatuses = ['draft', 'published', 'archived', 'suspended'];
     const normalizedStatus = validStatuses.includes(status) ? status : 'draft';
 
-    let instructorUser = null;
-    try {
-      instructorUser = await UserModel.findById(req.user.id).select('name email');
-    } catch (error) {
-      console.warn('Unable to load instructor user details:', error.message);
-    }
 
     let thumbnailUrl = '';
     if (req.files && req.files.image && req.files.image[0]) {

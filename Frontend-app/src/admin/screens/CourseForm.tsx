@@ -215,6 +215,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         mode="outlined"
         leftIcon="school"
       />
+      <Text style={styles.helperText}>2-200 characters</Text>
 
       <CustomTextInput
         label="Description"
@@ -226,6 +227,7 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         numberOfLines={3}
         leftIcon="text-box-outline"
       />
+      <Text style={styles.helperText}>2-2000 characters</Text>
 
       <CustomTextInput
         label="Price"
@@ -502,5 +504,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    marginBottom: 10,
+    marginLeft: 4,
   },
 });
