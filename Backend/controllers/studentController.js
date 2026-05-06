@@ -51,11 +51,14 @@ const getDashboard = async (req, res) => {
       'purchasedBy.student': studentId
     });
 
-    // Get upcoming live classes count
+    // Get upcoming or live classes count
     const upcomingLiveClassesCount = await LiveClassModel.countDocuments({
       'enrolledStudents.student': studentId,
-      startTime: { $gte: new Date() },
-      status: { $in: ['scheduled', 'live'] }
+      status: { $in: ['scheduled', 'live'] },
+      $or: [
+        { status: 'live' },
+        { startTime: { $gte: new Date() } }
+      ]
     });
 
     // Calculate overall progress
@@ -87,14 +90,17 @@ const getDashboard = async (req, res) => {
       .limit(5)
       .lean();
 
-    // Get upcoming live classes details
+    // Get upcoming or live classes details
     const upcomingLiveClasses = await LiveClassModel.find({
       'enrolledStudents.student': studentId,
-      startTime: { $gte: new Date() },
-      status: { $in: ['scheduled', 'live'] }
+      status: { $in: ['scheduled', 'live'] },
+      $or: [
+        { status: 'live' },
+        { startTime: { $gte: new Date() } }
+      ]
     })
-      .select('title description subject scheduledAt meetingLink status')
-      .sort({ scheduledAt: 1 })
+      .select('title description subject startTime meetingLink status')
+      .sort({ startTime: 1 })
       .limit(5)
       .lean();
 
@@ -427,9 +433,12 @@ const getStudentLiveClasses = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const liveClasses = await LiveClassModel.find({ 
-      status: { $in: ['scheduled', 'live'] },
+      status: { $in: ['scheduled', 'live', 'completed'] },
       isAvailable: true,
-      startTime: { $gte: new Date() }
+      $or: [
+        { status: { $in: ['live', 'completed'] } },
+        { startTime: { $gte: new Date() } }
+      ]
     })
       .select('-enrolledStudents -reviews')
       .sort({ startTime: 1 })
@@ -437,9 +446,12 @@ const getStudentLiveClasses = async (req, res) => {
       .limit(limit);
 
     const total = await LiveClassModel.countDocuments({ 
-      status: { $in: ['scheduled', 'live'] },
+      status: { $in: ['scheduled', 'live', 'completed'] },
       isAvailable: true,
-      startTime: { $gte: new Date() }
+      $or: [
+        { status: { $in: ['live', 'completed'] } },
+        { startTime: { $gte: new Date() } }
+      ]
     });
 
     res.json({
@@ -486,7 +498,7 @@ const joinLiveClass = async (req, res) => {
       });
     }
 
-    if (['cancelled', 'archived'].includes(liveClass.status)) {
+    if (['cancelled', 'archived', 'completed'].includes(liveClass.status)) {
       return res.status(400).json({
         success: false,
         message: `Live class is ${liveClass.status}`,

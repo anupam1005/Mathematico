@@ -7,6 +7,13 @@ const securityLogger = require('../utils/securityLogger');
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
+// Import models at top level for consistency
+const Course = require('../models/Course');
+const Book = require('../models/Book');
+const LiveClass = require('../models/LiveClass');
+const Payment = require('../models/Payment');
+const { connectDB } = require('../config/database');
+
 // Don't throw on startup - fail gracefully when payment is attempted
 let razorpay = null;
 if (keyId && keySecret) {
@@ -30,7 +37,6 @@ if (keyId && keySecret) {
 const createOrder = async (req, res) => {
   try {
     // Ensure database connection
-    const { connectDB } = require('../config/database');
     await connectDB();
 
     // Check if Razorpay feature is enabled
@@ -86,12 +92,13 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Validate course and get server-side price if courseId provided
+    // Validate item and get server-side price if ID provided
     let validatedAmount = amount;
-    if (courseId) {
+    
+    // 1. Course validation
+    if (courseId && itemType === 'course') {
       try {
-        const Course = require('../models/Course');
-        const course = await Course.findById(courseId).select('title price isPublished');
+        const course = await Course.findById(courseId).select('title price status isAvailable');
         
         if (!course) {
           return res.status(404).json({
@@ -102,26 +109,29 @@ const createOrder = async (req, res) => {
           });
         }
         
-        if (!course.isPublished) {
+        // Corrected check: Use 'status' instead of non-existent 'isPublished'
+        if (course.status !== 'published' || !course.isAvailable) {
           return res.status(400).json({
             success: false,
             message: 'Course is not available for purchase',
-            error: 'COURSE_NOT_PUBLISHED',
+            error: 'COURSE_NOT_AVAILABLE',
             timestamp: new Date().toISOString()
           });
         }
         
         // Use server-side price to prevent tampering
-        if (course.price && course.price > 0) {
+        if (course.price !== undefined && course.price !== null) {
           validatedAmount = course.price;
           if (Math.abs(validatedAmount - amount) > 0.01) {
+            console.warn(`[PAYMENT:TAMPERING] Price mismatch for course ${courseId}: expected ${validatedAmount}, got ${amount}`);
             securityLogger.logSecurityEvent({
               eventType: 'PAYMENT_TAMPERING_ATTEMPT',
               userId: req.user?.id || 'anonymous',
               ip: req.ip,
               userAgent: req.get('User-Agent'),
               url: req.originalUrl,
-              courseId,
+              itemId: courseId,
+              itemType: 'course',
               expectedAmount: validatedAmount,
               providedAmount: amount
             });
@@ -135,6 +145,57 @@ const createOrder = async (req, res) => {
           error: 'COURSE_VALIDATION_ERROR',
           timestamp: new Date().toISOString()
         });
+      }
+    }
+    
+    // 2. Book validation
+    const bookId = req.body.bookId || notes?.bookId;
+    if (bookId && (itemType === 'book' || !courseId)) {
+      try {
+        const book = await Book.findById(bookId).select('title price status isAvailable');
+        
+        if (book) {
+          if (book.status !== 'published' || !book.isAvailable) {
+            return res.status(400).json({
+              success: false,
+              message: 'Book is not available for purchase',
+              error: 'BOOK_NOT_AVAILABLE',
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          if (book.price !== undefined && book.price !== null) {
+            validatedAmount = book.price;
+            if (Math.abs(validatedAmount - amount) > 0.01) {
+               console.warn(`[PAYMENT:TAMPERING] Price mismatch for book ${bookId}: expected ${validatedAmount}, got ${amount}`);
+            }
+          }
+        }
+      } catch (bookError) {
+        console.error('Error validating book for payment:', bookError);
+      }
+    }
+
+    // 3. Live Class validation
+    const liveClassId = req.body.liveClassId || notes?.liveClassId;
+    if (liveClassId && itemType === 'liveClass') {
+      try {
+        const liveClass = await LiveClass.findById(liveClassId).select('title status isAvailable');
+        
+        if (liveClass) {
+          // Live classes might be free or have different pricing model, 
+          // but we still check if they are available
+          if (!['scheduled', 'live'].includes(liveClass.status) || !liveClass.isAvailable) {
+            return res.status(400).json({
+              success: false,
+              message: 'Live class is not available for registration',
+              error: 'LIVE_CLASS_NOT_AVAILABLE',
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      } catch (lcError) {
+        console.error('Error validating live class for payment:', lcError);
       }
     }
 
@@ -164,7 +225,15 @@ const createOrder = async (req, res) => {
     };
 
     console.log('[PAYMENT] Options built, calling Razorpay API...');
-    const order = await razorpay.orders.create(options);
+    
+    // Create order with a manual timeout to prevent hanging the request indefinitely
+    // Razorpay SDK doesn't always respect global timeouts.
+    const orderPromise = razorpay.orders.create(options);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Razorpay API timeout (15s)')), 15000)
+    );
+    
+    const order = await Promise.race([orderPromise, timeoutPromise]);
     console.log(`[PAYMENT] Order created: ${order.id}`);
     
     securityLogger.logSecurityEvent({
@@ -221,7 +290,6 @@ const createOrder = async (req, res) => {
 const verifyPayment = async (req, res) => {
   try {
     // Ensure database connection
-    const { connectDB } = require('../config/database');
     await connectDB();
 
     // Check if Razorpay feature is enabled
@@ -295,7 +363,6 @@ const verifyPayment = async (req, res) => {
     }
 
     // Check payment status from database (authoritative source)
-    const Payment = require('../models/Payment');
     let paymentRecord = await Payment.findOne({
       $or: [
         { paymentId: razorpay_payment_id },
