@@ -307,6 +307,7 @@ export type Course = BaseCourseData & {
   isAvailable?: boolean;
   isPublished?: boolean;
   isFeatured?: boolean;
+  isEnrolled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

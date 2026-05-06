@@ -100,7 +100,10 @@ const processPaymentCaptured = async (event) => {
       if (!courseId) throw new Error('courseId required for course payment');
       item = await Course.findById(courseId);
       if (!item) throw new Error(`Course not found: ${courseId}`);
-      if (!item.isPublished) throw new Error(`Course not published: ${courseId}`);
+      // Corrected status check: Course uses status: 'published' and isAvailable: true
+      if (item.status !== 'published' || !item.isAvailable) {
+        throw new Error(`Course not published or available: ${courseId} (status: ${item.status})`);
+      }
       expectedAmount = item.price * 100; // Convert to paise
       break;
       
@@ -112,6 +115,7 @@ const processPaymentCaptured = async (event) => {
       break;
       
     case 'live_class':
+    case 'liveClass':
       if (!liveClassId) throw new Error('liveClassId required for live class payment');
       item = await LiveClass.findById(liveClassId);
       if (!item) throw new Error(`Live class not found: ${liveClassId}`);
@@ -166,6 +170,7 @@ const processPaymentCaptured = async (event) => {
         await item.purchaseBook(userId);
         break;
       case 'live_class':
+      case 'liveClass':
         await item.enrollStudent(userId);
         break;
     }

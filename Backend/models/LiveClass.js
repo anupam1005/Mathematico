@@ -157,9 +157,25 @@ const liveClassSchema = new mongoose.Schema({
     type: String // URL to preview video
   },
   
-  // Enrollment (no pricing)
+  // Pricing Information
+  price: {
+    type: Number,
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative'],
+    default: 0
+  },
   
-  // Instructor Information
+  original_price: {
+    type: Number,
+    min: [0, 'Original price cannot be negative']
+  },
+  
+  currency: {
+    type: String,
+    default: 'INR'
+  },
+  
+  // Enrollment Information
   instructor: {
     name: {
       type: String,
@@ -463,9 +479,9 @@ liveClassSchema.pre('save', function(next) {
   next();
 });
 
-// Virtual for free status (all live classes are free)
+// Virtual for free status
 liveClassSchema.virtual('isFree').get(function() {
-  return true;
+  return !this.price || this.price === 0;
 });
 
 // Virtual for enrollment count
@@ -539,8 +555,9 @@ liveClassSchema.methods.enrollStudent = function(studentId) {
   }
   
   // Check if enrollment deadline has passed
-  if (this.startTime <= new Date()) {
-    throw new Error('Cannot enroll in a class that has already started');
+  // Relaxed to allow joining classes that have already started but are still 'live' or 'scheduled'
+  if (['completed', 'cancelled', 'archived'].includes(this.status)) {
+    throw new Error(`Cannot enroll in a class that is ${this.status}`);
   }
   
   // Add student to enrolled students

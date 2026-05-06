@@ -143,6 +143,38 @@ export default function LiveClassDetailScreen({ route }: any) {
     }
   };
 
+  const handleEnroll = async () => {
+    if (!liveClass) return;
+
+    try {
+      if (liveClass.price && liveClass.price > 0) {
+        // Handle paid enrollment via Razorpay
+        (navigationHook as any).navigate('Checkout', {
+          itemId: liveClassId,
+          type: 'liveClass',
+          itemData: {
+            title: liveClass.title,
+            price: liveClass.price,
+            description: liveClass.description
+          }
+        });
+      } else {
+        // Handle free enrollment
+        const response = await liveClassService.enrollInLiveClass(liveClassId);
+        if (response.success) {
+          Alert.alert('Success', 'You have successfully enrolled in this live class!');
+          await loadLiveClass();
+        } else {
+          Alert.alert('Error', response.message || 'Failed to enroll');
+        }
+      }
+    } catch (error) {
+      safeCatch('LiveClassDetailScreen.handleEnroll', () => {
+        Alert.alert('Error', 'An error occurred during enrollment');
+      })(error);
+    }
+  };
+
   const handleJoinLiveClass = async () => {
     if (!liveClass) return;
 
@@ -312,7 +344,12 @@ export default function LiveClassDetailScreen({ route }: any) {
             </Chip>
           </View>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>FREE</Text>
+            {liveClass.original_price && liveClass.original_price > (liveClass.price || 0) && (
+              <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
+            )}
+            <Text style={styles.price}>
+              {liveClass.price && liveClass.price > 0 ? `₹${liveClass.price}` : 'FREE'}
+            </Text>
           </View>
         </Card.Content>
       </Card>
@@ -462,8 +499,8 @@ export default function LiveClassDetailScreen({ route }: any) {
         {/* Student Controls - Only show Join button for students */}
         {!user?.isAdmin && (
           <>
-            {/* Join Live Class Button - Only show when class is live */}
-            {isLive(liveClass.status || '') && (
+            {/* Join Live Class Button - Only show when class is live and student is enrolled */}
+            {isLive(liveClass.status || '') && liveClass.isEnrolled && (
               <Button
                 mode="contained"
                 onPress={() => handleJoinLiveClass()}
@@ -473,6 +510,29 @@ export default function LiveClassDetailScreen({ route }: any) {
               >
                 Join Live Class
               </Button>
+            )}
+            
+            {/* Enroll Button - Show if not enrolled and class is not completed/cancelled */}
+            {!liveClass.isEnrolled && !['completed', 'cancelled'].includes(liveClass.status || '') && (
+              <Button
+                mode="contained"
+                onPress={handleEnroll}
+                style={styles.enrollButton}
+                contentStyle={styles.enrollButtonContent}
+                icon={() => <Icon name="account-plus" size={20} color={designSystem.colors.surface} />}
+              >
+                {liveClass.price && liveClass.price > 0 ? `Buy Now (₹${liveClass.price})` : 'Enroll for Free'}
+              </Button>
+            )}
+
+            {/* Message if live but not enrolled */}
+            {isLive(liveClass.status || '') && !liveClass.isEnrolled && (
+              <View style={styles.messageContainer}>
+                <Icon name="information-outline" size={24} color={designSystem.colors.info} />
+                <Text style={styles.messageText}>
+                  Please enroll to join this live class
+                </Text>
+              </View>
             )}
             
             {/* Show message for scheduled classes */}

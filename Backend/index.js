@@ -23,19 +23,14 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   const isProduction = process.env.NODE_ENV === 'production';
 
-  if (origin) {
+  if (origin && origin !== 'null') {
     // Reflect the origin dynamically
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   } else {
-    // Mobile apps usually don't send an Origin header.
-    // In production, we allow these requests but don't set the wildcard '*'
-    // to avoid security/credential conflicts.
-    if (!isProduction) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-    // Note: If no Origin is provided, Access-Control-Allow-Origin is technically not required
-    // for non-browser clients (Native Apps), but we set it to '*' in dev for ease of use.
+    // Mobile apps usually don't send an Origin header, or send 'null'.
+    // In production, we allow these requests explicitly to support native clients.
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -83,18 +78,18 @@ app.get(['/favicon.ico', '/favicon.png'], (req, res) => {
   return res.status(204).end();
 });
 
-// 2) Body parser
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// 3) DB connection middleware
+// 2) Database connectivity guard for all API routes
 app.use('/api/v1', ensureDatabase);
 
-// CRITICAL: Webhook route must use express.raw() BEFORE express.json() is registered.
+// 3) Webhook route (CRITICAL: Must use express.raw() BEFORE express.json() is registered globally)
 // Razorpay sends a raw JSON body and we must verify the HMAC signature against the
 // exact bytes received. Once express.json() parses the body, the raw Buffer is lost
-// and signature verification will always fail on a platform that pre-parses the body.
+// and signature verification will always fail.
 app.use('/api/v1/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook'));
+
+// 3) Global Body parsers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 4) Environment validator
 app.use(environmentValidator);
@@ -124,7 +119,6 @@ app.use('/api/v1/student', require('./routes/student'));
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/v1/payments', require('./routes/payment'));
 app.use('/api/v1/secure-pdf', require('./routes/securePdf'));
-// Note: /api/v1/webhook is registered earlier with express.raw() before express.json()
 
 app.get('/api/v1', (req, res) => {
   return res.status(200).json({

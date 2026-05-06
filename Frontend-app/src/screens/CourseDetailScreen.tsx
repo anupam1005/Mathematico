@@ -228,16 +228,29 @@ export default function CourseDetailScreen({ navigation, route }: any) {
         </Card>
       )}
 
-      {/* Enroll Button */}
+      {/* Action Button */}
       <View style={styles.enrollContainer}>
-        <Button
-          mode="contained"
-          onPress={handleEnroll}
-          style={styles.enrollButton}
-          contentStyle={styles.enrollButtonContent}
-        >
-          {`Enroll Now - ₹${course.price || 0}`}
-        </Button>
+        {course.isEnrolled ? (
+          <Button
+            mode="contained"
+            onPress={() => navigation.navigate('MainTabs', { screen: 'MyCourses' })}
+            style={[styles.enrollButton, { backgroundColor: designSystem.colors.success }]}
+            contentStyle={styles.enrollButtonContent}
+            icon="play-circle"
+          >
+            Go to Course
+          </Button>
+        ) : (
+          <Button
+            mode="contained"
+            onPress={handleEnroll}
+            style={styles.enrollButton}
+            contentStyle={styles.enrollButtonContent}
+            icon="cart"
+          >
+            {course.price && course.price > 0 ? `Enroll Now - ₹${course.price}` : 'Enroll for Free'}
+          </Button>
+        )}
       </View>
     </ScrollView>
   );

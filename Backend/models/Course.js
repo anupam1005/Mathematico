@@ -518,7 +518,11 @@ courseSchema.methods.updateStudentProgress = function(studentId, lessonId) {
   }
   
   // Calculate progress percentage
-  enrollment.progress = (enrollment.completedLessons.length / this.totalLessons) * 100;
+  if (this.totalLessons > 0) {
+    enrollment.progress = (enrollment.completedLessons.length / this.totalLessons) * 100;
+  } else {
+    enrollment.progress = 0;
+  }
   enrollment.lastAccessed = new Date();
   
   // Check if course is completed

@@ -152,23 +152,41 @@ const createOrder = async (req, res) => {
     const bookId = req.body.bookId || notes?.bookId;
     if (bookId && (itemType === 'book' || !courseId)) {
       try {
-        const book = await Book.findById(bookId).select('title price status isAvailable');
+        console.log(`[PAYMENT] Validating book price for ID: ${bookId}`);
+        const book = await Book.findById(bookId)
+          .select('title price status isAvailable')
+          .maxTimeMS(5000); // 5s timeout
         
-        if (book) {
-          if (book.status !== 'published' || !book.isAvailable) {
-            return res.status(400).json({
-              success: false,
-              message: 'Book is not available for purchase',
-              error: 'BOOK_NOT_AVAILABLE',
-              timestamp: new Date().toISOString()
-            });
-          }
-          
-          if (book.price !== undefined && book.price !== null) {
-            validatedAmount = book.price;
-            if (Math.abs(validatedAmount - amount) > 0.01) {
-               console.warn(`[PAYMENT:TAMPERING] Price mismatch for book ${bookId}: expected ${validatedAmount}, got ${amount}`);
-            }
+        console.log(`[PAYMENT] Book fetched: ${book ? 'found' : 'not found'}`);
+        
+        if (!book) {
+          console.error(`[PAYMENT] Book not found: ${bookId}`);
+          return res.status(404).json({
+            success: false,
+            message: 'Book not found'
+          });
+        }
+
+        if (!book.isAvailable || book.status !== 'published') {
+          console.warn(`[PAYMENT] Book unavailable or not published: ${bookId}`);
+          return res.status(403).json({
+            success: false,
+            message: 'Book is no longer available for purchase'
+          });
+        }
+
+        if (book.price !== undefined && book.price !== null) {
+          validatedAmount = book.price;
+          console.log(`[PAYMENT] Validated book price: ${validatedAmount}`);
+          if (Math.abs(validatedAmount - amount) > 0.01) {
+            console.warn(`[PAYMENT:TAMPERING] Price mismatch for book ${bookId}: expected ${validatedAmount}, got ${amount}`);
+            securityLogger.logSecurityEvent('PAYMENT_TAMPERING_ATTEMPT', {
+              itemId: bookId,
+              itemType: 'book',
+              expectedPrice: validatedAmount,
+              providedPrice: amount,
+              userId: req.user?.id
+            }, req);
           }
         }
       } catch (bookError) {
@@ -180,18 +198,41 @@ const createOrder = async (req, res) => {
     const liveClassId = req.body.liveClassId || notes?.liveClassId;
     if (liveClassId && itemType === 'liveClass') {
       try {
-        const liveClass = await LiveClass.findById(liveClassId).select('title status isAvailable');
+        console.log(`[PAYMENT] Validating live class price for ID: ${liveClassId}`);
+        const liveClass = await LiveClass.findById(liveClassId)
+          .select('title price status isAvailable')
+          .maxTimeMS(5000); // 5s timeout
         
-        if (liveClass) {
-          // Live classes might be free or have different pricing model, 
-          // but we still check if they are available
-          if (!['scheduled', 'live'].includes(liveClass.status) || !liveClass.isAvailable) {
-            return res.status(400).json({
-              success: false,
-              message: 'Live class is not available for registration',
-              error: 'LIVE_CLASS_NOT_AVAILABLE',
-              timestamp: new Date().toISOString()
-            });
+        console.log(`[PAYMENT] Live class fetched: ${liveClass ? 'found' : 'not found'}`);
+        
+        if (!liveClass) {
+          console.error(`[PAYMENT] Live class not found: ${liveClassId}`);
+          return res.status(404).json({
+            success: false,
+            message: 'Live class not found'
+          });
+        }
+
+        if (!liveClass.isAvailable || (liveClass.status === 'cancelled' || liveClass.status === 'completed')) {
+          console.warn(`[PAYMENT] Live class unavailable or finished: ${liveClassId} (status: ${liveClass.status})`);
+          return res.status(403).json({
+            success: false,
+            message: 'Live class is no longer available for purchase'
+          });
+        }
+
+        if (liveClass.price !== undefined && liveClass.price !== null) {
+          validatedAmount = liveClass.price;
+          console.log(`[PAYMENT] Validated live class price: ${validatedAmount}`);
+          if (Math.abs(validatedAmount - amount) > 0.01) {
+            console.warn(`[PAYMENT:TAMPERING] Price mismatch for live class ${liveClassId}: expected ${validatedAmount}, got ${amount}`);
+            securityLogger.logSecurityEvent('PAYMENT_TAMPERING_ATTEMPT', {
+              itemId: liveClassId,
+              itemType: 'liveClass',
+              expectedPrice: validatedAmount,
+              providedPrice: amount,
+              userId: req.user?.id
+            }, req);
           }
         }
       } catch (lcError) {
@@ -224,7 +265,7 @@ const createOrder = async (req, res) => {
       notes: orderNotes
     };
 
-    console.log('[PAYMENT] Options built, calling Razorpay API...');
+    console.log('[PAYMENT] Options built, calling Razorpay API...', JSON.stringify(options));
     
     // Create order with a manual timeout to prevent hanging the request indefinitely
     // Razorpay SDK doesn't always respect global timeouts.
@@ -233,7 +274,9 @@ const createOrder = async (req, res) => {
       setTimeout(() => reject(new Error('Razorpay API timeout (15s)')), 15000)
     );
     
+    console.log('[PAYMENT] Racing Razorpay API call with 15s timeout');
     const order = await Promise.race([orderPromise, timeoutPromise]);
+    console.log(`[PAYMENT] Razorpay order created: ${order?.id || 'failed'}`);
     console.log(`[PAYMENT] Order created: ${order.id}`);
     
     securityLogger.logSecurityEvent({

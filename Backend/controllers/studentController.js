@@ -510,7 +510,10 @@ const joinLiveClass = async (req, res) => {
       entry => entry.student.toString() === studentId.toString()
     );
 
-    if (!enrollment) {
+    const isInstructor = liveClass.instructor && liveClass.instructor.instructorId && liveClass.instructor.instructorId.toString() === studentId.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!enrollment && !isInstructor && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: 'You must enroll in this live class before joining',
@@ -518,7 +521,7 @@ const joinLiveClass = async (req, res) => {
       });
     }
 
-    if (!enrollment.joinedAt) {
+    if (enrollment && !enrollment.joinedAt) {
       enrollment.joinedAt = new Date();
       await liveClass.save();
     }
@@ -701,9 +704,21 @@ module.exports = {
         });
       }
 
+      // Check enrollment status for the current user
+      const userId = req.user?.id;
+      const isEnrolled = userId ? course.enrolledStudents.some(
+        e => e.student.toString() === userId.toString()
+      ) : false;
+
+      const courseObj = course.toObject();
+      delete courseObj.enrolledStudents;
+
       res.json({
         success: true,
-        data: course,
+        data: {
+          ...courseObj,
+          isEnrolled
+        },
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -817,7 +832,7 @@ module.exports = {
       await connectDB();
       const { id } = req.params;
 
-      const liveClass = await LiveClassModel.findById(id).select('-enrolledStudents -reviews');
+      const liveClass = await LiveClassModel.findById(id);
       
       if (!liveClass) {
         return res.status(404).json({
@@ -827,9 +842,20 @@ module.exports = {
         });
       }
 
+      // Check if current user is enrolled
+      const userId = req.user?.id;
+      const isEnrolled = userId ? liveClass.enrolledStudents.some(
+        e => e.student.toString() === userId.toString()
+      ) : false;
+
+      // Transform to object and remove sensitive enrollment list
+      const liveClassData = liveClass.toObject();
+      delete liveClassData.enrolledStudents;
+      liveClassData.isEnrolled = isEnrolled;
+
       res.json({
         success: true,
-        data: liveClass,
+        data: liveClassData,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -884,13 +910,8 @@ module.exports = {
         });
       }
 
-      // Add enrollment
-      liveClass.enrolledStudents.push({
-        student: studentId,
-        enrolledAt: new Date()
-      });
-
-      await liveClass.save();
+      // Use the model method for enrollment
+      await liveClass.enrollStudent(studentId);
 
       res.json({
         success: true,

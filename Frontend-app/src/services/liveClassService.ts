@@ -392,6 +392,7 @@ export type LiveClass = BaseLiveClassData & {
   isAvailable?: boolean;
   isPublished?: boolean;
   isFeatured?: boolean;
+  isEnrolled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
