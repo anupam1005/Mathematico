@@ -54,6 +54,7 @@ interface LiveClass {
   scheduled_at: string;
   duration: number;
   price: number;
+  original_price?: number;
   level: string;
   category: string;
   is_featured: boolean;
@@ -314,7 +315,16 @@ export default function HomeScreen({ navigation }: any) {
           >
             {liveClass.level}
           </Chip>
-          <Text style={textStyles.body}>FREE</Text>
+          <View style={styles.priceContainer}>
+            {liveClass.original_price && liveClass.original_price > liveClass.price && (
+              <Text style={[textStyles.caption, { textDecorationLine: 'line-through', marginRight: designSystem.spacing.sm }]}>
+                ₹{liveClass.original_price}
+              </Text>
+            )}
+            <Text style={textStyles.body}>
+              {liveClass.price > 0 ? `₹${liveClass.price}` : 'FREE'}
+            </Text>
+          </View>
         </View>
       </View>
     </UnifiedCard>

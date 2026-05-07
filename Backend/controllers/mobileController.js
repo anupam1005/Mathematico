@@ -117,8 +117,7 @@ const getAllCourses = async (req, res) => {
       .select('-enrolledStudents -reviews -curriculum')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .lean(); // Use lean() to get plain JavaScript objects without virtuals
+      .limit(limit);
 
     if (process.env.NODE_ENV !== 'production' && Math.random() < 0.1) { // Only log 10% of requests
       console.log('📱 Mobile: Found courses:', courses.length);
@@ -195,8 +194,7 @@ const getAllBooks = async (req, res) => {
       .select('-pdfFile') // Don't include PDF file URL in list
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .lean(); // Use lean() to get plain JavaScript objects without virtuals
+      .limit(limit);
 
     const total = await BookModel.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
@@ -582,7 +580,7 @@ const getAllLiveClasses = async (req, res) => {
       }
     } else {
       // No status filter supplied by the student: include all published classes
-      query.status = { $in: ['scheduled', 'live', 'completed'] };
+      query.status = { $in: ['scheduled', 'live'] };
     }
     
     // Add category filter
@@ -600,7 +598,7 @@ const getAllLiveClasses = async (req, res) => {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { instructor: { $regex: search, $options: 'i' } }
+        { 'instructor.name': { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -617,8 +615,7 @@ const getAllLiveClasses = async (req, res) => {
       .select('-enrolledStudents -reviews')
       .sort({ startTime: 1 })
       .skip(skip)
-      .limit(limit)
-      .lean(); // Use lean() to get plain JavaScript objects without virtuals
+      .limit(limit);
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('📱 Mobile: Found live classes:', liveClasses.length);
@@ -769,9 +766,9 @@ const getFeaturedContent = async (req, res) => {
     await connectDB();
 
     const [books, courses, liveClasses] = await Promise.all([
-      BookModel.findFeatured().select('-pdfFile').limit(6).lean(),
-      CourseModel.findFeatured().limit(6).lean(),
-      LiveClassModel.findFeatured().limit(6).lean()
+      BookModel.findFeatured().select('-pdfFile').limit(6),
+      CourseModel.findFeatured().limit(6),
+      LiveClassModel.findFeatured().limit(6)
     ]);
 
     res.json({
@@ -824,7 +821,7 @@ const getCourseById = async (req, res) => {
       _id: id,
       status: 'published',
       isAvailable: true
-    }).select('-enrolledStudents -reviews -curriculum').lean();
+    }).select('-enrolledStudents -reviews -curriculum');
 
     if (!course) {
       return res.status(404).json({
@@ -879,7 +876,7 @@ const getLiveClassById = async (req, res) => {
     const liveClass = await LiveClassModel.findOne({
       _id: id,
       isAvailable: true
-    }).select('-enrolledStudents -reviews').lean();
+    }).select('-enrolledStudents -reviews');
 
     if (!liveClass) {
       return res.status(404).json({
@@ -970,9 +967,9 @@ const searchContent = async (req, res) => {
     const shouldSearchLiveClasses = type === 'all' || type === 'liveclass' || type === 'liveclasses';
 
     const [books, courses, liveClasses] = await Promise.all([
-      shouldSearchBooks ? BookModel.searchBooks(query).limit(limit).lean() : [],
-      shouldSearchCourses ? CourseModel.searchCourses(query).limit(limit).lean() : [],
-      shouldSearchLiveClasses ? LiveClassModel.searchClasses(query).limit(limit).lean() : []
+      shouldSearchBooks ? BookModel.searchBooks(query).limit(limit) : [],
+      shouldSearchCourses ? CourseModel.searchCourses(query).limit(limit) : [],
+      shouldSearchLiveClasses ? LiveClassModel.searchClasses(query).limit(limit) : []
     ]);
 
     const results = [

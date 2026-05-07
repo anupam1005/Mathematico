@@ -112,6 +112,12 @@ const normalizeApiError = async (error: AxiosError): Promise<ApiError> => {
   };
 };
 
+// Add global request logger
+api.interceptors.request.use((config) => {
+  console.log(`[API] Request: ${config.method?.toUpperCase()} ${config.url}`);
+  return config;
+});
+
 // Initialize refresh interceptor to attach tokens and handle 401 retries
 installRefreshInterceptor(api, {
   timeoutMs: 20000,

@@ -390,98 +390,102 @@ export default function AdminLiveClasses({ navigation }: any) {
   }
 
   return (
-    <View style={layoutStyles.container}>
-      {/* Header */}
-      <UnifiedCard variant="elevated" style={styles.headerCard}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={textStyles.heading}>Live Classes Management</Text>
-            <Text style={textStyles.bodySecondary}>
-              Manage your live class sessions
-            </Text>
-          </View>
-          <Menu
-            visible={menuVisible}
-            onDismiss={() => setMenuVisible(false)}
-            anchor={
-              <TouchableOpacity onPress={() => setMenuVisible(true)}>
-                <Icon name="dots-vertical" size={24} color={designSystem.colors.textSecondary} />
-              </TouchableOpacity>
-            }
-          >
-            <Menu.Item
-              onPress={() => {
-                setMenuVisible(false);
-                handleBulkDelete();
-              }}
-              title="Delete Selected"
-              leadingIcon="delete"
-            />
-            <Menu.Item
-              onPress={() => {
-                setMenuVisible(false);
-                toggleSelectAll();
-              }}
-              title={selectedLiveClasses.size === liveClasses.length ? 'Deselect All' : 'Select All'}
-              leadingIcon="select-all"
-            />
-          </Menu>
-        </View>
-      </UnifiedCard>
-
-      {/* Search and Filters */}
-      <UnifiedCard variant="outlined" style={styles.searchCard}>
-        <Searchbar
-          placeholder="Search live classes..."
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-        />
-        <View style={styles.filters}>
-          <Chip
-            mode={filterStatus === 'all' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('all')}
-            style={styles.filterChip}
-          >
-            All
-          </Chip>
-          <Chip
-            mode={filterStatus === 'upcoming' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('upcoming')}
-            style={styles.filterChip}
-          >
-            Upcoming
-          </Chip>
-          <Chip
-            mode={filterStatus === 'live' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('live')}
-            style={styles.filterChip}
-          >
-            Live
-          </Chip>
-          <Chip
-            mode={filterStatus === 'completed' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('completed')}
-            style={styles.filterChip}
-          >
-            Completed
-          </Chip>
-          <Chip
-            mode={filterStatus === 'draft' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('draft')}
-            style={styles.filterChip}
-          >
-            Draft
-          </Chip>
-        </View>
-      </UnifiedCard>
-
+    <View style={[layoutStyles.container, styles.mainContainer]}>
       {/* Live Classes List */}
       <FlatList
         data={liveClasses}
         renderItem={renderLiveClassItem}
         keyExtractor={(item, index) => getLiveClassId(item) || `liveclass-${index}`}
         contentContainerStyle={styles.listContainer}
+        style={styles.flatListStyle}
+        ListHeaderComponent={
+          <View>
+            {/* Header */}
+            <UnifiedCard variant="elevated" style={styles.headerCard}>
+              <View style={styles.headerContent}>
+                <View>
+                  <Text style={textStyles.heading}>Live Classes Management</Text>
+                  <Text style={textStyles.bodySecondary}>
+                    Manage your live class sessions
+                  </Text>
+                </View>
+                <Menu
+                  visible={menuVisible}
+                  onDismiss={() => setMenuVisible(false)}
+                  anchor={
+                    <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                      <Icon name="dots-vertical" size={24} color={designSystem.colors.textSecondary} />
+                    </TouchableOpacity>
+                  }
+                >
+                  <Menu.Item
+                    onPress={() => {
+                      setMenuVisible(false);
+                      handleBulkDelete();
+                    }}
+                    title="Delete Selected"
+                    leadingIcon="delete"
+                  />
+                  <Menu.Item
+                    onPress={() => {
+                      setMenuVisible(false);
+                      toggleSelectAll();
+                    }}
+                    title={selectedLiveClasses.size === liveClasses.length ? 'Deselect All' : 'Select All'}
+                    leadingIcon="select-all"
+                  />
+                </Menu>
+              </View>
+            </UnifiedCard>
+
+            {/* Search and Filters */}
+            <UnifiedCard variant="outlined" style={styles.searchCard}>
+              <Searchbar
+                placeholder="Search live classes..."
+                onChangeText={setSearchQuery}
+                value={searchQuery}
+                style={styles.searchBar}
+              />
+              <View style={styles.filters}>
+                <Chip
+                  mode={filterStatus === 'all' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('all')}
+                  style={styles.filterChip}
+                >
+                  All
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'upcoming' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('upcoming')}
+                  style={styles.filterChip}
+                >
+                  Upcoming
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'live' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('live')}
+                  style={styles.filterChip}
+                >
+                  Live
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'completed' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('completed')}
+                  style={styles.filterChip}
+                >
+                  Completed
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'draft' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('draft')}
+                  style={styles.filterChip}
+                >
+                  Draft
+                </Chip>
+              </View>
+            </UnifiedCard>
+          </View>
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -522,6 +526,10 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: designSystem.colors.textSecondary,
   },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: designSystem.colors.background,
+  },
   headerCard: {
     margin: designSystem.spacing.md,
     marginBottom: designSystem.spacing.sm,
@@ -555,6 +563,9 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: designSystem.spacing.md,
     paddingTop: 0,
+    paddingBottom: 100, // Add bottom padding for FAB
+  },
+  flatListStyle: {
     flex: 1,
   },
   liveClassCard: {

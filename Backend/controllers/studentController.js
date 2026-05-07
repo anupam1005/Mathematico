@@ -55,6 +55,7 @@ const getDashboard = async (req, res) => {
     const upcomingLiveClassesCount = await LiveClassModel.countDocuments({
       'enrolledStudents.student': studentId,
       status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
@@ -83,26 +84,26 @@ const getDashboard = async (req, res) => {
 
     // Get recent enrolled courses details
     const recentEnrolledCourses = await CourseModel.find({
-      'enrolledStudents.student': studentId
+      'enrolledStudents.student': studentId,
+      isAvailable: true
     })
       .select('title description category thumbnail status')
       .sort({ createdAt: -1 })
-      .limit(5)
-      .lean();
+      .limit(5);
 
     // Get upcoming or live classes details
     const upcomingLiveClasses = await LiveClassModel.find({
       'enrolledStudents.student': studentId,
       status: { $in: ['scheduled', 'live'] },
+      isAvailable: true,
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
       ]
     })
-      .select('title description subject startTime meetingLink status')
+      .select('title description subject startTime meetingLink status thumbnail')
       .sort({ startTime: 1 })
-      .limit(5)
-      .lean();
+      .limit(5);
 
     // Get recent purchased books
     const recentPurchasedBooks = await BookModel.find({
@@ -110,8 +111,7 @@ const getDashboard = async (req, res) => {
     })
       .select('title author category coverImage')
       .sort({ createdAt: -1 })
-      .limit(5)
-      .lean();
+      .limit(5);
 
     const dashboardData = {
       enrolledCourses: enrolledCoursesCount,
@@ -433,10 +433,10 @@ const getStudentLiveClasses = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const liveClasses = await LiveClassModel.find({ 
-      status: { $in: ['scheduled', 'live', 'completed'] },
+      status: { $in: ['scheduled', 'live'] },
       isAvailable: true,
       $or: [
-        { status: { $in: ['live', 'completed'] } },
+        { status: 'live' },
         { startTime: { $gte: new Date() } }
       ]
     })
@@ -446,10 +446,10 @@ const getStudentLiveClasses = async (req, res) => {
       .limit(limit);
 
     const total = await LiveClassModel.countDocuments({ 
-      status: { $in: ['scheduled', 'live', 'completed'] },
+      status: { $in: ['scheduled', 'live'] },
       isAvailable: true,
       $or: [
-        { status: { $in: ['live', 'completed'] } },
+        { status: 'live' },
         { startTime: { $gte: new Date() } }
       ]
     });

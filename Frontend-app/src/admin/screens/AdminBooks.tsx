@@ -357,104 +357,6 @@ export default function AdminBooks({ navigation }: any) {
 
   return (
     <View style={[layoutStyles.container, styles.mainContainer]}>
-      {/* Header */}
-      <UnifiedCard variant="elevated" style={styles.headerCard}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={textStyles.heading}>Books Management</Text>
-            <Text style={textStyles.bodySecondary}>
-              Manage your digital library
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity 
-              onPress={loadBooks}
-              style={styles.refreshButton}
-            >
-              <Icon name="refresh" size={24} color={designSystem.colors.primary} />
-            </TouchableOpacity>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <TouchableOpacity onPress={() => setMenuVisible(true)}>
-                  <Icon name="dots-vertical" size={24} color={designSystem.colors.textSecondary} />
-                </TouchableOpacity>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setMenuVisible(false);
-                  handleBulkDelete();
-                }}
-                title="Delete Selected"
-                leadingIcon="delete"
-              />
-              <Menu.Item
-                onPress={() => {
-                  setMenuVisible(false);
-                  toggleSelectAll();
-                }}
-                title={selectedBooks.size === books.length ? 'Deselect All' : 'Select All'}
-                leadingIcon="select-all"
-              />
-            </Menu>
-          </View>
-        </View>
-      </UnifiedCard>
-
-      {error && (
-        <UnifiedCard variant="outlined" style={[styles.searchCard, { borderColor: designSystem.colors.error, marginTop: 12 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name="alert-circle" size={24} color={designSystem.colors.error} />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
-                {error}
-              </Text>
-              <TouchableOpacity 
-                style={{ marginTop: 8 }}
-                onPress={loadBooks}
-              >
-                <Text style={{ color: designSystem.colors.primary, fontWeight: 'bold' }}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </UnifiedCard>
-      )}
-
-      {/* Search and Filters */}
-      <UnifiedCard variant="outlined" style={styles.searchCard}>
-        <Searchbar
-          placeholder="Search books..."
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-        />
-        <View style={styles.filters}>
-          <Chip
-            mode={filterStatus === 'all' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('all')}
-            style={styles.filterChip}
-          >
-            All
-          </Chip>
-          <Chip
-            mode={filterStatus === 'published' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('published')}
-            style={styles.filterChip}
-          >
-            Published
-          </Chip>
-          <Chip
-            mode={filterStatus === 'draft' ? 'flat' : 'outlined'}
-            onPress={() => setFilterStatus('draft')}
-            style={styles.filterChip}
-          >
-            Draft
-          </Chip>
-        </View>
-      </UnifiedCard>
-
       {/* Books List */}
       <FlatList
         data={books}
@@ -465,6 +367,107 @@ export default function AdminBooks({ navigation }: any) {
         }}
         contentContainerStyle={styles.listContainer}
         style={styles.flatListStyle}
+        ListHeaderComponent={
+          <View>
+            {/* Header */}
+            <UnifiedCard variant="elevated" style={styles.headerCard}>
+              <View style={styles.headerContent}>
+                <View>
+                  <Text style={textStyles.heading}>Books Management</Text>
+                  <Text style={textStyles.bodySecondary}>
+                    Manage your digital library
+                  </Text>
+                </View>
+                <View style={styles.headerActions}>
+                  <TouchableOpacity 
+                    onPress={loadBooks}
+                    style={styles.refreshButton}
+                  >
+                    <Icon name="refresh" size={24} color={designSystem.colors.primary} />
+                  </TouchableOpacity>
+                  <Menu
+                    visible={menuVisible}
+                    onDismiss={() => setMenuVisible(false)}
+                    anchor={
+                      <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                        <Icon name="dots-vertical" size={24} color={designSystem.colors.textSecondary} />
+                      </TouchableOpacity>
+                    }
+                  >
+                    <Menu.Item
+                      onPress={() => {
+                        setMenuVisible(false);
+                        handleBulkDelete();
+                      }}
+                      title="Delete Selected"
+                      leadingIcon="delete"
+                    />
+                    <Menu.Item
+                      onPress={() => {
+                        setMenuVisible(false);
+                        toggleSelectAll();
+                      }}
+                      title={selectedBooks.size === books.length ? 'Deselect All' : 'Select All'}
+                      leadingIcon="select-all"
+                    />
+                  </Menu>
+                </View>
+              </View>
+            </UnifiedCard>
+
+            {error && (
+              <UnifiedCard variant="outlined" style={[styles.searchCard, { borderColor: designSystem.colors.error, marginTop: 12 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="alert-circle" size={24} color={designSystem.colors.error} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={[textStyles.body, { color: designSystem.colors.error }]}>
+                      {error}
+                    </Text>
+                    <TouchableOpacity 
+                      style={{ marginTop: 8 }}
+                      onPress={loadBooks}
+                    >
+                      <Text style={{ color: designSystem.colors.primary, fontWeight: 'bold' }}>Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </UnifiedCard>
+            )}
+
+            {/* Search and Filters */}
+            <UnifiedCard variant="outlined" style={styles.searchCard}>
+              <Searchbar
+                placeholder="Search books..."
+                onChangeText={setSearchQuery}
+                value={searchQuery}
+                style={styles.searchBar}
+              />
+              <View style={styles.filters}>
+                <Chip
+                  mode={filterStatus === 'all' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('all')}
+                  style={styles.filterChip}
+                >
+                  All
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'published' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('published')}
+                  style={styles.filterChip}
+                >
+                  Published
+                </Chip>
+                <Chip
+                  mode={filterStatus === 'draft' ? 'flat' : 'outlined'}
+                  onPress={() => setFilterStatus('draft')}
+                  style={styles.filterChip}
+                >
+                  Draft
+                </Chip>
+              </View>
+            </UnifiedCard>
+          </View>
+        }
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 

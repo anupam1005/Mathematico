@@ -104,9 +104,10 @@ class RazorpayService {
     try {
       console.log('[RAZORPAY_SERVICE] Getting auth token...');
       const authToken = await this.getAuthToken();
-      console.log('[RAZORPAY_SERVICE] Auth token acquired, sending POST to /payments/create-order');
+      console.log(`[RAZORPAY_SERVICE] POST URL: ${mobileApi.post === undefined ? 'ERR' : 'OK'}, payload:`, JSON.stringify(paymentOptions));
       const response = await mobileApi.post('/payments/create-order', paymentOptions, {
         headers: buildRequestHeaders(authToken),
+        timeout: 15000, // Explicit 15s timeout for order creation
       });
       console.log('[RAZORPAY_SERVICE] API response received:', response.status);
       const data = response.data;

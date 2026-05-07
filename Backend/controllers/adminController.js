@@ -1643,8 +1643,10 @@ const createLiveClass = async (req, res) => {
     }
 
     // Parse numeric fields from FormData (they come as strings)
-    const duration = parseInt(req.body.duration) || 60;
+     const duration = parseInt(req.body.duration) || 60;
     const maxStudents = parseInt(req.body.maxStudents) || 50;
+    const price = parseFloat(req.body.price) || 0;
+    const originalPrice = req.body.original_price ? parseFloat(req.body.original_price) : (req.body.originalPrice ? parseFloat(req.body.originalPrice) : undefined);
 
     const liveClassData = {
       title: req.body.title,
@@ -1655,6 +1657,8 @@ const createLiveClass = async (req, res) => {
       level: req.body.level || 'beginner',
       duration: duration,
       maxStudents: maxStudents,
+      price: price,
+      original_price: originalPrice,
       startTime: req.body.startTime,
       endTime: req.body.endTime,
       scheduledAt: req.body.scheduledAt,

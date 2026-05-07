@@ -189,7 +189,14 @@ export default function LiveClassesScreen({ navigation }: any) {
             >
               {(liveClass.level || 'unknown').toUpperCase()}
             </Chip>
-            <Text style={styles.price}>FREE</Text>
+            <View style={styles.priceContainer}>
+              {liveClass.original_price && liveClass.original_price > (liveClass.price || 0) && (
+                <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
+              )}
+              <Text style={styles.price}>
+                {liveClass.price && liveClass.price > 0 ? `₹${liveClass.price}` : 'FREE'}
+              </Text>
+            </View>
           </View>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
@@ -487,6 +494,16 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginLeft: 6,
     fontWeight: '500',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  originalPrice: {
+    fontSize: 14,
+    color: designSystem.colors.textSecondary,
+    textDecorationLine: 'line-through',
+    marginRight: designSystem.spacing.sm,
   },
   price: {
     fontSize: 18,

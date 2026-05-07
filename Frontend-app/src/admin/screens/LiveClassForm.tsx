@@ -54,6 +54,8 @@ const DEFAULT_FORM_VALUES = {
   scheduledAt: new Date(),
   status: 'scheduled',
   meetingLink: '',
+  price: '0',
+  originalPrice: '',
   image: null as any,
 };
 
@@ -129,6 +131,8 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
           scheduledAt: liveClass.scheduledAt ? new Date(liveClass.scheduledAt) : new Date(),
           duration: liveClass.duration?.toString() || '60',
           maxStudents: liveClass.maxStudents?.toString() || '50',
+          price: liveClass.price?.toString() || '0',
+          originalPrice: liveClass.original_price?.toString() || '',
         };
 
         if (isMounted.current) {
@@ -328,6 +332,8 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         scheduledAt: formData.scheduledAt.toISOString(),
         meetingLink: formData.meetingLink.trim(),
         status: formData.status || 'scheduled',
+        price: Number(formData.price) || 0,
+        original_price: formData.originalPrice ? Number(formData.originalPrice) : undefined,
         isAvailable: true
       };
       
@@ -888,6 +894,26 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         mode="outlined"
         keyboardType="numeric"
         leftIcon="account-group"
+      />
+
+      <CustomTextInput
+        label="Price (INR)"
+        value={formData.price}
+        onChangeText={(text) => handleInputChange('price', text)}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="currency-usd"
+      />
+
+      <CustomTextInput
+        label="Original Price (INR)"
+        value={formData.originalPrice}
+        onChangeText={(text) => handleInputChange('originalPrice', text)}
+        style={styles.input}
+        mode="outlined"
+        keyboardType="numeric"
+        leftIcon="currency-usd"
       />
 
       <CustomTextInput

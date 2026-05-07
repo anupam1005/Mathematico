@@ -24,11 +24,11 @@ if (keyId && keySecret) {
     });
     console.log('[BOOT] Razorpay initialized successfully (Key ID present)');
   } catch (error) {
-    console.error('❌ Failed to initialize Razorpay:', error.message);
+    console.error('❌ Failed to initialize Razorpay SDK:', error.message);
     razorpay = null;
   }
 } else {
-  console.warn('⚠️ Razorpay credentials not configured. Payment features will be unavailable.');
+  console.warn('⚠️ Razorpay credentials (RAZORPAY_KEY_ID/SECRET) not configured. Payment features will be unavailable.');
 }
 
 /**
@@ -41,14 +41,10 @@ const createOrder = async (req, res) => {
 
     // Check if Razorpay feature is enabled
     if (!isRazorpayEnabled()) {
-      securityLogger.logSecurityEvent({
-        eventType: 'PAYMENT_FEATURE_DISABLED',
+      securityLogger.logSecurityEvent('PAYMENT_FEATURE_DISABLED', {
         userId: req.user?.id || 'anonymous',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        url: req.originalUrl,
         reason: 'RAZORPAY_DISABLED'
-      });
+      }, req);
       
       return res.status(503).json({
         success: false,
@@ -75,14 +71,11 @@ const createOrder = async (req, res) => {
 
     // Verify Razorpay is initialized
     if (!razorpay || !razorpay.orders) {
-      securityLogger.logSecurityEvent({
-        eventType: 'PAYMENT_SERVICE_UNAVAILABLE',
+      console.error('[PAYMENT] Razorpay SDK not initialized or missing orders module');
+      securityLogger.logSecurityEvent('PAYMENT_SERVICE_UNAVAILABLE', {
         userId: req.user?.id || 'anonymous',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        url: req.originalUrl,
         reason: 'RAZORPAY_NOT_INITIALIZED'
-      });
+      }, req);
       
       return res.status(503).json({
         success: false,
@@ -96,11 +89,15 @@ const createOrder = async (req, res) => {
     let validatedAmount = amount;
     
     // 1. Course validation
-    if (courseId && itemType === 'course') {
+    if (courseId && (itemType === 'course' || itemType === 'live_course')) {
       try {
-        const course = await Course.findById(courseId).select('title price status isAvailable');
+        console.log(`[PAYMENT] Validating course price for ID: ${courseId}`);
+        const course = await Course.findById(courseId)
+          .select('title price status isAvailable')
+          .maxTimeMS(5000); // 5s timeout to prevent hanging
         
         if (!course) {
+          console.warn(`[PAYMENT] Course not found: ${courseId}`);
           return res.status(404).json({
             success: false,
             message: 'Course not found',
@@ -109,8 +106,8 @@ const createOrder = async (req, res) => {
           });
         }
         
-        // Corrected check: Use 'status' instead of non-existent 'isPublished'
         if (course.status !== 'published' || !course.isAvailable) {
+          console.warn(`[PAYMENT] Course not available: ${courseId} (status: ${course.status})`);
           return res.status(400).json({
             success: false,
             message: 'Course is not available for purchase',
@@ -124,17 +121,12 @@ const createOrder = async (req, res) => {
           validatedAmount = course.price;
           if (Math.abs(validatedAmount - amount) > 0.01) {
             console.warn(`[PAYMENT:TAMPERING] Price mismatch for course ${courseId}: expected ${validatedAmount}, got ${amount}`);
-            securityLogger.logSecurityEvent({
-              eventType: 'PAYMENT_TAMPERING_ATTEMPT',
-              userId: req.user?.id || 'anonymous',
-              ip: req.ip,
-              userAgent: req.get('User-Agent'),
-              url: req.originalUrl,
+            securityLogger.logSecurityEvent('PAYMENT_TAMPERING_ATTEMPT', {
               itemId: courseId,
               itemType: 'course',
               expectedAmount: validatedAmount,
               providedAmount: amount
-            });
+            }, req);
           }
         }
       } catch (courseError) {
@@ -265,7 +257,8 @@ const createOrder = async (req, res) => {
       notes: orderNotes
     };
 
-    console.log('[PAYMENT] Options built, calling Razorpay API...', JSON.stringify(options));
+    console.log(`[PAYMENT] Final options for Razorpay: amount=${amountInPaise} paise, receipt=${shortReceipt}`);
+    console.log('[PAYMENT] Options built, calling Razorpay API...', JSON.stringify({ ...options, notes: '[HIDDEN]' }));
     
     // Create order with a manual timeout to prevent hanging the request indefinitely
     // Razorpay SDK doesn't always respect global timeouts.
@@ -279,18 +272,13 @@ const createOrder = async (req, res) => {
     console.log(`[PAYMENT] Razorpay order created: ${order?.id || 'failed'}`);
     console.log(`[PAYMENT] Order created: ${order.id}`);
     
-    securityLogger.logSecurityEvent({
-      eventType: 'PAYMENT_ORDER_CREATED',
-      userId: req.user?.id,
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      url: req.originalUrl,
+    securityLogger.logSecurityEvent('PAYMENT_ORDER_CREATED', {
       orderId: order.id,
       amount: amountInPaise,
       currency,
       courseId,
       itemType
-    });
+    }, req);
     
     res.json({
       success: true,
@@ -308,14 +296,9 @@ const createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('PaymentController: Error creating order:', error);
-    securityLogger.logSecurityEvent({
-      eventType: 'PAYMENT_ORDER_ERROR',
-      userId: req.user?.id || 'anonymous',
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      url: req.originalUrl,
+    securityLogger.logSecurityEvent('PAYMENT_ORDER_ERROR', {
       error: error.message
-    });
+    }, req);
     
     res.status(500).json({
       success: false,
@@ -337,14 +320,10 @@ const verifyPayment = async (req, res) => {
 
     // Check if Razorpay feature is enabled
     if (!isRazorpayEnabled()) {
-      securityLogger.logSecurityEvent({
-        eventType: 'PAYMENT_FEATURE_DISABLED',
+      securityLogger.logSecurityEvent('PAYMENT_FEATURE_DISABLED', {
         userId: req.user?.id || 'anonymous',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        url: req.originalUrl,
         reason: 'RAZORPAY_DISABLED'
-      });
+      }, req);
       
       return res.status(503).json({
         success: false,
@@ -385,17 +364,13 @@ const verifyPayment = async (req, res) => {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (!isAuthentic) {
-      securityLogger.logSecurityEvent({
-        eventType: 'PAYMENT_SIGNATURE_VERIFICATION_FAILED',
+      securityLogger.logSecurityEvent('PAYMENT_SIGNATURE_VERIFICATION_FAILED', {
         userId: req.user?.id || 'anonymous',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        url: req.originalUrl,
         orderId: razorpay_order_id,
         paymentId: razorpay_payment_id,
         providedSignature: razorpay_signature,
         expectedSignature
-      });
+      }, req);
       
       return res.status(400).json({
         success: false,
@@ -430,16 +405,12 @@ const verifyPayment = async (req, res) => {
           isTemporary: true
         };
       } catch (razorpayError) {
-        securityLogger.logSecurityEvent({
-          eventType: 'PAYMENT_VERIFICATION_RAZORPAY_ERROR',
+        securityLogger.logSecurityEvent('PAYMENT_VERIFICATION_RAZORPAY_ERROR', {
           userId: req.user?.id || 'anonymous',
-          ip: req.ip,
-          userAgent: req.get('User-Agent'),
-          url: req.originalUrl,
           orderId: razorpay_order_id,
           paymentId: razorpay_payment_id,
           error: razorpayError.message
-        });
+        }, req);
         
         return res.status(500).json({
           success: false,
@@ -451,17 +422,13 @@ const verifyPayment = async (req, res) => {
     }
 
     // Log verification attempt (read-only operation)
-    securityLogger.logSecurityEvent({
-      eventType: 'PAYMENT_VERIFICATION_READ_ONLY',
+    securityLogger.logSecurityEvent('PAYMENT_VERIFICATION_READ_ONLY', {
       userId: req.user?.id,
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      url: req.originalUrl,
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id,
       paymentStatus: paymentRecord.status,
       isTemporary: paymentRecord.isTemporary || false
-    });
+    }, req);
     
     // Return payment status only (no enrollment or processing)
     res.json({
@@ -485,14 +452,9 @@ const verifyPayment = async (req, res) => {
 
   } catch (error) {
     console.error('PaymentController: Error verifying payment:', error);
-    securityLogger.logSecurityEvent({
-      eventType: 'PAYMENT_VERIFICATION_ERROR',
-      userId: req.user?.id || 'unknown',
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      url: req.originalUrl,
+    securityLogger.logSecurityEvent('PAYMENT_VERIFICATION_ERROR', {
       error: error.message
-    });
+    }, req);
     
     res.status(500).json({
       success: false,
