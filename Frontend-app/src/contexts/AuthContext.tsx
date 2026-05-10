@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const authMutationEpochRef = useRef(0);
   const sessionLockRef = useRef(0); // Timestamp until which session is locked
 
-  const restoreAuthState = async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
+  const restoreAuthState = React.useCallback(async (): Promise<{ user: User | null; isAuthenticated: boolean }> => {
     const restoreEpoch = authMutationEpochRef.current;
     try {
       const restored = await authService.restoreSession();
@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(false);
       return { user: null, isAuthenticated: false };
     }
-  };
+  }, [user, isAuthenticated]);
 
 
 
@@ -132,11 +132,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = React.useCallback(async () => {
     await bootstrap();
-  };
+  }, []);
 
-  const login = async (
+  const login = React.useCallback(async (
     email: string,
     password: string
   ): Promise<{ success: boolean; message?: string; user?: User }> => {
@@ -170,9 +170,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       authMutationEpochRef.current += 1;
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const register = async (
+  const register = React.useCallback(async (
     name: string,
     email: string,
     password: string
@@ -195,9 +195,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async (): Promise<void> => {
+  const logout = React.useCallback(async (): Promise<void> => {
     if (logoutRef.current) {
       await logoutRef.current;
       return;
@@ -219,9 +219,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       logoutRef.current = null;
     }
-  };
+  }, []);
 
-  const refreshToken = async (): Promise<boolean> => {
+  const refreshToken = React.useCallback(async (): Promise<boolean> => {
     try {
       const restored = await restoreAuthState();
       return restored.isAuthenticated;
@@ -229,9 +229,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       safeCatch('AuthContext.refreshToken')(error);
       return false;
     }
-  };
+  }, [restoreAuthState]);
 
-  const updateProfile = async (data: Partial<User>): Promise<boolean> => {
+  const updateProfile = React.useCallback(async (data: Partial<User>): Promise<boolean> => {
     try {
       const response = await authService.updateProfile(data);
 
@@ -250,9 +250,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })(error);
       return false;
     }
-  };
+  }, [restoreAuthState]);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = React.useMemo(() => ({
     user,
     isAuthenticated,
     isLoading,
@@ -262,7 +262,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshToken,
     updateProfile,
     checkAuthStatus,
-  };
+  }), [user, isAuthenticated, isLoading]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -38,15 +38,16 @@ export default function CoursesScreen({ navigation, route }: any) {
   }, [selectedCategory, selectedLevel, searchQuery]);
 
   useEffect(() => {
-    if (route.params?.search) {
-      setSearchQuery(route.params.search);
+    const searchParam = route.params?.search;
+    if (searchParam !== undefined && searchParam !== searchQuery) {
+      setSearchQuery(searchParam);
     }
-  }, [route.params]);
+  }, [route.params?.search]);
 
   const loadCourses = async (pageNum = 1, reset = true, signal?: AbortSignal) => {
     try {
       setLoading(true);
-      
+
       const filters = {
         search: searchQuery || undefined,
         category: selectedCategory || undefined,
@@ -56,18 +57,18 @@ export default function CoursesScreen({ navigation, route }: any) {
       };
 
       const response = await courseService.getCourses(pageNum, 10, filters);
-      
+
       if (signal?.aborted) return;
 
       if (response && response.data) {
         const newCourses = Array.isArray(response.data) ? response.data : [response.data];
-        
+
         if (reset) {
           setCourses(newCourses);
         } else {
           setCourses(prev => [...prev, ...newCourses]);
         }
-        
+
         setHasMore(newCourses.length === 10);
         setPage(pageNum);
       }
@@ -137,7 +138,7 @@ export default function CoursesScreen({ navigation, route }: any) {
   const renderCourseCard = ({ item: course }: { item: Course }) => {
     // Use _isUpcoming for rendering logic (badge / conditional UI)
     const isUpcoming = course.createdAt ? _isUpcoming(course.createdAt) : false;
-    
+
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('CourseDetail', { courseId: course._id || course.id })}
@@ -205,19 +206,19 @@ export default function CoursesScreen({ navigation, route }: any) {
         selected={!!value}
         style={[
           styles.chip,
-          value ? { 
+          value ? {
             backgroundColor: theme.colors.primary,
             borderColor: theme.colors.primary,
-          } : { 
+          } : {
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.primary,
           }
         ]}
-        textStyle={value ? { 
+        textStyle={value ? {
           color: '#FFFFFF',
           fontWeight: '600',
           fontSize: 14,
-        } : { 
+        } : {
           color: theme.colors.primary,
           fontWeight: '600',
           fontSize: 14,
@@ -248,9 +249,9 @@ export default function CoursesScreen({ navigation, route }: any) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
           <View style={styles.filters}>
             {renderFilterChip('All Categories', selectedCategory, () => setSelectedCategory(''))}
-            {categories.map((category) => 
+            {categories.map((category) =>
               <View key={`category-${category}`}>
-                {renderFilterChip(category, selectedCategory === category ? category : '', () => 
+                {renderFilterChip(category, selectedCategory === category ? category : '', () =>
                   setSelectedCategory(selectedCategory === category ? '' : category)
                 )}
               </View>
@@ -261,9 +262,9 @@ export default function CoursesScreen({ navigation, route }: any) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
           <View style={styles.filters}>
             {renderFilterChip('All Levels', selectedLevel, () => setSelectedLevel(''))}
-            {levels.map((level) => 
+            {levels.map((level) =>
               <View key={`level-${level}`}>
-                {renderFilterChip(level, selectedLevel === level ? level : '', () => 
+                {renderFilterChip(level, selectedLevel === level ? level : '', () =>
                   setSelectedLevel(selectedLevel === level ? '' : level)
                 )}
               </View>
