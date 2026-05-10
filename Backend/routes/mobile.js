@@ -62,6 +62,8 @@ router.post('/enrollments/:id/lessons/:lessonId/complete', strictAuthenticateTok
 // Live class routes
 router.get('/live-classes', mobileController.getAllLiveClasses);
 router.get('/live-classes/:id', mobileController.getLiveClassById);
+router.post('/live-classes/:id/enroll', strictAuthenticateToken, mobileController.enrollInLiveClass);
+
 // Starting/ending classes is an admin action
 router.put('/live-classes/:id/start', strictAuthenticateToken, strictRequireAdmin, mobileController.startLiveClass);
 router.put('/live-classes/:id/end', strictAuthenticateToken, strictRequireAdmin, mobileController.endLiveClass);

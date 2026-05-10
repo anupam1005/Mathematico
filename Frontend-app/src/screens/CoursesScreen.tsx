@@ -30,7 +30,11 @@ export default function CoursesScreen({ navigation, route }: any) {
   const levels = ['Foundation', 'Intermediate', 'Advanced', 'Expert'];
 
   useEffect(() => {
-    loadCourses();
+    const controller = new AbortController();
+    loadCourses(1, true, controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [selectedCategory, selectedLevel, searchQuery]);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export default function CoursesScreen({ navigation, route }: any) {
     }
   }, [route.params]);
 
-  const loadCourses = async (pageNum = 1, reset = true) => {
+  const loadCourses = async (pageNum = 1, reset = true, signal?: AbortSignal) => {
     try {
       setLoading(true);
       
@@ -48,10 +52,13 @@ export default function CoursesScreen({ navigation, route }: any) {
         category: selectedCategory || undefined,
         level: selectedLevel || undefined,
         status: 'published',
+        signal,
       };
 
       const response = await courseService.getCourses(pageNum, 10, filters);
       
+      if (signal?.aborted) return;
+
       if (response && response.data) {
         const newCourses = Array.isArray(response.data) ? response.data : [response.data];
         
@@ -64,10 +71,13 @@ export default function CoursesScreen({ navigation, route }: any) {
         setHasMore(newCourses.length === 10);
         setPage(pageNum);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'CanceledError' || error.name === 'AbortError') return;
       safeCatch('CoursesScreen.loadCourses')(error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 

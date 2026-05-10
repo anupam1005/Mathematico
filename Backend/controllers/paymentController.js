@@ -88,7 +88,24 @@ const createOrder = async (req, res) => {
     // Validate item and get server-side price if ID provided
     let validatedAmount = amount;
     
-    // 1. Course validation
+    // 1. Strict itemType validation
+    const allowedTypes = ['course', 'live_course', 'liveClass'];
+    if (!allowedTypes.includes(itemType)) {
+      securityLogger.logSecurityEvent('PAYMENT_INVALID_TYPE', {
+        userId: req.user?.id || 'anonymous',
+        providedType: itemType,
+        reason: 'UNSUPPORTED_ITEM_TYPE'
+      }, req);
+
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported item type for payment. Only Courses and Live Classes are supported.',
+        error: 'INVALID_ITEM_TYPE',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 2. Course validation
     if (courseId && (itemType === 'course' || itemType === 'live_course')) {
       try {
         console.log(`[PAYMENT] Validating course price for ID: ${courseId}`);
@@ -140,51 +157,8 @@ const createOrder = async (req, res) => {
       }
     }
     
-    // 2. Book validation
-    const bookId = req.body.bookId || notes?.bookId;
-    if (bookId && (itemType === 'book' || !courseId)) {
-      try {
-        console.log(`[PAYMENT] Validating book price for ID: ${bookId}`);
-        const book = await Book.findById(bookId)
-          .select('title price status isAvailable')
-          .maxTimeMS(5000); // 5s timeout
-        
-        console.log(`[PAYMENT] Book fetched: ${book ? 'found' : 'not found'}`);
-        
-        if (!book) {
-          console.error(`[PAYMENT] Book not found: ${bookId}`);
-          return res.status(404).json({
-            success: false,
-            message: 'Book not found'
-          });
-        }
+    // 2. Book validation removed as per requirement (only courses and live classes)
 
-        if (!book.isAvailable || book.status !== 'published') {
-          console.warn(`[PAYMENT] Book unavailable or not published: ${bookId}`);
-          return res.status(403).json({
-            success: false,
-            message: 'Book is no longer available for purchase'
-          });
-        }
-
-        if (book.price !== undefined && book.price !== null) {
-          validatedAmount = book.price;
-          console.log(`[PAYMENT] Validated book price: ${validatedAmount}`);
-          if (Math.abs(validatedAmount - amount) > 0.01) {
-            console.warn(`[PAYMENT:TAMPERING] Price mismatch for book ${bookId}: expected ${validatedAmount}, got ${amount}`);
-            securityLogger.logSecurityEvent('PAYMENT_TAMPERING_ATTEMPT', {
-              itemId: bookId,
-              itemType: 'book',
-              expectedPrice: validatedAmount,
-              providedPrice: amount,
-              userId: req.user?.id
-            }, req);
-          }
-        }
-      } catch (bookError) {
-        console.error('Error validating book for payment:', bookError);
-      }
-    }
 
     // 3. Live Class validation
     const liveClassId = req.body.liveClassId || notes?.liveClassId;

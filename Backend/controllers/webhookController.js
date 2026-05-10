@@ -107,13 +107,6 @@ const processPaymentCaptured = async (event) => {
       expectedAmount = item.price * 100; // Convert to paise
       break;
       
-    case 'book':
-      if (!bookId) throw new Error('bookId required for book payment');
-      item = await Book.findById(bookId);
-      if (!item) throw new Error(`Book not found: ${bookId}`);
-      expectedAmount = item.price * 100; // Convert to paise
-      break;
-      
     case 'live_class':
     case 'liveClass':
       if (!liveClassId) throw new Error('liveClassId required for live class payment');
@@ -165,9 +158,6 @@ const processPaymentCaptured = async (event) => {
     switch (itemType) {
       case 'course':
         await item.enrollStudent(userId);
-        break;
-      case 'book':
-        await item.purchaseBook(userId);
         break;
       case 'live_class':
       case 'liveClass':

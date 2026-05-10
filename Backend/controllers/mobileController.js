@@ -1126,6 +1126,85 @@ const enrollInCourse = async (req, res) => {
     }
   }
 };
+/**
+ * Enroll in a live class
+ */
+const enrollInLiveClass = async (req, res) => {
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Live class model unavailable' 
+      });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const liveClass = await LiveClassModel.findById(id);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!liveClass.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: 'Live class is not available for enrollment',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      await liveClass.enrollStudent(userId);
+      
+      res.json({
+        success: true,
+        message: 'Enrolled in live class successfully',
+        data: {
+          liveClassId: id,
+          userId: userId,
+          enrolledAt: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (enrollmentError) {
+      if (enrollmentError.message.includes('already enrolled')) {
+        return res.status(400).json({
+          success: false,
+          message: 'You are already enrolled in this live class',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      throw enrollmentError;
+    }
+  } catch (error) {
+    console.error('MobileController: Error enrolling in live class:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to enroll in live class',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+};
+
 
 /**
  * Get user enrollments
@@ -1725,6 +1804,7 @@ module.exports = {
   getMobileInfo: withTimeout(getMobileInfo),
   // Enrollment methods
   enrollInCourse: withTimeout(enrollInCourse),
+  enrollInLiveClass: withTimeout(enrollInLiveClass),
   getEnrollments: withTimeout(getEnrollments),
   getEnrollmentById: withTimeout(getEnrollmentById),
   updateEnrollmentStatus: withTimeout(updateEnrollmentStatus),

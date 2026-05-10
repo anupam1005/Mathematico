@@ -63,6 +63,7 @@ class BookService {
         if (options.responseType) cfg.responseType = options.responseType;
         if (options.withCredentials !== undefined) cfg.withCredentials = options.withCredentials;
         if (options.headers) cfg.headers = options.headers;
+        if (options.signal) cfg.signal = options.signal;
       }
 
       const response = await mobileApi.request(cfg);
@@ -77,6 +78,7 @@ class BookService {
     subject?: string;
     level?: string;
     search?: string;
+    signal?: AbortSignal;
   }): Promise<PaginatedResponse<any>> {
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
@@ -85,7 +87,7 @@ class BookService {
       if (filters?.level) params.append('level', filters.level);
       if (filters?.search) params.append('search', filters.search);
       
-      const response = await this.makeRequest(`/books?${params.toString()}`);
+      const response = await this.makeRequest(`/books?${params.toString()}`, { signal: filters?.signal });
       
       // Return the actual data from the API
       if (response && response.data) {

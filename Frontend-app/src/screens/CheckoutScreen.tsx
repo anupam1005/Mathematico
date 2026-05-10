@@ -53,20 +53,11 @@ export default function CheckoutScreen({ navigation, route }: any) {
 
         if (type === 'course') {
           enrollRes = await enrollmentService.enrollInCourse(itemId);
-        } else if (type === 'book') {
-          // Books are purchased/accessed via the mobile book access endpoint
-          enrollRes = await enrollmentService.enrollInCourse(itemId); // falls through to /books/:id/purchase on the backend
-          // If the server doesn't have a dedicated free-book endpoint, navigate to BookDetail directly
-          if (!enrollRes.success) {
-            Alert.alert('Success', 'You can now access this book for free!');
-            navigation.navigate('BookDetail', { bookId: itemId });
-            return;
-          }
         } else if (type === 'liveClass') {
-          // Live class registration via enroll endpoint
-          enrollRes = await enrollmentService.enrollInCourse(itemId);
+          // Live class registration via its own endpoint
+          enrollRes = await enrollmentService.enrollInLiveClass(itemId);
         } else {
-          Alert.alert('Error', 'Unknown item type');
+          Alert.alert('Error', 'Unknown item type or payment not supported for this item');
           return;
         }
 
@@ -93,7 +84,6 @@ export default function CheckoutScreen({ navigation, route }: any) {
         receipt: `${type}_${itemId}_${Date.now()}`,
         notes: { 
           courseId: type === 'course' ? itemId : undefined,
-          bookId: type === 'book' ? itemId : undefined,
           liveClassId: type === 'liveClass' ? itemId : undefined,
           userId: user?.id,
           itemType: type

@@ -52,10 +52,11 @@ const adminApi = withBasePath(API_PATHS.admin);
 class LiveClassService {
   private async makeRequest(endpoint: string, options: any = {}) {
     try {
-      const response = await mobileApi.request({
+      const cfg: any = { 
         url: endpoint,
-        ...options,
-      });
+        ...options
+      };
+      const response = await mobileApi.request(cfg);
       return response.data;
     } catch (error) {
       throw ErrorHandler.handleApiError(error);
@@ -68,6 +69,7 @@ class LiveClassService {
     level?: string;
     status?: string;
     search?: string;
+    signal?: AbortSignal;
   }): Promise<PaginatedResponse<any>> {
     try {
       const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
@@ -77,7 +79,7 @@ class LiveClassService {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.search) params.append('search', filters.search);
       
-      const response = await this.makeRequest(`/live-classes?${params.toString()}`);
+      const response = await this.makeRequest(`/live-classes?${params.toString()}`, { signal: filters?.signal });
       
       if (response && response.data) {
         return {

@@ -193,7 +193,7 @@ class MobileService {
     }
   }
 
-  async getStats(): Promise<MobileApiResponse<{
+  async getStats(options?: { signal?: AbortSignal }): Promise<MobileApiResponse<{
     totalBooks: number;
     totalCourses: number;
     totalLiveClasses: number;
@@ -201,7 +201,7 @@ class MobileService {
     activeUsers: number;
   }>> {
     try {
-      const response = await mobileApi.get('/stats');
+      const response = await mobileApi.get('/stats', { signal: options?.signal });
       return response.data;
     } catch (error) {
       const safeError = createSafeError(error);

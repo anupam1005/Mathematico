@@ -77,33 +77,41 @@ export default function HomeScreen({ navigation }: any) {
   });
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       setDataLoaded(false);
       await Promise.all([
-        loadFeaturedCourses(),
-        loadFeaturedBooks(),
-        loadUpcomingClasses(),
-        loadStats(),
+        loadFeaturedCourses(signal),
+        loadFeaturedBooks(signal),
+        loadUpcomingClasses(signal),
+        loadStats(signal),
       ]);
+      if (signal?.aborted) return;
       setDataLoaded(true);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'CanceledError' || error.name === 'AbortError') return;
       safeCatch('HomeScreen.loadData')(error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
-  const loadStats = async () => {
+  const loadStats = async (signal?: AbortSignal) => {
     try {
-      // Use the mobileService stats endpoint which returns aggregate counts directly.
-      // This avoids fetching up to 3×1000 records just to read .length.
       const { mobileService } = await import('../services/mobileService');
-      const statsRes = await mobileService.getStats().catch(() => null);
+      const statsRes = await mobileService.getStats({ signal }).catch(() => null);
+
+      if (signal?.aborted) return;
 
       if (statsRes && statsRes.success && statsRes.data) {
         const d = statsRes.data;
@@ -116,12 +124,13 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
-      // Fallback: fetch first page only and use pagination total if available
       const [courses, books, liveClasses] = await Promise.all([
-        courseService.getCourses(1, 1).catch(() => ({ data: [], total: 0 })),
-        bookService.getBooks(1, 1).catch(() => ({ data: [], total: 0 })),
-        liveClassService.getLiveClasses(1, 1).catch(() => ({ data: [], total: 0 })),
+        courseService.getCourses(1, 1, { signal }).catch(() => ({ data: [], total: 0 })),
+        bookService.getBooks(1, 1, { signal }).catch(() => ({ data: [], total: 0 })),
+        liveClassService.getLiveClasses(1, 1, { signal }).catch(() => ({ data: [], total: 0 })),
       ]);
+
+      if (signal?.aborted) return;
 
       setStats({
         totalCourses: (courses as any).total ?? (courses as any).data?.length ?? 0,
@@ -134,45 +143,51 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const loadFeaturedCourses = async () => {
+  const loadFeaturedCourses = async (signal?: AbortSignal) => {
     try {
-      const response = await courseService.getCourses(1, 4, { status: 'published' });
+      const response = await courseService.getCourses(1, 4, { status: 'published', signal });
+      if (signal?.aborted) return;
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedCourses(response.data);
       } else {
         setFeaturedCourses([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'CanceledError' || error.name === 'AbortError') return;
       safeCatch('HomeScreen.loadFeaturedCourses', () => {
         setFeaturedCourses([]);
       })(error);
     }
   };
 
-  const loadFeaturedBooks = async () => {
+  const loadFeaturedBooks = async (signal?: AbortSignal) => {
     try {
-      const response = await bookService.getBooks(1, 4);
+      const response = await bookService.getBooks(1, 4, { signal });
+      if (signal?.aborted) return;
       if (response && response.data && Array.isArray(response.data)) {
         setFeaturedBooks(response.data);
       } else {
         setFeaturedBooks([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'CanceledError' || error.name === 'AbortError') return;
       safeCatch('HomeScreen.loadFeaturedBooks', () => {
         setFeaturedBooks([]);
       })(error);
     }
   };
 
-  const loadUpcomingClasses = async () => {
+  const loadUpcomingClasses = async (signal?: AbortSignal) => {
     try {
-      const response = await liveClassService.getLiveClasses(1, 3, { status: 'upcoming' });
+      const response = await liveClassService.getLiveClasses(1, 3, { status: 'upcoming', signal });
+      if (signal?.aborted) return;
       if (response && response.data && Array.isArray(response.data)) {
         setUpcomingClasses(response.data);
       } else {
         setUpcomingClasses([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'CanceledError' || error.name === 'AbortError') return;
       safeCatch('HomeScreen.loadUpcomingClasses', () => {
         setUpcomingClasses([]);
       })(error);

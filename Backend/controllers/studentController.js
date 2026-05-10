@@ -368,6 +368,46 @@ const enrollInCourse = async (req, res) => {
     });
   }
 };
+/**
+ * Enroll in live class
+ */
+const enrollInLiveClass = async (req, res) => {
+  try {
+    if (!LiveClassModel) {
+      return res.status(503).json({ success: false, message: 'LiveClass model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const studentId = req.user.id;
+
+    const liveClass = await LiveClassModel.findById(id);
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Live class not found'
+      });
+    }
+
+    // Use the model's enrollStudent method
+    await liveClass.enrollStudent(studentId);
+
+    res.json({
+      success: true,
+      message: 'Successfully enrolled in live class',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Enroll in live class error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to enroll in live class',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 
 /**
  * Get all available books
@@ -678,7 +718,9 @@ module.exports = {
   updateProfile,
   getEnrolledCourses,
   enrollInCourse,
+  enrollInLiveClass,
   getStudentBooks,
+
   getStudentLiveClasses,
   joinLiveClass,
   getProgress,

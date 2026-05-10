@@ -104,6 +104,49 @@ class EnrollmentService {
   }
 
   /**
+   * Enroll in a live class (after payment verification)
+   */
+  async enrollInLiveClass(liveClassId: string): Promise<EnrollmentResponse> {
+    try {
+      const authToken = await this.getAuthToken();
+      const response = await mobileApi.post(`/live-classes/${liveClassId}/enroll`, {}, {
+        headers: buildRequestHeaders(authToken),
+      });
+      
+      const data = response.data;
+      
+      if (data.success) {
+        return {
+          success: true,
+          data: data.data,
+          message: data.message || 'Enrolled in live class successfully',
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || data.message || 'Failed to enroll in live class',
+          message: data.message || 'Enrollment failed',
+        };
+      }
+    } catch (error: any) {
+      errorHandler.handleError('EnrollmentService: Error enrolling in live class:', error);
+      
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          error: 'Already enrolled',
+          message: 'You are already enrolled in this live class',
+        };
+      }
+      
+      return {
+        ...toEnrollmentError(error, 'Failed to enroll in live class'),
+      };
+    }
+  }
+
+
+  /**
    * Get user's enrollments
    */
   async getEnrollments(userId?: string): Promise<EnrollmentResponse> {

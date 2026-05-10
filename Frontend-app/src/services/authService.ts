@@ -216,12 +216,13 @@ const authService = {
 
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      await api.post(`${API_PATHS.auth}/logout`);
-    } catch (error) {
-      safeCatch('authService.logout')(error);
-      throw error;
+      // Attempt to notify backend, but don't block local logout if it fails
+      await api.post(`${API_PATHS.auth}/logout`).catch(err => {
+        console.log('[AUTH] Backend logout failed (ignoring):', err?.message);
+      });
+    } finally {
+      await tokenStorage.clearSession();
     }
-    await tokenStorage.clearSession();
     return { success: true, message: 'Logout successful' };
   },
 
