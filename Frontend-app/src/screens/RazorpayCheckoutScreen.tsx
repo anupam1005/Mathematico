@@ -5,6 +5,7 @@ import {
   Platform,
   StyleSheet,
   View,
+  Linking,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import type { StackScreenProps } from '@react-navigation/stack';
@@ -253,13 +254,23 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
       ) : null}
       <WebView
         ref={webViewRef}
-        source={{ html: CHECKOUT_HTML, baseUrl: 'https://mathematico.com' }}
+        source={{ html: CHECKOUT_HTML, baseUrl: 'https://mathematico.in' }}
         onLoadStart={onLoadStart}
         onLoadEnd={onLoadEnd}
         onMessage={handleMessage}
         javaScriptEnabled
         domStorageEnabled
         originWhitelist={['*']}
+        onShouldStartLoadWithRequest={(request) => {
+          const url = request.url;
+          if (url.startsWith('upi://') || url.startsWith('intent://') || url.startsWith('tez://') || url.startsWith('paytmmp://')) {
+            Linking.openURL(url).catch(() => {
+              Alert.alert('Error', 'Could not open payment app. Please install the app or use another payment method.');
+            });
+            return false;
+          }
+          return true;
+        }}
         mixedContentMode="compatibility"
         setSupportMultipleWindows={false}
         allowsBackForwardNavigationGestures={false}

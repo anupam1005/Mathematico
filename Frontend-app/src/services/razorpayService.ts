@@ -280,7 +280,7 @@ class RazorpayService {
         order_id: input.orderId,
         name: config.name || 'Mathematico',
         description: input.description,
-        image: 'https://mathematico.com/logo.png',
+        image: 'https://mathematico.in/logo.png',
         prefill: {
           name: input.customerName,
           email: input.email || '',
@@ -290,7 +290,7 @@ class RazorpayService {
           color: config?.theme?.color || '#3399cc',
         },
         method: {
-          upi: false,
+          upi: true,
           card: true,
           netbanking: true,
           wallet: true,
