@@ -95,7 +95,8 @@ const rebuildRequest = (
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     skipAuthRefresh: original.skipAuthRefresh,
-  };
+    _retryCount: original._retryCount,
+  } as RetryableConfig;
 };
 
 const refreshTokenRequest = async (

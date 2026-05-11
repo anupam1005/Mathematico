@@ -486,7 +486,7 @@ liveClassSchema.virtual('isFree').get(function() {
 
 // Virtual for enrollment count
 liveClassSchema.virtual('enrollmentCount').get(function() {
-  return this.enrolledStudents.length;
+  return this.enrolledStudents ? this.enrolledStudents.length : 0;
 });
 
 // Virtual for attendance rate

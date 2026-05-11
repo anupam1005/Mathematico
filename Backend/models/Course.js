@@ -455,12 +455,12 @@ courseSchema.virtual('formattedPrice').get(function() {
 
 // Virtual for enrollment count
 courseSchema.virtual('enrollmentCount').get(function() {
-  return this.enrolledStudents.length;
+  return this.enrolledStudents ? this.enrolledStudents.length : 0;
 });
 
 // Virtual for completion rate
 courseSchema.virtual('completionRate').get(function() {
-  if (this.enrolledStudents.length === 0) return 0;
+  if (!this.enrolledStudents || this.enrolledStudents.length === 0) return 0;
   return (this.completions / this.enrolledStudents.length) * 100;
 });
 
