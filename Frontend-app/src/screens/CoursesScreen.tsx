@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,7 +44,15 @@ export default function CoursesScreen({ navigation, route }: any) {
     }
   }, [route.params?.search]);
 
+  const lastLoadTimeRef = useRef(0);
   const loadCourses = async (pageNum = 1, reset = true, signal?: AbortSignal) => {
+    const now = Date.now();
+    if (now - lastLoadTimeRef.current < 1500) {
+      console.log('CoursesScreen.loadCourses: Throttling duplicate request');
+      return;
+    }
+    lastLoadTimeRef.current = now;
+
     try {
       setLoading(true);
 

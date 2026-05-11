@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -84,7 +84,15 @@ export default function HomeScreen({ navigation }: any) {
     };
   }, []);
 
+  const lastLoadTimeRef = useRef(0);
   const loadData = async (signal?: AbortSignal) => {
+    const now = Date.now();
+    if (now - lastLoadTimeRef.current < 2000) {
+      console.log('HomeScreen.loadData: Throttling duplicate request');
+      return;
+    }
+    lastLoadTimeRef.current = now;
+
     try {
       setLoading(true);
       setDataLoaded(false);

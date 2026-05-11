@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,15 @@ export default function LiveClassesScreen({ navigation }: any) {
     loadLiveClasses();
   }, [selectedCategory, selectedLevel, selectedStatus, searchQuery]);
 
+  const lastLoadTimeRef = useRef(0);
   const loadLiveClasses = async (pageNum = 1, reset = true) => {
+    const now = Date.now();
+    if (now - lastLoadTimeRef.current < 1500) {
+      console.log('LiveClassesScreen.loadLiveClasses: Throttling duplicate request');
+      return;
+    }
+    lastLoadTimeRef.current = now;
+
     try {
       setLoading(true);
 

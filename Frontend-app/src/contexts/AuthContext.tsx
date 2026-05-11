@@ -78,7 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           currentEpoch: authMutationEpochRef.current,
           sessionLocked: Date.now() < sessionLockRef.current,
         });
-        return { user, isAuthenticated };
+        let currentUser: User | null = null;
+        let currentAuth = false;
+        setUser(prev => { currentUser = prev; return prev; });
+        setIsAuthenticated(prev => { currentAuth = prev; return prev; });
+        return { user: currentUser, isAuthenticated: currentAuth };
       }
       setUser(nextUser);
       setIsAuthenticated(nextIsAuthenticated);
@@ -93,7 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(false);
       return { user: null, isAuthenticated: false };
     }
-  }, [user, isAuthenticated]);
+  }, []);
 
 
 
