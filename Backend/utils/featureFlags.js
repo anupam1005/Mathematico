@@ -11,7 +11,7 @@ const featureFlags = {
   securePdf: process.env.ENABLE_SECURE_PDF === 'true',
   
   // Razorpay payment integration
-  razorpay: process.env.ENABLE_RAZORPAY === 'true',
+  razorpay: process.env.ENABLE_RAZORPAY !== 'false',
   
   // Development/Debug features
   debugMode: process.env.NODE_ENV !== 'production',
