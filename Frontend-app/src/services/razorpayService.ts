@@ -20,6 +20,16 @@ const buildRequestHeaders = (authToken?: string): Record<string, string> => {
 };
 
 const toPaymentError = (error: any, fallbackMessage: string): RazorpayPaymentResponse => {
+  // Handle normalized ApiError from apiClient
+  if (error?.code && !error?.response) {
+    return {
+      success: false,
+      error: error.code,
+      message: error.message || error.data?.message || fallbackMessage,
+    };
+  }
+
+  // Handle standard AxiosError
   if (!error?.response) {
     return {
       success: false,
