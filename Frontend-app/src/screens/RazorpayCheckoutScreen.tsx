@@ -172,9 +172,9 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
     if (parsed.type === 'failed') {
       const desc =
         parsed.error &&
-        typeof parsed.error === 'object' &&
-        parsed.error !== null &&
-        'description' in parsed.error
+          typeof parsed.error === 'object' &&
+          parsed.error !== null &&
+          'description' in parsed.error
           ? String((parsed.error as { description?: string }).description)
           : 'Payment failed';
       Alert.alert('Payment failed', desc);
@@ -254,7 +254,7 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
       ) : null}
       <WebView
         ref={webViewRef}
-        source={{ html: CHECKOUT_HTML, baseUrl: 'https://mathematico.in' }}
+        source={{ html: CHECKOUT_HTML, baseUrl: 'https://api.mathematico.in' }}
         onLoadStart={onLoadStart}
         onLoadEnd={onLoadEnd}
         onMessage={handleMessage}
@@ -278,7 +278,7 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
           Alert.alert('Load error', 'Could not load payment page. Check your connection.');
           navigation.goBack();
         }}
-        // Security: no arbitrary URL loading in this flow; Checkout.js only
+      // Security: no arbitrary URL loading in this flow; Checkout.js only
       />
     </View>
   );
