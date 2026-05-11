@@ -575,19 +575,19 @@ courseSchema.methods.incrementViews = function() {
 
 // Static method to find published courses
 courseSchema.statics.findPublished = function() {
-  return this.find({ status: 'published', isAvailable: true });
+  return this.find({ status: 'published', isAvailable: { $ne: false } });
 };
 
 // Static method to find featured courses
 courseSchema.statics.findFeatured = function() {
-  return this.find({ featured: true, status: 'published', isAvailable: true });
+  return this.find({ featured: true, status: 'published', isAvailable: { $ne: false } });
 };
 
 // Static method to search courses
 courseSchema.statics.searchCourses = function(query, filters = {}) {
   const searchQuery = {
     status: 'published',
-    isAvailable: true,
+    isAvailable: { $ne: false },
     ...filters
   };
   

@@ -407,19 +407,19 @@ bookSchema.methods.purchaseBook = async function(studentId, paymentId) {
 
 // Static method to find published books
 bookSchema.statics.findPublished = function() {
-  return this.find({ status: 'published', isAvailable: true });
+  return this.find({ status: 'published', isAvailable: { $ne: false } });
 };
 
 // Static method to find featured books
 bookSchema.statics.findFeatured = function() {
-  return this.find({ featured: true, status: 'published', isAvailable: true });
+  return this.find({ featured: true, status: 'published', isAvailable: { $ne: false } });
 };
 
 // Static method to search books
 bookSchema.statics.searchBooks = function(query, filters = {}) {
   const searchQuery = {
     status: 'published',
-    isAvailable: true,
+    isAvailable: { $ne: false },
     ...filters
   };
   

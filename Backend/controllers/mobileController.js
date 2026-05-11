@@ -76,7 +76,7 @@ const getAllCourses = async (req, res) => {
     const { status, category, level, search } = req.query;
 
     // Build query object
-    const query = { isAvailable: true };
+    const query = { isAvailable: { $ne: false } };
     
     // Add status filter (default to published if not specified)
     if (status) {
@@ -182,7 +182,7 @@ const getAllBooks = async (req, res) => {
     // Build query - only show published and available books
     const query = {
       status: 'published',
-      isAvailable: true
+      isAvailable: { $ne: false }
     };
 
     if (category) query.category = category;
@@ -251,7 +251,7 @@ const getBookById = async (req, res) => {
     const book = await BookModel.findOne({
       _id: id,
       status: 'published',
-      isAvailable: true
+      isAvailable: { $ne: false }
     }).select('-pdfFile');
 
     if (!book) {
@@ -310,7 +310,7 @@ const getSecurePdfViewer = async (req, res) => {
     let book = await BookModel.findOne({
       _id: id,
       status: 'published',
-      isAvailable: true
+      isAvailable: { $ne: false }
     }).select('title pdfFile status isAvailable');
 
     // If not found in published, try to find the book anyway for better error message
@@ -467,7 +467,7 @@ const streamSecurePdf = async (req, res) => {
     const book = await BookModel.findOne({
       _id: id,
       status: 'published',
-      isAvailable: true
+      isAvailable: { $ne: false }
     }).select('title pdfFile');
 
     if (!book || !book.pdfFile) {
@@ -564,7 +564,7 @@ const getAllLiveClasses = async (req, res) => {
     const { status, category, level, search } = req.query;
 
     // Build query object
-    const query = { isAvailable: true };
+    const query = { isAvailable: { $ne: false } };
     
     // Add status filter only when explicitly requested
     if (status) {
@@ -820,7 +820,7 @@ const getCourseById = async (req, res) => {
     const course = await CourseModel.findOne({
       _id: id,
       status: 'published',
-      isAvailable: true
+      isAvailable: { $ne: false }
     }).select('-enrolledStudents -reviews -curriculum');
 
     if (!course) {
@@ -875,7 +875,7 @@ const getLiveClassById = async (req, res) => {
     // Get live class details
     const liveClass = await LiveClassModel.findOne({
       _id: id,
-      isAvailable: true
+      isAvailable: { $ne: false }
     }).select('-enrolledStudents -reviews');
 
     if (!liveClass) {
@@ -913,9 +913,9 @@ const getCategories = async (req, res) => {
     await connectDB();
 
     const [bookCategories, courseCategories, liveClassCategories] = await Promise.all([
-      BookModel.distinct('category', { status: 'published', isAvailable: true }),
-      CourseModel.distinct('category', { status: 'published', isAvailable: true }),
-      LiveClassModel.distinct('category', { isAvailable: true })
+      BookModel.distinct('category', { status: 'published', isAvailable: { $ne: false } }),
+      CourseModel.distinct('category', { status: 'published', isAvailable: { $ne: false } }),
+      LiveClassModel.distinct('category', { isAvailable: { $ne: false } })
     ]);
 
     res.json({
@@ -1006,9 +1006,9 @@ const getMobileInfo = async (req, res) => {
 
     await connectDB();
     const [bookCount, courseCount, liveClassCount] = await Promise.all([
-      BookModel.countDocuments({ status: 'published', isAvailable: true }),
-      CourseModel.countDocuments({ status: 'published', isAvailable: true }),
-      LiveClassModel.countDocuments({ isAvailable: true })
+      BookModel.countDocuments({ status: 'published', isAvailable: { $ne: false } }),
+      CourseModel.countDocuments({ status: 'published', isAvailable: { $ne: false } }),
+      LiveClassModel.countDocuments({ isAvailable: { $ne: false } })
     ]);
 
     res.json({
@@ -1754,9 +1754,9 @@ const getStats = async (req, res) => {
     activeThreshold.setMonth(activeThreshold.getMonth() - 1);
 
     const [totalBooks, totalCourses, totalLiveClasses, totalStudents, activeUsers] = await Promise.all([
-      BookModel ? BookModel.countDocuments({ status: 'published', isAvailable: true }) : 0,
-      CourseModel ? CourseModel.countDocuments({ status: 'published', isAvailable: true }) : 0,
-      LiveClassModel ? LiveClassModel.countDocuments({ status: { $in: ['scheduled', 'live'] }, isAvailable: true }) : 0,
+      BookModel ? BookModel.countDocuments({ status: 'published', isAvailable: { $ne: false } }) : 0,
+      CourseModel ? CourseModel.countDocuments({ status: 'published', isAvailable: { $ne: false } }) : 0,
+      LiveClassModel ? LiveClassModel.countDocuments({ status: { $in: ['scheduled', 'live'] }, isAvailable: { $ne: false } }) : 0,
       UserModel ? UserModel.countDocuments({ role: 'student' }) : 0,
       UserModel ? UserModel.countDocuments({ role: 'student', lastLogin: { $gte: activeThreshold } }) : 0
     ]);

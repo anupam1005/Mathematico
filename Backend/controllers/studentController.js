@@ -55,7 +55,7 @@ const getDashboard = async (req, res) => {
     const upcomingLiveClassesCount = await LiveClassModel.countDocuments({
       'enrolledStudents.student': studentId,
       status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
+      isAvailable: { $ne: false },
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
@@ -85,7 +85,7 @@ const getDashboard = async (req, res) => {
     // Get recent enrolled courses details
     const recentEnrolledCourses = await CourseModel.find({
       'enrolledStudents.student': studentId,
-      isAvailable: true
+      isAvailable: { $ne: false }
     })
       .select('title description category thumbnail status')
       .sort({ createdAt: -1 })
@@ -95,7 +95,7 @@ const getDashboard = async (req, res) => {
     const upcomingLiveClasses = await LiveClassModel.find({
       'enrolledStudents.student': studentId,
       status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
+      isAvailable: { $ne: false },
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
@@ -298,14 +298,14 @@ const getEnrolledCourses = async (req, res) => {
 
     const courses = await CourseModel.find({ 
       status: 'published',
-      isAvailable: true 
+      isAvailable: { $ne: false } 
     })
       .select('-enrolledStudents -reviews')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await CourseModel.countDocuments({ status: 'published', isAvailable: true });
+    const total = await CourseModel.countDocuments({ status: 'published', isAvailable: { $ne: false } });
 
     res.json({
       success: true,
@@ -426,14 +426,14 @@ const getStudentBooks = async (req, res) => {
 
     const books = await BookModel.find({ 
       status: 'published',
-      isAvailable: true 
+      isAvailable: { $ne: false } 
     })
       .select('-pdfFile')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await BookModel.countDocuments({ status: 'published', isAvailable: true });
+    const total = await BookModel.countDocuments({ status: 'published', isAvailable: { $ne: false } });
 
     res.json({
       success: true,
@@ -474,7 +474,7 @@ const getStudentLiveClasses = async (req, res) => {
 
     const liveClasses = await LiveClassModel.find({ 
       status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
+      isAvailable: { $ne: false },
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
@@ -487,7 +487,7 @@ const getStudentLiveClasses = async (req, res) => {
 
     const total = await LiveClassModel.countDocuments({ 
       status: { $in: ['scheduled', 'live'] },
-      isAvailable: true,
+      isAvailable: { $ne: false },
       $or: [
         { status: 'live' },
         { startTime: { $gte: new Date() } }
@@ -1111,7 +1111,7 @@ module.exports = {
       await connectDB();
       const studentId = req.user.id;
 
-      const totalBooks = await BookModel.countDocuments({ status: 'published', isAvailable: true });
+      const totalBooks = await BookModel.countDocuments({ status: 'published', isAvailable: { $ne: false } });
       const purchasedBooks = await BookModel.countDocuments({
         'purchasedBy.student': studentId
       });

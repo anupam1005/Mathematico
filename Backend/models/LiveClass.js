@@ -654,7 +654,7 @@ liveClassSchema.statics.findUpcoming = function() {
   return this.find({
     startTime: { $gt: new Date() },
     status: 'scheduled',
-    isAvailable: true
+    isAvailable: { $ne: false }
   }).sort({ startTime: 1 });
 };
 
@@ -665,7 +665,7 @@ liveClassSchema.statics.findLive = function() {
     startTime: { $lte: now },
     endTime: { $gte: now },
     status: 'live',
-    isAvailable: true
+    isAvailable: { $ne: false }
   });
 };
 
@@ -674,7 +674,7 @@ liveClassSchema.statics.findFeatured = function() {
   return this.find({
     featured: true,
     status: 'scheduled',
-    isAvailable: true,
+    isAvailable: { $ne: false },
     startTime: { $gt: new Date() }
   });
 };
@@ -683,7 +683,7 @@ liveClassSchema.statics.findFeatured = function() {
 liveClassSchema.statics.searchClasses = function(query, filters = {}) {
   const searchQuery = {
     status: 'scheduled',
-    isAvailable: true,
+    isAvailable: { $ne: false },
     startTime: { $gt: new Date() },
     ...filters
   };
