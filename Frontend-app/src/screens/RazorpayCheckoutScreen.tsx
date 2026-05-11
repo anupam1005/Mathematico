@@ -254,7 +254,7 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
       ) : null}
       <WebView
         ref={webViewRef}
-        source={{ html: CHECKOUT_HTML, baseUrl: 'https://api.mathematico.in' }}
+        source={{ html: CHECKOUT_HTML, baseUrl: 'https://mathematico.in' }}
         onLoadStart={onLoadStart}
         onLoadEnd={onLoadEnd}
         onMessage={handleMessage}
