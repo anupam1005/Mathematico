@@ -9,14 +9,14 @@ export default {
     slug: 'mathematico-app',
     version: '9.0.4',
     orientation: 'portrait',
-    owner: 'adminmathematico2026',
+    owner: 'adminmathematicodipanjan2026',
     icon: './assets/icon.png',
     web: {
       favicon: './assets/favicon.png'
     },
     extra: {
       eas: {
-        projectId: '7bbf204a-18c0-4a04-841b-64437d52246f'
+        projectId: 'a9079ffa-9c87-4f2e-b20b-f68dc870aed1'
       },
       enableSecurePdf: ENABLE_SECURE_PDF,
       enableRazorpay: ENABLE_RAZORPAY,
