@@ -549,6 +549,27 @@ class AdminService {
     }
   }
 
+  // Payments
+  async getAllPayments(page: number = 1, limit: number = 20): Promise<ApiResponse<any>> {
+    try {
+      const response = await adminFetch('GET', `/payments?page=${page}&limit=${limit}`);
+      const payload = processResponse(response);
+      return {
+        success: true,
+        data: Array.isArray(payload) ? payload : (payload.data || (payload as any).payments || (payload as any).items || payload || []),
+        pagination: payload.pagination || { total: 0, page, limit, totalPages: 0 }
+      };
+    } catch (error) {
+      errorHandler.handleError('Error fetching payments:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch payments',
+        data: [],
+        pagination: { total: 0, page, limit, totalPages: 0 }
+      };
+    }
+  }
+
   // Settings (optional backend support)
   async getSettings(): Promise<ApiResponse<any>> {
     try {

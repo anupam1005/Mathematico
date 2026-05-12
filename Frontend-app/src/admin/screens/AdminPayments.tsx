@@ -23,6 +23,7 @@ import { designSystem, layoutStyles, textStyles } from '../../styles/designSyste
 import { UnifiedCard } from '../../components/UnifiedCard';
 import { EmptyState } from '../../components/EmptyState';
 import { safeCatch } from '../../utils/safeCatch';
+import adminService from '../../services/adminService';
 
 interface Payment {
   id: string;
@@ -67,8 +68,27 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
   const loadPayments = async () => {
     try {
       setIsLoading(true);
-      // Load payments from API
-      setPayments([]);
+      const response = await adminService.getAllPayments();
+      if (response.success && response.data) {
+        const mapped = response.data.map((p: any) => ({
+          id: p._id || p.id,
+          userId: p.userId?._id || p.userId,
+          userName: p.userId?.name || 'Unknown User',
+          userEmail: p.userId?.email || 'N/A',
+          courseId: p.courseId?._id || p.courseId || p.liveClassId?._id || p.liveClassId || p.bookId?._id || p.bookId || 'N/A',
+          courseTitle: p.courseId?.title || p.liveClassId?.title || p.bookId?.title || 'Unknown Item',
+          amount: (p.amount || 0) / 100, // Amount from razorpay is often in paise
+          currency: p.currency || 'INR',
+          status: p.status || 'pending',
+          paymentMethod: p.paymentMethod || 'Razorpay',
+          transactionId: p.paymentId || p.transactionId || 'N/A',
+          createdAt: p.createdAt || p.processedAt || new Date().toISOString(),
+          updatedAt: p.updatedAt || p.createdAt || new Date().toISOString(),
+        }));
+        setPayments(mapped);
+      } else {
+        setPayments([]);
+      }
     } catch (error) {
       safeCatch('AdminPayments.loadPayments', () => {
         Alert.alert('Error', 'Failed to load payments. Please try again.');
@@ -158,7 +178,6 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
       <View style={styles.paymentHeader}>
         <View style={styles.paymentInfo}>
           <Title style={textStyles.subheading}>{item.userName}</Title>
-          <Paragraph style={textStyles.caption}>{item.userEmail}</Paragraph>
         </View>
         <Chip
           icon={() => (
@@ -177,7 +196,7 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
 
       <View style={styles.paymentDetails}>
         <View style={styles.detailRow}>
-          <Text style={textStyles.caption}>Course:</Text>
+          <Text style={textStyles.caption}>Purchased Item:</Text>
           <Text style={textStyles.body}>{item.courseTitle}</Text>
         </View>
         <View style={styles.detailRow}>
@@ -185,14 +204,6 @@ export default function AdminPayments({ navigation }: { navigation: any }) {
           <Text style={[textStyles.body, styles.amountText]}>
             {item.currency} {item.amount.toFixed(2)}
           </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={textStyles.caption}>Method:</Text>
-          <Text style={textStyles.body}>{item.paymentMethod}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={textStyles.caption}>Transaction ID:</Text>
-          <Text style={textStyles.body}>{item.transactionId}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={textStyles.caption}>Date:</Text>

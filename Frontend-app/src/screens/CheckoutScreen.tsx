@@ -86,7 +86,7 @@ export default function CheckoutScreen({ navigation, route }: any) {
           courseId: type === 'course' ? itemId : undefined,
           liveClassId: type === 'liveClass' ? itemId : undefined,
           userId: user?.id,
-          itemType: type
+          itemType: type === 'liveClass' ? 'live_class' : type
         },
       });
 

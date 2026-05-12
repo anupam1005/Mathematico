@@ -215,6 +215,16 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
               ],
             })
           );
+        } else if (type === 'liveClass') {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 1,
+              routes: [
+                { name: 'MainTabs' },
+                { name: 'LiveClassDetail', params: { liveClassId: itemId } },
+              ],
+            })
+          );
         } else {
           navigation.dispatch(
             CommonActions.reset({

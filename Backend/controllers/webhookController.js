@@ -108,7 +108,6 @@ const processPaymentCaptured = async (event) => {
       break;
       
     case 'live_class':
-    case 'liveClass':
       if (!liveClassId) throw new Error('liveClassId required for live class payment');
       item = await LiveClass.findById(liveClassId);
       if (!item) throw new Error(`Live class not found: ${liveClassId}`);

@@ -367,17 +367,57 @@ const verifyPayment = async (req, res) => {
       try {
         const razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
         
-        paymentRecord = {
-          paymentId: razorpay_payment_id,
-          orderId: razorpay_order_id,
-          status: razorpayPayment.status,
-          amount: razorpayPayment.amount,
-          currency: razorpayPayment.currency,
-          processedAt: razorpayPayment.created_at,
-          // Note: This is a temporary record for verification only
-          // Webhook will create the permanent record
-          isTemporary: true
-        };
+        if (razorpayPayment.status === 'captured') {
+          // Process payment synchronously to avoid race conditions with webhook
+          const existing = await Payment.findOne({ paymentId: razorpay_payment_id });
+          if (!existing) {
+            const userId = razorpayPayment.notes?.userId || (req.user ? req.user.id : null);
+            const itemType = razorpayPayment.notes?.itemType || 'course';
+            
+            const newPayment = new Payment({
+              paymentId: razorpay_payment_id,
+              orderId: razorpay_order_id,
+              status: 'captured',
+              amount: razorpayPayment.amount,
+              currency: razorpayPayment.currency,
+              userId: userId,
+              courseId: razorpayPayment.notes?.courseId || null,
+              bookId: razorpayPayment.notes?.bookId || null,
+              liveClassId: razorpayPayment.notes?.liveClassId || null,
+              itemType: itemType,
+              processedAt: new Date()
+            });
+            await newPayment.save();
+            
+            // Enroll the student immediately
+            if (userId) {
+              try {
+                if (itemType === 'course' && razorpayPayment.notes?.courseId) {
+                  const course = await Course.findById(razorpayPayment.notes.courseId);
+                  if (course) await course.enrollStudent(userId);
+                } else if (itemType === 'live_class' && razorpayPayment.notes?.liveClassId) {
+                  const lc = await LiveClass.findById(razorpayPayment.notes.liveClassId);
+                  if (lc) await lc.enrollStudent(userId);
+                }
+              } catch (enrollError) {
+                console.error('Synchronous enrollment error:', enrollError);
+              }
+            }
+            paymentRecord = newPayment;
+          } else {
+            paymentRecord = existing;
+          }
+        } else {
+          paymentRecord = {
+            paymentId: razorpay_payment_id,
+            orderId: razorpay_order_id,
+            status: razorpayPayment.status,
+            amount: razorpayPayment.amount,
+            currency: razorpayPayment.currency,
+            processedAt: razorpayPayment.created_at,
+            isTemporary: true
+          };
+        }
       } catch (razorpayError) {
         securityLogger.logSecurityEvent('PAYMENT_VERIFICATION_RAZORPAY_ERROR', {
           userId: req.user?.id || 'anonymous',

@@ -236,9 +236,9 @@ export default function CourseDetailScreen({ navigation, route }: any) {
             onPress={() => navigation.navigate('MainTabs', { screen: 'MyCourses' })}
             style={[styles.enrollButton, { backgroundColor: designSystem.colors.success }]}
             contentStyle={styles.enrollButtonContent}
-            icon="play-circle"
+            icon="check-circle"
           >
-            Go to Course
+            Already Enrolled
           </Button>
         ) : (
           <Button

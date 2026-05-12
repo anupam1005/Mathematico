@@ -93,7 +93,7 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
         <iframe 
           class="pdf-viewer" 
           id="pdfFrame"
-          src="https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewerUrl + (viewerUrl.includes('?') ? '&' : '?') + '_cb=' + Date.now())}"
+          src="https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewerUrl)}"
           frameborder="0"
           scrolling="auto"
           onload="document.getElementById('loading').style.display='none';"

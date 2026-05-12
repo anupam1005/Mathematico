@@ -740,7 +740,7 @@ const createBook = async (req, res) => {
                 { 
                   resource_type: 'raw', 
                   folder: 'mathematico/books/pdfs',
-                  public_id: `pdf_${Date.now()}`
+                  public_id: `pdf_${Date.now()}.pdf`
                 },
                 (error, result) => {
                   if (error) reject(error);
@@ -1943,150 +1943,7 @@ const deleteLiveClass = async (req, res) => {
   }
 };
 
-// ============= PAYMENT MANAGEMENT =============
-
-const getAllPayments = async (req, res) => {
-  try {
-    // If you have a PaymentModel, use it; else return empty but without the removed message
-    let PaymentModel;
-    try { PaymentModel = require('../models/Payment'); } catch (_) {}
-
-    await connectDB();
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    if (PaymentModel) {
-      const payments = await PaymentModel.find({})
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      const total = await PaymentModel.countDocuments({});
-      return res.json({
-        success: true,
-        data: payments,
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-        timestamp: new Date().toISOString(),
-        message: 'Payments retrieved successfully'
-      });
-    }
-
-    // Return empty array if no model available
-    res.json({
-      success: true,
-      data: [],
-      pagination: { page, limit, total: 0, totalPages: 0 },
-      timestamp: new Date().toISOString(),
-      message: 'No payments found'
-    });
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payments',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const getPaymentById = async (req, res) => {
-  try {
-    let PaymentModelLocal;
-    try { PaymentModelLocal = require('../models/Payment'); } catch (_) {}
-
-    if (!PaymentModelLocal) {
-      return res.status(503).json({
-        success: false,
-        message: 'Payment model unavailable',
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    await connectDB();
-    const { id } = req.params;
-
-    const payment = await PaymentModelLocal.findById(id).lean();
-    if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found',
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: payment,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Error fetching payment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payment',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-const updatePaymentStatus = async (req, res) => {
-  try {
-    let PaymentModel;
-    try { PaymentModel = require('../models/Payment'); } catch (_) {}
-
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment status is required'
-      });
-    }
-
-    await connectDB();
-
-    if (PaymentModel) {
-      const payment = await PaymentModel.findByIdAndUpdate(
-        id,
-        { status, updatedAt: new Date() },
-        { new: true }
-      );
-
-      if (!payment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Payment not found'
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Payment status updated successfully',
-        data: payment,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Payment status updated (no model configured)',
-      data: { id, status },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Update payment status error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update payment status',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
+// Payment management methods were moved below.
 
 // ============= FILE UPLOAD =============
 
@@ -2206,6 +2063,143 @@ const getLiveClassStats = async (req, res) => {
     res.json({ success: true, data: { total, upcoming, completed } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch live class stats', error: error.message });
+  }
+};
+
+// ============= PAYMENT MANAGEMENT =============
+
+const getAllPayments = async (req, res) => {
+  try {
+    if (!PaymentModel) {
+      return res.status(503).json({ success: false, message: 'Payment model unavailable' });
+    }
+
+    await connectDB();
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    const { status, search } = req.query;
+
+    const query = {};
+    if (status && status !== 'all') query.status = status;
+    // Note: Search implementation skipped for simplicity, but could be added here
+
+    const payments = await PaymentModel.find(query)
+      .populate('userId', 'name email')
+      .populate('courseId', 'title')
+      .populate('liveClassId', 'title')
+      .populate('bookId', 'title')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await PaymentModel.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payments',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const getPaymentById = async (req, res) => {
+  try {
+    if (!PaymentModel) {
+      return res.status(503).json({ success: false, message: 'Payment model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+
+    const payment = await PaymentModel.findById(id)
+      .populate('userId', 'name email')
+      .populate('courseId', 'title')
+      .populate('liveClassId', 'title')
+      .populate('bookId', 'title')
+      .lean();
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: payment,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+const updatePaymentStatus = async (req, res) => {
+  try {
+    if (!PaymentModel) {
+      return res.status(503).json({ success: false, message: 'Payment model unavailable' });
+    }
+
+    await connectDB();
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'completed', 'failed', 'refunded', 'captured'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Valid status is required. Allowed: ${validStatuses.join(', ')}`
+      });
+    }
+
+    const payment = await PaymentModel.findByIdAndUpdate(
+      id,
+      { status, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Payment status updated to ${status} successfully`,
+      data: payment,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Update payment status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update payment status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 };
 

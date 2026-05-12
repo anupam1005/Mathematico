@@ -324,6 +324,31 @@ export default function BookForm({ route, navigation }: BookFormProps) {
         </View>
       </View>
 
+      <View style={styles.pickerContainer}>
+        <Text style={styles.pickerLabel}>Level</Text>
+        <View style={styles.pickerWrapper}>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => {
+              Alert.alert(
+                'Select Level',
+                'Choose the book level',
+                [
+                  { text: 'Foundation', onPress: () => setFormData({ ...formData, level: 'Foundation' }) },
+                  { text: 'Intermediate', onPress: () => setFormData({ ...formData, level: 'Intermediate' }) },
+                  { text: 'Advanced', onPress: () => setFormData({ ...formData, level: 'Advanced' }) },
+                  { text: 'Expert', onPress: () => setFormData({ ...formData, level: 'Expert' }) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.pickerText}>{formData.level || 'Select Level'}</Text>
+            <Text style={styles.pickerArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={styles.imageSection}>
         <Text style={styles.sectionLabel}>Cover Image</Text>
         <TouchableOpacity style={styles.button} onPress={pickImage}>

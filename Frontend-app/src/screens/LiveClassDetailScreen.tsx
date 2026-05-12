@@ -37,11 +37,11 @@ export default function LiveClassDetailScreen({ route }: any) {
     try {
       setLoading(true);
       const response = await liveClassService.getLiveClassById(liveClassId);
-      
+
       if (response.success && response.data) {
         // Handle both single object and array responses
         const liveClassData = Array.isArray(response.data) ? response.data[0] : response.data;
-        
+
         // Ensure all required properties exist with fallbacks
         const safeLiveClassData = {
           _id: liveClassData._id || liveClassData.id || '',
@@ -64,7 +64,7 @@ export default function LiveClassDetailScreen({ route }: any) {
           recording_url: liveClassData.recording_url || null,
           ...liveClassData // Spread any additional properties
         };
-        
+
         setLiveClass(safeLiveClassData);
       } else {
         Alert.alert('Error', response.message || 'Failed to load live class');
@@ -110,7 +110,7 @@ export default function LiveClassDetailScreen({ route }: any) {
   const startLiveClass = async () => {
     try {
       const response = await liveClassService.startLiveClass(liveClassId);
-      
+
       if (response.success) {
         Alert.alert('Success', 'Live class started successfully!');
         // Reload the live class data to update the status
@@ -128,7 +128,7 @@ export default function LiveClassDetailScreen({ route }: any) {
   const endLiveClass = async () => {
     try {
       const response = await liveClassService.endLiveClass(liveClassId);
-      
+
       if (response.success) {
         Alert.alert('Success', 'Live class ended successfully!');
         // Reload the live class data to update the status
@@ -304,261 +304,261 @@ export default function LiveClassDetailScreen({ route }: any) {
   try {
     return (
       <ScrollView style={styles.container}>
-      {/* Live Class Header */}
-      <Card style={styles.headerCard}>
-        <Card.Cover
-          source={
-            liveClass.thumbnail_url
-              ? { uri: liveClass.thumbnail_url }
-              : require('../../assets/icon.png')
-          }
-          style={styles.thumbnail}
-        />
-        <Card.Content style={styles.headerContent}>
-          <View style={styles.titleContainer}>
-            <Title style={styles.title}>{liveClass.title || 'Untitled Live Class'}</Title>
-            <Chip
-              mode="flat"
-              style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status || '') }]}
-              textStyle={{ color: designSystem.colors.surface }}
-            >
-              {(liveClass.status || 'unknown').toUpperCase()}
-            </Chip>
-          </View>
-          {/* Use _isUpcoming for conditional UI rendering */}
-          {liveClass.scheduled_at && _isUpcoming(liveClass.scheduled_at) && (
-            <View style={styles.upcomingBadge}>
-              <Icon name="calendar-clock" size={16} color={designSystem.colors.info} />
-              <Text style={styles.upcomingText}>UPCOMING</Text>
+        {/* Live Class Header */}
+        <Card style={styles.headerCard}>
+          <Card.Cover
+            source={
+              liveClass.thumbnail_url
+                ? { uri: liveClass.thumbnail_url }
+                : require('../../assets/icon.png')
+            }
+            style={styles.thumbnail}
+          />
+          <Card.Content style={styles.headerContent}>
+            <View style={styles.titleContainer}>
+              <Title style={styles.title}>{liveClass.title || 'Untitled Live Class'}</Title>
+              <Chip
+                mode="flat"
+                style={[styles.statusChip, { backgroundColor: getStatusColor(liveClass.status || '') }]}
+                textStyle={{ color: designSystem.colors.surface }}
+              >
+                {(liveClass.status || 'unknown').toUpperCase()}
+              </Chip>
             </View>
+            {/* Use _isUpcoming for conditional UI rendering */}
+            {liveClass.scheduled_at && _isUpcoming(liveClass.scheduled_at) && (
+              <View style={styles.upcomingBadge}>
+                <Icon name="calendar-clock" size={16} color={designSystem.colors.info} />
+                <Text style={styles.upcomingText}>UPCOMING</Text>
+              </View>
+            )}
+            <View style={styles.metaContainer}>
+              <Chip
+                mode="flat"
+                style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
+                textStyle={{ color: designSystem.colors.surface }}
+              >
+                {liveClass.level || 'All Levels'}
+              </Chip>
+              <Chip mode="outlined" style={styles.categoryChip}>
+                {liveClass.category || 'General'}
+              </Chip>
+            </View>
+            <View style={styles.priceContainer}>
+              {liveClass.original_price && liveClass.original_price > (liveClass.price || 0) && (
+                <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
+              )}
+              <Text style={styles.price}>
+                {liveClass.price && liveClass.price > 0 ? `₹${liveClass.price}` : 'FREE'}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Live Class Description */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Title style={styles.sectionTitle}>Description</Title>
+            <Paragraph style={styles.description}>
+              {liveClass.description && typeof liveClass.description === 'string'
+                ? liveClass.description
+                : 'No description available.'}
+            </Paragraph>
+          </Card.Content>
+        </Card>
+
+        {/* Live Class Details */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Title style={styles.sectionTitle}>Class Details</Title>
+            <View style={styles.detailsContainer}>
+              <View style={styles.detailItem}>
+                <Icon name="calendar-month" size={20} color={designSystem.colors.primary} />
+                <Text style={styles.detailLabel}>Scheduled:</Text>
+                <Text style={styles.detailValue}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Icon name="clock-outline" size={20} color={designSystem.colors.primary} />
+                <Text style={styles.detailLabel}>Duration:</Text>
+                <Text style={styles.detailValue}>{liveClass.duration || 0} minutes</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Icon name="account-group" size={20} color={designSystem.colors.primary} />
+                <Text style={styles.detailLabel}>Enrolled:</Text>
+                <Text style={styles.detailValue}>{liveClass.enrolled_students || 0}/{liveClass.max_students || 0}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Icon name="tag" size={20} color={designSystem.colors.primary} />
+                <Text style={styles.detailLabel}>Subject:</Text>
+                <Text style={styles.detailValue}>{liveClass.subject || 'General'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Icon name="school" size={20} color={designSystem.colors.primary} />
+                <Text style={styles.detailLabel}>Class:</Text>
+                <Text style={styles.detailValue}>{liveClass.class || 'All Classes'}</Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Topics */}
+        {liveClass.topics && liveClass.topics.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.sectionTitle}>Topics Covered</Title>
+              <View style={styles.topicsContainer}>
+                {liveClass.topics.map((topic, index) => (
+                  <Chip key={index} mode="outlined" style={styles.topicChip}>
+                    {topic}
+                  </Chip>
+                ))}
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Prerequisites */}
+        {liveClass.prerequisites && typeof liveClass.prerequisites === 'string' && liveClass.prerequisites.trim() && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.sectionTitle}>Prerequisites</Title>
+              <Paragraph style={styles.prerequisites}>{liveClass.prerequisites}</Paragraph>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Materials */}
+        {liveClass.materials && typeof liveClass.materials === 'string' && liveClass.materials.trim() && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.sectionTitle}>Materials Required</Title>
+              <Paragraph style={styles.materials}>{liveClass.materials}</Paragraph>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Notes */}
+        {liveClass.notes && typeof liveClass.notes === 'string' && liveClass.notes.trim() && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.sectionTitle}>Additional Notes</Title>
+              <Paragraph style={styles.notes}>{liveClass.notes}</Paragraph>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Recording */}
+        {isCompleted(liveClass.status || '') && liveClass.recording_url && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.sectionTitle}>Class Recording</Title>
+              <Button
+                mode="outlined"
+                onPress={() => Alert.alert('Info', 'Recording playback would be implemented here')}
+                icon="play-circle"
+                style={styles.recordingButton}
+              >
+                Watch Recording
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <View style={styles.actionContainer}>
+          {/* Admin Controls - Only show for admin users */}
+          {user?.isAdmin && (
+            <>
+              {/* Start Live Class Button */}
+              {liveClass.status === 'scheduled' && (
+                <Button
+                  mode="contained"
+                  onPress={handleStartLiveClass}
+                  style={styles.startButton}
+                  contentStyle={styles.startButtonContent}
+                  icon={() => <Icon name="play-circle" size={20} color={designSystem.colors.surface} />}
+                >
+                  Start Live Class
+                </Button>
+              )}
+
+              {/* End Live Class Button */}
+              {liveClass.status === 'live' && (
+                <Button
+                  mode="contained"
+                  onPress={handleEndLiveClass}
+                  style={styles.endButton}
+                  contentStyle={styles.endButtonContent}
+                  icon={() => <Icon name="stop-circle" size={20} color={designSystem.colors.surface} />}
+                >
+                  End Live Class
+                </Button>
+              )}
+            </>
           )}
-          <View style={styles.metaContainer}>
-            <Chip
-              mode="flat"
-              style={[styles.levelChip, { backgroundColor: getLevelColor(liveClass.level || '') }]}
-              textStyle={{ color: designSystem.colors.surface }}
-            >
-              {liveClass.level || 'All Levels'}
-            </Chip>
-            <Chip mode="outlined" style={styles.categoryChip}>
-              {liveClass.category || 'General'}
-            </Chip>
-          </View>
-          <View style={styles.priceContainer}>
-            {liveClass.original_price && liveClass.original_price > (liveClass.price || 0) && (
-              <Text style={styles.originalPrice}>₹{liveClass.original_price}</Text>
-            )}
-            <Text style={styles.price}>
-              {liveClass.price && liveClass.price > 0 ? `₹${liveClass.price}` : 'FREE'}
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
 
-      {/* Live Class Description */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Title style={styles.sectionTitle}>Description</Title>
-          <Paragraph style={styles.description}>
-            {liveClass.description && typeof liveClass.description === 'string' 
-              ? liveClass.description 
-              : 'No description available.'}
-          </Paragraph>
-        </Card.Content>
-      </Card>
+          {/* Student Controls - Only show Join button for students */}
+          {!user?.isAdmin && (
+            <>
+              {/* Join Live Class Button - Only show when class is live and student is enrolled */}
+              {isLive(liveClass.status || '') && liveClass.isEnrolled && (
+                <Button
+                  mode="contained"
+                  onPress={() => handleJoinLiveClass()}
+                  style={styles.joinButton}
+                  contentStyle={styles.joinButtonContent}
+                  icon={() => <Icon name="video" size={20} color={designSystem.colors.surface} />}
+                >
+                  Join Live Class
+                </Button>
+              )}
 
-      {/* Live Class Details */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Title style={styles.sectionTitle}>Class Details</Title>
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailItem}>
-              <Icon name="calendar-month" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.detailLabel}>Scheduled:</Text>
-              <Text style={styles.detailValue}>{liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="clock-outline" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.detailLabel}>Duration:</Text>
-              <Text style={styles.detailValue}>{liveClass.duration || 0} minutes</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="account-group" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.detailLabel}>Enrolled:</Text>
-              <Text style={styles.detailValue}>{liveClass.enrolled_students || 0}/{liveClass.max_students || 0}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="tag" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.detailLabel}>Subject:</Text>
-              <Text style={styles.detailValue}>{liveClass.subject || 'General'}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="school" size={20} color={designSystem.colors.primary} />
-              <Text style={styles.detailLabel}>Class:</Text>
-              <Text style={styles.detailValue}>{liveClass.class || 'All Classes'}</Text>
-            </View>
-          </View>
-        </Card.Content>
-      </Card>
+              {/* Enroll Button - Show if not enrolled and class is not completed/cancelled */}
+              {!liveClass.isEnrolled && !['completed', 'cancelled'].includes(liveClass.status || '') && (
+                <Button
+                  mode="contained"
+                  onPress={handleEnroll}
+                  style={styles.enrollButton}
+                  contentStyle={styles.enrollButtonContent}
+                  icon={() => <Icon name="account-plus" size={20} color={designSystem.colors.surface} />}
+                >
+                  {liveClass.price && liveClass.price > 0 ? `Buy Now (₹${liveClass.price})` : 'Enroll for Free'}
+                </Button>
+              )}
 
-      {/* Topics */}
-      {liveClass.topics && liveClass.topics.length > 0 && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Topics Covered</Title>
-            <View style={styles.topicsContainer}>
-              {liveClass.topics.map((topic, index) => (
-                <Chip key={index} mode="outlined" style={styles.topicChip}>
-                  {topic}
-                </Chip>
-              ))}
-            </View>
-          </Card.Content>
-        </Card>
-      )}
+              {/* Message if live but not enrolled */}
+              {isLive(liveClass.status || '') && !liveClass.isEnrolled && (
+                <View style={styles.messageContainer}>
+                  <Icon name="information-outline" size={24} color={designSystem.colors.info} />
+                  <Text style={styles.messageText}>
+                    Please enroll to join this live class
+                  </Text>
+                </View>
+              )}
 
-      {/* Prerequisites */}
-      {liveClass.prerequisites && typeof liveClass.prerequisites === 'string' && liveClass.prerequisites.trim() && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Prerequisites</Title>
-            <Paragraph style={styles.prerequisites}>{liveClass.prerequisites}</Paragraph>
-          </Card.Content>
-        </Card>
-      )}
+              {/* Show message for scheduled classes */}
+              {liveClass.status === 'scheduled' && (
+                <View style={styles.messageContainer}>
+                  <Icon name="calendar-month" size={24} color={designSystem.colors.info} />
+                  <Text style={styles.messageText}>
+                    Class will start at {liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}
+                  </Text>
+                </View>
+              )}
 
-      {/* Materials */}
-      {liveClass.materials && typeof liveClass.materials === 'string' && liveClass.materials.trim() && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Materials Required</Title>
-            <Paragraph style={styles.materials}>{liveClass.materials}</Paragraph>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* Notes */}
-      {liveClass.notes && typeof liveClass.notes === 'string' && liveClass.notes.trim() && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Additional Notes</Title>
-            <Paragraph style={styles.notes}>{liveClass.notes}</Paragraph>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* Recording */}
-      {isCompleted(liveClass.status || '') && liveClass.recording_url && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>Class Recording</Title>
-            <Button
-              mode="outlined"
-              onPress={() => Alert.alert('Info', 'Recording playback would be implemented here')}
-              icon="play-circle"
-              style={styles.recordingButton}
-            >
-              Watch Recording
-            </Button>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* Action Buttons */}
-      <View style={styles.actionContainer}>
-        {/* Admin Controls - Only show for admin users */}
-        {user?.isAdmin && (
-          <>
-            {/* Start Live Class Button */}
-            {liveClass.status === 'scheduled' && (
-              <Button
-                mode="contained"
-                onPress={handleStartLiveClass}
-                style={styles.startButton}
-                contentStyle={styles.startButtonContent}
-                icon={() => <Icon name="play-circle" size={20} color={designSystem.colors.surface} />}
-              >
-                Start Live Class
-              </Button>
-            )}
-            
-            {/* End Live Class Button */}
-            {liveClass.status === 'live' && (
-              <Button
-                mode="contained"
-                onPress={handleEndLiveClass}
-                style={styles.endButton}
-                contentStyle={styles.endButtonContent}
-                icon={() => <Icon name="stop-circle" size={20} color={designSystem.colors.surface} />}
-              >
-                End Live Class
-              </Button>
-            )}
-          </>
-        )}
-        
-        {/* Student Controls - Only show Join button for students */}
-        {!user?.isAdmin && (
-          <>
-            {/* Join Live Class Button - Only show when class is live and student is enrolled */}
-            {isLive(liveClass.status || '') && liveClass.isEnrolled && (
-              <Button
-                mode="contained"
-                onPress={() => handleJoinLiveClass()}
-                style={styles.joinButton}
-                contentStyle={styles.joinButtonContent}
-                icon={() => <Icon name="video" size={20} color={designSystem.colors.surface} />}
-              >
-                Join Live Class
-              </Button>
-            )}
-            
-            {/* Enroll Button - Show if not enrolled and class is not completed/cancelled */}
-            {!liveClass.isEnrolled && !['completed', 'cancelled'].includes(liveClass.status || '') && (
-              <Button
-                mode="contained"
-                onPress={handleEnroll}
-                style={styles.enrollButton}
-                contentStyle={styles.enrollButtonContent}
-                icon={() => <Icon name="account-plus" size={20} color={designSystem.colors.surface} />}
-              >
-                {liveClass.price && liveClass.price > 0 ? `Buy Now (₹${liveClass.price})` : 'Enroll for Free'}
-              </Button>
-            )}
-
-            {/* Message if live but not enrolled */}
-            {isLive(liveClass.status || '') && !liveClass.isEnrolled && (
-              <View style={styles.messageContainer}>
-                <Icon name="information-outline" size={24} color={designSystem.colors.info} />
-                <Text style={styles.messageText}>
-                  Please enroll to join this live class
-                </Text>
-              </View>
-            )}
-            
-            {/* Show message for scheduled classes */}
-            {liveClass.status === 'scheduled' && (
-              <View style={styles.messageContainer}>
-                <Icon name="calendar-month" size={24} color={designSystem.colors.info} />
-                <Text style={styles.messageText}>
-                  Class will start at {liveClass.scheduled_at ? formatDate(liveClass.scheduled_at) : 'TBD'}
-                </Text>
-              </View>
-            )}
-            
-            {/* Show message for completed classes */}
-            {isCompleted(liveClass.status || '') && (
-              <View style={styles.messageContainer}>
-                <Icon name="check-circle" size={24} color={designSystem.colors.success} />
-                <Text style={styles.messageText}>
-                  This class has been completed
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
-    </ScrollView>
+              {/* Show message for completed classes */}
+              {isCompleted(liveClass.status || '') && (
+                <View style={styles.messageContainer}>
+                  <Icon name="check-circle" size={24} color={designSystem.colors.success} />
+                  <Text style={styles.messageText}>
+                    This class has been completed
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
     );
   } catch (error) {
     safeCatch('LiveClassDetailScreen.render')(error);
