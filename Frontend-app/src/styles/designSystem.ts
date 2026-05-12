@@ -2,30 +2,30 @@
 export const designSystem = {
   colors: {
     // Primary Colors
-    primary: '#3b82f6',
-    primaryDark: '#1e40af',
-    primaryLight: '#60a5fa',
+    primary: '#4F46E5', // Indigo 600 - modern, premium
+    primaryDark: '#3730A3',
+    primaryLight: '#818CF8',
     
     // Secondary Colors
-    secondary: '#8b5cf6',
-    secondaryDark: '#7c3aed',
-    secondaryLight: '#a78bfa',
+    secondary: '#EC4899', // Pink 500 for vibrant contrast
+    secondaryDark: '#BE185D',
+    secondaryLight: '#F472B6',
     
     // Accent Colors
-    accent: '#f59e0b',
-    accentDark: '#d97706',
-    accentLight: '#fbbf24',
+    accent: '#F59E0B',
+    accentDark: '#D97706',
+    accentLight: '#FBBF24',
     
     // Status Colors
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    info: '#06b6d4',
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#06B6D4',
     
     // Neutral Colors
-    background: '#f8fafc',
-    surface: '#ffffff',
-    surfaceVariant: '#f1f5f9',
+    background: '#F1F5F9', // Slightly deeper background for card contrast
+    surface: '#FFFFFF',
+    surfaceVariant: '#F8FAFC',
     
     // Text Colors
     textPrimary: '#1e293b',
@@ -56,34 +56,37 @@ export const designSystem = {
   },
   
   borderRadius: {
-    sm: 4,
-    md: 8,
-    lg: 12,
-    xl: 16,
+    sm: 6,
+    md: 12,
+    lg: 16,
+    xl: 24,
     full: 9999,
   },
   
   typography: {
     // Headings
     h1: {
-      fontSize: 32,
-      fontWeight: 'bold' as const,
-      lineHeight: 40,
+      fontSize: 34,
+      fontWeight: '800' as const,
+      lineHeight: 42,
+      letterSpacing: -0.5,
     },
     h2: {
-      fontSize: 24,
-      fontWeight: 'bold' as const,
-      lineHeight: 32,
+      fontSize: 28,
+      fontWeight: '700' as const,
+      lineHeight: 36,
+      letterSpacing: -0.3,
     },
     h3: {
-      fontSize: 20,
-      fontWeight: '600' as const,
-      lineHeight: 28,
+      fontSize: 22,
+      fontWeight: '700' as const,
+      lineHeight: 30,
+      letterSpacing: -0.2,
     },
     h4: {
       fontSize: 18,
       fontWeight: '600' as const,
-      lineHeight: 24,
+      lineHeight: 26,
     },
     
     // Body Text
@@ -91,52 +94,57 @@ export const designSystem = {
       fontSize: 16,
       fontWeight: '400' as const,
       lineHeight: 24,
+      letterSpacing: 0.1,
     },
     bodySmall: {
       fontSize: 14,
       fontWeight: '400' as const,
       lineHeight: 20,
+      letterSpacing: 0.1,
     },
     caption: {
       fontSize: 12,
-      fontWeight: '400' as const,
+      fontWeight: '500' as const,
       lineHeight: 16,
+      letterSpacing: 0.2,
     },
     
     // Labels
     label: {
-      fontSize: 14,
-      fontWeight: '500' as const,
+      fontSize: 15,
+      fontWeight: '600' as const,
       lineHeight: 20,
+      letterSpacing: 0.1,
     },
     labelSmall: {
-      fontSize: 12,
-      fontWeight: '500' as const,
+      fontSize: 13,
+      fontWeight: '600' as const,
       lineHeight: 16,
+      letterSpacing: 0.1,
     },
   },
   
   shadows: {
     sm: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-    },
-    md: {
-      shadowColor: '#000',
+      shadowColor: '#0F172A',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
       elevation: 2,
     },
-    lg: {
-      shadowColor: '#000',
+    md: {
+      shadowColor: '#0F172A',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
       elevation: 4,
+    },
+    lg: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      elevation: 8,
     },
   },
   
@@ -191,40 +199,41 @@ export const cardStyles = {
 export const buttonStyles = {
   primary: {
     backgroundColor: designSystem.colors.primary,
-    borderRadius: designSystem.borderRadius.md,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    minHeight: 44,
+    borderRadius: designSystem.borderRadius.full,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    minHeight: 52,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+    ...designSystem.shadows.sm,
   },
   secondary: {
     backgroundColor: designSystem.colors.surface,
-    borderRadius: designSystem.borderRadius.md,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    minHeight: 44,
+    borderRadius: designSystem.borderRadius.full,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    minHeight: 52,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: designSystem.colors.primary,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderRadius: designSystem.borderRadius.md,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    minHeight: 44,
+    borderRadius: designSystem.borderRadius.full,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    minHeight: 52,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
-    borderColor: designSystem.colors.border,
+    borderColor: designSystem.colors.borderDark,
   },
   text: {
     backgroundColor: 'transparent',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    minHeight: 36,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    minHeight: 44,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
@@ -374,10 +383,10 @@ export const formStyles = {
     marginBottom: designSystem.spacing.xs,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: designSystem.colors.border,
     borderRadius: designSystem.borderRadius.md,
-    padding: designSystem.spacing.sm,
+    padding: designSystem.spacing.md,
     ...designSystem.typography.body,
     color: designSystem.colors.textPrimary,
     backgroundColor: designSystem.colors.surface,

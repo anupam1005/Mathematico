@@ -60,10 +60,13 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
         }
         
         .pdf-container {
-          width: 100vw;
-          height: 100vh;
+          width: 100%;
+          height: 100%;
           position: relative;
           background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         
         .pdf-viewer {
@@ -223,8 +226,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webView: {
-    width: width,
-    height: height,
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
   },
   loadingText: {
     marginTop: 16,

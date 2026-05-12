@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
+import { View, StyleSheet, StatusBar, SafeAreaView } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useSecurePdf } from '../hooks/useSecurePdf';
 
@@ -53,7 +53,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       <View style={styles.closeButtonContainer}>
@@ -93,7 +93,7 @@ const SecurePdfScreen: React.FC<SecurePdfScreenProps> = ({ route, navigation }) 
           </View>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -104,6 +104,6 @@ const styles = StyleSheet.create({
   viewerContainer: { flex: 1, backgroundColor: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { color: '#d32f2f', marginBottom: 16 },
-  closeButtonContainer: { position: 'absolute', top: 40, right: 16, zIndex: 1000 },
+  closeButtonContainer: { position: 'absolute', top: 10, right: 16, zIndex: 1000 },
   closeButton: { borderRadius: 24 },
 });

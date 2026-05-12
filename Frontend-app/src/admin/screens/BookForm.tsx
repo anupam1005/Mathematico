@@ -9,25 +9,29 @@ import { designSystem, formStyles, layoutStyles } from "../../styles/designSyste
 import { safeCatch } from '../../utils/safeCatch';
 
 interface BookFormProps {
-  bookId?: string;
-  isEditing?: boolean;
-  onSuccess?: () => void;
+  route?: any;
   navigation?: any;
 }
 
-export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps) {
+export default function BookForm({ route, navigation }: BookFormProps) {
+  const params = route?.params || {};
+  const isEditing = params.isEditing;
+  const onSuccess = params.onSuccess;
+  const book = params.book;
+  const bookId = book?.id || book?._id || book?.Id || params.bookId;
   const [formData, setFormData] = useState<any>({
-    title: "",
-    author: "",
-    description: "",
-    category: "",
-    subject: "",
-    grade: "",
-    pages: "",
-    isbn: "",
-    status: "draft",
-    coverImage: null,
-    pdfFile: null,
+    title: book?.title || "",
+    author: book?.author || "",
+    description: book?.description || "",
+    category: book?.category || "",
+    subject: book?.subject || "",
+    grade: book?.grade || "",
+    pages: book?.pages?.toString() || "",
+    isbn: book?.isbn || "",
+    status: book?.status || "draft",
+    level: book?.level || "Foundation",
+    coverImage: book?.coverImage || book?.image || book?.thumbnail || null,
+    pdfFile: book?.pdfFile || book?.pdf || null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -178,6 +182,9 @@ export default function BookForm({ bookId, isEditing, onSuccess }: BookFormProps
       }
       
       onSuccess?.();
+      if (navigation && navigation.goBack) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       safeCatch('BookForm.handleSubmit', (safeError) => {
         Alert.alert("Error", safeError.message || "Something went wrong");

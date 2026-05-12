@@ -8,26 +8,31 @@ import { CustomTextInput } from "../../components/CustomTextInput";
 import { safeCatch } from '../../utils/safeCatch';
 
 interface CourseFormProps {
-  courseId?: string;
-  onSuccess?: () => void;
+  route?: any;
+  navigation?: any;
 }
 
-export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
+export default function CourseForm({ route, navigation }: CourseFormProps) {
+  const params = route?.params || {};
+  const course = params.course;
+  const courseId = course?.id || course?._id || course?.Id || params.courseId;
+  const onSuccess = params.onSuccess;
+  const isEditing = params.isEditing;
   const [formData, setFormData] = useState<any>({
-    title: "",
-    description: "",
-    price: "",
-    originalPrice: "",
-    level: "",
-    category: "",
-    subject: "",
-    grade: "",
-    status: "draft",
-    maxStudents: "",
-    duration: "",
-    instructorName: "",
-    image: null,
-    pdf: null,
+    title: course?.title || "",
+    description: course?.description || "",
+    price: course?.price?.toString() || "",
+    originalPrice: course?.originalPrice?.toString() || "",
+    level: course?.level || "",
+    category: course?.category || "",
+    subject: course?.subject || "",
+    grade: course?.grade || "",
+    status: course?.status || "draft",
+    maxStudents: course?.maxStudents?.toString() || "",
+    duration: course?.duration?.toString() || "",
+    instructorName: course?.instructorName || course?.instructor?.name || "",
+    image: course?.image || course?.thumbnail || null,
+    pdf: course?.pdf || null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -195,6 +200,9 @@ export default function CourseForm({ courseId, onSuccess }: CourseFormProps) {
         }
       }
       onSuccess?.();
+      if (navigation && navigation.goBack) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       safeCatch('CourseForm.handleSubmit', (safeError) => {
         Alert.alert("Error", safeError.message || "Something went wrong");

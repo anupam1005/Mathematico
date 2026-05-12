@@ -68,15 +68,40 @@ interface LiveClassFormProps {
 }
 
 const LiveClassForm: React.FC<LiveClassFormProps> = ({ 
-  liveClassId, 
-  onSuccess, 
+  liveClassId: propLiveClassId, 
+  onSuccess: propOnSuccess, 
   onCancel,
-  route
+  route,
+  navigation
 }) => {
+  const params = route?.params || {};
+  const liveClass = params.liveClass;
+  const liveClassId = liveClass?.id || liveClass?._id || liveClass?.Id || params.liveClassId || propLiveClassId;
+  const onSuccess = params.onSuccess || propOnSuccess;
+  const isEditing = params.isEditing;
+  
+  // Initial State Helper
+  const getInitialFormData = () => {
+    if (liveClass) {
+      return {
+        ...DEFAULT_FORM_VALUES,
+        ...liveClass,
+        startTime: liveClass.startTime ? new Date(liveClass.startTime) : DEFAULT_FORM_VALUES.startTime,
+        endTime: liveClass.endTime ? new Date(liveClass.endTime) : DEFAULT_FORM_VALUES.endTime,
+        scheduledAt: liveClass.scheduledAt ? new Date(liveClass.scheduledAt) : DEFAULT_FORM_VALUES.scheduledAt,
+        duration: liveClass.duration?.toString() || DEFAULT_FORM_VALUES.duration,
+        maxStudents: liveClass.maxStudents?.toString() || DEFAULT_FORM_VALUES.maxStudents,
+        price: liveClass.price?.toString() || DEFAULT_FORM_VALUES.price,
+        originalPrice: liveClass.original_price?.toString() || liveClass.originalPrice?.toString() || DEFAULT_FORM_VALUES.originalPrice,
+      };
+    }
+    return { ...DEFAULT_FORM_VALUES };
+  };
+
   // State
-  const [formData, setFormData] = useState<typeof DEFAULT_FORM_VALUES>({ ...DEFAULT_FORM_VALUES });
+  const [formData, setFormData] = useState<typeof DEFAULT_FORM_VALUES>(getInitialFormData());
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(!!liveClassId);
+  const [isLoading, setIsLoading] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showScheduledDatePicker, setShowScheduledDatePicker] = useState(false);
@@ -152,19 +177,7 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
     }
   }, [liveClassId]);
 
-  // Pre-fill form from route params for edit mode
-  useEffect(() => {
-    if (route?.params?.liveClassData) {
-      const preFillData = route.params.liveClassData;
-      setFormData(prev => ({
-        ...prev,
-        ...preFillData,
-        startTime: preFillData.startTime ? new Date(preFillData.startTime) : prev.startTime,
-        endTime: preFillData.endTime ? new Date(preFillData.endTime) : prev.endTime,
-        scheduledAt: preFillData.scheduledAt ? new Date(preFillData.scheduledAt) : prev.scheduledAt,
-      }));
-    }
-  }, [route?.params?.liveClassData]);
+
 
   // Load data when component mounts or liveClassId changes
   useFocusEffect(
@@ -371,6 +384,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         if (result.success) {
           Alert.alert("Success", "Live class updated successfully");
           onSuccess?.();
+          if (navigation && navigation.goBack) {
+            navigation.goBack();
+          }
         } else {
           Alert.alert("Error", result.error || "Failed to update live class");
         }
@@ -379,6 +395,9 @@ const LiveClassForm: React.FC<LiveClassFormProps> = ({
         if (result.success) {
           Alert.alert("Success", "Live class created successfully");
           onSuccess?.();
+          if (navigation && navigation.goBack) {
+            navigation.goBack();
+          }
         } else {
           Alert.alert("Error", result.error || "Failed to create live class");
         }

@@ -262,8 +262,17 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
         domStorageEnabled
         originWhitelist={['*']}
         onShouldStartLoadWithRequest={(request) => {
-          const url = request.url;
-          if (url.startsWith('upi://') || url.startsWith('intent://') || url.startsWith('tez://') || url.startsWith('paytmmp://')) {
+          let url = request.url;
+          
+          if (url.startsWith('intent://')) {
+            const intentParts = url.split('#Intent');
+            const intentUrl = intentParts[0].replace('intent://', '');
+            const schemeMatch = url.match(/scheme=([^;]+)/);
+            const scheme = schemeMatch ? schemeMatch[1] : 'upi';
+            url = `${scheme}://${intentUrl}`;
+          }
+
+          if (url.startsWith('upi://') || url.startsWith('tez://') || url.startsWith('paytmmp://') || url.startsWith('phonepe://') || url.startsWith('gpay://')) {
             Linking.openURL(url).catch(() => {
               Alert.alert('Error', 'Could not open payment app. Please install the app or use another payment method.');
             });
@@ -274,7 +283,16 @@ export default function RazorpayCheckoutScreen({ navigation, route }: Props) {
         mixedContentMode="compatibility"
         setSupportMultipleWindows={false}
         allowsBackForwardNavigationGestures={false}
-        onError={() => {
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          if (
+            nativeEvent.description &&
+            (nativeEvent.description.includes('ERR_UNKNOWN_URL_SCHEME') || 
+             nativeEvent.description.includes('ERR_ABORTED'))
+          ) {
+            // Ignore deep link errors from Android WebView
+            return;
+          }
           Alert.alert('Load error', 'Could not load payment page. Check your connection.');
           navigation.goBack();
         }}
