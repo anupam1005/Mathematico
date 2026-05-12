@@ -272,14 +272,6 @@ export default function BooksScreen({ navigation }: any) {
         }
       />
 
-      {/* Admin FAB */}
-      {user?.isAdmin && (
-        <FAB
-          style={styles.fab}
-          icon="plus"
-          onPress={() => navigation.navigate('Admin', { screen: 'AdminBooks' })}
-        />
-      )}
     </View>
   );
 }

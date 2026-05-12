@@ -315,14 +315,7 @@ export default function CoursesScreen({ navigation, route }: any) {
         }
       />
 
-      {/* Admin FAB */}
-      {user?.isAdmin && (
-        <FAB
-          style={styles.fab}
-          icon="plus"
-          onPress={() => navigation.navigate('Admin', { screen: 'AdminCourses' })}
-        />
-      )}
+
     </View>
   );
 }
