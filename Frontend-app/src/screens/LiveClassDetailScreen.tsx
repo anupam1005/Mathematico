@@ -168,9 +168,10 @@ export default function LiveClassDetailScreen({ route }: any) {
           Alert.alert('Error', response.message || 'Failed to enroll');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || 'An error occurred during enrollment';
       safeCatch('LiveClassDetailScreen.handleEnroll', () => {
-        Alert.alert('Error', 'An error occurred during enrollment');
+        Alert.alert('Error', errorMessage);
       })(error);
     }
   };

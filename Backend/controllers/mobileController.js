@@ -821,7 +821,7 @@ const getCourseById = async (req, res) => {
       _id: id,
       status: 'published',
       isAvailable: { $ne: false }
-    }).select('-enrolledStudents -reviews -curriculum');
+    }).select('-reviews -curriculum');
 
     if (!course) {
       return res.status(404).json({
@@ -830,9 +830,32 @@ const getCourseById = async (req, res) => {
       });
     }
 
+    let userId = null;
+    try {
+      const authHeader = req.headers && (req.headers.authorization || req.headers.Authorization);
+      if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        if (token) {
+          const { strictVerifyAccessToken } = require('../middleware/strictJwtAuth');
+          const decoded = strictVerifyAccessToken(token);
+          userId = decoded.id || decoded.sub;
+        }
+      }
+    } catch (err) {
+      // Ignore token errors for public access
+    }
+
+    const isEnrolled = userId && course.enrolledStudents ? course.enrolledStudents.some(
+      e => e.student && e.student.toString() === userId.toString()
+    ) : false;
+
+    const courseData = course.toObject();
+    delete courseData.enrolledStudents;
+    courseData.isEnrolled = isEnrolled;
+
     res.json({
       success: true,
-      data: course,
+      data: courseData,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -872,11 +895,11 @@ const getLiveClassById = async (req, res) => {
 
     const { id } = req.params;
 
-    // Get live class details
+    // Get live class details (do not exclude enrolledStudents yet)
     const liveClass = await LiveClassModel.findOne({
       _id: id,
       isAvailable: { $ne: false }
-    }).select('-enrolledStudents -reviews');
+    }).select('-reviews');
 
     if (!liveClass) {
       return res.status(404).json({
@@ -885,9 +908,32 @@ const getLiveClassById = async (req, res) => {
       });
     }
 
+    let userId = null;
+    try {
+      const authHeader = req.headers && (req.headers.authorization || req.headers.Authorization);
+      if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        if (token) {
+          const { strictVerifyAccessToken } = require('../middleware/strictJwtAuth');
+          const decoded = strictVerifyAccessToken(token);
+          userId = decoded.id || decoded.sub;
+        }
+      }
+    } catch (err) {
+      // Ignore token errors for public access
+    }
+
+    const isEnrolled = userId && liveClass.enrolledStudents ? liveClass.enrolledStudents.some(
+      e => e.student && e.student.toString() === userId.toString()
+    ) : false;
+
+    const liveClassData = liveClass.toObject();
+    delete liveClassData.enrolledStudents;
+    liveClassData.isEnrolled = isEnrolled;
+
     res.json({
       success: true,
-      data: liveClass,
+      data: liveClassData,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
