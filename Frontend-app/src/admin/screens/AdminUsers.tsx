@@ -37,6 +37,12 @@ interface User {
   isActive: boolean;
   createdAt: string;
   lastLogin?: string;
+  phone?: string;
+  gender?: string;
+  grade?: string;
+  school?: string;
+  profilePicture?: string;
+  isEmailVerified?: boolean;
 }
 
 export default function AdminUsers({ navigation }: { navigation: any }) {
@@ -204,6 +210,11 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
       email: user.email,
       isAdmin: user.isAdmin,
       isActive: user.isActive,
+      phone: user.phone || '',
+      gender: user.gender || 'prefer_not_to_say',
+      grade: user.grade || '',
+      school: user.school || '',
+      isEmailVerified: user.isEmailVerified || false,
     });
     setIsEditModalVisible(true);
   };
@@ -465,11 +476,18 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               <View style={styles.modalDetails}>
                 <Text style={textStyles.body}>Name: {selectedUser.name}</Text>
                 <Text style={textStyles.body}>Email: {selectedUser.email}</Text>
+                <Text style={textStyles.body}>Phone: {selectedUser.phone || 'N/A'}</Text>
+                <Text style={textStyles.body}>Gender: {selectedUser.gender || 'N/A'}</Text>
+                <Text style={textStyles.body}>Grade: {selectedUser.grade || 'N/A'}</Text>
+                <Text style={textStyles.body}>School: {selectedUser.school || 'N/A'}</Text>
                 <Text style={textStyles.body}>
                   Role: {selectedUser.isAdmin ? 'Admin' : 'Student'}
                 </Text>
                 <Text style={textStyles.body}>
                   Status: {selectedUser.isActive ? 'Active' : 'Inactive'}
+                </Text>
+                <Text style={textStyles.body}>
+                  Verified: {selectedUser.isEmailVerified ? 'Yes' : 'No'}
                 </Text>
                 <Text style={textStyles.body}>
                   Joined: {new Date(selectedUser.createdAt).toLocaleDateString()}
@@ -502,7 +520,6 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               value={editForm.name || ''}
               onChangeText={(text) => setEditForm({ ...editForm, name: text })}
               style={styles.input}
-              // Use valid MaterialCommunityIcons icon name
               leftIcon="account"
             />
             <CustomTextInput
@@ -512,6 +529,37 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               style={styles.input}
               keyboardType="email-address"
               leftIcon="email"
+            />
+            <CustomTextInput
+              label="Phone"
+              value={editForm.phone || ''}
+              onChangeText={(text) => setEditForm({ ...editForm, phone: text })}
+              style={styles.input}
+              keyboardType="phone-pad"
+              leftIcon="phone"
+            />
+            <View style={styles.row}>
+              <CustomTextInput
+                label="Grade"
+                value={editForm.grade || ''}
+                onChangeText={(text) => setEditForm({ ...editForm, grade: text })}
+                style={[styles.input, { flex: 1, marginRight: 8 }]}
+                leftIcon="school"
+              />
+              <CustomTextInput
+                label="Gender"
+                value={editForm.gender || ''}
+                onChangeText={(text) => setEditForm({ ...editForm, gender: text })}
+                style={[styles.input, { flex: 1 }]}
+                leftIcon="gender-male-female"
+              />
+            </View>
+            <CustomTextInput
+              label="School"
+              value={editForm.school || ''}
+              onChangeText={(text) => setEditForm({ ...editForm, school: text })}
+              style={styles.input}
+              leftIcon="office-building"
             />
             <View style={styles.switchContainer}>
               <Text style={textStyles.body}>Admin privileges</Text>
@@ -525,6 +573,13 @@ export default function AdminUsers({ navigation }: { navigation: any }) {
               <Switch
                 value={editForm.isActive || false}
                 onValueChange={(value) => setEditForm({ ...editForm, isActive: value })}
+              />
+            </View>
+            <View style={styles.switchContainer}>
+              <Text style={textStyles.body}>Email Verified</Text>
+              <Switch
+                value={editForm.isEmailVerified || false}
+                onValueChange={(value) => setEditForm({ ...editForm, isEmailVerified: value })}
               />
             </View>
             <View style={styles.modalButtons}>
@@ -608,6 +663,11 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     padding: designSystem.spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: designSystem.spacing.xs,
   },
   userCard: {
     marginBottom: designSystem.spacing.md,

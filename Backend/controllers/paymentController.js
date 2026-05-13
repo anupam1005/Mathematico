@@ -89,7 +89,7 @@ const createOrder = async (req, res) => {
     let validatedAmount = amount;
     
     // 1. Strict itemType validation
-    const allowedTypes = ['course', 'live_course', 'liveClass'];
+    const allowedTypes = ['course', 'live_course', 'liveClass', 'live_class'];
     if (!allowedTypes.includes(itemType)) {
       securityLogger.logSecurityEvent('PAYMENT_INVALID_TYPE', {
         userId: req.user?.id || 'anonymous',
@@ -162,7 +162,7 @@ const createOrder = async (req, res) => {
 
     // 3. Live Class validation
     const liveClassId = req.body.liveClassId || notes?.liveClassId;
-    if (liveClassId && itemType === 'liveClass') {
+    if (liveClassId && (itemType === 'liveClass' || itemType === 'live_class')) {
       try {
         console.log(`[PAYMENT] Validating live class price for ID: ${liveClassId}`);
         const liveClass = await LiveClass.findById(liveClassId)
@@ -219,7 +219,7 @@ const createOrder = async (req, res) => {
       ...notes,
       userId: req.user?.id,
       courseId: courseId || null,
-      itemType: itemType || 'course',
+      itemType: (itemType === 'liveClass' ? 'live_class' : itemType) || 'course',
       timestamp: new Date().toISOString(),
       ip: req.ip
     };
@@ -372,7 +372,8 @@ const verifyPayment = async (req, res) => {
           const existing = await Payment.findOne({ paymentId: razorpay_payment_id });
           if (!existing) {
             const userId = razorpayPayment.notes?.userId || (req.user ? req.user.id : null);
-            const itemType = razorpayPayment.notes?.itemType || 'course';
+            let itemType = razorpayPayment.notes?.itemType || 'course';
+            if (itemType === 'liveClass') itemType = 'live_class'; // Coerce to schema format
             
             const newPayment = new Payment({
               paymentId: razorpay_payment_id,
@@ -395,7 +396,7 @@ const verifyPayment = async (req, res) => {
                 if (itemType === 'course' && razorpayPayment.notes?.courseId) {
                   const course = await Course.findById(razorpayPayment.notes.courseId);
                   if (course) await course.enrollStudent(userId);
-                } else if (itemType === 'live_class' && razorpayPayment.notes?.liveClassId) {
+                } else if ((itemType === 'live_class' || itemType === 'liveClass') && razorpayPayment.notes?.liveClassId) {
                   const lc = await LiveClass.findById(razorpayPayment.notes.liveClassId);
                   if (lc) await lc.enrollStudent(userId);
                 }

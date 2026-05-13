@@ -208,7 +208,7 @@ const getAllUsers = async (req, res) => {
     }
 
     const users = await UserModel.find(query)
-      .select('name email role isActive isEmailVerified createdAt updatedAt')
+      .select('name email role isActive isEmailVerified createdAt updatedAt phone gender grade school profilePicture')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -227,6 +227,11 @@ const getAllUsers = async (req, res) => {
         isEmailVerified: u.isEmailVerified,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
+        phone: u.phone,
+        gender: u.gender,
+        grade: u.grade,
+        school: u.school,
+        profilePicture: u.profilePicture,
         isAdmin: u.role === 'admin',
         is_admin: u.role === 'admin',
         is_active: u.isActive !== false,
@@ -260,7 +265,7 @@ const getUserById = async (req, res) => {
     }
     await connectDB();
     const { id } = req.params;
-    const user = await UserModel.findById(id).select('name email role isActive isEmailVerified createdAt updatedAt').lean();
+    const user = await UserModel.findById(id).select('name email role isActive isEmailVerified createdAt updatedAt phone gender grade school profilePicture').lean();
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -273,6 +278,11 @@ const getUserById = async (req, res) => {
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      phone: user.phone,
+      gender: user.gender,
+      grade: user.grade,
+      school: user.school,
+      profilePicture: user.profilePicture,
       isAdmin: user.role === 'admin',
       is_admin: user.role === 'admin',
       is_active: user.isActive !== false,
@@ -303,7 +313,10 @@ const createUser = async (req, res) => {
 
     await connectDB();
 
-    const { name, email, password, role, isActive, isEmailVerified, isAdmin } = req.body;
+    const { 
+      name, email, password, role, isActive, isEmailVerified, isAdmin,
+      phone, gender, grade, school, subjects, dateOfBirth, profilePicture
+    } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -333,7 +346,14 @@ const createUser = async (req, res) => {
       password,
       role: normalizedRole,
       isActive: isActive !== false,
-      isEmailVerified: isEmailVerified === true
+      isEmailVerified: isEmailVerified === true,
+      phone,
+      gender,
+      grade,
+      school,
+      subjects,
+      dateOfBirth,
+      profilePicture
     });
 
     const publicUser = user.getPublicProfile ? user.getPublicProfile() : user;
@@ -363,7 +383,10 @@ const updateUser = async (req, res) => {
 
     await connectDB();
     const { id } = req.params;
-    const { name, email, password, role, isActive, isEmailVerified, isAdmin } = req.body;
+    const { 
+      name, email, password, role, isActive, isEmailVerified, isAdmin,
+      phone, gender, grade, school, subjects, dateOfBirth, profilePicture
+    } = req.body;
 
     const user = await UserModel.findById(id).select('+password');
     if (!user) {
@@ -383,6 +406,13 @@ const updateUser = async (req, res) => {
     }
 
     if (name) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone;
+    if (gender !== undefined) user.gender = gender;
+    if (grade !== undefined) user.grade = grade;
+    if (school !== undefined) user.school = school;
+    if (subjects !== undefined) user.subjects = subjects;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (profilePicture !== undefined) user.profilePicture = profilePicture;
 
     const candidateRole = isAdmin === true ? 'admin' : role;
     if (candidateRole && ['student', 'admin', 'teacher'].includes(candidateRole)) {
