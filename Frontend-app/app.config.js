@@ -8,9 +8,14 @@ export default {
     name: 'Mathematico',
     slug: 'mathematico-app',
     version: '9.0.4',
-    orientation: 'portrait',
+    orientation: 'default',
     owner: 'adminmathematicodipanjan2026',
     icon: './assets/icon.png',
+    userInterfaceStyle: 'automatic',
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.anupam1505.mathematicoapp'
+    },
     web: {
       favicon: './assets/favicon.png'
     },
@@ -35,8 +40,30 @@ export default {
       contentRating: {
         rating: 'Everyone',
         descriptors: ['Educational', 'Learning']
-      }
+      },
+      statusBar: {
+        barStyle: 'light-content',
+        backgroundColor: '#00000000',
+        translucent: true
+      },
+      softwareKeyboardLayoutMode: 'resize'
     },
-    plugins: ['expo-secure-store', 'expo-font', 'expo-image-picker', 'expo-document-picker']
+    plugins: [
+      'expo-secure-store', 
+      'expo-font', 
+      'expo-image-picker', 
+      'expo-document-picker',
+      [
+        'expo-build-properties',
+        {
+          android: {
+            ndkVersion: '27.1.12297006',
+            extraBuildGradleProperties: [
+              ['android.enableUncompressedNativeLibs', 'false']
+            ]
+          }
+        }
+      ]
+    ]
   }
 };

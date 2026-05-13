@@ -727,9 +727,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         />
         <Divider />
         <List.Item
-          title="Terms of Service"
+          title="Terms of Use"
           left={_props => <Icon name="file-document-outline" size={24} color={colors.onSurface} />}
-          onPress={() => navigation.navigate('TermsOfService')}
+          onPress={() => navigation.navigate('TermsOfUse')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
         <Divider />

@@ -271,6 +271,8 @@ function AppNavigator() {
   );
 }
 
+import { StatusBar } from 'expo-status-bar';
+
 function AppContent() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -330,6 +332,7 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar style="auto" translucent />
       <PaperProvider theme={theme as any}>
         <AuthProvider>
           <NavigationContainer>
