@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { strictAuthenticateToken, strictRequireAdmin } = require('../middleware/strictJwtAuth');
+const { maintenanceMode } = require('../middleware/settingsMiddleware');
 
 // Import controllers
 const mobileController = require('../controllers/mobileController');
@@ -13,6 +14,9 @@ if (process.env.NODE_ENV !== 'production' && !global.controllersLoaded) {
 }
 
 // ============= ROUTE DEFINITIONS =============
+
+// Apply maintenance mode to all mobile routes
+router.use(maintenanceMode);
 
 // Root endpoint
 router.get('/', (req, res) => {
@@ -89,6 +93,9 @@ router.get('/stats', mobileController.getStats);
 router.get('/settings', strictAuthenticateToken, profileController.getUserSettings);
 
 router.put('/settings', strictAuthenticateToken, profileController.updateUserSettings);
+
+// Account management
+router.delete('/account', strictAuthenticateToken, profileController.deleteAccount);
 
 // Payment routes
 router.get('/payments/config', paymentController.getRazorpayConfig);

@@ -267,7 +267,7 @@ export default function AdminSettings({ navigation }: { navigation: any }) {
         <View style={styles.infoContainer}>
           <Icon name="check-circle" size={20} color={designSystem.colors.success} />
           <Text style={textStyles.body}>
-            Status: Connected to Railway MySQL
+            Status: Connected to MongoDB
           </Text>
         </View>
       </UnifiedCard>

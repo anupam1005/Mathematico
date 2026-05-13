@@ -388,6 +388,30 @@ export const SettingsService = {
       return false;
     }
   },
+
+  deleteAccount: async (): Promise<SettingsResponse> => {
+    try {
+      const response = await requestWithRetry({
+        method: 'DELETE',
+        url: '/account',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = response.data as any;
+      if (data?.success) {
+        return {
+          success: true,
+          message: 'Account deleted successfully',
+        };
+      } else {
+        throw new Error(data.message || 'Failed to delete account');
+      }
+    } catch (error: any) {
+      return handleError(error, 'Failed to delete account');
+    }
+  },
 };
 
 // Initialize network listener for syncing pending settings (call at runtime)

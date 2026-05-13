@@ -176,7 +176,7 @@ const login = async (req, res) => {
 
     // Regular user login - find user in database with explicit password selection
     const user = await UserModel.findOne({ email: normalizedEmail })
-      .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive +tokenVersion');
+      .select('+password +loginAttempts +lockUntil +lastFailedLogin +isActive +tokenVersion +isEmailVerified');
     
     if (!user) {
       scheduleSecurityLog(() => logFailedLogin(normalizedEmail, 'user_not_found', req));
@@ -224,6 +224,22 @@ const login = async (req, res) => {
         message: 'Invalid email or password',
         timestamp: new Date().toISOString()
       });
+    }
+
+    // Check email verification requirement (skip for admin)
+    if (user.role !== 'admin') {
+      let SettingsModel;
+      try { SettingsModel = require('../models/Settings'); } catch (_) {}
+      if (SettingsModel) {
+        const settings = await SettingsModel.findOne({});
+        if (settings && settings.require_email_verification && !user.isEmailVerified) {
+          return res.status(403).json({
+            success: false,
+            message: 'Please verify your email before logging in.',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
     }
 
     // Generate token pair
@@ -279,6 +295,20 @@ const login = async (req, res) => {
  */
 const register = async (req, res) => {
   try {
+    // Check registration setting
+    let SettingsModel;
+    try { SettingsModel = require('../models/Settings'); } catch (_) {}
+    if (SettingsModel) {
+      const settings = await SettingsModel.findOne({});
+      if (settings && settings.allow_registration === false) {
+        return res.status(403).json({
+          success: false,
+          message: 'Public registration is currently disabled by administrator.',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
     const { name, email, password } = req.body;
 
     // Log request for production debugging (sanitized)

@@ -26,6 +26,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { debounce } from '../utils/debounce';
 import { safeCatch } from '../utils/safeCatch';
 import SettingsService, { Settings, PendingSetting, UserSettings } from '../services/settingsService';
+import tokenStorage from '../services/tokenStorage';
 import { formatBytes, formatDate } from '../utils/formatters';
 
 const DATA_USAGE_KEY = 'mathematico_data_usage';
@@ -67,6 +68,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   const [showQualityDialog, setShowQualityDialog] = useState(false);
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [showDataUsageDialog, setShowDataUsageDialog] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [showOfflineSnackbar, setShowOfflineSnackbar] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<PendingSetting[]>([]);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -244,12 +246,6 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     try {
       setIsSaving(true);
       
-      // Clear all cached data
-      await Promise.all([
-        AsyncStorage.clear(),
-        SettingsService.clearSettings(),
-      ]);
-
       // Reset to default settings
       const defaultSettings: UserSettings = {
         notifications: {
@@ -273,6 +269,9 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         },
       };
 
+      // Save to server first
+      await SettingsService.updateSettings(defaultSettings);
+
       // Update state with default settings
       settingsRef.current = defaultSettings;
       setSettings(defaultSettings);
@@ -292,7 +291,16 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   const handleClearCache = useCallback(async () => {
     try {
       setIsSaving(true);
-      await AsyncStorage.clear();
+      
+      // surgical clearing: keep auth tokens, user info, and essential settings
+      const keys = await AsyncStorage.getAllKeys();
+      const essentialKeys = ['authToken', 'refreshToken', 'user', 'mathematico_user_settings'];
+      const keysToRemove = keys.filter(key => !essentialKeys.includes(key));
+      
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+      
       await loadDataUsage();
       showSnackbar('Cache cleared successfully', 'success');
     } catch (error) {
@@ -304,6 +312,32 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       setShowClearCacheDialog(false);
     }
   }, [loadDataUsage, showSnackbar]);
+
+  // Delete account
+  const handleDeleteAccount = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      const response = await SettingsService.deleteAccount();
+      if (response.success) {
+        showSnackbar('Account deleted successfully. Logging out...', 'success');
+        // Clear all session data and redirect to login
+        await tokenStorage.clearSession();
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      } else {
+        throw new Error(response.message || 'Failed to delete account');
+      }
+    } catch (error) {
+      safeCatch('SettingsScreen.deleteAccount', () => {
+        showSnackbar('Failed to delete account. Please try again.', 'error');
+      })(error);
+    } finally {
+      setIsSaving(false);
+      setShowDeleteAccountDialog(false);
+    }
+  }, [navigation, showSnackbar]);
 
   // Network change handler
   const handleNetworkChange = useCallback((state: NetInfoState) => {
@@ -397,11 +431,12 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   // Handle back button on Android
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (showLanguageDialog || showQualityDialog || showClearCacheDialog || showDataUsageDialog) {
+      if (showLanguageDialog || showQualityDialog || showClearCacheDialog || showDataUsageDialog || showDeleteAccountDialog) {
         setShowLanguageDialog(false);
         setShowQualityDialog(false);
         setShowClearCacheDialog(false);
         setShowDataUsageDialog(false);
+        setShowDeleteAccountDialog(false);
         return true;
       }
       return false;
@@ -704,6 +739,15 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
           onPress={() => navigation.navigate('PrivacyPolicy')}
           right={props => <List.Icon {...props} icon="chevron-right" />}
         />
+        <Divider />
+        <List.Item
+          title="Delete Account"
+          description="Permanently delete your account and data"
+          left={_props => <Icon name="account-remove" size={24} color={colors.error} />}
+          onPress={() => setShowDeleteAccountDialog(true)}
+          titleStyle={{ color: colors.error }}
+          right={props => <List.Icon {...props} icon="chevron-right" color={colors.error} />}
+        />
       </Card.Content>
     </Card>
   );
@@ -910,6 +954,26 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
         {renderLanguageDialog()}
         {renderClearCacheDialog()}
         {renderDataUsageDialog()}
+        <Dialog visible={showDeleteAccountDialog} onDismiss={() => setShowDeleteAccountDialog(false)}>
+          <Dialog.Title style={{ color: colors.error }}>Delete Account</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.onSurfaceVariant }}>
+              Are you sure you want to delete your account? This action is permanent and cannot be undone. 
+              All your progress, enrollments, and personal data will be removed.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowDeleteAccountDialog(false)}>Cancel</Button>
+            <Button 
+              onPress={handleDeleteAccount}
+              loading={isSaving}
+              disabled={isSaving}
+              textColor={colors.error}
+            >
+              Delete Permanently
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
 
       {/* Snackbar for offline status */}

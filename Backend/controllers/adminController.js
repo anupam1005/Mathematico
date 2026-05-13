@@ -1,5 +1,6 @@
 // Admin Controller - Handles admin panel operations with MongoDB
 const { connectDB } = require('../config/database');
+const { clearSettingsCache } = require('../middleware/settingsMiddleware');
 const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 const { uploadFileToCloud } = require('../utils/fileUpload');
@@ -2307,6 +2308,9 @@ module.exports = {
       if (SettingsModel) {
         const update = req.body || {};
         const settings = await SettingsModel.findOneAndUpdate({}, update, { upsert: true, new: true });
+        // Clear in-memory settings cache so changes take effect immediately
+        clearSettingsCache();
+        
         return res.json({ success: true, message: 'Settings updated successfully', data: settings });
       }
       return res.json({ success: true, message: 'Settings saved (no model configured)', data: req.body });

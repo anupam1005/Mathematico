@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
+const { maintenanceMode } = require('../middleware/settingsMiddleware');
 const { connectDB } = require('../config/database');
 
 // Import User model - serverless-safe direct import
 // The User model uses mongoose.models.User || mongoose.model() pattern
 const User = require('../models/User');
+
+// Apply maintenance mode to all users routes
+router.use(maintenanceMode);
 
 // Root endpoint (public info)
 router.get('/', (req, res) => {

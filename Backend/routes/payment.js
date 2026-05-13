@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
+const { maintenanceMode } = require('../middleware/settingsMiddleware');
+
+// Apply maintenance mode to all payment routes
+router.use(maintenanceMode);
 
 // Root endpoint
 router.get('/', (req, res) => {

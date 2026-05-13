@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { strictAuthenticateToken } = require('../middleware/strictJwtAuth');
+const { maintenanceMode } = require('../middleware/settingsMiddleware');
 
 // Import student controller
 const studentController = require('../controllers/studentController');
@@ -8,6 +9,9 @@ if (process.env.NODE_ENV !== 'production' && !global.controllersLoaded) {
   console.log('✅ StudentController loaded successfully');
   global.controllersLoaded = true;
 }
+
+// Apply maintenance mode to all student routes
+router.use(maintenanceMode);
 
 // Root endpoint (public info)
 router.get('/', (req, res) => {
