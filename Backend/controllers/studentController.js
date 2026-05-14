@@ -574,10 +574,14 @@ const joinLiveClass = async (req, res) => {
       });
     }
 
+    const joinLink = liveClass.meetingLink && !liveClass.meetingLink.match(/^[a-zA-Z]+:\/\//)
+      ? `https://${liveClass.meetingLink.trim()}`
+      : liveClass.meetingLink?.trim();
+
     res.json({
       success: true,
       data: {
-        joinLink: liveClass.meetingLink,
+        joinLink: joinLink,
         meetingId: liveClass.meetingId,
         meetingPassword: liveClass.meetingPassword,
         platform: liveClass.platform

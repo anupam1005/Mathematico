@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import Icon from '../components/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { liveClassService, LiveClass } from '../services/liveClassService';
 import { designSystem } from '../styles/designSystem';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { safeCatch } from '../utils/safeCatch';
 
 export default function LiveClassDetailScreen({ route }: any) {
@@ -28,6 +28,13 @@ export default function LiveClassDetailScreen({ route }: any) {
   const navigationHook = useNavigation(); // Use useNavigation hook properly
   const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Use useFocusEffect to reload data when screen is focused (e.g. returning from checkout)
+  useFocusEffect(
+    useCallback(() => {
+      loadLiveClass();
+    }, [liveClassId])
+  );
 
   useEffect(() => {
     loadLiveClass();
@@ -181,11 +188,17 @@ export default function LiveClassDetailScreen({ route }: any) {
 
     try {
       const response = await liveClassService.joinLiveClass(liveClassId);
-      const joinLink = response?.joinLink || response?.meetingLink;
+      const rawJoinLink = response?.joinLink || response?.meetingLink;
 
-      if (!joinLink) {
+      if (!rawJoinLink) {
         Alert.alert('Error', 'Join link is unavailable. Please contact support.');
         return;
+      }
+
+      // Normalize URL: Ensure it has a protocol
+      let joinLink = rawJoinLink.trim();
+      if (joinLink && !joinLink.match(/^[a-zA-Z]+:\/\//)) {
+        joinLink = 'https://' + joinLink;
       }
 
       Alert.alert(
@@ -195,12 +208,22 @@ export default function LiveClassDetailScreen({ route }: any) {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Join Now',
-            onPress: () => {
-              Linking.openURL(joinLink).catch(
+            onPress: async () => {
+              try {
+                const canOpen = await Linking.canOpenURL(joinLink);
+                if (canOpen) {
+                  await Linking.openURL(joinLink);
+                } else {
+                  Alert.alert(
+                    'Error',
+                    'No application found to open this link. Please ensure you have the required app (Zoom, Google Meet, etc.) installed.'
+                  );
+                }
+              } catch (error) {
                 safeCatch('LiveClassDetailScreen.joinLiveClass.openURL', () => {
                   Alert.alert('Error', 'Could not open the meeting link.');
-                })
-              );
+                })(error);
+              }
             },
           },
         ],

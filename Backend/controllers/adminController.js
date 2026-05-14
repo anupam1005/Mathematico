@@ -1693,7 +1693,9 @@ const createLiveClass = async (req, res) => {
       startTime: req.body.startTime,
       endTime: req.body.endTime,
       scheduledAt: req.body.scheduledAt,
-      meetingLink: req.body.meetingLink,
+      meetingLink: req.body.meetingLink && !req.body.meetingLink.match(/^[a-zA-Z]+:\/\//)
+        ? `https://${req.body.meetingLink.trim()}`
+        : req.body.meetingLink?.trim(),
       status: req.body.status || 'scheduled',
       isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true,
       createdBy: req.user.id,
@@ -1804,6 +1806,13 @@ const updateLiveClass = async (req, res) => {
     delete updateData._id;
     delete updateData.createdBy;
     delete updateData.createdAt;
+
+    // Normalize meetingLink if present
+    if (updateData.meetingLink && !updateData.meetingLink.match(/^[a-zA-Z]+:\/\//)) {
+      updateData.meetingLink = `https://${updateData.meetingLink.trim()}`;
+    } else if (updateData.meetingLink) {
+      updateData.meetingLink = updateData.meetingLink.trim();
+    }
 
     // Handle file upload if present
     if (req.file) {
