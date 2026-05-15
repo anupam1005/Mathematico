@@ -210,16 +210,28 @@ export default function LiveClassDetailScreen({ route }: any) {
             text: 'Join Now',
             onPress: async () => {
               try {
+                console.log('[DEBUG] Attempting to open join link:', joinLink);
+                
+                // Try opening directly first as it's more reliable than canOpenURL on modern Android
+                try {
+                  const opened = await Linking.openURL(joinLink);
+                  if (opened) return;
+                } catch (e) {
+                  console.warn('[DEBUG] Linking.openURL failed, trying canOpenURL check:', e);
+                }
+
+                // Fallback check
                 const canOpen = await Linking.canOpenURL(joinLink);
                 if (canOpen) {
                   await Linking.openURL(joinLink);
                 } else {
                   Alert.alert(
                     'Error',
-                    'No application found to open this link. Please ensure you have the required app (Zoom, Google Meet, etc.) installed.'
+                    `No application found to open this link. Please ensure you have the required app (Zoom, Google Meet, etc.) installed.\n\nLink: ${joinLink}`
                   );
                 }
               } catch (error) {
+                console.error('[DEBUG] Error in joinLiveClass.openURL:', error);
                 safeCatch('LiveClassDetailScreen.joinLiveClass.openURL', () => {
                   Alert.alert('Error', 'Could not open the meeting link.');
                 })(error);
