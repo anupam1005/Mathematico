@@ -27,14 +27,16 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
 
   // Custom HTML for full-screen PDF viewing
   // Uses Google PDF Viewer for better mobile compatibility
+  // Custom HTML for full-screen PDF viewing
+  // Uses Google PDF Viewer for better mobile compatibility
   const securePdfHtml = viewerUrl ? `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <title>PDF Viewer</title>
+      <title>Secure PDF Viewer</title>
       <style>
         * {
           margin: 0;
@@ -46,10 +48,9 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background: white;
+          background: #f0f0f0;
           -webkit-text-size-adjust: 100%;
           -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
         }
         
         body {
@@ -63,12 +64,21 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
           width: 100%;
           height: 100%;
           position: relative;
-          background: white;
+          background: #525659;
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
         }
         
+        /* Attempt to hide Google GView toolbar/popout */
+        .pdf-viewer-wrapper {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          position: relative;
+        }
+
         .pdf-viewer {
           width: 100%;
           height: 100%;
@@ -82,23 +92,49 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
           left: 50%;
           transform: translate(-50%, -50%);
           text-align: center;
-          color: #666;
+          color: white;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          z-index: 5;
+        }
+
+        /* Overlay to block clicks on the iframe controls */
+        .click-shield {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 50px; /* Block top toolbar */
+          z-index: 10;
+          background: transparent;
+        }
+
+        .click-shield-bottom {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 60px;
+          height: 60px; /* Block bottom-right popout icon */
+          z-index: 10;
+          background: transparent;
         }
       </style>
     </head>
     <body>
       <div class="pdf-container">
-        <div class="loading" id="loading">Loading PDF...</div>
-        <iframe 
-          class="pdf-viewer" 
-          id="pdfFrame"
-          src="https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewerUrl)}"
-          frameborder="0"
-          scrolling="auto"
-          onload="document.getElementById('loading').style.display='none';"
-          onerror="document.getElementById('loading').innerHTML='Failed to load PDF. Please try again.';"
-        ></iframe>
+        <div class="loading" id="loading">Preparing secure viewer...</div>
+        <div class="pdf-viewer-wrapper">
+          <div class="click-shield"></div>
+          <div class="click-shield-bottom"></div>
+          <iframe 
+            class="pdf-viewer" 
+            id="pdfFrame"
+            src="https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewerUrl)}"
+            frameborder="0"
+            scrolling="auto"
+            onload="document.getElementById('loading').style.display='none';"
+            onerror="document.getElementById('loading').innerHTML='Failed to load PDF. Please try again.';"
+          ></iframe>
+        </div>
       </div>
       
       <script>
@@ -117,13 +153,11 @@ const SecurePdfViewer: React.FC<SecurePdfViewerProps> = ({ bookId, viewerUrl, on
           }
         }, true);
         
-        // Hide loading after 5 seconds even if onload doesn't fire
+        // Hide loading after 10 seconds anyway
         setTimeout(function() {
           var loading = document.getElementById('loading');
-          if (loading) {
-            loading.style.display = 'none';
-          }
-        }, 5000);
+          if (loading) loading.style.display = 'none';
+        }, 10000);
       </script>
     </body>
     </html>

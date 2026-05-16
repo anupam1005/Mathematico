@@ -178,6 +178,7 @@ const getAllBooks = async (req, res) => {
     const category = req.query.category;
     const subject = req.query.subject;
     const grade = req.query.grade;
+    const level = req.query.level;
 
     // Build query - only show published and available books
     const query = {
@@ -188,6 +189,7 @@ const getAllBooks = async (req, res) => {
     if (category) query.category = category;
     if (subject) query.subject = subject;
     if (grade) query.grade = grade;
+    if (level) query.level = level;
 
     // Get books with pagination
     const books = await BookModel.find(query)
@@ -201,7 +203,11 @@ const getAllBooks = async (req, res) => {
 
     res.json({
       success: true,
-      data: books,
+      data: books.map(book => {
+        const bookObj = book.toObject();
+        if (!bookObj.level) bookObj.level = 'Foundation';
+        return bookObj;
+      }),
       pagination: {
         page,
         limit,
@@ -261,9 +267,12 @@ const getBookById = async (req, res) => {
       });
     }
 
+    const bookObj = book.toObject();
+    if (!bookObj.level) bookObj.level = 'Foundation';
+
     res.json({
       success: true,
-      data: book,
+      data: bookObj,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -368,10 +377,15 @@ const getSecurePdfViewer = async (req, res) => {
       console.log('✅ Secure viewer URL generated:', secureViewerUrl);
     }
 
+    const protocol = req.protocol === 'https' ? 'https' : (req.get('x-forwarded-proto') || req.protocol);
+    const host = req.get('host');
+    const filename = `${book.title.replace(/[^a-zA-Z0-9]/g, '_')}_secure.pdf`;
+    const streamUrl = `${protocol}://${host}/api/mobile/books/${id}/stream/${filename}`;
+
     res.json({
       success: true,
       data: {
-        viewerUrl: secureViewerUrl,
+        viewerUrl: streamUrl,
         title: book.title,
         restrictions: {
           download: false,
@@ -492,11 +506,6 @@ const streamSecurePdf = async (req, res) => {
     });
 
     const secureUrl = generateSecurePdfUrl(book.pdfFile, book.title);
-
-    // For Cloudinary URLs, redirect to the secure URL
-    if (book.pdfFile.includes('cloudinary.com')) {
-      return res.redirect(secureUrl);
-    }
 
     if (!secureUrl || !secureUrl.startsWith('http')) {
       return res.status(400).json({

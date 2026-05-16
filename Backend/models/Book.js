@@ -64,6 +64,12 @@ const bookSchema = new mongoose.Schema({
     trim: true
   },
   
+  level: {
+    type: String,
+    enum: ['Foundation', 'Intermediate', 'Advanced', 'Expert'],
+    default: 'Foundation'
+  },
+  
   tags: [{
     type: String,
     trim: true,
