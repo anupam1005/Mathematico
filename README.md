@@ -547,5 +547,5 @@ This project is licensed under the MIT License.
 
 **Built with ❤️ for mathematics education**
 
-**Version**: 8.6.6 (Build 6)  
+**Version**: 9.0.7 
 **Status**: ✅ Production Ready - Available on Google Play Store
