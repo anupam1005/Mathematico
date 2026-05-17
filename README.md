@@ -1,7 +1,21 @@
-﻿# 🎓 Mathematico - Educational Platform
+# 🎓 Mathematico - Educational Platform
+
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.anupam1505.mathematicoapp">
+    <img src="https://img.shields.io/badge/Google_Play-Live-green?logo=google-play&style=for-the-badge" alt="Google Play Live" />
+  </a>
+  <a href="https://play.google.com/store/apps/details?id=com.anupam1505.mathematicoapp">
+    <img src="https://img.shields.io/badge/Status-Production--Ready-brightgreen?style=for-the-badge" alt="Status Production Ready" />
+  </a>
+  <img src="https://img.shields.io/badge/Version-8.6.6-blue?style=for-the-badge" alt="Version 8.6.6" />
+</p>
+
+<br/>
 
 > **📱 Available on Google Play Store**  
-> This app is already published and available on the Google Play Store. You can download and check it out!
+> The Mathematico application is live on the Google Play Store. You can download and experience the platform directly on your Android device.
+>
+> 👉 **[Download from Google Play Store](https://play.google.com/store/apps/details?id=com.anupam1505.mathematicoapp)**
 
 A comprehensive educational platform featuring a mobile app and backend API for mathematics learning, built with React Native (Expo) and Node.js.
 
@@ -436,7 +450,7 @@ Indian Rupee (INR) is the default currency, configured in `src/config.ts`.
 ### Mobile App
 - Built with **EAS Build** (Expo Application Services)
 - Android: Published to Google Play Store
-- Version: 7.0.0 (Build 7)
+- Version: 9.0.7
 - Package: `com.anupam1505.mathematicoapp`
 
 ---
